@@ -135,7 +135,7 @@ function App() {
     [],
   );
 
-  const [formStatus, submitTranslation, isSubmitting] = useActionState<FormStatus>(
+  const [formStatus, submitTranslation, isSubmitting] = useActionState<FormStatus, FormData>(
     async (_previousState, formData: FormData) => {
       void _previousState;
       setSystemError(null);
@@ -197,7 +197,7 @@ function App() {
     { error: null },
   );
 
-  const [logoutStatus, triggerLogout, isLogoutPending] = useActionState<LogoutStatus>(
+  const [logoutStatus, triggerLogout, isLogoutPending] = useActionState<LogoutStatus, FormData>(
     async (_previousState, _formData: FormData) => {
       void _previousState;
       void _formData;

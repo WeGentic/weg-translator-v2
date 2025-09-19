@@ -4,6 +4,7 @@ use ipc::{
     fail_translation,
     health_check,
     list_active_jobs,
+    path_exists,
     start_translation,
     TranslationState,
 };
@@ -33,10 +34,13 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
         .manage(TranslationState::new())
         .invoke_handler(tauri::generate_handler![
             health_check,
             list_active_jobs,
+            path_exists,
             start_translation,
             fail_translation
         ])

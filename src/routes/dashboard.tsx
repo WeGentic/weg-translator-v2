@@ -9,6 +9,9 @@ import { Separator } from "../components/ui/separator";
 import { useAuth } from "../contexts/AuthContext";
 import { LogConsole } from "../components/logging/LogConsole";
 import { logger } from "../logging";
+import { useState } from "react";
+import { convert, convertStream } from "../lib/openxliff";
+import { OpenXliffPanel } from "@/components/openxliff/OpenXliffPanel";
 
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: ({
@@ -34,8 +37,12 @@ function DashboardPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [isNavigating, startNavigate] = useTransition();
-  const [logoutStatus, triggerLogout, isLogoutPending] = useActionState<{ error: string | null }>(
-    async (_previousState, _formData) => {
+  const [testOutput, setTestOutput] = useState<string>("");
+  const [isStreamRunning, setIsStreamRunning] = useState(false);
+  const [streamLog, setStreamLog] = useState<string>("");
+  const [streamExit, setStreamExit] = useState<string>("");
+  const [logoutStatus, triggerLogout, isLogoutPending] = useActionState<{ error: string | null }, FormData>(
+    async (_previousState: { error: string | null }, _formData: FormData) => {
       void _previousState;
       void _formData;
       try {
@@ -58,6 +65,42 @@ function DashboardPage() {
       user_email: user?.email,
     });
   }, [user?.email, user?.id]);
+
+  const handleTestOpenXliff = () => {
+    void (async () => {
+      try {
+        const res = await convert({ file: "/tmp/dummy.txt", srcLang: "en-US", version: "2.1" });
+        setTestOutput(`[code ${res.code}]\n${res.stdout || res.stderr}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to run stub";
+        setTestOutput(`Error: ${message}`);
+      }
+    })();
+  };
+
+  const handleTestOpenXliffStream = () => {
+    if (isStreamRunning) return;
+    setStreamLog("");
+    setStreamExit("");
+    setIsStreamRunning(true);
+    void (async () => {
+      try {
+        const res = await convertStream(
+          { file: "/tmp/dummy.txt", srcLang: "en-US", version: "2.1" },
+          {
+            onStdout: (line) => setStreamLog((prev) => (prev ? `${prev}\n${line}` : line)),
+            onStderr: (line) => setStreamLog((prev) => (prev ? `${prev}\n[err] ${line}` : `[err] ${line}`)),
+          },
+        );
+        setStreamExit(`exit code: ${res.code} signal: ${res.signal} ok: ${res.ok}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to run stream";
+        setStreamExit(`Error: ${message}`);
+      } finally {
+        setIsStreamRunning(false);
+      }
+    })();
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/10 p-6">
@@ -111,6 +154,47 @@ function DashboardPage() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
+              <Separator />
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleTestOpenXliff}
+                >
+                  Test OpenXLIFF Sidecars
+                </Button>
+                <p className="text-xs text-muted-foreground">Runs stub sidecar to verify wiring.</p>
+              </div>
+              {testOutput && (
+                <pre className="mt-2 whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
+                  {testOutput}
+                </pre>
+              )}
+              <Separator className="my-4" />
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="default"
+                  disabled={isStreamRunning}
+                  aria-busy={isStreamRunning}
+                  onClick={handleTestOpenXliffStream}
+                >
+                  {isStreamRunning ? "Running…" : "Test Streaming (convert)"}
+                </Button>
+                <p className="text-xs text-muted-foreground">Streams stdout/stderr lines from sidecar.</p>
+              </div>
+              {(streamLog || streamExit) && (
+                <div className="mt-2 grid gap-2">
+                  {streamLog && (
+                    <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs text-foreground/90">
+                      {streamLog}
+                    </pre>
+                  )}
+                  {streamExit && (
+                    <div className="rounded-md border bg-muted/30 p-2 text-xs text-foreground/90">
+                      {streamExit}
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -142,6 +226,8 @@ function DashboardPage() {
             <PlaceholderItem title="Automations" description="Schedule batch translations." />
           </CardContent>
         </Card>
+
+        <OpenXliffPanel />
       </div>
     </div>
   );

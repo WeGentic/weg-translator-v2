@@ -1,0 +1,3 @@
+@echo off
+rem Stub sidecar for non-Windows target triple (aarch64-apple-darwin)
+rem Not used at runtime on macOS; present to satisfy bundler.

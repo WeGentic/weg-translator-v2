@@ -1,0 +1,7 @@
+# Ensure line endings and executable behavior for sidecar scripts
+src-tauri/sidecars/openxliff/bin/*.sh text eol=lf
+src-tauri/sidecars/openxliff/bin/*.cmd text eol=crlf
+vendor/openxliff/bin/*.sh text eol=lf
+vendor/openxliff/bin/*.cmd text eol=crlf
+*.sh linguist-language=Shell
+*.cmd linguist-language=Batchfile

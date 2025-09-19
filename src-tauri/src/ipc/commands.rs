@@ -13,6 +13,7 @@ use super::dto::{
 use super::error::{IpcError, IpcResult};
 use super::events::{TRANSLATION_COMPLETED, TRANSLATION_FAILED, TRANSLATION_PROGRESS};
 use super::state::{JobRecord, TranslationState};
+use std::path::Path;
 
 #[tauri::command]
 pub async fn health_check() -> AppHealthReport {
@@ -166,4 +167,14 @@ pub async fn fail_translation(
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn path_exists(path: String) -> Result<(bool, bool, bool), ()> {
+    // Returns (exists, is_file, is_dir)
+    let p = Path::new(&path);
+    let exists = p.exists();
+    let is_file = exists && p.is_file();
+    let is_dir = exists && p.is_dir();
+    Ok((exists, is_file, is_dir))
 }

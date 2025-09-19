@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ macos-latest, windows-latest ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Gradle (macOS)
+        if: runner.os == 'macOS'
+        run: brew update && brew install gradle
+
+      - name: Install Gradle (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: choco install -y gradle
+
+      - name: Cache OpenXLIFF vendor dists
+        uses: actions/cache@v4
+        with:
+          path: |
+            vendor/openxliff/dist-*
+          key: ${{ runner.os }}-openxliff-${{ hashFiles('vendor/openxliff/VERSION') }}
+
+      - name: Build and vendor OpenXLIFF
+        shell: bash
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/fetch-openxliff.sh
+          ./scripts/sync-openxliff-resources.sh
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Build web
+        run: npm run build
+
+      - name: Build Tauri app (debug)
+        run: npm run tauri build -- --debug
+
+      - name: Upload bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-bundles-${{ runner.os }}
+          path: |
+            src-tauri/target/**/bundle/**
+

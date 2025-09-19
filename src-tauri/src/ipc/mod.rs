@@ -8,6 +8,7 @@ pub use commands::{
     fail_translation,
     health_check,
     list_active_jobs,
+    path_exists,
     start_translation,
 };
 pub use state::TranslationState;

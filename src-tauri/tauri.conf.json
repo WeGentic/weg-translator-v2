@@ -24,6 +24,18 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "externalBin": [
+      "sidecars/openxliff/bin/convert.sh",
+      "sidecars/openxliff/bin/merge.sh",
+      "sidecars/openxliff/bin/xliffchecker.sh",
+      "sidecars/openxliff/bin/convert.cmd",
+      "sidecars/openxliff/bin/merge.cmd",
+      "sidecars/openxliff/bin/xliffchecker.cmd"
+    ],
+    "resources": [
+      "resources/jre",
+      "resources/openxliff"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

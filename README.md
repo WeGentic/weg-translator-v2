@@ -1,54 +1,140 @@
-# Weg Translator IPC Playground
+# Weg Translator Desktop
 
-This project showcases a modern, extensible inter-process communication (IPC) setup between a **React 19** frontend and a **Rust/Tauri 2.8** backend. The wiring is intentionally modular so new commands, streams, or services can be layered in without disturbing existing flows.
+Tauri 2.8.5 desktop application with a **React 19.1** frontend and **Rust 1.89** backend that wraps the OpenXLIFF command-line tools as sidecars. The app ships a minimal Java 21 runtime, exposes convert/merge/validate flows in the UI, and showcases secured IPC between React and Tauri.
 
-## Quick start
+## Highlights
+
+- React UI (ShadCN v3.3.1 + TailwindCSS 4.1.1) with streaming logs, file pickers, and OpenXLIFF controls.
+- Tauri sidecars bundle OpenXLIFF CLI scripts (`convert`, `merge`, `xliffchecker`) plus a slimmed Java runtime for offline operation.
+- Rust IPC layer exposes translation job simulation, path validation, and structured logging via `tauri-plugin-log`.
+- Capability hardening: shell sidecars limited to an allowlisted flag set; opener/dialog permissions scoped to user actions.
+- CI workflow builds macOS/Windows bundles, caches vendored OpenXLIFF dists, and uploads artifacts.
+
+## Repository layout
+
+```
+src/                      React frontend (routes, ShadCN components, OpenXLIFF panel)
+src/lib/openxliff.ts      JS wrappers around @tauri-apps/plugin-shell sidecars
+src/lib/fs.ts             Path existence helper (Rust command `path_exists`)
+src-tauri/                Rust backend, Tauri config, sidecar binaries/resources
+src-tauri/sidecars/       Wrapper scripts invoked as sidecars
+src-tauri/resources/      Vendored OpenXLIFF dist + Java runtime per platform
+scripts/                  Helper scripts (fetch, sync, normalize, build JRE)
+vendor/openxliff/         Source-of-truth OpenXLIFF assets
+.github/workflows/ci.yml  macOS/Windows build workflow
+Plan.md                   Detailed project roadmap and status
+```
+
+## Prerequisites
+
+- Node.js 20+
+- Rust toolchain (`rustup`, `cargo`) matching Tauri requirements
+- Tauri CLI dependencies (see [Tauri docs](https://v2.tauri.app/start/prerequisites/))
+- Java 21 + Gradle if you need to rebuild OpenXLIFF (`scripts/fetch-openxliff.sh`)
+
+## Getting started
 
 ```bash
 npm install
 npm run tauri dev
 ```
 
-To validate builds locally:
+During development `tauri dev` launches Vite together with the Tauri backend. Logs are streamed to the in-app console (powered by `tauri-plugin-log`).
+
+## Building
+
+Debug build (bundles the macOS `.app` / `.dmg` or Windows `.msi`/`.exe` depending on host):
 
 ```bash
-npm run build
-cargo check --manifest-path src-tauri/Cargo.toml
+npm run tauri build -- --debug
 ```
 
-## IPC architecture
+Artifacts land in `src-tauri/target/debug/bundle/…`. Example macOS output:
 
-### Rust side (`src-tauri/src/ipc`)
+- `bundle/macos/weg-translator.app`
+- `bundle/dmg/weg-translator_0.1.0_aarch64.dmg`
 
-- **Commands** (`commands.rs`)
-  - `health_check` → returns `AppHealthReport` (versions, profile)
-  - `list_active_jobs` → exposes tracked in-flight translation jobs
-  - `start_translation` → spawns an async job, streams progress, then completion payload
-  - `fail_translation` → broadcasts a structured failure event (handy for cancellation UX)
-- **Events** (`events.rs`): channel names follow a URI-like namespace (`translation://progress`, `translation://completed`, `translation://failed`).
-- **Shared DTOs** (`dto.rs`): serde-driven models keep payloads camelCased for the frontend, with UUID job IDs and optional metadata slots.
-- **State manager** (`state.rs`): minimal `TranslationState` registry (Arc + Mutex) that tracks job lifecycle and snapshots active jobs.
+The `Resources/resources/openxliff/<platform>` directory inside the bundle carries the vendored CLI + jlink runtime. Wrapper scripts were validated to resolve this location automatically.
 
-The backend emits progress via `tokio::time::sleep` driven tasks so you can swap in a real translator/LLM pipeline later without changing the IPC surface.
+## OpenXLIFF integration
 
-### Frontend side (`src/ipc` and `src/App.tsx`)
+- Vendored assets live under `vendor/openxliff/` (built via `scripts/fetch-openxliff.sh`).
+- `scripts/sync-openxliff-resources.sh` mirrors the dist into `src-tauri/resources/openxliff/<platform>`.
+- `scripts/normalize-openxliff-resources.sh` replaces JRE symlinks with real files to avoid macOS codesign/EACCES issues.
+- Sidecar wrapper scripts (`src-tauri/sidecars/openxliff/bin/*.sh|*.cmd`) resolve the correct resource path in both dev tree and packaged app; macOS-specific copies are emitted with the host triple suffix.
+- Shell permissions (`src-tauri/capabilities/default.json`) allow only approved flags (e.g. `-file`, `-srcLang`, `-xliff`, `-2.0|2.1|2.2`).
 
-- `ipc/types.ts` mirrors the Rust DTOs in TypeScript.
-- `ipc/client.ts` wraps `@tauri-apps/api` `invoke` calls with a `safeInvoke` helper for consistent error handling.
-- `ipc/events.ts` centralises `listen` subscriptions and returns unlisten functions, making it easy to fan out event handlers.
-- `App.tsx` demonstrates a small reactive UI: submit jobs, watch progress bars update in real time, and inspect completion payloads.
+### CLI quick checks
 
-### Extending the bridge
+Run scripts from the dev tree:
 
-1. **Add DTOs** in `src-tauri/src/ipc/dto.rs` and re-export them in `ipc/mod.rs`.
-2. **Expose a new command** in `commands.rs`, returning `Result<T, InvokeError>` for clean error propagation.
-3. **Register** the command inside `tauri::Builder::invoke_handler` in `src-tauri/src/lib.rs`.
-4. **Mirror types** in `src/ipc/types.ts`, then add `safeInvoke` wrappers or listeners as needed.
+```bash
+src-tauri/sidecars/openxliff/bin/convert.sh -help
+src-tauri/sidecars/openxliff/bin/merge.sh -help
+src-tauri/sidecars/openxliff/bin/xliffchecker.sh -help
+```
 
-Events follow the same pattern—declare a constant, emit from Rust, subscribe from React with strong typing.
+Run from inside the packaged app:
+
+```bash
+APP=src-tauri/target/debug/bundle/macos/weg-translator.app/Contents/MacOS
+"$APP/convert.sh" -help
+```
+
+### Sample conversion
+
+```bash
+APP=src-tauri/target/debug/bundle/macos/weg-translator.app/Contents/MacOS/convert.sh
+"$APP" \
+  -file "$PWD/Test.docx" \
+  -srcLang en-US \
+  -tgtLang it-IT \
+  -xliff "$PWD/Test.en-it.xlf" \
+  -type OFF \
+  -2.1
+
+# Produces Test.en-it.xlf (~540 KB) using the bundled Java runtime
+```
+
+`-type OFF` matches the “Microsoft Office 2007 Document” type reported by `convert.sh -types`.
+
+## Frontend components
+
+- `src/routes/dashboard.tsx`: authenticated dashboard shell; buttons to trigger sidecar smoke tests.
+- `src/components/openxliff/OpenXliffPanel.tsx`: full convert/validate/merge UI with path validation, dialogs, and streaming logs.
+- `src/lib/openxliff.ts`: `Command.sidecar` wrappers (execute + streaming variants) returning structured results.
+- `src/lib/fs.ts`: client helper around the Rust `path_exists` command (exists/isFile/isDir).
+
+## IPC / backend
+
+- `src-tauri/src/lib.rs`: Tauri builder wiring (`tauri-plugin-log`, `dialog`, `opener`, `shell`), registers commands including `path_exists`.
+- `src-tauri/src/ipc/commands.rs`: health checks, job simulation, new file-existence command.
+- `src-tauri/src/ipc/state.rs`: in-memory job registry used by the sample translation flow.
+- Logs emitted via JSON formatter for ingestion by the in-app console.
+
+## Continuous Integration
+
+`.github/workflows/ci.yml` runs on macOS + Windows:
+
+1. Checkout, setup Node/Rust/Java.
+2. Install Gradle (brew/choco).
+3. Cache `vendor/openxliff/dist-*` per OS.
+4. `./scripts/fetch-openxliff.sh` then `./scripts/sync-openxliff-resources.sh`.
+5. `npm ci`, `npm run build`, `npm run tauri build -- --debug`.
+6. Upload bundles from `src-tauri/target/**/bundle`. 
+
+Extend the workflow with release notarization/signing as Phase 18/19 of `Plan.md` progresses.
+
+## Troubleshooting
+
+- **Unknown file format** when converting Office docs → include `-type OFF`.
+- **macOS build “Permission denied”** while scanning JRE legal files → ensure `scripts/normalize-openxliff-resources.sh` has been run (replaces symlinks with files).
+- **New sidecar flags** → update `src-tauri/capabilities/default.json` to whitelist them before invoking from the frontend.
 
 ## Next steps
 
-- Replace the simulated translation pipeline inside `start_translation` with the actual LLM/agent orchestration logic.
-- Layer authentication/entitlement checks before mutating commands.
-- Promote the in-memory `TranslationState` to a more robust job queue (e.g. crossbeam channel, database-backed store) when you need multi-session continuity.
+- Implement real translation pipelines / LLM agents in place of the simulated job runner.
+- Expand capability separation per window and tighten argument validation (see `Phase 20` in `Plan.md`).
+- Produce Windows x64 / macOS x64 OpenXLIFF dist snapshots and wire them into CI releases.
+
+Refer to `Plan.md` for the full roadmap and remaining tasks.

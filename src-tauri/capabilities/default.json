@@ -5,6 +5,224 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default"
+    "opener:default",
+    "opener:allow-open-path",
+    "opener:allow-reveal-item-in-dir",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "sidecars/openxliff/bin/convert.sh",
+          "sidecar": true,
+          "args": [
+            "-help",
+            "-version",
+            "-file",
+            "-srcLang",
+            "-tgtLang",
+            "-skl",
+            "-xliff",
+            "-type",
+            "-enc",
+            "-srx",
+            "-catalog",
+            "-ditaval",
+            "-config",
+            "-embed",
+            "-paragraph",
+            "-xmlfilter",
+            "-ignoretc",
+            "-ignoresvg",
+            { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" },
+            { "validator": "^[^-].*$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/merge.sh",
+          "sidecar": true,
+          "args": [
+            "-help",
+            "-version",
+            "-xliff",
+            "-target",
+            "-catalog",
+            "-unapproved",
+            "-export",
+            "-getTarget",
+            { "validator": "^[^-].*$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/xliffchecker.sh",
+          "sidecar": true,
+          "args": [
+            "-help",
+            "-xliff",
+            "-catalog",
+            { "validator": "^[^-].*$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/convert.cmd",
+          "sidecar": true,
+          "args": [
+            "-help",
+            "-version",
+            "-file",
+            "-srcLang",
+            "-tgtLang",
+            "-skl",
+            "-xliff",
+            "-type",
+            "-enc",
+            "-srx",
+            "-catalog",
+            "-ditaval",
+            "-config",
+            "-embed",
+            "-paragraph",
+            "-xmlfilter",
+            "-ignoretc",
+            "-ignoresvg",
+            { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" },
+            { "validator": "^[^-].*$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/merge.cmd",
+          "sidecar": true,
+          "args": [
+            "-help",
+            "-version",
+            "-xliff",
+            "-target",
+            "-catalog",
+            "-unapproved",
+            "-export",
+            "-getTarget",
+            { "validator": "^[^-].*$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/xliffchecker.cmd",
+          "sidecar": true,
+          "args": [
+            "-help",
+            "-xliff",
+            "-catalog",
+            { "validator": "^[^-].*$" }
+          ]
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "sidecars/openxliff/bin/convert.sh",
+          "sidecar": true,
+          "args": [
+            "-help",
+            "-version",
+            "-file",
+            "-srcLang",
+            "-tgtLang",
+            "-skl",
+            "-xliff",
+            "-type",
+            "-enc",
+            "-srx",
+            "-catalog",
+            "-ditaval",
+            "-config",
+            "-embed",
+            "-paragraph",
+            "-xmlfilter",
+            "-ignoretc",
+            "-ignoresvg",
+            { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" },
+            { "validator": "^[^-].*$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/merge.sh",
+          "sidecar": true,
+          "args": [
+            "-help",
+            "-version",
+            "-xliff",
+            "-target",
+            "-catalog",
+            "-unapproved",
+            "-export",
+            "-getTarget",
+            { "validator": "^[^-].*$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/xliffchecker.sh",
+          "sidecar": true,
+          "args": [
+            "-help",
+            "-xliff",
+            "-catalog",
+            { "validator": "^[^-].*$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/convert.cmd",
+          "sidecar": true,
+          "args": [
+            "-help",
+            "-version",
+            "-file",
+            "-srcLang",
+            "-tgtLang",
+            "-skl",
+            "-xliff",
+            "-type",
+            "-enc",
+            "-srx",
+            "-catalog",
+            "-ditaval",
+            "-config",
+            "-embed",
+            "-paragraph",
+            "-xmlfilter",
+            "-ignoretc",
+            "-ignoresvg",
+            { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" },
+            { "validator": "^[^-].*$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/merge.cmd",
+          "sidecar": true,
+          "args": [
+            "-help",
+            "-version",
+            "-xliff",
+            "-target",
+            "-catalog",
+            "-unapproved",
+            "-export",
+            "-getTarget",
+            { "validator": "^[^-].*$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/xliffchecker.cmd",
+          "sidecar": true,
+          "args": [
+            "-help",
+            "-xliff",
+            "-catalog",
+            { "validator": "^[^-].*$" }
+          ]
+        }
+      ]
+    }
   ]
 }
