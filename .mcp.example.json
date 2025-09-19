@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "perplexity-ask": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "server-perplexity-ask"],
+      "env": {
+        "PERPLEXITY_API_KEY": ""
+      }
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@brave/brave-search-mcp-server"],
+      "env": {
+        "BRAVE_API_KEY": "",
+        "BRAVE_MCP_TRANSPORT": "stdio"
+      },
+      "alwaysAllow": ["brave_web_search"],
+      "timeout": 300
+    },
+    "eslint": {
+      "command": "npx",
+      "args": ["@eslint/mcp@latest"],
+      "env": {}
+    },
+    "codex-wrapper": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/Volumes/SSD_1_ext/CODING/WeGentic/CodexCLI-MCP/dist/index.js"],
+      "env": {},
+      "alwaysAllow": ["codex_run"],
+      "timeout": 36000
+    }
+  }
+}
