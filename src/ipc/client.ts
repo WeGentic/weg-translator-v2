@@ -4,6 +4,7 @@ import type {
   AppHealthReport,
   JobAccepted,
   JobRecord,
+  TranslationHistoryRecord,
   TranslationRequest,
 } from "./types";
 
@@ -31,4 +32,28 @@ export async function listActiveJobs() {
 
 export async function failTranslation(jobId: string, reason?: string) {
   return safeInvoke<void>("fail_translation", { job_id: jobId, reason });
+}
+
+export interface TranslationHistoryQuery {
+  limit?: number;
+  offset?: number;
+}
+
+export async function listTranslationHistory(query: TranslationHistoryQuery = {}) {
+  const payload: Record<string, unknown> = {};
+  if (typeof query.limit === "number") {
+    payload.limit = query.limit;
+  }
+  if (typeof query.offset === "number") {
+    payload.offset = query.offset;
+  }
+  return safeInvoke<TranslationHistoryRecord[]>("list_translation_history", payload);
+}
+
+export async function clearTranslationHistory() {
+  return safeInvoke<number>("clear_translation_history");
+}
+
+export async function getTranslationJob(jobId: string) {
+  return safeInvoke<TranslationHistoryRecord | null>("get_translation_job", { job_id: jobId });
 }

@@ -6,7 +6,7 @@ use std::{
 use serde::Serialize;
 use uuid::Uuid;
 
-use super::dto::{TranslationRequest, TranslationStage};
+use super::dto::{StoredTranslationJob, TranslationRequest, TranslationStage};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -25,6 +25,30 @@ pub struct TranslationState {
 impl TranslationState {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn hydrate_from_records(&self, jobs: &[StoredTranslationJob]) {
+        if let Ok(mut map) = self.inner.lock() {
+            for job in jobs {
+                if matches!(job.status.as_str(), "queued" | "running") {
+                    let request = TranslationRequest {
+                        source_language: job.source_language.clone(),
+                        target_language: job.target_language.clone(),
+                        text: job.input_text.clone(),
+                        metadata: job.metadata.clone(),
+                    };
+
+                    let record = JobRecord {
+                        job_id: job.job_id,
+                        request,
+                        stage: job.stage.clone(),
+                        progress: job.progress,
+                    };
+
+                    map.insert(job.job_id, record);
+                }
+            }
+        }
     }
 
     pub fn track_job(&self, job_id: Uuid, request: TranslationRequest) {

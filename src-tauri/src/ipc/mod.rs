@@ -5,10 +5,7 @@ pub mod events;
 pub mod state;
 
 pub use commands::{
-    fail_translation,
-    health_check,
-    list_active_jobs,
-    path_exists,
-    start_translation,
+    clear_translation_history, fail_translation, get_translation_job, health_check,
+    list_active_jobs, list_translation_history, path_exists, start_translation,
 };
 pub use state::TranslationState;

@@ -8,12 +8,17 @@ use uuid::Uuid;
 
 use super::dto::{
     AppHealthReport, JobAccepted, TranslationCompletedPayload, TranslationFailedPayload,
-    TranslationProgressPayload, TranslationRequest, TranslationStage,
+    TranslationHistoryRecord, TranslationProgressPayload, TranslationRequest, TranslationStage,
 };
 use super::error::{IpcError, IpcResult};
 use super::events::{TRANSLATION_COMPLETED, TRANSLATION_FAILED, TRANSLATION_PROGRESS};
 use super::state::{JobRecord, TranslationState};
 use std::path::Path;
+
+use crate::db::{DbManager, NewTranslationRecord, PersistedTranslationOutput};
+
+const MAX_LANGUAGE_LENGTH: usize = 64;
+const MAX_TEXT_LENGTH: usize = 20_000;
 
 #[tauri::command]
 pub async fn health_check() -> AppHealthReport {
@@ -38,9 +43,54 @@ pub async fn list_active_jobs(state: State<'_, TranslationState>) -> IpcResult<V
 pub async fn start_translation(
     app: AppHandle,
     state: State<'_, TranslationState>,
-    request: TranslationRequest,
+    db: State<'_, DbManager>,
+    mut request: TranslationRequest,
 ) -> IpcResult<JobAccepted> {
-    if request.text.trim().is_empty() {
+    request.source_language = request.source_language.trim().to_string();
+    request.target_language = request.target_language.trim().to_string();
+    request.text = request.text.trim().to_string();
+
+    if request.source_language.is_empty() {
+        warn!(
+            target: "ipc::commands::translation",
+            "Rejected translation request because source language is empty"
+        );
+        return Err(IpcError::Validation("source language is required".into()).into());
+    }
+
+    if request.target_language.is_empty() {
+        warn!(
+            target: "ipc::commands::translation",
+            "Rejected translation request because target language is empty"
+        );
+        return Err(IpcError::Validation("target language is required".into()).into());
+    }
+
+    if request.source_language.len() > MAX_LANGUAGE_LENGTH {
+        warn!(
+            target: "ipc::commands::translation",
+            "Rejected translation request because source language exceeds limit ({})",
+            request.source_language
+        );
+        return Err(IpcError::Validation(format!(
+            "source language must be {MAX_LANGUAGE_LENGTH} characters or fewer"
+        ))
+        .into());
+    }
+
+    if request.target_language.len() > MAX_LANGUAGE_LENGTH {
+        warn!(
+            target: "ipc::commands::translation",
+            "Rejected translation request because target language exceeds limit ({})",
+            request.target_language
+        );
+        return Err(IpcError::Validation(format!(
+            "target language must be {MAX_LANGUAGE_LENGTH} characters or fewer"
+        ))
+        .into());
+    }
+
+    if request.text.is_empty() {
         warn!(
             target: "ipc::commands::translation",
             "Rejected translation request because text is empty"
@@ -54,9 +104,19 @@ pub async fn start_translation(
             "Rejected translation request because languages match: {}",
             request.source_language
         );
-        return Err(
-            IpcError::Validation("source and target languages must differ".into()).into(),
+        return Err(IpcError::Validation("source and target languages must differ".into()).into());
+    }
+
+    if request.text.len() > MAX_TEXT_LENGTH {
+        warn!(
+            target: "ipc::commands::translation",
+            "Rejected translation request because text exceeds limit: {} characters",
+            request.text.len()
         );
+        return Err(IpcError::Validation(format!(
+            "text must be {MAX_TEXT_LENGTH} characters or fewer"
+        ))
+        .into());
     }
 
     let job_id = Uuid::new_v4();
@@ -66,6 +126,11 @@ pub async fn start_translation(
         request.source_language,
         request.target_language
     );
+    let new_record = NewTranslationRecord {
+        job_id,
+        request: request.clone(),
+    };
+    db.insert_job(&new_record).await?;
     state.track_job(job_id, request.clone());
 
     let accepted = JobAccepted {
@@ -76,12 +141,17 @@ pub async fn start_translation(
     let state_for_task = state.inner().clone();
     let request_for_task = request;
     let app_handle = app.clone();
+    let db_for_task = db.inner().clone();
 
     spawn(async move {
         let start = Instant::now();
 
         let steps = [
-            (TranslationStage::Preparing, 0.2, "preparing request context"),
+            (
+                TranslationStage::Preparing,
+                0.2,
+                "preparing request context",
+            ),
             (TranslationStage::Translating, 0.7, "translating content"),
         ];
 
@@ -92,6 +162,15 @@ pub async fn start_translation(
                 "job {job_id} advanced to {stage:?} ({percent:.0}%)"
             );
             state_for_task.record_progress(job_id, stage.clone(), progress);
+            if let Err(err) = db_for_task
+                .update_progress(job_id, stage.clone(), progress)
+                .await
+            {
+                error!(
+                    target: "ipc::commands::translation",
+                    "failed to persist progress for {job_id}: {err}"
+                );
+            }
             let payload = TranslationProgressPayload {
                 job_id,
                 progress,
@@ -127,6 +206,26 @@ pub async fn start_translation(
             duration_ms: start.elapsed().as_millis(),
         };
 
+        let duration_ms_i64 = completion.duration_ms.min(i64::MAX as u128) as i64;
+
+        if let Err(err) = db_for_task
+            .store_output(&PersistedTranslationOutput {
+                job_id,
+                output_text: completion.output_text.clone(),
+                model_name: Some("demo-llm".to_string()),
+                input_token_count: None,
+                output_token_count: None,
+                total_token_count: None,
+                duration_ms: Some(duration_ms_i64),
+            })
+            .await
+        {
+            error!(
+                target: "ipc::commands::translation",
+                "failed to persist completion for {job_id}: {err}"
+            );
+        }
+
         info!(
             target: "ipc::commands::translation",
             "job {job_id} completed in {}ms",
@@ -147,6 +246,7 @@ pub async fn start_translation(
 pub async fn fail_translation(
     app: AppHandle,
     state: State<'_, TranslationState>,
+    db: State<'_, DbManager>,
     job_id: Uuid,
     reason: Option<String>,
 ) -> IpcResult<()> {
@@ -156,6 +256,13 @@ pub async fn fail_translation(
         "Marking translation job {job_id} as failed: {reason}"
     );
     state.finish_job(job_id);
+
+    if let Err(err) = db.mark_failed(job_id, &reason).await {
+        error!(
+            target: "ipc::commands::translation",
+            "failed to persist failure for {job_id}: {err}"
+        );
+    }
 
     let payload = TranslationFailedPayload { job_id, reason };
 
@@ -177,4 +284,31 @@ pub async fn path_exists(path: String) -> Result<(bool, bool, bool), ()> {
     let is_file = exists && p.is_file();
     let is_dir = exists && p.is_dir();
     Ok((exists, is_file, is_dir))
+}
+
+#[tauri::command]
+pub async fn list_translation_history(
+    db: State<'_, DbManager>,
+    limit: Option<i64>,
+    offset: Option<i64>,
+) -> IpcResult<Vec<TranslationHistoryRecord>> {
+    let limit = limit.unwrap_or(50);
+    let offset = offset.unwrap_or(0);
+    let records = db.list_history(limit, offset).await?;
+    Ok(records)
+}
+
+#[tauri::command]
+pub async fn clear_translation_history(db: State<'_, DbManager>) -> IpcResult<u64> {
+    let deleted = db.clear_history().await?;
+    Ok(deleted)
+}
+
+#[tauri::command]
+pub async fn get_translation_job(
+    db: State<'_, DbManager>,
+    job_id: Uuid,
+) -> IpcResult<Option<TranslationHistoryRecord>> {
+    let record = db.get_job(job_id).await?;
+    Ok(record)
 }

@@ -2,11 +2,13 @@ use anyhow::anyhow;
 use tauri::ipc::InvokeError;
 use thiserror::Error;
 
+use crate::db::DbError;
+
 #[derive(Debug, Error)]
 pub enum IpcError {
-    #[error("invalid request: {0}")]
+    #[error("{0}")]
     Validation(String),
-    #[error("internal error: {0}")]
+    #[error("{0}")]
     Internal(String),
 }
 
@@ -15,5 +17,35 @@ pub type IpcResult<T> = Result<T, InvokeError>;
 impl From<IpcError> for InvokeError {
     fn from(error: IpcError) -> Self {
         InvokeError::from_anyhow(anyhow!(error))
+    }
+}
+
+impl From<DbError> for IpcError {
+    fn from(error: DbError) -> Self {
+        match error {
+            DbError::NotFound(id) => {
+                IpcError::Validation(format!("Translation job {id} was not found."))
+            }
+            DbError::DuplicateJob(_) => IpcError::Validation(
+                "A translation job with the same identifier already exists.".into(),
+            ),
+            DbError::ResolvePath(_) | DbError::Io(_) => IpcError::Internal(
+                "Unable to open the translation database. Check disk permissions and retry.".into(),
+            ),
+            DbError::Json(_) | DbError::InvalidStage(_) | DbError::InvalidUuid(_) => {
+                IpcError::Internal(
+                    "Stored translation data is invalid. Try clearing history and retry.".into(),
+                )
+            }
+            DbError::Sqlx(_) => {
+                IpcError::Internal("Database operation failed unexpectedly. Please retry.".into())
+            }
+        }
+    }
+}
+
+impl From<DbError> for InvokeError {
+    fn from(error: DbError) -> Self {
+        IpcError::from(error).into()
     }
 }

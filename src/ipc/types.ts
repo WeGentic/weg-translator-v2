@@ -5,6 +5,8 @@ export type TranslationStage =
   | "completed"
   | "failed";
 
+export type TranslationStatus = "queued" | "running" | "completed" | "failed";
+
 export interface TranslationRequest {
   sourceLanguage: string;
   targetLanguage: string;
@@ -40,6 +42,39 @@ export interface JobRecord {
   request: TranslationRequest;
   stage: TranslationStage;
   progress: number;
+}
+
+export interface StoredTranslationJob {
+  jobId: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  inputText: string;
+  status: TranslationStatus;
+  stage: TranslationStage;
+  progress: number;
+  queuedAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  failedAt?: string;
+  failureReason?: string;
+  metadata?: unknown;
+  updatedAt: string;
+}
+
+export interface TranslationOutputSnapshot {
+  outputText: string;
+  modelName?: string;
+  inputTokenCount?: number;
+  outputTokenCount?: number;
+  totalTokenCount?: number;
+  durationMs?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TranslationHistoryRecord {
+  job: StoredTranslationJob;
+  output?: TranslationOutputSnapshot | null;
 }
 
 export interface AppHealthReport {

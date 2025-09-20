@@ -81,7 +81,7 @@ This repository contains a Tauri 2.8.5 application with React 19.1.1 as frontend
 ### Key Files
 - `/src/main.tsx` - App entry point with auth provider
 - `/src/routes/login.tsx` - Login page route
-- `/src/routes/index.tsx` - Protected dashboard route
+- `/src/routes/index.tsx` - Protected translator route
 - `/src/components/LoginForm.tsx` - Login form component
 - `/src/contexts/AuthContext.tsx` - Authentication state management
 - `/src/App.tsx` - Main translation application

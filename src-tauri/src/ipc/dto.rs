@@ -18,7 +18,7 @@ pub struct JobAccepted {
     pub queued: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TranslationStage {
     Received,
@@ -26,6 +26,29 @@ pub enum TranslationStage {
     Translating,
     Completed,
     Failed,
+}
+
+impl TranslationStage {
+    pub fn as_db_value(&self) -> &'static str {
+        match self {
+            TranslationStage::Received => "received",
+            TranslationStage::Preparing => "preparing",
+            TranslationStage::Translating => "translating",
+            TranslationStage::Completed => "completed",
+            TranslationStage::Failed => "failed",
+        }
+    }
+
+    pub fn from_db_value(value: &str) -> Option<Self> {
+        match value {
+            "received" => Some(Self::Received),
+            "preparing" => Some(Self::Preparing),
+            "translating" => Some(Self::Translating),
+            "completed" => Some(Self::Completed),
+            "failed" => Some(Self::Failed),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -59,4 +82,54 @@ pub struct AppHealthReport {
     pub app_version: String,
     pub tauri_version: String,
     pub build_profile: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoredTranslationJob {
+    pub job_id: Uuid,
+    pub source_language: String,
+    pub target_language: String,
+    pub input_text: String,
+    pub status: String,
+    pub stage: TranslationStage,
+    pub progress: f32,
+    pub queued_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub started_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub completed_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failed_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failure_reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TranslationOutputSnapshot {
+    pub output_text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_token_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_token_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_token_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<i64>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TranslationHistoryRecord {
+    pub job: StoredTranslationJob,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output: Option<TranslationOutputSnapshot>,
 }

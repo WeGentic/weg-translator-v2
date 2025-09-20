@@ -1,14 +1,24 @@
 import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 
+import { WorkspaceFooter, CollapsedFooterBar } from "./components/layout/WorkspaceFooter";
+import {
+  WorkspaceHeader,
+  CollapsedHeaderBar,
+} from "./components/layout/WorkspaceHeader";
+import {
+  WorkspaceMainContent,
+  type TranslationJobViewModel,
+} from "./components/layout/WorkspaceMainContent";
+import {
+  WorkspaceSidebar,
+  type SidebarState,
+} from "./components/layout/WorkspaceSidebar";
 import { useAuth } from "./contexts/AuthContext";
-import { Button } from "./components/ui/button";
-import { LogConsole } from "./components/logging/LogConsole";
 import { logger } from "./logging";
 
 import "./App.css";
 import {
-  IPC_EVENT,
   healthCheck,
   listActiveJobs,
   startTranslation,
@@ -21,20 +31,6 @@ import {
   type TranslationRequest,
   type TranslationStage,
 } from "./ipc";
-
-interface TranslationJobViewModel {
-  jobId: string;
-  sourceLanguage: string;
-  targetLanguage: string;
-  text: string;
-  stage: TranslationStage;
-  progress: number;
-  status: "queued" | "running" | "completed" | "failed";
-  message?: string;
-  outputText?: string;
-  durationMs?: number;
-  errorReason?: string;
-}
 
 const INITIAL_FORM: TranslationRequest = {
   sourceLanguage: "en",
@@ -107,6 +103,9 @@ function App() {
   const [jobs, setJobs] = useState<Record<string, TranslationJobViewModel>>({});
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [systemError, setSystemError] = useState<string | null>(null);
+  const [sidebarState, setSidebarState] = useState<SidebarState>("expanded");
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [isFooterVisible, setIsFooterVisible] = useState(true);
 
   const selectedJob = selectedJobId ? jobs[selectedJobId] : undefined;
   const jobList = useMemo(
@@ -346,209 +345,98 @@ function App() {
     }));
   }, []);
 
+  const cycleSidebarState = useCallback(() => {
+    setSidebarState((prev) => {
+      if (prev === "expanded") return "compact";
+      if (prev === "compact") return "hidden";
+      return "expanded";
+    });
+  }, []);
+
+  const toggleFooter = useCallback(() => {
+    setIsFooterVisible((prev) => !prev);
+  }, []);
+
+  const handleHideHeader = useCallback(() => {
+    setIsHeaderVisible(false);
+  }, []);
+
+  const handleShowHeader = useCallback(() => {
+    setIsHeaderVisible(true);
+  }, []);
+
+  const handleCreateProject = useCallback(() => {
+    void logger.info("Create project placeholder action triggered");
+  }, []);
+
+  const handleTranslationFormAction = useCallback(
+    (formData: FormData) => {
+      void submitTranslation(formData);
+    },
+    [submitTranslation],
+  );
+
+  const handleLogoutFormAction = useCallback(
+    (formData: FormData) => {
+      void triggerLogout(formData);
+    },
+    [triggerLogout],
+  );
+
   const formIsValid =
     form.sourceLanguage.trim().length > 1 &&
     form.targetLanguage.trim().length > 1 &&
     form.text.trim().length > 0 &&
     form.sourceLanguage.trim().toLowerCase() !== form.targetLanguage.trim().toLowerCase();
 
+  const displayName = user?.name || user?.email || "Authenticated user";
+  const activeJobCount = jobList.length;
+
   return (
-    <main className="app-shell">
-      <header className="app-header">
-        <div>
-          <h1>Weg Translator IPC Playground</h1>
-          <p className="muted">
-            React ↔︎ Rust communication via Tauri commands ({IPC_EVENT.translationProgress}).
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          {health && (
-            <dl className="health">
-              <div>
-                <dt>App</dt>
-                <dd>{health.appVersion}</dd>
-              </div>
-              <div>
-                <dt>Tauri</dt>
-                <dd>{health.tauriVersion}</dd>
-              </div>
-              <div>
-                <dt>Profile</dt>
-                <dd>{health.buildProfile}</dd>
-              </div>
-            </dl>
-          )}
-          <div className="flex flex-col items-end gap-2">
-            {logoutStatus.error && <p className="text-xs text-red-500">{logoutStatus.error}</p>}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                Welcome, {user?.name || user?.email}
-              </span>
-              <form action={triggerLogout} className="inline-flex">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="submit"
-                  disabled={isLogoutPending}
-                >
-                  {isLogoutPending ? "Logging out…" : "Logout"}
-                </Button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="flex min-h-screen flex-col bg-background/60">
+      {isHeaderVisible ? (
+        <WorkspaceHeader
+          displayName={displayName}
+          activeJobCount={activeJobCount}
+          sidebarState={sidebarState}
+          onSidebarCycle={cycleSidebarState}
+          onHideHeader={handleHideHeader}
+          onToggleFooter={toggleFooter}
+          isFooterVisible={isFooterVisible}
+          triggerLogout={handleLogoutFormAction}
+          isLogoutPending={isLogoutPending}
+          logoutError={logoutStatus.error}
+        />
+      ) : (
+        <CollapsedHeaderBar onExpand={handleShowHeader} />
+      )}
 
-      <section className="panel">
-        <h2>Request Translation</h2>
-        <form className="translation-form" action={submitTranslation}>
-          <div className="row">
-            <label className="field">
-              <span>Source language</span>
-              <input
-                name="sourceLanguage"
-                value={form.sourceLanguage}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, sourceLanguage: event.target.value }))
-                }
-                placeholder="e.g. en"
-              />
-            </label>
-            <button
-              type="button"
-              className="swap"
-              onClick={handleSwapLanguages}
-              title="Swap languages"
-            >
-              ⇄
-            </button>
-            <label className="field">
-              <span>Target language</span>
-              <input
-                name="targetLanguage"
-                value={form.targetLanguage}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, targetLanguage: event.target.value }))
-                }
-                placeholder="e.g. es"
-              />
-            </label>
-          </div>
+      <div className="flex flex-1 overflow-hidden">
+        <WorkspaceSidebar state={sidebarState} onCreateProject={handleCreateProject} />
+        <WorkspaceMainContent
+          systemError={systemError}
+          form={form}
+          onFormChange={setForm}
+          onSwapLanguages={handleSwapLanguages}
+          submitTranslation={handleTranslationFormAction}
+          isSubmitting={isSubmitting}
+          formStatus={formStatus}
+          isFormValid={formIsValid}
+          health={health}
+          jobList={jobList}
+          selectedJobId={selectedJobId}
+          selectedJob={selectedJob}
+          onSelectJob={setSelectedJobId}
+          activeJobCount={activeJobCount}
+        />
+      </div>
 
-          <label className="field">
-            <span>Text</span>
-            <textarea
-              name="text"
-              value={form.text}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, text: event.target.value }))
-              }
-              rows={4}
-              placeholder="Enter text to translate"
-            />
-          </label>
-
-          <div className="actions">
-            <button type="submit" disabled={!formIsValid || isSubmitting}>
-              {isSubmitting ? "Submitting…" : "Start translation"}
-            </button>
-            {(formStatus.error || systemError) && (
-              <p className="error">{formStatus.error ?? systemError}</p>
-            )}
-          </div>
-        </form>
-      </section>
-
-      <section className="panel">
-        <div className="panel-header">
-          <h2>Tracked Jobs</h2>
-          <span className="badge">{jobList.length}</span>
-        </div>
-        {jobList.length === 0 ? (
-          <p className="muted">No active jobs yet. Submit a translation to get started.</p>
-        ) : (
-          <ul className="job-list">
-            {jobList.map((job) => (
-              <li key={job.jobId}>
-                <button
-                  className={job.jobId === selectedJobId ? "job-button active" : "job-button"}
-                  type="button"
-                  onClick={() => setSelectedJobId(job.jobId)}
-                >
-                  <div className="job-row">
-                    <strong>
-                      {job.sourceLanguage} → {job.targetLanguage}
-                    </strong>
-                    <span className={`status status-${job.status}`}>
-                      {job.status.toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="job-row">
-                    <span className="job-text">{job.text || "(empty)"}</span>
-                    <span>{Math.round(job.progress * 100)}%</span>
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="panel">
-        <div className="panel-header">
-          <h2>Job Details</h2>
-          {selectedJob && <span className="badge">{selectedJob.jobId}</span>}
-        </div>
-        {!selectedJob ? (
-          <p className="muted">Select a translation job to see live updates.</p>
-        ) : (
-          <div className="job-detail">
-            <div className="progress">
-              <div className="progress-bar" style={{ width: `${selectedJob.progress * 100}%` }} />
-            </div>
-            <dl>
-              <div>
-                <dt>Status</dt>
-                <dd>{selectedJob.status}</dd>
-              </div>
-              <div>
-                <dt>Stage</dt>
-                <dd>{selectedJob.stage}</dd>
-              </div>
-              {selectedJob.message && (
-                <div>
-                  <dt>Message</dt>
-                  <dd>{selectedJob.message}</dd>
-                </div>
-              )}
-              {selectedJob.durationMs != null && (
-                <div>
-                  <dt>Duration</dt>
-                  <dd>{selectedJob.durationMs} ms</dd>
-                </div>
-              )}
-              {selectedJob.errorReason && (
-                <div>
-                  <dt>Error</dt>
-                  <dd className="error">{selectedJob.errorReason}</dd>
-                </div>
-              )}
-            </dl>
-
-            {selectedJob.outputText && (
-              <div className="result">
-                <h3>Translated Output</h3>
-                <pre>{selectedJob.outputText}</pre>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-
-      <section className="panel">
-        <LogConsole />
-      </section>
-    </main>
+      {isFooterVisible ? (
+        <WorkspaceFooter health={health} onHide={() => setIsFooterVisible(false)} />
+      ) : (
+        <CollapsedFooterBar onExpand={toggleFooter} />
+      )}
+    </div>
   );
 }
 

@@ -5,7 +5,7 @@ import { AnimatedBackground } from "../components/AnimatedBackground";
 export const Route = createFileRoute("/login")({
   beforeLoad: ({ context }: { context: { auth?: { isAuthenticated?: boolean } } }) => {
     if (context.auth?.isAuthenticated) {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({ to: "/" });
     }
   },
   component: LoginPage,
