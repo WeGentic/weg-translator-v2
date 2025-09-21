@@ -938,7 +938,7 @@ impl DbManager {
         .bind(failed_at.as_deref())
         .bind(&now)
         .bind(&id)
-        .execute(&mut *tx)
+        .execute(tx.as_mut())
         .await?;
 
         if updated.rows_affected() == 0 {
@@ -1003,7 +1003,7 @@ impl DbManager {
             .bind(&request.version)
             .bind(paragraph_flag)
             .bind(embed_flag)
-            .fetch_optional(&mut *tx)
+            .fetch_optional(tx.as_mut())
             .await?
         {
             return build_project_file_conversion(&row);
@@ -1037,7 +1037,7 @@ impl DbManager {
 
         let inserted_row = sqlx::query(&select_inserted)
             .bind(&conversion_id.to_string())
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.as_mut())
             .await?;
 
         build_project_file_conversion(&inserted_row)
@@ -1168,7 +1168,7 @@ impl DbManager {
             )
             .bind(&file.id.to_string())
             .bind(&project_id.to_string())
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.as_mut())
             .await?;
 
             inserted.push(build_project_file_details(&row)?);
@@ -1191,7 +1191,7 @@ impl DbManager {
         let removed = sqlx::query("DELETE FROM project_files WHERE id = ?1 AND project_id = ?2")
             .bind(&project_file_id.to_string())
             .bind(&project_id.to_string())
-            .execute(&mut *tx)
+            .execute(tx.as_mut())
             .await?;
 
         tx.commit().await?;
@@ -1209,12 +1209,11 @@ impl DbManager {
         let pool = self.pool().await;
         let mut tx = pool.begin().await?;
 
-        let request =
-            ProjectFileConversionRequest::new(src_lang.to_owned(), tgt_lang.to_owned(), "2.1");
+        let request = ProjectFileConversionRequest::new(src_lang, tgt_lang, "2.1");
         let select_files =
             sqlx::query("SELECT id, ext, import_status FROM project_files WHERE project_id = ?1")
                 .bind(&project_id.to_string())
-                .fetch_all(&mut *tx)
+                .fetch_all(tx.as_mut())
                 .await?;
 
         let mut pending = Vec::new();

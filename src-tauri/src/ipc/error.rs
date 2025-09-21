@@ -40,9 +40,16 @@ impl From<DbError> for IpcError {
             DbError::InvalidProjectId(_)
             | DbError::InvalidProjectType(_)
             | DbError::InvalidProjectStatus(_)
-            | DbError::InvalidProjectFileStatus(_) => {
+            | DbError::InvalidProjectFileStatus(_)
+            | DbError::InvalidProjectFileConversionStatus(_) => {
                 IpcError::Internal("Stored project data is invalid. Refresh and retry.".into())
             }
+            DbError::ProjectNotFound(id) => {
+                IpcError::Validation(format!("Project {id} was not found."))
+            }
+            DbError::ProjectFileConversionNotFound(id) => IpcError::Validation(format!(
+                "Conversion {id} was not found for the requested project file.",
+            )),
             DbError::Sqlx(_) => {
                 IpcError::Internal("Database operation failed unexpectedly. Please retry.".into())
             }
