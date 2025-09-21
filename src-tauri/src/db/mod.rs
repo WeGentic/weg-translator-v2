@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use log::{debug, error, warn};
@@ -16,6 +16,11 @@ use crate::ipc::dto::{
 };
 
 pub const SQLITE_DB_FILE: &str = "weg_translator.db";
+const PROJECT_FILE_CONVERSION_COLUMNS: &str = "id, project_file_id, src_lang, tgt_lang, version, paragraph, embed, xliff_rel_path, status, started_at, completed_at, failed_at, error_message, created_at, updated_at";
+const SKIP_CONVERSION_EXTENSIONS: &[&str] = &["xlf", "xliff", "mqxliff", "sdlxliff"];
+const CONVERTIBLE_EXTENSIONS: &[&str] = &[
+    "doc", "docx", "ppt", "pptx", "xls", "xlsx", "odt", "odp", "ods", "html", "xml", "dita", "md",
+];
 
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 
@@ -51,6 +56,12 @@ pub enum DbError {
     InvalidProjectStatus(String),
     #[error("invalid project file status '{0}' in storage")]
     InvalidProjectFileStatus(String),
+    #[error("invalid project file conversion status '{0}' in storage")]
+    InvalidProjectFileConversionStatus(String),
+    #[error("project not found: {0}")]
+    ProjectNotFound(Uuid),
+    #[error("project file conversion not found: {0}")]
+    ProjectFileConversionNotFound(Uuid),
 }
 
 pub type DbResult<T> = Result<T, DbError>;
@@ -141,6 +152,126 @@ impl ProjectFileImportStatus {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectFileConversionStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+}
+
+impl ProjectFileConversionStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ProjectFileConversionStatus::Pending => "pending",
+            ProjectFileConversionStatus::Running => "running",
+            ProjectFileConversionStatus::Completed => "completed",
+            ProjectFileConversionStatus::Failed => "failed",
+        }
+    }
+
+    pub fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "pending" => Some(Self::Pending),
+            "running" => Some(Self::Running),
+            "completed" => Some(Self::Completed),
+            "failed" => Some(Self::Failed),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct NewProjectFileConversion {
+    pub id: Uuid,
+    pub project_file_id: Uuid,
+    pub src_lang: String,
+    pub tgt_lang: String,
+    pub version: String,
+    pub paragraph: bool,
+    pub embed: bool,
+    pub xliff_rel_path: Option<String>,
+    pub status: ProjectFileConversionStatus,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub failed_at: Option<String>,
+    pub error_message: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProjectFileConversionRequest {
+    pub src_lang: String,
+    pub tgt_lang: String,
+    pub version: String,
+    pub paragraph: bool,
+    pub embed: bool,
+}
+
+impl ProjectFileConversionRequest {
+    pub fn new<S1, S2, S3>(src_lang: S1, tgt_lang: S2, version: S3) -> Self
+    where
+        S1: Into<String>,
+        S2: Into<String>,
+        S3: Into<String>,
+    {
+        Self {
+            src_lang: src_lang.into(),
+            tgt_lang: tgt_lang.into(),
+            version: version.into(),
+            paragraph: true,
+            embed: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ProjectFileDetails {
+    pub id: Uuid,
+    pub original_name: String,
+    pub stored_rel_path: String,
+    pub ext: String,
+    pub size_bytes: Option<i64>,
+    pub import_status: ProjectFileImportStatus,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProjectFileConversionRow {
+    pub id: Uuid,
+    pub project_file_id: Uuid,
+    pub src_lang: String,
+    pub tgt_lang: String,
+    pub version: String,
+    pub paragraph: bool,
+    pub embed: bool,
+    pub xliff_rel_path: Option<String>,
+    pub status: ProjectFileConversionStatus,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub failed_at: Option<String>,
+    pub error_message: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProjectFileWithConversions {
+    pub file: ProjectFileDetails,
+    pub conversions: Vec<ProjectFileConversionRow>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProjectDetails {
+    pub id: Uuid,
+    pub name: String,
+    pub slug: String,
+    pub default_src_lang: Option<String>,
+    pub default_tgt_lang: Option<String>,
+    pub root_path: String,
+    pub files: Vec<ProjectFileWithConversions>,
+}
+
 #[derive(Debug, Clone)]
 pub struct NewProject {
     pub id: Uuid,
@@ -219,6 +350,57 @@ impl DbManager {
         drop(writer);
         old_pool.close().await;
         Ok(())
+    }
+
+    pub async fn update_project_root_paths(
+        &self,
+        old_base: &Path,
+        new_base: &Path,
+    ) -> DbResult<u64> {
+        let _guard = self.write_lock.lock().await;
+        let pool = self.pool().await;
+        let mut tx = pool.begin().await?;
+
+        let projects = sqlx::query("SELECT id, root_path FROM projects")
+            .fetch_all(&mut *tx)
+            .await?;
+
+        let mut updated = 0u64;
+        let now = now_iso8601();
+
+        for row in projects {
+            let id: String = row.try_get("id")?;
+            let root_path: String = row.try_get("root_path")?;
+            let current_path = PathBuf::from(&root_path);
+
+            if let Ok(relative) = current_path.strip_prefix(old_base) {
+                let candidate = new_base.join(relative);
+                if candidate != current_path {
+                    let candidate_str = candidate.to_string_lossy().to_string();
+                    let result = sqlx::query(
+                        "UPDATE projects SET root_path = ?1, updated_at = ?2 WHERE id = ?3",
+                    )
+                    .bind(&candidate_str)
+                    .bind(&now)
+                    .bind(&id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                    updated += result.rows_affected();
+                }
+            }
+        }
+
+        tx.commit().await?;
+
+        if updated > 0 {
+            debug!(
+                target: "db::projects",
+                "updated root paths for {updated} project(s) after storage migration"
+            );
+        }
+
+        Ok(updated)
     }
 
     pub async fn insert_job(&self, record: &NewTranslationRecord) -> DbResult<()> {
@@ -657,6 +839,210 @@ impl DbManager {
         Ok(())
     }
 
+    pub async fn insert_project_file_conversions(
+        &self,
+        rows: &[NewProjectFileConversion],
+        tx: &mut Transaction<'_, Sqlite>,
+    ) -> DbResult<()> {
+        if rows.is_empty() {
+            return Ok(());
+        }
+
+        let now = now_iso8601();
+
+        for row in rows {
+            let id = row.id.to_string();
+            let project_file_id = row.project_file_id.to_string();
+
+            let query = sqlx::query(
+                "INSERT INTO project_file_conversions (
+                     id,
+                     project_file_id,
+                     src_lang,
+                     tgt_lang,
+                     version,
+                     paragraph,
+                     embed,
+                     xliff_rel_path,
+                     status,
+                     started_at,
+                     completed_at,
+                     failed_at,
+                     error_message,
+                     created_at,
+                     updated_at
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?14)",
+            )
+            .bind(&id)
+            .bind(&project_file_id)
+            .bind(&row.src_lang)
+            .bind(&row.tgt_lang)
+            .bind(&row.version)
+            .bind(row.paragraph as i64)
+            .bind(row.embed as i64)
+            .bind(row.xliff_rel_path.as_deref())
+            .bind(row.status.as_str())
+            .bind(row.started_at.as_deref())
+            .bind(row.completed_at.as_deref())
+            .bind(row.failed_at.as_deref())
+            .bind(row.error_message.as_deref())
+            .bind(&now);
+
+            tx.execute(query).await?;
+
+            debug!(
+                target: "db::project_file_conversions",
+                "inserted conversion {id} for file {project_file_id} ({src}->{tgt} v{version})",
+                src = row.src_lang,
+                tgt = row.tgt_lang,
+                version = row.version
+            );
+        }
+
+        Ok(())
+    }
+
+    pub async fn upsert_conversion_status(
+        &self,
+        conversion_id: Uuid,
+        status: ProjectFileConversionStatus,
+        xliff_rel_path: Option<String>,
+        error_message: Option<String>,
+        started_at: Option<String>,
+        completed_at: Option<String>,
+        failed_at: Option<String>,
+    ) -> DbResult<()> {
+        let _guard = self.write_lock.lock().await;
+        let pool = self.pool().await;
+        let mut tx = pool.begin().await?;
+
+        let now = now_iso8601();
+        let id = conversion_id.to_string();
+
+        let updated = sqlx::query(
+            "UPDATE project_file_conversions
+             SET status = ?1,
+                 xliff_rel_path = ?2,
+                 error_message = ?3,
+                 started_at = ?4,
+                 completed_at = ?5,
+                 failed_at = ?6,
+                 updated_at = ?7
+             WHERE id = ?8",
+        )
+        .bind(status.as_str())
+        .bind(xliff_rel_path.as_deref())
+        .bind(error_message.as_deref())
+        .bind(started_at.as_deref())
+        .bind(completed_at.as_deref())
+        .bind(failed_at.as_deref())
+        .bind(&now)
+        .bind(&id)
+        .execute(&mut *tx)
+        .await?;
+
+        if updated.rows_affected() == 0 {
+            return Err(DbError::ProjectFileConversionNotFound(conversion_id));
+        }
+
+        tx.commit().await?;
+
+        debug!(
+            target: "db::project_file_conversions",
+            "updated conversion {id} status -> {status}",
+            id = id,
+            status = status.as_str()
+        );
+
+        Ok(())
+    }
+
+    pub async fn find_or_create_conversion_for_file(
+        &self,
+        project_file_id: Uuid,
+        request: &ProjectFileConversionRequest,
+    ) -> DbResult<ProjectFileConversionRow> {
+        let _guard = self.write_lock.lock().await;
+        let pool = self.pool().await;
+        let mut tx = pool.begin().await?;
+
+        let row = self
+            .find_or_create_conversion_for_file_tx(&mut tx, project_file_id, request)
+            .await?;
+
+        tx.commit().await?;
+        Ok(row)
+    }
+
+    async fn find_or_create_conversion_for_file_tx(
+        &self,
+        tx: &mut Transaction<'_, Sqlite>,
+        project_file_id: Uuid,
+        request: &ProjectFileConversionRequest,
+    ) -> DbResult<ProjectFileConversionRow> {
+        let paragraph_flag = if request.paragraph { 1 } else { 0 };
+        let embed_flag = if request.embed { 1 } else { 0 };
+        let file_id = project_file_id.to_string();
+
+        let select_existing = format!(
+            "SELECT {columns} FROM project_file_conversions
+             WHERE project_file_id = ?1
+               AND src_lang = ?2
+               AND tgt_lang = ?3
+               AND version = ?4
+               AND paragraph = ?5
+               AND embed = ?6
+             LIMIT 1",
+            columns = PROJECT_FILE_CONVERSION_COLUMNS,
+        );
+
+        if let Some(row) = sqlx::query(&select_existing)
+            .bind(&file_id)
+            .bind(&request.src_lang)
+            .bind(&request.tgt_lang)
+            .bind(&request.version)
+            .bind(paragraph_flag)
+            .bind(embed_flag)
+            .fetch_optional(&mut *tx)
+            .await?
+        {
+            return build_project_file_conversion(&row);
+        }
+
+        let new_conversion = NewProjectFileConversion {
+            id: Uuid::new_v4(),
+            project_file_id,
+            src_lang: request.src_lang.clone(),
+            tgt_lang: request.tgt_lang.clone(),
+            version: request.version.clone(),
+            paragraph: request.paragraph,
+            embed: request.embed,
+            xliff_rel_path: None,
+            status: ProjectFileConversionStatus::Pending,
+            started_at: None,
+            completed_at: None,
+            failed_at: None,
+            error_message: None,
+        };
+
+        let conversion_id = new_conversion.id;
+
+        self.insert_project_file_conversions(std::slice::from_ref(&new_conversion), tx)
+            .await?;
+
+        let select_inserted = format!(
+            "SELECT {columns} FROM project_file_conversions WHERE id = ?1",
+            columns = PROJECT_FILE_CONVERSION_COLUMNS,
+        );
+
+        let inserted_row = sqlx::query(&select_inserted)
+            .bind(&conversion_id.to_string())
+            .fetch_one(&mut *tx)
+            .await?;
+
+        build_project_file_conversion(&inserted_row)
+    }
+
     pub async fn list_projects(&self, limit: i64, offset: i64) -> DbResult<Vec<ProjectListItem>> {
         let pool = self.pool().await;
         let rows = sqlx::query(
@@ -684,6 +1070,213 @@ impl DbManager {
         rows.into_iter()
             .map(|row| build_project_list_item(row))
             .collect()
+    }
+
+    pub async fn list_project_details(&self, project_id: Uuid) -> DbResult<ProjectDetails> {
+        let pool = self.pool().await;
+        let project_id_str = project_id.to_string();
+
+        let select_project = sqlx::query(
+            "SELECT id, name, slug, default_src_lang, default_tgt_lang, root_path
+             FROM projects WHERE id = ?1",
+        )
+        .bind(&project_id_str)
+        .fetch_optional(&pool)
+        .await?;
+
+        let project_row = match select_project {
+            Some(row) => row,
+            None => return Err(DbError::ProjectNotFound(project_id)),
+        };
+
+        let name: String = project_row.try_get("name")?;
+        let slug: String = project_row.try_get("slug")?;
+        let default_src_lang: Option<String> = project_row.try_get("default_src_lang")?;
+        let default_tgt_lang: Option<String> = project_row.try_get("default_tgt_lang")?;
+        let root_path: String = project_row.try_get("root_path")?;
+
+        let file_rows = sqlx::query(
+            "SELECT id, original_name, stored_rel_path, ext, size_bytes, import_status, created_at, updated_at
+             FROM project_files
+             WHERE project_id = ?1
+             ORDER BY created_at ASC",
+        )
+        .bind(&project_id_str)
+        .fetch_all(&pool)
+        .await?;
+
+        let mut files = Vec::with_capacity(file_rows.len());
+
+        for row in file_rows {
+            let details = build_project_file_details(&row)?;
+            let select_conversions = format!(
+                "SELECT {columns} FROM project_file_conversions
+                 WHERE project_file_id = ?1
+                 ORDER BY created_at ASC",
+                columns = PROJECT_FILE_CONVERSION_COLUMNS,
+            );
+
+            let conversion_rows = sqlx::query(&select_conversions)
+                .bind(&details.id.to_string())
+                .fetch_all(&pool)
+                .await?;
+
+            let mut conversions = Vec::with_capacity(conversion_rows.len());
+            for conversion_row in conversion_rows {
+                conversions.push(build_project_file_conversion(&conversion_row)?);
+            }
+
+            files.push(ProjectFileWithConversions {
+                file: details,
+                conversions,
+            });
+        }
+
+        Ok(ProjectDetails {
+            id: project_id,
+            name,
+            slug,
+            default_src_lang,
+            default_tgt_lang,
+            root_path,
+            files,
+        })
+    }
+
+    pub async fn add_files_to_project(
+        &self,
+        project_id: Uuid,
+        new_files: &[NewProjectFile],
+    ) -> DbResult<Vec<ProjectFileDetails>> {
+        if new_files.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let _guard = self.write_lock.lock().await;
+        let pool = self.pool().await;
+        let mut tx = pool.begin().await?;
+
+        for file in new_files {
+            self.insert_project_file(file, &mut tx).await?;
+        }
+
+        let mut inserted = Vec::with_capacity(new_files.len());
+        for file in new_files {
+            let row = sqlx::query(
+                "SELECT id, original_name, stored_rel_path, ext, size_bytes, import_status, created_at, updated_at
+                 FROM project_files WHERE id = ?1 AND project_id = ?2",
+            )
+            .bind(&file.id.to_string())
+            .bind(&project_id.to_string())
+            .fetch_one(&mut *tx)
+            .await?;
+
+            inserted.push(build_project_file_details(&row)?);
+        }
+
+        tx.commit().await?;
+
+        Ok(inserted)
+    }
+
+    pub async fn remove_project_file(
+        &self,
+        project_id: Uuid,
+        project_file_id: Uuid,
+    ) -> DbResult<u64> {
+        let _guard = self.write_lock.lock().await;
+        let pool = self.pool().await;
+        let mut tx = pool.begin().await?;
+
+        let removed = sqlx::query("DELETE FROM project_files WHERE id = ?1 AND project_id = ?2")
+            .bind(&project_file_id.to_string())
+            .bind(&project_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+
+        Ok(removed.rows_affected())
+    }
+
+    pub async fn list_pending_conversions(
+        &self,
+        project_id: Uuid,
+        src_lang: &str,
+        tgt_lang: &str,
+    ) -> DbResult<Vec<ProjectFileConversionRow>> {
+        let _guard = self.write_lock.lock().await;
+        let pool = self.pool().await;
+        let mut tx = pool.begin().await?;
+
+        let request =
+            ProjectFileConversionRequest::new(src_lang.to_owned(), tgt_lang.to_owned(), "2.1");
+        let select_files =
+            sqlx::query("SELECT id, ext, import_status FROM project_files WHERE project_id = ?1")
+                .bind(&project_id.to_string())
+                .fetch_all(&mut *tx)
+                .await?;
+
+        let mut pending = Vec::new();
+
+        for row in select_files {
+            let file_id_raw: String = row.try_get("id")?;
+            let file_id = Uuid::parse_str(&file_id_raw)
+                .map_err(|_| DbError::InvalidProjectId(file_id_raw.clone()))?;
+
+            let ext: String = row.try_get("ext")?;
+            if SKIP_CONVERSION_EXTENSIONS.contains(&ext.as_str()) {
+                continue;
+            }
+            if !CONVERTIBLE_EXTENSIONS.contains(&ext.as_str()) {
+                continue;
+            }
+
+            let import_status_raw: String = row.try_get("import_status")?;
+            let import_status = ProjectFileImportStatus::from_str(&import_status_raw)
+                .ok_or_else(|| DbError::InvalidProjectFileStatus(import_status_raw.clone()))?;
+
+            if import_status != ProjectFileImportStatus::Imported {
+                continue;
+            }
+
+            let conversion = self
+                .find_or_create_conversion_for_file_tx(&mut tx, file_id, &request)
+                .await?;
+
+            if matches!(
+                conversion.status,
+                ProjectFileConversionStatus::Pending | ProjectFileConversionStatus::Failed
+            ) {
+                pending.push(conversion);
+            }
+        }
+
+        tx.commit().await?;
+
+        Ok(pending)
+    }
+
+    pub async fn project_root_path(&self, project_id: Uuid) -> DbResult<PathBuf> {
+        let pool = self.pool().await;
+        let project_row = sqlx::query("SELECT root_path FROM projects WHERE id = ?1")
+            .bind(&project_id.to_string())
+            .fetch_optional(&pool)
+            .await?;
+
+        match project_row {
+            Some(row) => {
+                let root: String = row.try_get("root_path")?;
+                Ok(PathBuf::from(root))
+            }
+            None => Err(DbError::ProjectNotFound(project_id)),
+        }
+    }
+
+    pub fn ensure_subdir(root: &Path, name: &str) -> DbResult<PathBuf> {
+        let target = root.join(name);
+        fs::create_dir_all(&target)?;
+        Ok(target)
     }
 
     pub async fn clear_history(&self) -> DbResult<u64> {
@@ -799,6 +1392,62 @@ fn build_project_list_item(row: sqlx::sqlite::SqliteRow) -> DbResult<ProjectList
         created_at,
         updated_at,
         file_count,
+    })
+}
+
+fn build_project_file_details(row: &sqlx::sqlite::SqliteRow) -> DbResult<ProjectFileDetails> {
+    let id_str: String = row.try_get("id")?;
+    let id = Uuid::parse_str(&id_str).map_err(|_| DbError::InvalidProjectId(id_str.clone()))?;
+
+    let import_status_raw: String = row.try_get("import_status")?;
+    let import_status = ProjectFileImportStatus::from_str(&import_status_raw)
+        .ok_or_else(|| DbError::InvalidProjectFileStatus(import_status_raw.clone()))?;
+
+    Ok(ProjectFileDetails {
+        id,
+        original_name: row.try_get("original_name")?,
+        stored_rel_path: row.try_get("stored_rel_path")?,
+        ext: row.try_get("ext")?,
+        size_bytes: row.try_get("size_bytes")?,
+        import_status,
+        created_at: row.try_get("created_at")?,
+        updated_at: row.try_get("updated_at")?,
+    })
+}
+
+fn build_project_file_conversion(
+    row: &sqlx::sqlite::SqliteRow,
+) -> DbResult<ProjectFileConversionRow> {
+    let id_str: String = row.try_get("id")?;
+    let id = Uuid::parse_str(&id_str).map_err(|_| DbError::InvalidProjectId(id_str.clone()))?;
+
+    let file_id_raw: String = row.try_get("project_file_id")?;
+    let project_file_id = Uuid::parse_str(&file_id_raw)
+        .map_err(|_| DbError::InvalidProjectId(file_id_raw.clone()))?;
+
+    let status_raw: String = row.try_get("status")?;
+    let status = ProjectFileConversionStatus::from_str(&status_raw)
+        .ok_or_else(|| DbError::InvalidProjectFileConversionStatus(status_raw.clone()))?;
+
+    let paragraph_value: i64 = row.try_get("paragraph")?;
+    let embed_value: i64 = row.try_get("embed")?;
+
+    Ok(ProjectFileConversionRow {
+        id,
+        project_file_id,
+        src_lang: row.try_get("src_lang")?,
+        tgt_lang: row.try_get("tgt_lang")?,
+        version: row.try_get("version")?,
+        paragraph: paragraph_value != 0,
+        embed: embed_value != 0,
+        xliff_rel_path: row.try_get("xliff_rel_path")?,
+        status,
+        started_at: row.try_get("started_at")?,
+        completed_at: row.try_get("completed_at")?,
+        failed_at: row.try_get("failed_at")?,
+        error_message: row.try_get("error_message")?,
+        created_at: row.try_get("created_at")?,
+        updated_at: row.try_get("updated_at")?,
     })
 }
 
