@@ -20,18 +20,11 @@
     "security": {
       "csp": null,
       "capabilities": [
-        "default",
-        "sqlite-db"
+        "default"
       ]
     }
   },
-  "plugins": {
-    "sql": {
-      "preload": [
-        "sqlite:weg_translator.db"
-      ]
-    }
-  },
+  "plugins": {},
   "bundle": {
     "active": true,
     "targets": "all",

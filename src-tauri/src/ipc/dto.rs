@@ -19,6 +19,36 @@ pub struct JobAccepted {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateProjectRequest {
+    pub name: String,
+    pub project_type: String,
+    pub files: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateProjectResponse {
+    pub project_id: String,
+    pub slug: String,
+    pub folder: String,
+    pub file_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectListItemDto {
+    pub project_id: String,
+    pub name: String,
+    pub slug: String,
+    pub project_type: String,
+    pub status: String,
+    pub file_count: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TranslationStage {
     Received,
@@ -132,4 +162,19 @@ pub struct TranslationHistoryRecord {
     pub job: StoredTranslationJob,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output: Option<TranslationOutputSnapshot>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppSettingsDto {
+    pub app_folder: String,
+    pub app_folder_exists: bool,
+    pub database_path: String,
+    pub database_exists: bool,
+    pub projects_path: String,
+    pub projects_path_exists: bool,
+    pub settings_file: String,
+    pub settings_file_exists: bool,
+    pub default_app_folder: String,
+    pub is_using_default_location: bool,
 }

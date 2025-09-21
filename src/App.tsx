@@ -1,21 +1,23 @@
 import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
+import { PanelsTopLeft, FolderKanban, Briefcase, History, Settings, FileText } from "lucide-react";
 
 import { WorkspaceFooter, CollapsedFooterBar } from "./components/layout/WorkspaceFooter";
-import {
-  WorkspaceHeader,
-  CollapsedHeaderBar,
-} from "./components/layout/WorkspaceHeader";
+import { CollapsedHeaderBar } from "./components/layout/WorkspaceHeader";
+import { AppHeader } from "./components/layout/AppHeader";
 import {
   WorkspaceMainContent,
   type TranslationJobViewModel,
 } from "./components/layout/WorkspaceMainContent";
-import {
-  WorkspaceSidebar,
-  type SidebarState,
-} from "./components/layout/WorkspaceSidebar";
+import { type SidebarState } from "./components/layout/WorkspaceSidebar";
+import { AppSidebar, type MenuItem } from "./components/layout/AppSidebar";
+import { ProjectsPanel } from "./components/projects/ProjectsPanel";
+import { ProjectOverviewPlaceholder } from "./components/projects/ProjectOverviewPlaceholder";
+import { AppSettingsPanel } from "./components/settings/AppSettingsPanel";
 import { useAuth } from "./contexts/AuthContext";
 import { logger } from "./logging";
+import { useHeaderTitle } from "./hooks/useHeaderTitle";
+import { cn } from "./lib/utils";
 
 import "./App.css";
 import {
@@ -30,7 +32,22 @@ import {
   type TranslationProgressPayload,
   type TranslationRequest,
   type TranslationStage,
+  type ProjectListItem,
 } from "./ipc";
+
+const PROJECT_VIEW_PREFIX = "project:" as const;
+type ProjectViewKey = `${typeof PROJECT_VIEW_PREFIX}${string}`;
+type MainView = "workspace" | "projects" | "jobs" | "history" | "settings" | ProjectViewKey;
+
+function toProjectViewKey(projectId: string): ProjectViewKey {
+  // The template string preserves the literal prefix; cast keeps the precise key type for lookups.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+  return `${PROJECT_VIEW_PREFIX}${projectId}` as ProjectViewKey;
+}
+
+function parseProjectIdFromKey(key: string): string | null {
+  return key.startsWith(PROJECT_VIEW_PREFIX) ? key.slice(PROJECT_VIEW_PREFIX.length) : null;
+}
 
 const INITIAL_FORM: TranslationRequest = {
   sourceLanguage: "en",
@@ -104,8 +121,10 @@ function App() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [systemError, setSystemError] = useState<string | null>(null);
   const [sidebarState, setSidebarState] = useState<SidebarState>("expanded");
+  const [mainView, setMainView] = useState<MainView>("workspace");
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [isFooterVisible, setIsFooterVisible] = useState(true);
+  const [openProjects, setOpenProjects] = useState<ProjectListItem[]>([]);
 
   const selectedJob = selectedJobId ? jobs[selectedJobId] : undefined;
   const jobList = useMemo(
@@ -365,9 +384,7 @@ function App() {
     setIsHeaderVisible(true);
   }, []);
 
-  const handleCreateProject = useCallback(() => {
-    void logger.info("Create project placeholder action triggered");
-  }, []);
+  // Removed unused create-project placeholder when migrating to AppSidebar
 
   const handleTranslationFormAction = useCallback(
     (formData: FormData) => {
@@ -391,44 +408,148 @@ function App() {
 
   const displayName = user?.name || user?.email || "Authenticated user";
   const activeJobCount = jobList.length;
+  const fixedItems: MenuItem[] = useMemo(
+    () => [
+      { key: "workspace", label: "Workspace", icon: PanelsTopLeft },
+      { key: "projects", label: "Projects", icon: FolderKanban },
+      { key: "jobs", label: "Jobs", icon: Briefcase },
+      { key: "history", label: "History", icon: History },
+      { key: "settings", label: "Settings", icon: Settings },
+    ],
+    [],
+  );
+
+  const handleCloseProject = useCallback(
+    (projectId: string) => {
+      setOpenProjects((previous) => {
+        const next = previous.filter((project) => project.projectId !== projectId);
+        setMainView((current) => {
+          if (parseProjectIdFromKey(current) === projectId) {
+            if (next.length > 0) {
+              const fallback = next[next.length - 1];
+              return toProjectViewKey(fallback.projectId);
+            }
+            return "projects";
+          }
+          return current;
+        });
+        return next;
+      });
+    },
+    [setMainView],
+  );
+
+  const temporaryProjectItems: MenuItem[] = useMemo(
+    () =>
+      openProjects.map((project) => ({
+        key: toProjectViewKey(project.projectId),
+        label: project.name,
+        icon: FileText,
+        onClose: () => handleCloseProject(project.projectId),
+      })),
+    [handleCloseProject, openProjects],
+  );
+
+  const currentProjectId = useMemo(() => parseProjectIdFromKey(mainView), [mainView]);
+  const activeProject = useMemo(() => {
+    if (!currentProjectId) return null;
+    return openProjects.find((project) => project.projectId === currentProjectId) ?? null;
+  }, [currentProjectId, openProjects]);
+
+  const handleOpenProject = useCallback(
+    (project: ProjectListItem) => {
+      setOpenProjects((previous) => {
+        const existingIndex = previous.findIndex((item) => item.projectId === project.projectId);
+        if (existingIndex >= 0) {
+          const next = [...previous];
+          next[existingIndex] = project;
+          return next;
+        }
+        return [...previous, project];
+      });
+      setMainView(toProjectViewKey(project.projectId));
+    },
+    [setMainView],
+  );
+
+  const headerTitle = useHeaderTitle({
+    explicit:
+      activeProject?.name ?? fixedItems.find((i) => i.key === mainView)?.label ?? undefined,
+  });
+  const contentPaddingClass = isHeaderVisible ? "pt-24" : "pt-6";
+  const contentLeftPadClass = useMemo(() => {
+    if (sidebarState === "expanded") return "pl-64"; // 16rem matches w-64
+    if (sidebarState === "compact") return "pl-16"; // 4rem matches w-16
+    return "pl-0";
+  }, [sidebarState]);
 
   return (
     <div className="flex min-h-screen flex-col bg-background/60">
+      <a
+        href="#main-content"
+        className="sr-only focus-visible:not-sr-only fixed left-3 top-3 z-[60] rounded-md border border-border/60 bg-background px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      >
+        Skip to content
+      </a>
       {isHeaderVisible ? (
-        <WorkspaceHeader
-          displayName={displayName}
-          activeJobCount={activeJobCount}
-          sidebarState={sidebarState}
-          onSidebarCycle={cycleSidebarState}
-          onHideHeader={handleHideHeader}
-          onToggleFooter={toggleFooter}
-          isFooterVisible={isFooterVisible}
-          triggerLogout={handleLogoutFormAction}
-          isLogoutPending={isLogoutPending}
-          logoutError={logoutStatus.error}
+        <AppHeader
+          title={headerTitle}
+          onToggleSidebar={cycleSidebarState}
+          state={sidebarState}
+          hideUser={!user}
         />
       ) : (
         <CollapsedHeaderBar onExpand={handleShowHeader} />
       )}
 
-      <div className="flex flex-1 overflow-hidden">
-        <WorkspaceSidebar state={sidebarState} onCreateProject={handleCreateProject} />
-        <WorkspaceMainContent
-          systemError={systemError}
-          form={form}
-          onFormChange={setForm}
-          onSwapLanguages={handleSwapLanguages}
-          submitTranslation={handleTranslationFormAction}
-          isSubmitting={isSubmitting}
-          formStatus={formStatus}
-          isFormValid={formIsValid}
-          health={health}
-          jobList={jobList}
-          selectedJobId={selectedJobId}
-          selectedJob={selectedJob}
-          onSelectJob={setSelectedJobId}
-          activeJobCount={activeJobCount}
+      <div className={cn("flex flex-1 flex-col", contentPaddingClass)}>
+        <AppSidebar
+          state={sidebarState}
+          fixedItems={fixedItems}
+          temporaryItems={temporaryProjectItems}
+          selectedKey={mainView}
+          onSelect={(key) => setMainView(key as MainView)}
+          style={{
+            top: isHeaderVisible ? "5rem" : "3.25rem", // header(3.5rem) + gaps vs collapsed bar(2.5rem) + gap
+            bottom: isFooterVisible ? "4.25rem" : "3.25rem", // footer(3.5rem)/collapsed(2.5rem) + gap
+          }}
         />
+        <main id="main-content" role="main" className="contents">
+          <div className={cn("flex flex-1 overflow-hidden", contentLeftPadClass)}>
+            {mainView === "workspace" ? (
+              <WorkspaceMainContent
+                systemError={systemError}
+                form={form}
+                onFormChange={setForm}
+                onSwapLanguages={handleSwapLanguages}
+                submitTranslation={handleTranslationFormAction}
+                isSubmitting={isSubmitting}
+                formStatus={formStatus}
+                isFormValid={formIsValid}
+                health={health}
+                jobList={jobList}
+                selectedJobId={selectedJobId}
+                selectedJob={selectedJob}
+                onSelectJob={setSelectedJobId}
+                activeJobCount={activeJobCount}
+              />
+            ) : mainView === "projects" ? (
+              <ProjectsPanel onOpenProject={handleOpenProject} />
+            ) : mainView === "settings" ? (
+              <div className="w-full overflow-y-auto p-6">
+                <AppSettingsPanel />
+              </div>
+            ) : currentProjectId ? (
+              <ProjectOverviewPlaceholder project={activeProject} />
+            ) : (
+              <div className="flex w-full items-center justify-center p-6">
+                <div className="rounded-xl border border-border/60 bg-background/70 p-8 text-center text-sm text-muted-foreground shadow-sm">
+                  {fixedItems.find((i) => i.key === mainView)?.label} coming soon
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
       </div>
 
       {isFooterVisible ? (

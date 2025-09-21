@@ -8,9 +8,12 @@ import { invoke } from "@tauri-apps/api/core";
 
 import {
   clearTranslationHistory,
+  getAppSettings,
   listTranslationHistory,
   startTranslation,
+  updateAppFolder,
 } from "./client";
+import type { AppSettings } from "./types";
 import type { TranslationHistoryRecord, TranslationRequest } from "./types";
 
 const invokeMock = vi.mocked(invoke);
@@ -52,5 +55,36 @@ describe("ipc/client", () => {
     await expect(clearTranslationHistory()).rejects.toThrow(
       "[IPC] clear_translation_history failed: SQL failed",
     );
+  });
+
+  it("fetches application settings", async () => {
+    const settings: AppSettings = {
+      appFolder: "/tmp/app",
+      appFolderExists: true,
+      databasePath: "/tmp/app/db.sqlite",
+      databaseExists: true,
+      projectsPath: "/tmp/app/projects",
+      projectsPathExists: true,
+      settingsFile: "/config/settings.yaml",
+      settingsFileExists: true,
+      defaultAppFolder: "/tmp/default",
+      isUsingDefaultLocation: false,
+    };
+    invokeMock.mockResolvedValueOnce(settings);
+
+    const result = await getAppSettings();
+
+    expect(invokeMock).toHaveBeenCalledWith("get_app_settings", undefined);
+    expect(result).toBe(settings);
+  });
+
+  it("updates the application folder", async () => {
+    const payload = { appFolder: "/tmp/new" };
+    invokeMock.mockResolvedValueOnce(payload);
+
+    const result = await updateAppFolder("/tmp/new");
+
+    expect(invokeMock).toHaveBeenCalledWith("update_app_folder", { new_folder: "/tmp/new" });
+    expect(result).toBe(payload);
   });
 });

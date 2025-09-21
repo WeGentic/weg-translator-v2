@@ -37,6 +37,12 @@ impl From<DbError> for IpcError {
                     "Stored translation data is invalid. Try clearing history and retry.".into(),
                 )
             }
+            DbError::InvalidProjectId(_)
+            | DbError::InvalidProjectType(_)
+            | DbError::InvalidProjectStatus(_)
+            | DbError::InvalidProjectFileStatus(_) => {
+                IpcError::Internal("Stored project data is invalid. Refresh and retry.".into())
+            }
             DbError::Sqlx(_) => {
                 IpcError::Internal("Database operation failed unexpectedly. Please retry.".into())
             }

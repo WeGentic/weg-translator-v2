@@ -1,13 +1,13 @@
 use std::fs;
+use std::path::Path;
 use std::sync::Arc;
 
 use log::{debug, error, warn};
 use serde_json::Value;
-use sqlx::{Row, SqlitePool, sqlite::SqlitePoolOptions};
-use tauri::{AppHandle, Manager};
+use sqlx::{Executor, Row, Sqlite, SqlitePool, Transaction, sqlite::SqlitePoolOptions};
 use thiserror::Error;
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
 
 use crate::ipc::dto::{
@@ -16,11 +16,12 @@ use crate::ipc::dto::{
 };
 
 pub const SQLITE_DB_FILE: &str = "weg_translator.db";
-pub const SQLITE_DB_URL: &str = "sqlite:weg_translator.db";
+
+static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 
 #[derive(Clone)]
 pub struct DbManager {
-    pool: SqlitePool,
+    pool: Arc<RwLock<SqlitePool>>,
     write_lock: Arc<Mutex<()>>,
 }
 
@@ -42,6 +43,14 @@ pub enum DbError {
     InvalidUuid(String),
     #[error("duplicate translation job identifier: {0}")]
     DuplicateJob(Uuid),
+    #[error("invalid project identifier stored in database: {0}")]
+    InvalidProjectId(String),
+    #[error("invalid project type '{0}' in storage")]
+    InvalidProjectType(String),
+    #[error("invalid project status '{0}' in storage")]
+    InvalidProjectStatus(String),
+    #[error("invalid project file status '{0}' in storage")]
+    InvalidProjectFileStatus(String),
 }
 
 pub type DbResult<T> = Result<T, DbError>;
@@ -63,28 +72,153 @@ pub struct PersistedTranslationOutput {
     pub duration_ms: Option<i64>,
 }
 
-impl DbManager {
-    pub async fn new(app: &AppHandle) -> DbResult<Self> {
-        let dir = app.path().app_data_dir()?;
-        fs::create_dir_all(&dir)?;
-        let db_path = dir.join(SQLITE_DB_FILE);
-        let connection_url = format!("sqlite://{}", db_path.to_string_lossy());
-        let pool = SqlitePoolOptions::new()
-            .max_connections(5)
-            .connect(&connection_url)
-            .await?;
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectType {
+    Translation,
+    Rag,
+}
 
+impl ProjectType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ProjectType::Translation => "translation",
+            ProjectType::Rag => "rag",
+        }
+    }
+
+    pub fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "translation" => Some(Self::Translation),
+            "rag" => Some(Self::Rag),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectStatus {
+    Active,
+    Archived,
+}
+
+impl ProjectStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ProjectStatus::Active => "active",
+            ProjectStatus::Archived => "archived",
+        }
+    }
+
+    pub fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "active" => Some(Self::Active),
+            "archived" => Some(Self::Archived),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectFileImportStatus {
+    Imported,
+    Failed,
+}
+
+impl ProjectFileImportStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ProjectFileImportStatus::Imported => "imported",
+            ProjectFileImportStatus::Failed => "failed",
+        }
+    }
+
+    pub fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "imported" => Some(Self::Imported),
+            "failed" => Some(Self::Failed),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct NewProject {
+    pub id: Uuid,
+    pub name: String,
+    pub slug: String,
+    pub project_type: ProjectType,
+    pub root_path: String,
+    pub status: ProjectStatus,
+    pub metadata: Option<Value>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NewProjectFile {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub original_name: String,
+    pub original_path: String,
+    pub stored_rel_path: String,
+    pub ext: String,
+    pub size_bytes: Option<i64>,
+    pub checksum_sha256: Option<String>,
+    pub import_status: ProjectFileImportStatus,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProjectListItem {
+    pub id: Uuid,
+    pub name: String,
+    pub slug: String,
+    pub project_type: ProjectType,
+    pub root_path: String,
+    pub status: ProjectStatus,
+    pub created_at: String,
+    pub updated_at: String,
+    pub file_count: i64,
+}
+
+impl DbManager {
+    pub async fn new_with_base_dir(base_dir: &Path) -> DbResult<Self> {
+        fs::create_dir_all(base_dir)?;
+        let pool = Self::connect_pool(base_dir).await?;
         Ok(Self {
-            pool,
+            pool: Arc::new(RwLock::new(pool)),
             write_lock: Arc::new(Mutex::new(())),
         })
     }
 
     pub fn from_pool(pool: SqlitePool) -> Self {
         Self {
-            pool,
+            pool: Arc::new(RwLock::new(pool)),
             write_lock: Arc::new(Mutex::new(())),
         }
+    }
+
+    async fn pool(&self) -> SqlitePool {
+        self.pool.read().await.clone()
+    }
+
+    async fn connect_pool(base_dir: &Path) -> Result<SqlitePool, sqlx::Error> {
+        let db_path = base_dir.join(SQLITE_DB_FILE);
+        let connection_url = format!("sqlite://{}", db_path.to_string_lossy());
+        let pool = SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect(&connection_url)
+            .await?;
+        MIGRATOR.run(&pool).await?;
+        Ok(pool)
+    }
+
+    pub async fn reopen_with_base_dir(&self, base_dir: &Path) -> DbResult<()> {
+        fs::create_dir_all(base_dir)?;
+        let new_pool = Self::connect_pool(base_dir).await?;
+        let _guard = self.write_lock.lock().await;
+        let mut writer = self.pool.write().await;
+        let old_pool = std::mem::replace(&mut *writer, new_pool);
+        drop(writer);
+        old_pool.close().await;
+        Ok(())
     }
 
     pub async fn insert_job(&self, record: &NewTranslationRecord) -> DbResult<()> {
@@ -98,6 +232,8 @@ impl DbManager {
             .transpose()?;
 
         let job_id_str = record.job_id.to_string();
+        let pool = self.pool().await;
+
         let query = sqlx::query(
             "INSERT INTO translation_jobs (id, source_language, target_language, input_text, status, stage, progress, queued_at, created_at, updated_at, metadata) VALUES (?1, ?2, ?3, ?4, 'queued', 'received', 0.0, ?5, ?5, ?5, ?6)"
         )
@@ -108,7 +244,7 @@ impl DbManager {
         .bind(&now)
         .bind(metadata);
 
-        match query.execute(&self.pool).await {
+        match query.execute(&pool).await {
             Ok(_) => {
                 debug!(
                     target: "db::jobs",
@@ -153,6 +289,7 @@ impl DbManager {
         let started_at = matches!(stage, TranslationStage::Preparing).then(|| now.clone());
 
         let job_id_str = job_id.to_string();
+        let pool = self.pool().await;
         let result = sqlx::query(
             "UPDATE translation_jobs
              SET status = ?1,
@@ -170,7 +307,7 @@ impl DbManager {
         .bind(started_at.as_deref())
         .bind(&now)
         .bind(&job_id_str)
-        .execute(&self.pool)
+        .execute(&pool)
         .await;
 
         match result {
@@ -203,6 +340,7 @@ impl DbManager {
         let _guard = self.write_lock.lock().await;
         let now = now_iso8601();
         let job_id_str = job_id.to_string();
+        let pool = self.pool().await;
         let result = sqlx::query(
             "UPDATE translation_jobs
              SET status = 'failed',
@@ -216,7 +354,7 @@ impl DbManager {
         .bind(&now)
         .bind(reason)
         .bind(&job_id_str)
-        .execute(&self.pool)
+        .execute(&pool)
         .await;
 
         match result {
@@ -247,7 +385,8 @@ impl DbManager {
 
     pub async fn store_output(&self, output: &PersistedTranslationOutput) -> DbResult<()> {
         let _guard = self.write_lock.lock().await;
-        let mut tx = self.pool.begin().await?;
+        let pool = self.pool().await;
+        let mut tx = pool.begin().await?;
         let now = now_iso8601();
         let job_id_str = output.job_id.to_string();
 
@@ -330,6 +469,7 @@ impl DbManager {
     }
 
     pub async fn list_jobs(&self, limit: i64, offset: i64) -> DbResult<Vec<StoredTranslationJob>> {
+        let pool = self.pool().await;
         let rows = sqlx::query(
             "SELECT id, source_language, target_language, input_text, status, stage, progress, queued_at, started_at, completed_at, failed_at, failure_reason, metadata, updated_at
              FROM translation_jobs
@@ -338,7 +478,7 @@ impl DbManager {
         )
         .bind(limit)
         .bind(offset)
-        .fetch_all(&self.pool)
+        .fetch_all(&pool)
         .await?;
 
         rows.into_iter().map(|row| build_stored_job(&row)).collect()
@@ -349,6 +489,7 @@ impl DbManager {
         limit: i64,
         offset: i64,
     ) -> DbResult<Vec<TranslationHistoryRecord>> {
+        let pool = self.pool().await;
         let rows = sqlx::query(
             "SELECT
                  j.id,
@@ -377,11 +518,11 @@ impl DbManager {
              LEFT JOIN translation_outputs o ON o.job_id = j.id
              WHERE j.status IN ('completed', 'failed')
              ORDER BY j.updated_at DESC
-             LIMIT ?1 OFFSET ?2",
+            LIMIT ?1 OFFSET ?2",
         )
         .bind(limit)
         .bind(offset)
-        .fetch_all(&self.pool)
+        .fetch_all(&pool)
         .await?;
 
         rows.into_iter()
@@ -390,6 +531,7 @@ impl DbManager {
     }
 
     pub async fn get_job(&self, job_id: Uuid) -> DbResult<Option<TranslationHistoryRecord>> {
+        let pool = self.pool().await;
         let row = sqlx::query(
             "SELECT
                  j.id,
@@ -419,15 +561,135 @@ impl DbManager {
              WHERE j.id = ?1",
         )
         .bind(job_id.to_string())
-        .fetch_optional(&self.pool)
+        .fetch_optional(&pool)
         .await?;
 
         row.map(build_history_record).transpose()
     }
 
+    pub async fn insert_project_with_files(
+        &self,
+        project: &NewProject,
+        files: &[NewProjectFile],
+    ) -> DbResult<()> {
+        let _guard = self.write_lock.lock().await;
+        let pool = self.pool().await;
+        let mut tx = pool.begin().await?;
+
+        self.insert_project(project, &mut tx).await?;
+        for file in files {
+            self.insert_project_file(file, &mut tx).await?;
+        }
+
+        tx.commit().await?;
+        Ok(())
+    }
+
+    pub async fn insert_project(
+        &self,
+        project: &NewProject,
+        tx: &mut Transaction<'_, Sqlite>,
+    ) -> DbResult<()> {
+        let now = now_iso8601();
+        let id = project.id.to_string();
+        let metadata = project
+            .metadata
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()?;
+
+        let query = sqlx::query(
+            "INSERT INTO projects (id, name, slug, project_type, root_path, status, created_at, updated_at, metadata)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7, ?8)",
+        )
+        .bind(&id)
+        .bind(&project.name)
+        .bind(&project.slug)
+        .bind(project.project_type.as_str())
+        .bind(&project.root_path)
+        .bind(project.status.as_str())
+        .bind(&now)
+        .bind(metadata);
+
+        tx.execute(query).await?;
+
+        debug!(
+            target: "db::projects",
+            "inserted project {id} ({name})",
+            name = project.name
+        );
+
+        Ok(())
+    }
+
+    pub async fn insert_project_file(
+        &self,
+        file: &NewProjectFile,
+        tx: &mut Transaction<'_, Sqlite>,
+    ) -> DbResult<()> {
+        let now = now_iso8601();
+        let id = file.id.to_string();
+        let project_id = file.project_id.to_string();
+
+        let query = sqlx::query(
+            "INSERT INTO project_files (id, project_id, original_name, original_path, stored_rel_path, ext, size_bytes, checksum_sha256, import_status, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?10)",
+        )
+        .bind(&id)
+        .bind(&project_id)
+        .bind(&file.original_name)
+        .bind(&file.original_path)
+        .bind(&file.stored_rel_path)
+        .bind(&file.ext)
+        .bind(file.size_bytes)
+        .bind(file.checksum_sha256.as_deref())
+        .bind(file.import_status.as_str())
+        .bind(&now);
+
+        tx.execute(query).await?;
+
+        debug!(
+            target: "db::project_files",
+            "inserted project file {id} for project {project_id} ({original})",
+            original = file.original_name
+        );
+
+        Ok(())
+    }
+
+    pub async fn list_projects(&self, limit: i64, offset: i64) -> DbResult<Vec<ProjectListItem>> {
+        let pool = self.pool().await;
+        let rows = sqlx::query(
+            "SELECT
+                 p.id,
+                 p.name,
+                 p.slug,
+                 p.project_type,
+                 p.root_path,
+                 p.status,
+                 p.created_at,
+                 p.updated_at,
+                 COALESCE(COUNT(f.id), 0) AS file_count
+             FROM projects p
+             LEFT JOIN project_files f ON f.project_id = p.id
+             GROUP BY p.id
+             ORDER BY p.updated_at DESC
+             LIMIT ?1 OFFSET ?2",
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&pool)
+        .await?;
+
+        rows.into_iter()
+            .map(|row| build_project_list_item(row))
+            .collect()
+    }
+
     pub async fn clear_history(&self) -> DbResult<u64> {
         let _guard = self.write_lock.lock().await;
-        let mut tx = self.pool.begin().await?;
+        let pool = self.pool().await;
+        let mut tx = pool.begin().await?;
         sqlx::query(
             "DELETE FROM translation_outputs WHERE job_id IN (
                 SELECT id FROM translation_jobs WHERE status IN ('completed', 'failed')
@@ -506,6 +768,38 @@ fn build_history_record(row: sqlx::sqlite::SqliteRow) -> DbResult<TranslationHis
     });
 
     Ok(TranslationHistoryRecord { job, output })
+}
+
+fn build_project_list_item(row: sqlx::sqlite::SqliteRow) -> DbResult<ProjectListItem> {
+    let id_str: String = row.try_get("id")?;
+    let id = Uuid::parse_str(&id_str).map_err(|_| DbError::InvalidProjectId(id_str.clone()))?;
+
+    let project_type_raw: String = row.try_get("project_type")?;
+    let project_type = ProjectType::from_str(&project_type_raw)
+        .ok_or_else(|| DbError::InvalidProjectType(project_type_raw.clone()))?;
+
+    let status_raw: String = row.try_get("status")?;
+    let status = ProjectStatus::from_str(&status_raw)
+        .ok_or_else(|| DbError::InvalidProjectStatus(status_raw.clone()))?;
+
+    let name: String = row.try_get("name")?;
+    let slug: String = row.try_get("slug")?;
+    let root_path: String = row.try_get("root_path")?;
+    let created_at: String = row.try_get("created_at")?;
+    let updated_at: String = row.try_get("updated_at")?;
+    let file_count: i64 = row.try_get("file_count")?;
+
+    Ok(ProjectListItem {
+        id,
+        name,
+        slug,
+        project_type,
+        root_path,
+        status,
+        created_at,
+        updated_at,
+        file_count,
+    })
 }
 
 fn now_iso8601() -> String {

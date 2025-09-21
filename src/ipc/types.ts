@@ -83,6 +83,47 @@ export interface AppHealthReport {
   buildProfile: string;
 }
 
+export type ProjectType = "translation" | "rag";
+
+export type ProjectStatus = "active" | "archived";
+
+export interface CreateProjectRequest {
+  name: string;
+  projectType: ProjectType;
+  files: string[];
+}
+
+export interface CreateProjectResponse {
+  projectId: string;
+  slug: string;
+  folder: string;
+  fileCount: number;
+}
+
+export interface ProjectListItem {
+  projectId: string;
+  name: string;
+  slug: string;
+  projectType: ProjectType;
+  status: ProjectStatus;
+  fileCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AppSettings {
+  appFolder: string;
+  appFolderExists: boolean;
+  databasePath: string;
+  databaseExists: boolean;
+  projectsPath: string;
+  projectsPathExists: boolean;
+  settingsFile: string;
+  settingsFileExists: boolean;
+  defaultAppFolder: string;
+  isUsingDefaultLocation: boolean;
+}
+
 export const IPC_EVENT = {
   translationProgress: "translation://progress",
   translationCompleted: "translation://completed",
