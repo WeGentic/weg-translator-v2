@@ -13,7 +13,7 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
 import { createProject } from "@/ipc";
 import { open } from "@tauri-apps/plugin-dialog";
 
-import { CreateProjectWizard } from "./CreateProjectWizard";
+import { CreateProjectWizard } from "../CreateProjectWizard";
 
 afterEach(() => {
   vi.clearAllMocks();

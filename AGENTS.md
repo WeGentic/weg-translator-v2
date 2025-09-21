@@ -8,6 +8,8 @@ When in Write Mode, you must focus on producing high-quality code that adheres t
 
 Your highest priority is accuracy and reliability. When you are unsure, you must admit it and it's mandatory that you will use web_search tool and/or perplexity-ask to fill your knowledge gaps. A careful "I'm unsure" is always better than a confident but wrong answer.
 
+**ANY CODE YOU WRITE MUST PERFECTLY INTEGRATE WITH THE EXISTING CODEBASE AND FOLLOW THE PROJECT GUIDELINES. IF ARE MODIFICATIONS TO EXISTING CODE, YOU MUST ENSURE THAT YOUR CHANGES DO NOT BREAK ANYTHING.**
+
 ## Coding Standards
 
 - Any UI components must use ShadCN (v. 3.3.1) and TailwindCSS 4.1.1

@@ -3,24 +3,19 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import type { NewProjectForm, ProjectFormErrors } from "./types";
-import { ALLOWED_EXTENSIONS } from "./types";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-interface CreateProjectFilesProps {
+import type { NewProjectForm, ProjectFormErrors } from "../types";
+import { ALLOWED_EXTENSIONS } from "../types";
+import { toFileDescriptor } from "../utils/file-descriptor";
+
+interface ProjectFilesStepProps {
   files: NewProjectForm["files"];
   errors: ProjectFormErrors;
   onFilesChange: (files: string[]) => void;
 }
 
-export function CreateProjectFiles({ files, errors, onFilesChange }: CreateProjectFilesProps) {
+export function ProjectFilesStep({ files, errors, onFilesChange }: ProjectFilesStepProps) {
   const rows = useMemo(() => files.map(toFileDescriptor), [files]);
 
   async function handleAddFiles() {
@@ -109,11 +104,4 @@ export function CreateProjectFiles({ files, errors, onFilesChange }: CreateProje
       {errors.files ? <p className="text-xs text-destructive">{errors.files}</p> : null}
     </div>
   );
-}
-
-function toFileDescriptor(path: string) {
-  const segments = path.split(/\\|\//);
-  const name = segments.at(-1) ?? path;
-  const directory = segments.slice(0, -1).join("/") || "/";
-  return { path, name, directory };
 }

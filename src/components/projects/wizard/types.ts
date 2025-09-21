@@ -15,9 +15,8 @@ export interface ProjectFormErrors {
   general?: string;
 }
 
-export interface WizardStepState {
-  index: WizardStep;
-  canProceed: boolean;
+export interface CreateProjectStatus {
+  error: string | null;
 }
 
 export const INITIAL_PROJECT_FORM: NewProjectForm = {
@@ -27,3 +26,11 @@ export const INITIAL_PROJECT_FORM: NewProjectForm = {
 };
 
 export const ALLOWED_EXTENSIONS = ["docx", "doc", "xliff", "mqxliff", "sdlxliff"] as const;
+
+export const CREATE_PROJECT_STEP_LABELS = [
+  "Project details",
+  "Select files",
+  "Review",
+] as const;
+
+export type WizardStepLabel = (typeof CREATE_PROJECT_STEP_LABELS)[number];

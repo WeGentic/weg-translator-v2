@@ -12,7 +12,7 @@ import {
 import { type SidebarState } from "./components/layout/WorkspaceSidebar";
 import { AppSidebar, type MenuItem } from "./components/layout/AppSidebar";
 import { ProjectsPanel } from "./components/projects/ProjectsPanel";
-import { ProjectOverviewPlaceholder } from "./components/projects/ProjectOverviewPlaceholder";
+import { ProjectOverviewPlaceholder } from "./components/projects/overview/ProjectOverviewPlaceholder";
 import { AppSettingsPanel } from "./components/settings/AppSettingsPanel";
 import { useAuth } from "./contexts/AuthContext";
 import { logger } from "./logging";

@@ -1,12 +1,13 @@
 import { useMemo } from "react";
 
-import type { NewProjectForm } from "./types";
+import type { NewProjectForm } from "../types";
+import { toFileDescriptor } from "../utils/file-descriptor";
 
-interface CreateProjectReviewProps {
+interface ProjectReviewStepProps {
   form: NewProjectForm;
 }
 
-export function CreateProjectReview({ form }: CreateProjectReviewProps) {
+export function ProjectReviewStep({ form }: ProjectReviewStepProps) {
   const fileSummaries = useMemo(() => form.files.map(toFileDescriptor), [form.files]);
 
   return (
@@ -15,15 +16,15 @@ export function CreateProjectReview({ form }: CreateProjectReviewProps) {
         <dl className="grid gap-3 text-sm">
           <div className="flex items-start justify-between gap-4">
             <dt className="text-muted-foreground">Project name</dt>
-            <dd className="font-medium text-foreground text-right">{form.name}</dd>
+            <dd className="text-right font-medium text-foreground">{form.name}</dd>
           </div>
           <div className="flex items-start justify-between gap-4">
             <dt className="text-muted-foreground">Project type</dt>
-            <dd className="font-medium text-foreground text-right">{formatProjectType(form.type)}</dd>
+            <dd className="text-right font-medium text-foreground">{formatProjectType(form.type)}</dd>
           </div>
           <div className="flex items-start justify-between gap-4">
             <dt className="text-muted-foreground">Files selected</dt>
-            <dd className="font-medium text-foreground text-right">{fileSummaries.length}</dd>
+            <dd className="text-right font-medium text-foreground">{fileSummaries.length}</dd>
           </div>
         </dl>
       </div>
@@ -47,13 +48,6 @@ export function CreateProjectReview({ form }: CreateProjectReviewProps) {
       </div>
     </div>
   );
-}
-
-function toFileDescriptor(path: string) {
-  const segments = path.split(/\\|\//);
-  const name = segments.at(-1) ?? path;
-  const directory = segments.slice(0, -1).join("/") || "/";
-  return { path, name, directory };
 }
 
 function formatProjectType(type: NewProjectForm["type"]) {

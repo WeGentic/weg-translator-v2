@@ -28,10 +28,10 @@ This plan designs and specifies a create-project Wizard integrated with `Project
 
 ## UI Architecture
 - New components under `src/components/projects/`:
-  - `CreateProjectWizard.tsx` – Modal wrapper + stepper logic + actions.
-  - `CreateProjectDetails.tsx` – Step 1 form (name, type).
-  - `CreateProjectFiles.tsx` – Step 2 file selection and table.
-  - `CreateProjectReview.tsx` – Step 3 summary.
+  - `wizard/CreateProjectWizard.tsx` – Modal wrapper, state bridge, and dialog control logic.
+  - `wizard/steps/ProjectDetailsStep.tsx` – Step 1 form (name, type).
+  - `wizard/steps/ProjectFilesStep.tsx` – Step 2 file selection and table.
+  - `wizard/steps/ProjectReviewStep.tsx` – Step 3 summary.
   - `ProjectsPanel` consumes the wizard (internal state) and refreshes list post-create.
 - ShadCN components to (add/use):
   - `ui/dialog.tsx` (Modal) – if not present, add via shadcn.
@@ -45,7 +45,7 @@ This plan designs and specifies a create-project Wizard integrated with `Project
 
 ### Types
 ```ts
-// src/components/projects/types.ts
+// src/components/projects/wizard/types.ts
 export type ProjectType = "translation" | "rag";
 
 export interface NewProjectForm {

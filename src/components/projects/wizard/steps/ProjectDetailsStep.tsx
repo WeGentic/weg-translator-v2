@@ -1,26 +1,21 @@
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import type { NewProjectForm, ProjectFormErrors } from "./types";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+import type { NewProjectForm, ProjectFormErrors } from "../types";
 
 const projectTypeOptions = [
   { value: "translation", label: "Translation" },
   { value: "rag", label: "RAG" },
 ] as const;
 
-interface CreateProjectDetailsProps {
+interface ProjectDetailsStepProps {
   form: NewProjectForm;
   errors: ProjectFormErrors;
   onChange: (patch: Partial<NewProjectForm>) => void;
 }
 
-export function CreateProjectDetails({ form, errors, onChange }: CreateProjectDetailsProps) {
+export function ProjectDetailsStep({ form, errors, onChange }: ProjectDetailsStepProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -52,10 +47,7 @@ export function CreateProjectDetails({ form, errors, onChange }: CreateProjectDe
           Project type
           <span className="text-xs font-normal text-muted-foreground">Required</span>
         </Label>
-        <Select
-          value={form.type}
-          onValueChange={(value) => onChange({ type: value as NewProjectForm["type"] })}
-        >
+        <Select value={form.type} onValueChange={(value) => onChange({ type: value as NewProjectForm["type"] })}>
           <SelectTrigger
             id="project-type"
             aria-invalid={Boolean(errors.type)}

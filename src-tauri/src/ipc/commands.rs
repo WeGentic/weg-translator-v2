@@ -733,6 +733,40 @@ pub async fn update_app_folder(
         .into());
     }
 
+    if let Err(error) = db
+        .update_project_root_paths(&current_settings.app_folder, &candidate_path)
+        .await
+    {
+        error!(
+            target: "ipc::settings",
+            "failed to refresh project root paths after moving data: {error}"
+        );
+
+        match move_directory(&candidate_path, &current_settings.app_folder).await {
+            Ok(_) => {
+                if let Err(reopen_error) =
+                    db.reopen_with_base_dir(&current_settings.app_folder).await
+                {
+                    error!(
+                        target: "ipc::settings",
+                        "failed to reopen database at previous folder after project path update error: {reopen_error}"
+                    );
+                }
+            }
+            Err(revert_error) => {
+                error!(
+                    target: "ipc::settings",
+                    "failed to revert application data after project path update error: {revert_error}"
+                );
+            }
+        }
+
+        return Err(IpcError::Internal(
+            "Unable to refresh stored project paths. Application data was restored to the previous location.".into(),
+        )
+        .into());
+    }
+
     if let Err(error) = settings
         .update_and_save_app_folder(candidate_path.clone())
         .await
