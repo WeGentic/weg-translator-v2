@@ -3,10 +3,13 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   AppHealthReport,
   AppSettings,
+  AddFilesResponse,
   CreateProjectRequest,
   CreateProjectResponse,
   JobAccepted,
   JobRecord,
+  EnsureConversionsPlan,
+  ProjectDetails,
   ProjectListItem,
   TranslationHistoryRecord,
   TranslationRequest,
@@ -88,4 +91,32 @@ export async function getAppSettings() {
 
 export async function updateAppFolder(newFolder: string) {
   return safeInvoke<AppSettings>("update_app_folder", { new_folder: newFolder });
+}
+
+// ===== Project: Details & Conversions IPC =====
+
+export async function getProjectDetails(projectId: string) {
+  return safeInvoke<ProjectDetails>("get_project_details", { project_id: projectId });
+}
+
+export async function addFilesToProject(projectId: string, files: string[]) {
+  return safeInvoke<AddFilesResponse>("add_files_to_project", { project_id: projectId, files });
+}
+
+export async function removeProjectFile(projectId: string, projectFileId: string) {
+  return safeInvoke<number>("remove_project_file", { project_id: projectId, project_file_id: projectFileId });
+}
+
+export async function ensureProjectConversionsPlan(projectId: string) {
+  return safeInvoke<EnsureConversionsPlan>("ensure_project_conversions_plan", { project_id: projectId });
+}
+
+export async function updateConversionStatus(
+  conversionId: string,
+  status: "pending" | "running" | "completed" | "failed",
+  payload?: { xliffRelPath?: string; errorMessage?: string },
+) {
+  const xliff_rel_path = payload?.xliffRelPath;
+  const error_message = payload?.errorMessage;
+  return safeInvoke<void>("update_conversion_status", { conversion_id: conversionId, status, xliff_rel_path, error_message });
 }

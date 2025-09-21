@@ -90,6 +90,8 @@ export type ProjectStatus = "active" | "archived";
 export interface CreateProjectRequest {
   name: string;
   projectType: ProjectType;
+  defaultSrcLang: string;
+  defaultTgtLang: string;
   files: string[];
 }
 
@@ -122,6 +124,80 @@ export interface AppSettings {
   settingsFileExists: boolean;
   defaultAppFolder: string;
   isUsingDefaultLocation: boolean;
+}
+
+// ===== Project Details & Conversions =====
+
+export type ProjectFileImportStatus = "imported" | "failed";
+export type ProjectFileConversionStatus = "pending" | "running" | "completed" | "failed";
+
+export interface ProjectFileDto {
+  id: string;
+  originalName: string;
+  storedRelPath: string;
+  ext: string;
+  sizeBytes?: number;
+  importStatus: ProjectFileImportStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectFileConversionDto {
+  id: string;
+  projectFileId: string;
+  srcLang: string;
+  tgtLang: string;
+  version: string;
+  paragraph: boolean;
+  embed: boolean;
+  xliffRelPath?: string;
+  status: ProjectFileConversionStatus;
+  startedAt?: string;
+  completedAt?: string;
+  failedAt?: string;
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectFileWithConversionsDto {
+  file: ProjectFileDto;
+  conversions: ProjectFileConversionDto[];
+}
+
+export interface ProjectDetails {
+  id: string;
+  name: string;
+  slug: string;
+  defaultSrcLang?: string;
+  defaultTgtLang?: string;
+  rootPath: string;
+  files: ProjectFileWithConversionsDto[];
+}
+
+export interface AddFilesResponse {
+  inserted: ProjectFileDto[];
+  insertedCount: number;
+}
+
+export interface EnsureConversionsTask {
+  conversionId: string;
+  projectFileId: string;
+  inputAbsPath: string;
+  outputAbsPath: string;
+  srcLang: string;
+  tgtLang: string;
+  version: string;
+  paragraph: boolean;
+  embed: boolean;
+}
+
+export interface EnsureConversionsPlan {
+  projectId: string;
+  srcLang: string;
+  tgtLang: string;
+  version: string;
+  tasks: EnsureConversionsTask[];
 }
 
 export const IPC_EVENT = {

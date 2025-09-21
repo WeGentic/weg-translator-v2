@@ -13,6 +13,7 @@ import { type SidebarState } from "./components/layout/WorkspaceSidebar";
 import { AppSidebar, type MenuItem } from "./components/layout/AppSidebar";
 import { ProjectsPanel } from "./components/projects/ProjectsPanel";
 import { ProjectOverviewPlaceholder } from "./components/projects/overview/ProjectOverviewPlaceholder";
+import { ProjectOverview } from "./components/projects/overview/ProjectOverview";
 import { AppSettingsPanel } from "./components/settings/AppSettingsPanel";
 import { useAuth } from "./contexts/AuthContext";
 import { logger } from "./logging";
@@ -540,7 +541,11 @@ function App() {
                 <AppSettingsPanel />
               </div>
             ) : currentProjectId ? (
-              <ProjectOverviewPlaceholder project={activeProject} />
+              activeProject ? (
+                <ProjectOverview projectSummary={activeProject} />
+              ) : (
+                <ProjectOverviewPlaceholder project={activeProject} />
+              )
             ) : (
               <div className="flex w-full items-center justify-center p-6">
                 <div className="rounded-xl border border-border/60 bg-background/70 p-8 text-center text-sm text-muted-foreground shadow-sm">

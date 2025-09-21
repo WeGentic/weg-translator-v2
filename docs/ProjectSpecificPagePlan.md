@@ -2,6 +2,17 @@
 
 Goal: Implement a project-specific page with file management and automatic XLIFF conversion on open, plus wizard language selectors and SQLite persistence for file/conversion status. Uses React 19.1.1, ShadCN v3.3.1, TailwindCSS 4.1.1, and Tauri 2.8.5 sidecars.
 
+Progress (Sep 21):
+- [x] 1–2 Migrations added (006, 007)
+- [x] 3–4 DbManager structs + CRUD + helpers
+- [x] 5–7 IPC DTOs + commands + capabilities
+- [x] 8–10 Wizard language fields + validation + request wiring
+- [x] 11 Frontend IPC wrappers
+- [x] 12–15 Project page (details, file table, add/remove, auto‑conversion modal + statuses)
+- [ ] 16–20 Paths/UX: implemented as described; monitor for refinements
+- [ ] 21–22 Unit tests (next)
+- [ ] 23–26 Docs/rollout (docs updated incrementally; finalize after tests)
+
 Note on sidecars: We will execute the packaged OpenXLIFF sidecar from the frontend via `@tauri-apps/plugin-shell` (`Command.sidecar`), which is already wired in `src/lib/openxliff.ts`. This aligns with the existing capabilities config and avoids duplicating process control on the backend.
 
 
@@ -193,4 +204,3 @@ Note on sidecars: We will execute the packaged OpenXLIFF sidecar from the fronte
 - Use existing `src/lib/openxliff.ts` streaming helpers for robust stdout/stderr capture and normalized errors.
 - Persist only relative paths in DB; compute absolute with `project.root_path` on demand.
 - Enforce BCP‑47 well-formedness with `src/lib/validators.ts`; do not over-constrain (accept well-formed tags, not only ISO pairs).
-

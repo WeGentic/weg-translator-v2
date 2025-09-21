@@ -280,6 +280,8 @@ pub struct NewProject {
     pub project_type: ProjectType,
     pub root_path: String,
     pub status: ProjectStatus,
+    pub default_src_lang: Option<String>,
+    pub default_tgt_lang: Option<String>,
     pub metadata: Option<Value>,
 }
 
@@ -781,8 +783,8 @@ impl DbManager {
             .transpose()?;
 
         let query = sqlx::query(
-            "INSERT INTO projects (id, name, slug, project_type, root_path, status, created_at, updated_at, metadata)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7, ?8)",
+            "INSERT INTO projects (id, name, slug, project_type, root_path, status, default_src_lang, default_tgt_lang, created_at, updated_at, metadata)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9, ?10)",
         )
         .bind(&id)
         .bind(&project.name)
@@ -790,6 +792,8 @@ impl DbManager {
         .bind(project.project_type.as_str())
         .bind(&project.root_path)
         .bind(project.status.as_str())
+        .bind(project.default_src_lang.as_deref())
+        .bind(project.default_tgt_lang.as_deref())
         .bind(&now)
         .bind(metadata);
 

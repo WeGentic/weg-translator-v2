@@ -6,9 +6,11 @@ pub use crate::db::{DbError, DbManager, NewTranslationRecord, PersistedTranslati
 pub use crate::ipc::dto::{TranslationHistoryRecord, TranslationRequest, TranslationStage};
 
 use ipc::{
-    TranslationState, clear_translation_history, create_project_with_files, fail_translation,
-    get_app_settings, get_translation_job, health_check, list_active_jobs, list_projects,
-    list_translation_history, path_exists, start_translation, update_app_folder,
+    TranslationState, add_files_to_project, clear_translation_history, create_project_with_files,
+    ensure_project_conversions_plan, fail_translation, get_app_settings, get_project_details,
+    get_translation_job, health_check, list_active_jobs, list_projects, list_translation_history,
+    path_exists, remove_project_file, start_translation, update_app_folder,
+    update_conversion_status,
 };
 use log::LevelFilter;
 use log::kv::VisitSource;
@@ -83,6 +85,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             clear_translation_history,
             create_project_with_files,
+            get_project_details,
+            add_files_to_project,
+            remove_project_file,
+            ensure_project_conversions_plan,
+            update_conversion_status,
             health_check,
             get_translation_job,
             get_app_settings,

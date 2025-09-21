@@ -52,6 +52,8 @@ export function useProjectWizard({ onProjectCreated, onRequestClose }: UseProjec
         const response = await createProject({
           name: normalized.name,
           projectType: normalized.type as ProjectType,
+          defaultSrcLang: normalized.srcLang,
+          defaultTgtLang: normalized.tgtLang,
           files: normalized.files,
         });
 
@@ -90,6 +92,8 @@ export function useProjectWizard({ onProjectCreated, onRequestClose }: UseProjec
       const next = { ...current, general: undefined } satisfies ProjectFormErrors;
       if (patch.name !== undefined) next.name = undefined;
       if (patch.type !== undefined) next.type = undefined;
+      if (patch.srcLang !== undefined) next.srcLang = undefined;
+      if (patch.tgtLang !== undefined) next.tgtLang = undefined;
       if (patch.files !== undefined) next.files = undefined;
       return next;
     });
@@ -118,11 +122,11 @@ export function useProjectWizard({ onProjectCreated, onRequestClose }: UseProjec
         return;
       }
     }
-    setStep((current) => Math.min((current + 1) as WizardStep, 2));
+    setStep((current) => (current === 0 ? 1 : 2));
   }, [form, step]);
 
   const goBack = useCallback(() => {
-    setStep((current) => Math.max((current - 1) as WizardStep, 0));
+    setStep((current) => (current === 2 ? 1 : 0));
   }, []);
 
   const submit = useCallback(() => {

@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { isWellFormedBcp47 } from "@/lib/validators";
 
 import type { NewProjectForm, ProjectFormErrors } from "../types";
 
@@ -68,6 +69,47 @@ export function ProjectDetailsStep({ form, errors, onChange }: ProjectDetailsSte
             {errors.type}
           </p>
         ) : null}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="src-lang" className="flex items-center justify-between text-sm font-medium text-foreground">
+            Source language
+            <span className="text-xs font-normal text-muted-foreground">BCP‑47</span>
+          </Label>
+          <Input
+            id="src-lang"
+            value={form.srcLang}
+            onChange={(e) => onChange({ srcLang: e.target.value })}
+            placeholder="e.g. en-US"
+            aria-invalid={Boolean(errors.srcLang) || (form.srcLang ? !isWellFormedBcp47(form.srcLang) : false)}
+            aria-describedby={errors.srcLang ? "src-lang-error" : undefined}
+          />
+          {errors.srcLang ? (
+            <p id="src-lang-error" className="text-xs text-destructive">
+              {errors.srcLang}
+            </p>
+          ) : null}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="tgt-lang" className="flex items-center justify-between text-sm font-medium text-foreground">
+            Target language
+            <span className="text-xs font-normal text-muted-foreground">BCP‑47</span>
+          </Label>
+          <Input
+            id="tgt-lang"
+            value={form.tgtLang}
+            onChange={(e) => onChange({ tgtLang: e.target.value })}
+            placeholder="e.g. it-IT"
+            aria-invalid={Boolean(errors.tgtLang) || (form.tgtLang ? !isWellFormedBcp47(form.tgtLang) : false)}
+            aria-describedby={errors.tgtLang ? "tgt-lang-error" : undefined}
+          />
+          {errors.tgtLang ? (
+            <p id="tgt-lang-error" className="text-xs text-destructive">
+              {errors.tgtLang}
+            </p>
+          ) : null}
+        </div>
       </div>
     </div>
   );

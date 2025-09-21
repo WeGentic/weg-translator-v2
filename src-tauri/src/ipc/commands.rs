@@ -11,7 +11,9 @@ use tokio::{fs, time::sleep};
 use uuid::Uuid;
 
 use super::dto::{
-    AppHealthReport, AppSettingsDto, CreateProjectRequest, CreateProjectResponse, JobAccepted,
+    AddFilesResponseDto, AppHealthReport, AppSettingsDto, CreateProjectRequest,
+    CreateProjectResponse, EnsureConversionsPlanDto, EnsureConversionsTaskDto, JobAccepted,
+    ProjectDetailsDto, ProjectFileConversionDto, ProjectFileDto, ProjectFileWithConversionsDto,
     ProjectListItemDto, TranslationCompletedPayload, TranslationFailedPayload,
     TranslationHistoryRecord, TranslationProgressPayload, TranslationRequest, TranslationStage,
 };
@@ -21,7 +23,8 @@ use super::state::{JobRecord, TranslationState};
 
 use crate::db::{
     DbManager, NewProject, NewProjectFile, NewTranslationRecord, PersistedTranslationOutput,
-    ProjectFileImportStatus, ProjectListItem, ProjectStatus, ProjectType, SQLITE_DB_FILE,
+    ProjectDetails, ProjectFileConversionRow, ProjectFileDetails, ProjectFileImportStatus,
+    ProjectListItem, ProjectStatus, ProjectType, SQLITE_DB_FILE,
 };
 use crate::settings::{SettingsManager, move_directory};
 
@@ -307,6 +310,16 @@ pub async fn create_project_with_files(
         project_type,
         root_path: project_dir.display().to_string(),
         status: ProjectStatus::Active,
+        default_src_lang: req
+            .default_src_lang
+            .clone()
+            .filter(|s| !s.trim().is_empty())
+            .or(Some("en-US".into())),
+        default_tgt_lang: req
+            .default_tgt_lang
+            .clone()
+            .filter(|s| !s.trim().is_empty())
+            .or(Some("it-IT".into())),
         metadata: None,
     };
 
@@ -323,6 +336,8 @@ pub async fn create_project_with_files(
         return Err(IpcError::from(error).into());
     }
 
+    // default languages saved within project record
+
     info!(
         target: "ipc::projects",
         "created project {project_id} with {count} file(s)",
@@ -335,6 +350,337 @@ pub async fn create_project_with_files(
         folder: project_dir.display().to_string(),
         file_count: imported_files.len(),
     })
+}
+
+// ===== Projects: Details & File Management & Conversions =====
+
+#[tauri::command]
+pub async fn get_project_details(
+    db: State<'_, DbManager>,
+    project_id: Uuid,
+) -> IpcResult<ProjectDetailsDto> {
+    let details = db.list_project_details(project_id).await?;
+    Ok(project_details_to_dto(&details))
+}
+
+#[tauri::command]
+pub async fn add_files_to_project(
+    _app: AppHandle,
+    settings: State<'_, SettingsManager>,
+    db: State<'_, DbManager>,
+    project_id: Uuid,
+    files: Vec<String>,
+) -> IpcResult<AddFilesResponseDto> {
+    if files.is_empty() {
+        return Err(IpcError::Validation("Select at least one file to add.".into()).into());
+    }
+
+    // Resolve project root
+    let project_root = db.project_root_path(project_id).await?;
+    let mut unique_paths = HashSet::new();
+    let mut pending_files = Vec::new();
+
+    for raw in &files {
+        let trimmed = raw.trim();
+        if trimmed.is_empty() {
+            return Err(IpcError::Validation("File paths cannot be empty.".into()).into());
+        }
+        let candidate_path = PathBuf::from(trimmed);
+        let canonical_path = match fs::canonicalize(&candidate_path).await {
+            Ok(path) => path,
+            Err(error) => {
+                warn!(target: "ipc::projects", "failed to canonicalize file '{trimmed}': {error}");
+                return Err(IpcError::Validation(format!(
+                    "File '{trimmed}' is not accessible."
+                ))
+                .into());
+            }
+        };
+        if !unique_paths.insert(canonical_path.clone()) {
+            continue;
+        }
+        let metadata = match fs::metadata(&canonical_path).await {
+            Ok(meta) => meta,
+            Err(error) => {
+                warn!(
+                    target: "ipc::projects",
+                    "failed to read metadata for '{:?}': {error}",
+                    canonical_path
+                );
+                return Err(IpcError::Validation(format!(
+                    "File '{}' is not accessible.",
+                    canonical_path.display()
+                ))
+                .into());
+            }
+        };
+        if !metadata.is_file() {
+            return Err(IpcError::Validation(format!(
+                "'{}' is not a regular file.",
+                canonical_path.display()
+            ))
+            .into());
+        }
+        let extension = canonical_path
+            .extension()
+            .and_then(OsStr::to_str)
+            .map(|ext| ext.to_lowercase())
+            .ok_or_else(|| {
+                IpcError::Validation(format!(
+                    "File '{}' is missing an extension.",
+                    canonical_path.display()
+                ))
+            })?;
+        if !ALLOWED_PROJECT_EXTENSIONS.contains(&extension.as_str()) {
+            return Err(IpcError::Validation(format!(
+                "File '{}' has an unsupported extension (allowed: {}).",
+                canonical_path.display(),
+                ALLOWED_PROJECT_EXTENSIONS.join(", ")
+            ))
+            .into());
+        }
+        let original_name = canonical_path
+            .file_name()
+            .and_then(OsStr::to_str)
+            .map(str::to_string)
+            .ok_or_else(|| {
+                IpcError::Validation(format!(
+                    "Unable to determine file name for '{}'.",
+                    canonical_path.display()
+                ))
+            })?;
+        pending_files.push((canonical_path, original_name, extension));
+    }
+
+    if pending_files.is_empty() {
+        return Err(IpcError::Validation("No unique files were selected.".into()).into());
+    }
+
+    // Copy files in and prepare DB rows
+    let mut imported_files = Vec::with_capacity(pending_files.len());
+    for (source_path, original_name, extension) in &pending_files {
+        let candidate_name = match next_available_file_name(&project_root, original_name).await {
+            Ok(name) => name,
+            Err(error) => {
+                error!(
+                    target: "ipc::projects",
+                    "failed to resolve unique filename for {:?}: {error}",
+                    original_name
+                );
+                return Err(IpcError::Internal(
+                    "Unable to stage imported files for the project.".into(),
+                )
+                .into());
+            }
+        };
+        let destination_path = project_root.join(&candidate_name);
+        if let Err(error) = fs::copy(source_path, &destination_path).await {
+            error!(
+                target: "ipc::projects",
+                "failed to copy file {:?} -> {:?}: {error}",
+                source_path,
+                destination_path
+            );
+            return Err(IpcError::Internal(
+                "Unable to copy selected files into the project.".into(),
+            )
+            .into());
+        }
+        let stored_rel_path = candidate_name.clone();
+        let size_bytes = match fs::metadata(&destination_path).await {
+            Ok(meta) => i64::try_from(meta.len()).ok(),
+            Err(error) => {
+                warn!(
+                    target: "ipc::projects",
+                    "failed to inspect copied file {:?}: {error}",
+                    destination_path
+                );
+                None
+            }
+        };
+        imported_files.push(NewProjectFile {
+            id: Uuid::new_v4(),
+            project_id,
+            original_name: original_name.clone(),
+            original_path: source_path.display().to_string(),
+            stored_rel_path,
+            ext: extension.clone(),
+            size_bytes,
+            checksum_sha256: None,
+            import_status: ProjectFileImportStatus::Imported,
+        });
+    }
+
+    let inserted = db
+        .add_files_to_project(project_id, &imported_files)
+        .await?;
+
+    let inserted_dtos = inserted
+        .into_iter()
+        .map(project_file_to_dto)
+        .collect::<Vec<_>>();
+
+    Ok(AddFilesResponseDto {
+        inserted: inserted_dtos,
+        inserted_count: imported_files.len(),
+    })
+}
+
+#[tauri::command]
+pub async fn remove_project_file(
+    db: State<'_, DbManager>,
+    project_id: Uuid,
+    project_file_id: Uuid,
+) -> IpcResult<u64> {
+    // Snapshot details for cleanup
+    let details = db.list_project_details(project_id).await?;
+    let root_path = PathBuf::from(&details.root_path);
+
+    let target = details
+        .files
+        .iter()
+        .find(|f| f.file.id.to_string() == project_file_id.to_string())
+        .cloned();
+
+    let removed = db
+        .remove_project_file(project_id, project_file_id)
+        .await?;
+
+    if let Some(entry) = target {
+        // Remove original file
+        let source_path = root_path.join(&entry.file.stored_rel_path);
+        if let Err(error) = fs::remove_file(&source_path).await {
+            if error.kind() != ErrorKind::NotFound {
+                warn!(
+                    target: "ipc::projects",
+                    "failed to remove project file artifact {:?}: {error}",
+                    source_path
+                );
+            }
+        }
+        // Remove any generated xliff
+        for conv in entry.conversions {
+            if let Some(rel) = conv.xliff_rel_path {
+                let xliff_path = root_path.join(rel);
+                if let Err(error) = fs::remove_file(&xliff_path).await {
+                    if error.kind() != ErrorKind::NotFound {
+                        warn!(
+                            target: "ipc::projects",
+                            "failed to remove xliff artifact {:?}: {error}",
+                            xliff_path
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(removed)
+}
+
+#[tauri::command]
+pub async fn ensure_project_conversions_plan(
+    db: State<'_, DbManager>,
+    project_id: Uuid,
+) -> IpcResult<EnsureConversionsPlanDto> {
+    let details = db.list_project_details(project_id).await?;
+    let src_lang = details
+        .default_src_lang
+        .clone()
+        .unwrap_or_else(|| "en-US".to_string());
+    let tgt_lang = details
+        .default_tgt_lang
+        .clone()
+        .unwrap_or_else(|| "it-IT".to_string());
+    let version = "2.1".to_string();
+
+    // Ensure xliff subdir exists
+    let root_path = PathBuf::from(&details.root_path);
+    let xliff_dir = DbManager::ensure_subdir(&root_path, "xliff")?;
+
+    // Build a quick lookup of file id -> stored_rel_path
+    let mut file_map = std::collections::HashMap::<String, ProjectFileDetails>::new();
+    for f in &details.files {
+        file_map.insert(f.file.id.to_string(), f.file.clone());
+    }
+
+    let pending = db
+        .list_pending_conversions(project_id, &src_lang, &tgt_lang)
+        .await?;
+
+    let mut tasks = Vec::with_capacity(pending.len());
+    for row in pending {
+        if let Some(f) = file_map.get(&row.project_file_id.to_string()) {
+            let input_abs_path = root_path.join(&f.stored_rel_path);
+            // derive output file name: <stem>.<src>-<tgt>.xlf
+            let stem = Path::new(&f.stored_rel_path)
+                .file_stem()
+                .and_then(OsStr::to_str)
+                .unwrap_or("file");
+            let target_name = format!("{}.{}-{}.xlf", stem, src_lang, tgt_lang);
+            let output_abs_path = xliff_dir.join(target_name);
+            tasks.push(EnsureConversionsTaskDto {
+                conversion_id: row.id.to_string(),
+                project_file_id: f.id.to_string(),
+                input_abs_path: input_abs_path.display().to_string(),
+                output_abs_path: output_abs_path.display().to_string(),
+                src_lang: src_lang.clone(),
+                tgt_lang: tgt_lang.clone(),
+                version: version.clone(),
+                paragraph: true,
+                embed: true,
+            });
+        }
+    }
+
+    Ok(EnsureConversionsPlanDto {
+        project_id: details.id.to_string(),
+        src_lang,
+        tgt_lang,
+        version,
+        tasks,
+    })
+}
+
+#[tauri::command]
+pub async fn update_conversion_status(
+    db: State<'_, DbManager>,
+    conversion_id: Uuid,
+    status: String,
+    xliff_rel_path: Option<String>,
+    error_message: Option<String>,
+) -> IpcResult<()> {
+    use crate::db::ProjectFileConversionStatus as S;
+    let parsed = match status.as_str() {
+        "pending" => S::Pending,
+        "running" => S::Running,
+        "completed" => S::Completed,
+        "failed" => S::Failed,
+        _ => return Err(IpcError::Validation("Invalid conversion status.".into()).into()),
+    };
+
+    let ts = time::OffsetDateTime::now_utc()
+        .format(&time::format_description::well_known::Rfc3339)
+        .unwrap_or_else(|_| time::OffsetDateTime::now_utc().to_string());
+    let (started_at, completed_at, failed_at) = match parsed {
+        S::Running => (Some(ts), None, None),
+        S::Completed => (None, Some(ts), None),
+        S::Failed => (None, None, Some(ts)),
+        S::Pending => (None, None, None),
+    };
+
+    db
+        .upsert_conversion_status(
+            conversion_id,
+            parsed,
+            xliff_rel_path,
+            error_message,
+            started_at,
+            completed_at,
+            failed_at,
+        )
+        .await?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -937,6 +1283,65 @@ fn build_project_slug(name: &str, project_id: Uuid) -> String {
     let mut unique = project_id.simple().to_string();
     unique.truncate(8);
     format!("{base}-{unique}")
+}
+
+// ===== Mapping helpers =====
+
+fn project_details_to_dto(details: &ProjectDetails) -> ProjectDetailsDto {
+    let files = details
+        .files
+        .iter()
+        .map(|f| ProjectFileWithConversionsDto {
+            file: project_file_to_dto(&f.file),
+            conversions: f
+                .conversions
+                .iter()
+                .map(project_file_conversion_to_dto)
+                .collect(),
+        })
+        .collect();
+    ProjectDetailsDto {
+        id: details.id.to_string(),
+        name: details.name.clone(),
+        slug: details.slug.clone(),
+        default_src_lang: details.default_src_lang.clone(),
+        default_tgt_lang: details.default_tgt_lang.clone(),
+        root_path: details.root_path.clone(),
+        files,
+    }
+}
+
+fn project_file_to_dto(file: &ProjectFileDetails) -> ProjectFileDto {
+    ProjectFileDto {
+        id: file.id.to_string(),
+        original_name: file.original_name.clone(),
+        stored_rel_path: file.stored_rel_path.clone(),
+        ext: file.ext.clone(),
+        size_bytes: file.size_bytes,
+        import_status: file.import_status.as_str().to_string(),
+        created_at: file.created_at.clone(),
+        updated_at: file.updated_at.clone(),
+    }
+}
+
+fn project_file_conversion_to_dto(row: &ProjectFileConversionRow) -> ProjectFileConversionDto {
+    ProjectFileConversionDto {
+        id: row.id.to_string(),
+        project_file_id: row.project_file_id.to_string(),
+        src_lang: row.src_lang.clone(),
+        tgt_lang: row.tgt_lang.clone(),
+        version: row.version.clone(),
+        paragraph: row.paragraph,
+        embed: row.embed,
+        xliff_rel_path: row.xliff_rel_path.clone(),
+        status: row.status.as_str().to_string(),
+        started_at: row.started_at.clone(),
+        completed_at: row.completed_at.clone(),
+        failed_at: row.failed_at.clone(),
+        error_message: row.error_message.clone(),
+        created_at: row.created_at.clone(),
+        updated_at: row.updated_at.clone(),
+    }
 }
 
 #[cfg(test)]

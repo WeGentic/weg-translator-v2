@@ -23,6 +23,10 @@ pub struct JobAccepted {
 pub struct CreateProjectRequest {
     pub name: String,
     pub project_type: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_src_lang: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_tgt_lang: Option<String>,
     pub files: Vec<String>,
 }
 
@@ -177,4 +181,97 @@ pub struct AppSettingsDto {
     pub settings_file_exists: bool,
     pub default_app_folder: String,
     pub is_using_default_location: bool,
+}
+
+// ===== Projects: Details & Conversions DTOs =====
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectFileDto {
+    pub id: String,
+    pub original_name: String,
+    pub stored_rel_path: String,
+    pub ext: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<i64>,
+    pub import_status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectFileConversionDto {
+    pub id: String,
+    pub project_file_id: String,
+    pub src_lang: String,
+    pub tgt_lang: String,
+    pub version: String,
+    pub paragraph: bool,
+    pub embed: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub xliff_rel_path: Option<String>,
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub started_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub completed_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failed_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectFileWithConversionsDto {
+    pub file: ProjectFileDto,
+    pub conversions: Vec<ProjectFileConversionDto>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectDetailsDto {
+    pub id: String,
+    pub name: String,
+    pub slug: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_src_lang: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_tgt_lang: Option<String>,
+    pub root_path: String,
+    pub files: Vec<ProjectFileWithConversionsDto>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddFilesResponseDto {
+    pub inserted: Vec<ProjectFileDto>,
+    pub inserted_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EnsureConversionsTaskDto {
+    pub conversion_id: String,
+    pub project_file_id: String,
+    pub input_abs_path: String,
+    pub output_abs_path: String,
+    pub src_lang: String,
+    pub tgt_lang: String,
+    pub version: String,
+    pub paragraph: bool,
+    pub embed: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EnsureConversionsPlanDto {
+    pub project_id: String,
+    pub src_lang: String,
+    pub tgt_lang: String,
+    pub version: String,
+    pub tasks: Vec<EnsureConversionsTaskDto>,
 }

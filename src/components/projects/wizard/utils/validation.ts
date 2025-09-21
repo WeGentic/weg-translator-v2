@@ -1,4 +1,5 @@
 import { ALLOWED_EXTENSIONS, type NewProjectForm, type ProjectFormErrors } from "../types";
+import { isWellFormedBcp47 } from "@/lib/validators";
 
 export function validateDetails(form: NewProjectForm) {
   const errors: ProjectFormErrors = {};
@@ -12,6 +13,24 @@ export function validateDetails(form: NewProjectForm) {
 
   if (form.type !== "translation" && form.type !== "rag") {
     errors.type = "Select a project type.";
+  }
+
+  const src = form.srcLang.trim();
+  const tgt = form.tgtLang.trim();
+  if (src.length === 0) {
+    errors.srcLang = "Source language is required.";
+  } else if (!isWellFormedBcp47(src)) {
+    errors.srcLang = "Enter a well‑formed BCP‑47 tag (e.g. en-US).";
+  }
+
+  if (tgt.length === 0) {
+    errors.tgtLang = "Target language is required.";
+  } else if (!isWellFormedBcp47(tgt)) {
+    errors.tgtLang = "Enter a well‑formed BCP‑47 tag (e.g. it-IT).";
+  }
+
+  if (!errors.srcLang && !errors.tgtLang && src.toLowerCase() === tgt.toLowerCase()) {
+    errors.tgtLang = "Source and target languages must differ.";
   }
 
   return { valid: Object.keys(errors).length === 0, errors } as const;
