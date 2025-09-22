@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-// Table replaced by compact list
-import { Separator } from "@/components/ui/separator";
 import { FileList } from "./components/files/FileList";
 import { OverviewHeader } from "./components/OverviewHeader";
 import { OverviewAutoConvertBanner } from "./components/OverviewAutoConvertBanner";
+import { AddFilesDialog } from "./components/dialogs/AddFilesDialog";
+import { RemoveFileDialog } from "./components/dialogs/RemoveFileDialog";
+import { EnsureQueueModal } from "./components/EnsureQueueModal";
 
 import {
   addFilesToProject,
@@ -289,6 +287,21 @@ export function ProjectOverview({ projectSummary }: Props) {
     }
   }, [details, loadDetails]);
 
+  const handleRequestRemove = useCallback((fileId: string) => {
+    setIsRemoveOpen(fileId);
+  }, [setIsRemoveOpen]);
+
+  const handleOpenEditor = useCallback(
+    (fileId: string) => {
+      window.dispatchEvent(
+        new CustomEvent("app:navigate", {
+          detail: { view: "editor", projectId, fileId },
+        }),
+      );
+    },
+    [projectId],
+  );
+
   return (
     <section className="flex w-full flex-col gap-6 overflow-y-auto p-6">
       <OverviewHeader
@@ -317,14 +330,8 @@ export function ProjectOverview({ projectSummary }: Props) {
           <FileList
             files={details?.files ?? []}
             isLoading={isLoading}
-            onRemove={(fileId) => setIsRemoveOpen(fileId)}
-            onOpenEditor={(fileId) => {
-              window.dispatchEvent(
-                new CustomEvent("app:navigate", {
-                  detail: { view: "editor", projectId, fileId },
-                }),
-              );
-            }}
+            onRemove={handleRequestRemove}
+            onOpenEditor={handleOpenEditor}
           />
         </CardContent>
       </Card>
@@ -336,88 +343,25 @@ export function ProjectOverview({ projectSummary }: Props) {
         </div>
       ) : null}
 
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add files</DialogTitle>
-            <DialogDescription>Select files to import into this project.</DialogDescription>
-          </DialogHeader>
-          <Separator className="my-2" />
-          <div className="text-sm text-muted-foreground">You will be prompted to select files using the system dialog.</div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddFiles}>Choose files…</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddFilesDialog open={isAddOpen} onOpenChange={setIsAddOpen} onConfirm={handleAddFiles} />
 
-      <Dialog open={isRemoveOpen !== null} onOpenChange={(open) => setIsRemoveOpen(open ? isRemoveOpen : null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove file</DialogTitle>
-            <DialogDescription>This will remove the file from the project. Converted artifacts will also be removed.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsRemoveOpen(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleRemoveFile}>
-              <Trash2 className="mr-2 h-4 w-4" /> Remove
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RemoveFileDialog
+        open={isRemoveOpen !== null}
+        onOpenChange={(open) => setIsRemoveOpen(open ? isRemoveOpen : null)}
+        onConfirm={handleRemoveFile}
+      />
 
-      <Dialog open={!!ensurePlan} onOpenChange={(open) => (!open ? setEnsurePlan(null) : null)}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Preparing project…</DialogTitle>
-            <DialogDescription>Converting files to XLIFF and validating outputs.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <ProgressBar current={ensureProgress.current} total={ensureProgress.total} running={isEnsuring} />
-            {queueSummary ? (
-              <div className="text-xs text-muted-foreground">
-                Completed: {queueSummary.completed} • Failed: {queueSummary.failed}
-              </div>
-            ) : null}
-            <div className="h-48 overflow-auto rounded-md border border-border/60 bg-muted/30 p-2 text-xs">
-              {logs.map((line, idx) => (
-                <div key={idx} className="whitespace-pre-wrap text-muted-foreground">
-                  {line}
-                </div>
-              ))}
-            </div>
-          </div>
-          <DialogFooter>
-            {isEnsuring ? (
-              <Button variant="outline" onClick={cancelEnsureQueue}>Cancel</Button>
-            ) : (
-              <>
-                <Button variant="ghost" onClick={() => setEnsurePlan(null)}>Close</Button>
-                {!queueSummary ? (
-                  <Button onClick={startEnsureQueue}>
-                    <Loader2 className="mr-2 h-4 w-4" /> Start
-                  </Button>
-                ) : null}
-              </>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EnsureQueueModal
+        plan={ensurePlan}
+        isEnsuring={isEnsuring}
+        progress={ensureProgress}
+        logs={logs}
+        summary={queueSummary}
+        onClose={() => setEnsurePlan(null)}
+        onStart={startEnsureQueue}
+        onCancel={cancelEnsureQueue}
+      />
     </section>
-  );
-}
-
-function ProgressBar({ current, total, running }: { current: number; total: number; running: boolean }) {
-  const pct = total > 0 ? Math.round((current / total) * 100) : 0;
-  return (
-    <div className="flex items-center gap-3">
-      <div className="relative h-2 flex-1 overflow-hidden rounded bg-muted">
-        <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
-      </div>
-      <div className="text-xs text-muted-foreground">
-        {running ? `${current} / ${total}` : total > 0 ? `0 / ${total}` : ""}
-      </div>
-    </div>
   );
 }
 

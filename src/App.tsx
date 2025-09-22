@@ -12,6 +12,7 @@ import { ProjectsPanel } from "./components/projects/ProjectsPanel";
 import { ProjectOverviewPlaceholder } from "./components/projects/overview/ProjectOverviewPlaceholder";
 import { ProjectOverview } from "./components/projects/overview/ProjectOverview";
 import { ProjectEditor } from "./components/projects/editor/ProjectEditor";
+import { ProjectEditorPlaceholder } from "./components/projects/editor/ProjectEditorPlaceholder";
 import { AppSettingsPanel } from "./components/settings/AppSettingsPanel";
 import { useAuth } from "./contexts/AuthContext";
 import { logger } from "./logging";
@@ -476,6 +477,11 @@ function App() {
     return openProjects.find((project) => project.projectId === currentProjectId) ?? null;
   }, [currentProjectId, openProjects]);
 
+  const activeEditorProject = useMemo(() => {
+    if (!currentEditorProjectId) return null;
+    return openProjects.find((project) => project.projectId === currentEditorProjectId) ?? null;
+  }, [currentEditorProjectId, openProjects]);
+
   const handleOpenProject = useCallback(
     (project: ProjectListItem) => {
       setOpenProjects((previous) => {
@@ -494,7 +500,9 @@ function App() {
 
   const headerTitle = useHeaderTitle({
     explicit:
-      activeProject?.name ?? fixedItems.find((i) => i.key === mainView)?.label ?? undefined,
+      activeEditorProject
+        ? `Editor — ${activeEditorProject.name}`
+        : activeProject?.name ?? fixedItems.find((i) => i.key === mainView)?.label ?? undefined,
   });
   const contentPaddingClass = isHeaderVisible ? "pt-24" : "pt-6";
   const contentLeftPadClass = useMemo(() => {
@@ -569,7 +577,11 @@ function App() {
                 <AppSettingsPanel />
               </div>
             ) : currentEditorProjectId ? (
-              <ProjectEditor projectId={currentEditorProjectId} fileId={selectedFileId} />
+              activeEditorProject ? (
+                <ProjectEditor project={activeEditorProject} fileId={selectedFileId} />
+              ) : (
+                <ProjectEditorPlaceholder projectId={currentEditorProjectId} />
+              )
             ) : currentProjectId ? (
               activeProject ? (
                 <ProjectOverview projectSummary={activeProject} />

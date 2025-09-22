@@ -1,11 +1,15 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/ipc", () => ({
   getProjectDetails: vi.fn(),
   addFilesToProject: vi.fn(),
   removeProjectFile: vi.fn(),
+  ensureProjectConversionsPlan: vi.fn(),
+  updateConversionStatus: vi.fn(),
+  convertStream: vi.fn(),
+  validateStream: vi.fn(),
   getAppSettings: vi.fn(),
 }));
 
@@ -13,7 +17,13 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
 }));
 
-import { getProjectDetails, addFilesToProject, removeProjectFile, getAppSettings } from "@/ipc";
+import {
+  getProjectDetails,
+  addFilesToProject,
+  removeProjectFile,
+  ensureProjectConversionsPlan,
+  getAppSettings,
+} from "@/ipc";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 import { ProjectOverview } from "./ProjectOverview";
@@ -79,6 +89,10 @@ const details = {
   ],
 };
 
+beforeEach(() => {
+  vi.mocked(ensureProjectConversionsPlan).mockResolvedValue({ tasks: [] } as any);
+});
+
 afterEach(() => {
   vi.clearAllMocks();
 });
@@ -90,7 +104,10 @@ describe("ProjectOverview", () => {
 
     render(<ProjectOverview projectSummary={projectSummary as any} />);
 
-    await screen.findByText("a.docx");
+    const title = await screen.findByRole("heading", { level: 2, name: projectSummary.name });
+    expect(title).toBeInTheDocument();
+    expect(screen.getByRole("list")).toBeInTheDocument();
+    expect(screen.queryByText(/languages/i)).not.toBeInTheDocument();
     expect(screen.getByText("a.docx")).toBeInTheDocument();
     expect(screen.getByText("b.xliff")).toBeInTheDocument();
 
@@ -105,19 +122,20 @@ describe("ProjectOverview", () => {
 
     render(<ProjectOverview projectSummary={projectSummary as any} />);
 
-    await screen.findByText("a.docx");
+    await screen.findByRole("list");
 
     // Add files flow
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /add files/i }));
-    const choose = await screen.findByRole("button", { name: /choose files/i });
+    const choose = await screen.findByRole("button", { name: /choose files…/i });
     await user.click(choose);
 
     await waitFor(() => expect(addFilesToProject).toHaveBeenCalled());
 
     // Remove file flow
-    await user.click(screen.getAllByRole("button", { name: "" })[0]); // first trash icon
-    const confirm = await screen.findByRole("button", { name: /remove/i });
+    const remove = (await screen.findAllByRole("button", { name: /remove file/i }))[0];
+    await user.click(remove);
+    const confirm = await screen.findByRole("button", { name: /^remove$/i });
     await user.click(confirm);
     await waitFor(() => expect(removeProjectFile).toHaveBeenCalled());
   });

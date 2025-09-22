@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import type { ProjectFileWithConversionsDto } from "@/ipc";
 import { Loader2 } from "lucide-react";
 import { FileListItem } from "./FileListItem";
@@ -10,6 +12,19 @@ type Props = {
 };
 
 export function FileList({ files, isLoading = false, onOpenEditor, onRemove }: Props) {
+  const rows = useMemo(
+    () =>
+      files.map((row) => ({
+        id: row.file.id,
+        name: row.file.originalName,
+        ext: row.file.ext,
+        size: row.file.sizeBytes,
+        importStatus: row.file.importStatus,
+        conversions: row.conversions,
+      })),
+    [files],
+  );
+
   return (
     <div className="px-0">
       {isLoading ? (
@@ -18,16 +33,16 @@ export function FileList({ files, isLoading = false, onOpenEditor, onRemove }: P
         </div>
       ) : files.length > 0 ? (
         <ul role="list" className="divide-y divide-border/60">
-          {files.map((row) => (
+          {rows.map((row) => (
             <FileListItem
-              key={row.file.id}
-              name={row.file.originalName}
-              ext={row.file.ext}
-              size={row.file.sizeBytes}
-              importStatus={row.file.importStatus}
+              key={row.id}
+              name={row.name}
+              ext={row.ext}
+              size={row.size}
+              importStatus={row.importStatus}
               conversions={row.conversions}
-              onOpenEditor={() => onOpenEditor(row.file.id)}
-              onRemove={() => onRemove(row.file.id)}
+              onOpenEditor={() => onOpenEditor(row.id)}
+              onRemove={() => onRemove(row.id)}
             />
           ))}
         </ul>
@@ -39,4 +54,3 @@ export function FileList({ files, isLoading = false, onOpenEditor, onRemove }: P
 }
 
 export default FileList;
-

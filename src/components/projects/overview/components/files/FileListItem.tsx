@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { Button } from "@/components/ui/button";
 import type { ProjectFileConversionDto } from "@/ipc";
 import { Trash2 } from "lucide-react";
@@ -14,8 +16,21 @@ type Props = {
 };
 
 export function FileListItem({ name, ext, size, importStatus, conversions, onOpenEditor, onRemove }: Props) {
-  const visible = conversions.slice(0, 4);
-  const remaining = Math.max(0, conversions.length - visible.length);
+  const { visible, remaining } = useMemo(() => {
+    const subset = conversions.slice(0, 4);
+    return { visible: subset, remaining: Math.max(0, conversions.length - subset.length) };
+  }, [conversions]);
+
+  const sizeLabel = useMemo(() => formatSize(size), [size]);
+  const importStatusClass = useMemo(() => {
+    if (importStatus === "imported") {
+      return "inline-flex rounded bg-emerald-500/15 px-2 py-0.5 text-[0.7rem] text-emerald-700 dark:text-emerald-300";
+    }
+    if (importStatus === "failed") {
+      return "inline-flex rounded bg-destructive/10 px-2 py-0.5 text-[0.7rem] text-destructive";
+    }
+    return "inline-flex rounded bg-muted px-2 py-0.5 text-[0.7rem] text-muted-foreground";
+  }, [importStatus]);
   return (
     <li className="flex items-start justify-between gap-3 border-b border-border/60 px-3 py-2 last:border-b-0">
       <div className="min-w-0">
@@ -25,9 +40,9 @@ export function FileListItem({ name, ext, size, importStatus, conversions, onOpe
         <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span className="tabular-nums">{ext}</span>
           <span>•</span>
-          <span className="tabular-nums">{formatSize(size)}</span>
+          <span className="tabular-nums">{sizeLabel}</span>
           <span>•</span>
-          <span className={importStatus === "imported" ? "inline-flex rounded bg-emerald-500/15 px-2 py-0.5 text-[0.7rem] text-emerald-700 dark:text-emerald-300" : importStatus === "failed" ? "inline-flex rounded bg-destructive/10 px-2 py-0.5 text-[0.7rem] text-destructive" : "inline-flex rounded bg-muted px-2 py-0.5 text-[0.7rem] text-muted-foreground"}>
+          <span className={importStatusClass}>
             {importStatus}
           </span>
           {conversions.length > 0 ? <span>•</span> : null}

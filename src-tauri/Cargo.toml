@@ -33,4 +33,4 @@ tokio = { version = "1.47.1", features = ["full"] }
 log = "0.4.28"
 time = { version = "0.3.44", features = ["formatting"] }
 sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "sqlite", "uuid", "macros", "migrate"] }
-libc = "0.2.175yes"
+libc = "0.2.175"

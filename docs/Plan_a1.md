@@ -55,7 +55,7 @@ Step 2.2.2 - Move the auto-convert disabled banner logic into a tiny child compo
 Details: Created `OverviewAutoConvertBanner.tsx` and integrated in `ProjectOverview.tsx` below header.
 
 
-Task 3 - Files area: compact two-line rows + Editor action - Status: IN PROGRESS
+Task 3 - Files area: compact two-line rows + Editor action - Status: COMPLETED
 Sub-task 3.1 - Choose structure and layout - Status: COMPLETED
 Step 3.1.1 - Replace the current table with a compact list component when tabular sorting isn’t required; otherwise, compress the table to two-line rows per item (primary + secondary) inside the first cell - Status: COMPLETED
 Details: Replaced table with `FileList` in `ProjectOverview.tsx` and added list components.
@@ -78,15 +78,18 @@ Details: Added `StatusBadge.tsx` and used it in the list items.
 Step 3.3.2 - For long lists of conversions, cap display with `line-clamp-1` or render up to N badges and add a `+N more` indicator - Status: COMPLETED
 Details: Showing up to 4 badges per row and a `+N more` chip beyond that.
 
-Sub-task 3.4 - Extract dialogs and queue modal - Status: NOT COMPLETED
-Step 3.4.1 - Move Add/Remove `Dialog` blocks to `overview/components/dialogs/{AddFilesDialog,RemoveFileDialog}.tsx` - Status: NOT COMPLETED
-Step 3.4.2 - Move the Ensure conversions modal to `overview/components/EnsureQueueModal.tsx` with props for plan, progress, logs, handlers - Status: NOT COMPLETED
+Sub-task 3.4 - Extract dialogs and queue modal - Status: COMPLETED
+Step 3.4.1 - Move Add/Remove `Dialog` blocks to `overview/components/dialogs/{AddFilesDialog,RemoveFileDialog}.tsx` - Status: COMPLETED
+Details: Migrated both dialogs into dedicated components and wired ProjectOverview to use them.
+Step 3.4.2 - Move the Ensure conversions modal to `overview/components/EnsureQueueModal.tsx` with props for plan, progress, logs, handlers - Status: COMPLETED
+Details: Created EnsureQueueModal with progress props and replaced the inline queue dialog.
 
 
-Task 4 - Editor area (placeholder) - Status: IN PROGRESS
-Sub-task 4.1 - New view components - Status: IN PROGRESS
+Task 4 - Editor area (placeholder) - Status: COMPLETED
+Sub-task 4.1 - New view components - Status: COMPLETED
 Step 4.1.1 - Create `src/components/projects/editor/ProjectEditor.tsx` (placeholder): header with project name, optional selected file info, and a stubbed editor surface - Status: COMPLETED
-Step 4.1.2 - Optionally add `ProjectEditorPlaceholder.tsx` for fallback when project/file context is missing - Status: NOT COMPLETED
+Step 4.1.2 - Optionally add `ProjectEditorPlaceholder.tsx` for fallback when project/file context is missing - Status: COMPLETED
+Details: Added ProjectEditorPlaceholder and render fallback when editor context is missing.
 
 Sub-task 4.2 - Wiring navigation and state - Status: COMPLETED
 Step 4.2.1 - Extend `MainView` type in `src/App.tsx` to include `editor:<projectId>` and parse functions like existing `project:` helpers - Status: COMPLETED
@@ -101,20 +104,24 @@ Step 4.3.2 - In `AppSidebar.tsx`, render an “Editor” section with these item
 Details: Editor items appear in a dedicated nav group; close button uses the same handler as project close.
 
 
-Task 5 - Single-scoped file organization - Status: IN PROGRESS
-Sub-task 5.1 - Overview components - Status: IN PROGRESS
+Task 5 - Single-scoped file organization - Status: COMPLETED
+Sub-task 5.1 - Overview components - Status: COMPLETED
 Step 5.1.1 - Create `src/components/projects/overview/components/OverviewHeader.tsx` - Status: COMPLETED
 Step 5.1.2 - Create `src/components/projects/overview/components/OverviewAutoConvertBanner.tsx` - Status: COMPLETED
 Step 5.1.3 - Create `src/components/projects/overview/components/StatusBadge.tsx` - Status: COMPLETED
 Step 5.1.4 - Create `src/components/projects/overview/components/files/FileList.tsx` and `FileListItem.tsx` - Status: COMPLETED
-Step 5.1.5 - Create `src/components/projects/overview/components/dialogs/AddFilesDialog.tsx` and `RemoveFileDialog.tsx` - Status: NOT COMPLETED
-Step 5.1.6 - Create `src/components/projects/overview/components/EnsureQueueModal.tsx` - Status: NOT COMPLETED
+Step 5.1.5 - Create `src/components/projects/overview/components/dialogs/AddFilesDialog.tsx` and `RemoveFileDialog.tsx` - Status: COMPLETED
+Details: Added scoped dialog components and exposed them for ProjectOverview.
+Step 5.1.6 - Create `src/components/projects/overview/components/EnsureQueueModal.tsx` - Status: COMPLETED
+Details: Provided EnsureQueueModal to encapsulate queue progress UI with accessibility hooks.
 Step 5.1.7 - Refactor `ProjectOverview.tsx` to compose these components; keep business logic and IPC calls in `ProjectOverview.tsx` - Status: COMPLETED
-Details: Composed header, banner, and file list; dialogs and queue modal remain inline pending Task 5.1.5–5.1.6.
+Details: Updated ProjectOverview to compose header/list modules while delegating dialogs and queue modal to the new scoped components.
 
-Sub-task 5.2 - Editor components - Status: NOT COMPLETED
-Step 5.2.1 - Create `src/components/projects/editor/ProjectEditor.tsx` (placeholder) - Status: NOT COMPLETED
-Step 5.2.2 - Optionally create `src/components/projects/editor/ProjectEditorPlaceholder.tsx` - Status: NOT COMPLETED
+Sub-task 5.2 - Editor components - Status: COMPLETED
+Step 5.2.1 - Create `src/components/projects/editor/ProjectEditor.tsx` (placeholder) - Status: COMPLETED
+Details: Enriched ProjectEditor with project header, context summary, and editor surface placeholder.
+Step 5.2.2 - Optionally create `src/components/projects/editor/ProjectEditorPlaceholder.tsx` - Status: COMPLETED
+Details: Added placeholder component and render path in App.tsx for missing editor context.
 
 
 Task 6 - Styling and compactness guidelines (Tailwind v4 + ShadCN) - Status: COMPLETED
@@ -136,32 +143,37 @@ Step 7.1.2 - Update the `useEffect` listener in `src/App.tsx` to route `view: 'e
 Details: The global event handler now supports `editor` with `projectId` and optional `fileId`, updating `selectedFileId` and routing accordingly.
 
 
-Task 8 - Tests updates - Status: NOT COMPLETED
-Sub-task 8.1 - Unit tests (TS) - Status: NOT COMPLETED
-Step 8.1.1 - Update `src/components/projects/overview/ProjectOverview.test.tsx` to match the compact header (no Languages card) and list markup - Status: NOT COMPLETED
-Step 8.1.2 - Add tests for `FileListItem` minimum rendering (name, secondary meta, Editor button presence, remove action) - Status: NOT COMPLETED
-Step 8.1.3 - Add simple render test for `ProjectEditor` placeholder - Status: NOT COMPLETED
+Task 8 - Tests updates - Status: COMPLETED
+Sub-task 8.1 - Unit tests (TS) - Status: COMPLETED
+Step 8.1.1 - Update `src/components/projects/overview/ProjectOverview.test.tsx` to match the compact header (no Languages card) and list markup - Status: COMPLETED
+Details: Adjusted overview tests for new header assertions, dialog controls, and list semantics.
+Step 8.1.2 - Add tests for `FileListItem` minimum rendering (name, secondary meta, Editor button presence, remove action) - Status: COMPLETED
+Details: Added FileListItem tests covering metadata display and action callbacks.
+Step 8.1.3 - Add simple render test for `ProjectEditor` placeholder - Status: COMPLETED
+Details: Added editor tests ensuring both primary and placeholder views render as expected.
 
 
-Task 9 - Non-functional checks - Status: NOT COMPLETED
-Sub-task 9.1 - Accessibility - Status: NOT COMPLETED
-Step 9.1.1 - Verify roles/labels for list and controls; ensure header levels remain logical; separators use `aria-hidden` - Status: NOT COMPLETED
+Task 9 - Non-functional checks - Status: COMPLETED
+Sub-task 9.1 - Accessibility - Status: COMPLETED
+Step 9.1.1 - Verify roles/labels for list and controls; ensure header levels remain logical; separators use `aria-hidden` - Status: COMPLETED
+Details: Confirmed list roles, added aria-hidden on separators, and marked queue log as a polite live region.
 
-Sub-task 9.2 - Performance - Status: NOT COMPLETED
-Step 9.2.1 - Use `useMemo` for derived rows and `useCallback` for handlers to avoid unnecessary re-renders on long lists - Status: NOT COMPLETED
+Sub-task 9.2 - Performance - Status: COMPLETED
+Step 9.2.1 - Use `useMemo` for derived rows and `useCallback` for handlers to avoid unnecessary re-renders on long lists - Status: COMPLETED
+Details: Memoized file rows, badge subsets, and editor/remove handlers to stabilize renders.
 
 Sub-task 9.3 - Logging - Status: COMPLETED
 Step 9.3.1 - Emit debug logs when switching to Editor with project/file context to assist troubleshooting - Status: COMPLETED
 Details: Added debug log in global navigation handler when routing to editor.
 
 
-Task 10 - Acceptance criteria - Status: IN PROGRESS
+Task 10 - Acceptance criteria - Status: COMPLETED
 Step 10.1 - Sidebar shows only Projects (with nested open projects) and Editor section (per open project). Settings sits as a sticky footer, visually separated - Status: COMPLETED
 Step 10.2 - Project Overview displays a compact sub-header with key info; Languages card is removed - Status: COMPLETED
 Step 10.3 - Files area is a two-line dense list with truncation and badges; actions include Editor and Remove - Status: COMPLETED
 Step 10.4 - Clicking Editor opens a project-specific Editor placeholder view and optionally selects the clicked file in context - Status: COMPLETED
-Step 10.5 - All components are single-scoped, placed in appropriate subfolders, and existing logic is preserved - Status: IN PROGRESS
-Details: Overview components and Editor placeholder added; dialogs and ensure modal extraction pending.
+Step 10.5 - All components are single-scoped, placed in appropriate subfolders, and existing logic is preserved - Status: COMPLETED
+Details: Completed scope moves for dialogs, queue modal, and editor modules while preserving existing behaviors.
 
 
 Notes from best-practices research (applied):
