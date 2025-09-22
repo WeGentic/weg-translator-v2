@@ -19,7 +19,7 @@ import {
   type ProjectFileConversionDto,
   type ProjectListItem,
 } from "@/ipc";
-import { convertStream, validateStream, checkOpenXliffRuntime } from "@/lib/openxliff";
+import { convertStream, validateStream } from "@/lib/openxliff";
 import { getAppSettings } from "@/ipc";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
@@ -149,36 +149,7 @@ export function ProjectOverview({ projectSummary }: Props) {
     setEnsureProgress({ current: 0, total: ensurePlan.tasks.length });
     setQueueSummary(null);
 
-    // Preflight: verify sidecar + resources are available
-    try {
-      const check = await checkOpenXliffRuntime();
-      if (!check.ok) {
-        const reason = check.message || "OpenXLIFF runtime not available.";
-        setLogs((cur) => [...cur, `Preflight failed: ${reason}`, ...(check.detail ? [check.detail] : [])]);
-        // Fail all pending tasks with a clear error message
-        for (const task of ensurePlan.tasks) {
-          try {
-            await updateConversionStatus(task.conversionId, "failed", { errorMessage: reason });
-          } catch {
-            // continue
-          }
-        }
-        setQueueSummary({ completed: 0, failed: ensurePlan.tasks.length });
-        setIsEnsuring(false);
-        return;
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "OpenXLIFF preflight error.";
-      setLogs((cur) => [...cur, `Preflight error: ${msg}`]);
-      for (const task of ensurePlan.tasks) {
-        try {
-          await updateConversionStatus(task.conversionId, "failed", { errorMessage: msg });
-        } catch {}
-      }
-      setQueueSummary({ completed: 0, failed: ensurePlan.tasks.length });
-      setIsEnsuring(false);
-      return;
-    }
+    // No preflight: call convert directly and surface its stderr/stdout.
     let failed = 0;
     let completed = 0;
     for (let i = 0; i < ensurePlan.tasks.length; i++) {
@@ -205,22 +176,17 @@ export function ProjectOverview({ projectSummary }: Props) {
     const onStderr = (line: string) => setLogs((cur) => [...cur, line]);
     try {
       await updateConversionStatus(task.conversionId, "running");
-      const fileExt = task.inputAbsPath.split(".").pop()?.toLowerCase();
-      const knownTypes = new Set([
-        "doc", "docx", "ppt", "pptx", "xls", "xlsx", "odt", "odp", "ods", "html", "xml", "dita", "md",
-      ] as const);
-      const convType = fileExt && knownTypes.has(fileExt as any) ? (fileExt as string) : undefined;
+      const showVersion = /^2\./.test(task.version) ? ` -${task.version}` : '';
       setLogs((cur) => [
         ...cur,
-        `> convert -file ${task.inputAbsPath} -srcLang ${task.srcLang} -tgtLang ${task.tgtLang} -xliff ${task.outputAbsPath} ${convType ? `-type ${convType} ` : ""}-${task.version}`,
+        `> convert -file ${task.inputAbsPath} -srcLang ${task.srcLang} -tgtLang ${task.tgtLang} -xliff ${task.outputAbsPath}${showVersion}`,
       ]);
       const res = await convertStream({
         file: task.inputAbsPath,
         srcLang: task.srcLang,
         tgtLang: task.tgtLang,
         xliff: task.outputAbsPath,
-        version: task.version as "2.0" | "2.1" | "2.2",
-        type: convType,
+        version: /^2\./.test(task.version) ? (task.version as "2.0" | "2.1" | "2.2") : undefined,
         paragraph: task.paragraph,
         embed: task.embed,
       }, { onStdout, onStderr });

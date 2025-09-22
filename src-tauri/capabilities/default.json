@@ -19,26 +19,46 @@
           "name": "sidecars/openxliff/bin/convert.sh",
           "sidecar": true,
           "args": [
-            "-help",
-            "-version",
-            "-file",
-            "-srcLang",
-            "-tgtLang",
-            "-skl",
-            "-xliff",
-            "-type",
-            "-enc",
-            "-srx",
-            "-catalog",
-            "-ditaval",
-            "-config",
+            "-file", { "validator": "^[^-].+" },
+            "-srcLang", { "validator": "^[^-].+" },
+            "-tgtLang", { "validator": "^[^-].+" },
+            "-xliff", { "validator": "^[^-].+" },
             "-embed",
             "-paragraph",
-            "-xmlfilter",
-            "-ignoretc",
-            "-ignoresvg",
-            { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" },
-            { "validator": "^[^-].*$" }
+            { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/convert.sh",
+          "sidecar": true,
+          "args": [
+            "-file", { "validator": "^[^-].+" },
+            "-srcLang", { "validator": "^[^-].+" },
+            "-tgtLang", { "validator": "^[^-].+" },
+            "-xliff", { "validator": "^[^-].+" },
+            "-embed",
+            "-paragraph"
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/convert.sh",
+          "sidecar": true,
+          "args": [
+            "-file", { "validator": "^[^-].+" },
+            "-srcLang", { "validator": "^[^-].+" },
+            "-tgtLang", { "validator": "^[^-].+" },
+            "-xliff", { "validator": "^[^-].+" },
+            { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/convert.sh",
+          "sidecar": true,
+          "args": [
+            "-file", { "validator": "^[^-].+" },
+            "-srcLang", { "validator": "^[^-].+" },
+            "-tgtLang", { "validator": "^[^-].+" },
+            "-xliff", { "validator": "^[^-].+" }
           ]
         },
         {
@@ -60,36 +80,61 @@
           "name": "sidecars/openxliff/bin/xliffchecker.sh",
           "sidecar": true,
           "args": [
-            "-help",
-            "-xliff",
-            "-catalog",
-            { "validator": "^[^-].*$" }
+            "-xliff", { "validator": "^[^-].+" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/xliffchecker.sh",
+          "sidecar": true,
+          "args": [
+            "-xliff", { "validator": "^[^-].+" },
+            "-catalog", { "validator": "^[^-].+" }
           ]
         },
         {
           "name": "sidecars/openxliff/bin/convert.cmd",
           "sidecar": true,
           "args": [
-            "-help",
-            "-version",
-            "-file",
-            "-srcLang",
-            "-tgtLang",
-            "-skl",
-            "-xliff",
-            "-type",
-            "-enc",
-            "-srx",
-            "-catalog",
-            "-ditaval",
-            "-config",
+            "-file", { "validator": "^[^-].+" },
+            "-srcLang", { "validator": "^[^-].+" },
+            "-tgtLang", { "validator": "^[^-].+" },
+            "-xliff", { "validator": "^[^-].+" },
             "-embed",
             "-paragraph",
-            "-xmlfilter",
-            "-ignoretc",
-            "-ignoresvg",
-            { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" },
-            { "validator": "^[^-].*$" }
+            { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/convert.cmd",
+          "sidecar": true,
+          "args": [
+            "-file", { "validator": "^[^-].+" },
+            "-srcLang", { "validator": "^[^-].+" },
+            "-tgtLang", { "validator": "^[^-].+" },
+            "-xliff", { "validator": "^[^-].+" },
+            "-embed",
+            "-paragraph"
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/convert.cmd",
+          "sidecar": true,
+          "args": [
+            "-file", { "validator": "^[^-].+" },
+            "-srcLang", { "validator": "^[^-].+" },
+            "-tgtLang", { "validator": "^[^-].+" },
+            "-xliff", { "validator": "^[^-].+" },
+            { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/convert.cmd",
+          "sidecar": true,
+          "args": [
+            "-file", { "validator": "^[^-].+" },
+            "-srcLang", { "validator": "^[^-].+" },
+            "-tgtLang", { "validator": "^[^-].+" },
+            "-xliff", { "validator": "^[^-].+" }
           ]
         },
         {
@@ -111,10 +156,15 @@
           "name": "sidecars/openxliff/bin/xliffchecker.cmd",
           "sidecar": true,
           "args": [
-            "-help",
-            "-xliff",
-            "-catalog",
-            { "validator": "^[^-].*$" }
+            "-xliff", { "validator": "^[^-].+" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/xliffchecker.cmd",
+          "sidecar": true,
+          "args": [
+            "-xliff", { "validator": "^[^-].+" },
+            "-catalog", { "validator": "^[^-].+" }
           ]
         }
       ]

@@ -247,10 +247,10 @@ export async function checkOpenXliffRuntime(): Promise<{
   detail?: string
 }> {
   try {
-    // Prefer '-version' to avoid heavy work; wrappers typically support it.
-    const res = await runStream('convert', ['-version'])
+    // Use a lightweight help check that satisfies capability allowlists
+    const res = await runStream('xliffchecker', ['-help'])
     const normalized = normalizeResult(res)
-    if (normalized.ok) return { ok: true }
+    if (normalized.ok || normalized.knownError?.type === 'usage') return { ok: true }
     const msg = normalized.knownError?.message || normalized.message || 'OpenXLIFF not available.'
     const detail = normalized.knownError?.detail || firstNonEmptyLine(normalized.stderr || normalized.stdout)
     return { ok: false, message: msg, detail }
@@ -279,28 +279,23 @@ export async function convert(opts: {
   xmlfilter?: string
   ignoretc?: boolean
   ignoresvg?: boolean
-  strict?: boolean
-  charsets?: boolean
-  types?: boolean
 }): Promise<ExecResult> {
+  // Order strictly matches src-tauri/capabilities/default.json allowlist
   const args: string[] = ['-file', opts.file, '-srcLang', opts.srcLang]
   if (opts.tgtLang) args.push('-tgtLang', opts.tgtLang)
+  if (opts.skl) args.push('-skl', opts.skl)
   if (opts.xliff) args.push('-xliff', opts.xliff)
   if (opts.type) args.push('-type', opts.type)
+  if (opts.enc) args.push('-enc', opts.enc)
   if (opts.srx) args.push('-srx', opts.srx)
   if (opts.catalog) args.push('-catalog', opts.catalog)
-  if (opts.config) args.push('-config', opts.config)
-  if (opts.paragraph) args.push('-paragraph')
-  if (opts.embed) args.push('-embed')
-  if (opts.skl) args.push('-skl', opts.skl)
-  if (opts.enc) args.push('-enc', opts.enc)
   if (opts.ditaval) args.push('-ditaval', opts.ditaval)
+  if (opts.config) args.push('-config', opts.config)
+  if (opts.embed) args.push('-embed')
+  if (opts.paragraph) args.push('-paragraph')
   if (opts.xmlfilter) args.push('-xmlfilter', opts.xmlfilter)
-  if (opts.ignoresvg) args.push('-ignoresvg')
   if (opts.ignoretc) args.push('-ignoretc')
-  if (opts.strict) args.push('-strict')
-  if (opts.charsets) args.push('-charsets')
-  if (opts.types) args.push('-types')
+  if (opts.ignoresvg) args.push('-ignoresvg')
   if (opts.version === '2.0') args.push('-2.0')
   if (opts.version === '2.1') args.push('-2.1')
   if (opts.version === '2.2') args.push('-2.2')
@@ -322,7 +317,7 @@ export async function merge(opts: {
 }
 
 export async function validate(opts: { xliff: string; catalog?: string }): Promise<ExecResult> {
-  const args: string[] = ['-file', opts.xliff]
+  const args: string[] = ['-xliff', opts.xliff]
   if (opts.catalog) args.push('-catalog', opts.catalog)
   return run('xliffchecker', args)
 }
@@ -332,24 +327,22 @@ export async function convertStream(
   opts: Parameters<typeof convert>[0],
   handlers?: StreamHandlers
 ): Promise<NormalizedResult> {
+  // Order strictly matches src-tauri/capabilities/default.json allowlist
   const args: string[] = ['-file', opts.file, '-srcLang', opts.srcLang]
   if (opts.tgtLang) args.push('-tgtLang', opts.tgtLang)
+  if (opts.skl) args.push('-skl', opts.skl)
   if (opts.xliff) args.push('-xliff', opts.xliff)
   if (opts.type) args.push('-type', opts.type)
+  if (opts.enc) args.push('-enc', opts.enc)
   if (opts.srx) args.push('-srx', opts.srx)
   if (opts.catalog) args.push('-catalog', opts.catalog)
-  if (opts.config) args.push('-config', opts.config)
-  if (opts.paragraph) args.push('-paragraph')
-  if (opts.embed) args.push('-embed')
-  if (opts.skl) args.push('-skl', opts.skl)
-  if (opts.enc) args.push('-enc', opts.enc)
   if (opts.ditaval) args.push('-ditaval', opts.ditaval)
+  if (opts.config) args.push('-config', opts.config)
+  if (opts.embed) args.push('-embed')
+  if (opts.paragraph) args.push('-paragraph')
   if (opts.xmlfilter) args.push('-xmlfilter', opts.xmlfilter)
-  if (opts.ignoresvg) args.push('-ignoresvg')
   if (opts.ignoretc) args.push('-ignoretc')
-  if (opts.strict) args.push('-strict')
-  if (opts.charsets) args.push('-charsets')
-  if (opts.types) args.push('-types')
+  if (opts.ignoresvg) args.push('-ignoresvg')
   if (opts.version === '2.0') args.push('-2.0')
   if (opts.version === '2.1') args.push('-2.1')
   if (opts.version === '2.2') args.push('-2.2')
@@ -373,7 +366,7 @@ export async function validateStream(
   opts: Parameters<typeof validate>[0],
   handlers?: StreamHandlers
 ): Promise<NormalizedResult> {
-  const args: string[] = ['-file', opts.xliff]
+  const args: string[] = ['-xliff', opts.xliff]
   if (opts.catalog) args.push('-catalog', opts.catalog)
   const res = await runStream('xliffchecker', args, handlers)
   return normalizeResult(res)
