@@ -48,6 +48,11 @@ function detectKnownError(stdout: string, stderr: string): KnownError | undefine
       detail: (m) => m[0] ?? 'Missing OpenXLIFF resources',
     },
     {
+      type: 'spawn',
+      pattern: /ENOENT|No such file or directory|exec format error/i,
+      message: 'Failed to start sidecar (missing or incompatible binary).',
+    },
+    {
       type: 'missing_source',
       pattern: /ERROR:\s*Source file does not exist/i,
       message: 'Source file does not exist or cannot be read.',
@@ -180,7 +185,13 @@ async function runStream(
     })
   }
 
-  await cmd.spawn()
+  try {
+    await cmd.spawn()
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    // Return a synthetic ExecResult so callers can normalize and extract a helpful error
+    return { code: null, signal: null, stdout: '', stderr: msg }
+  }
 
   return await new Promise<ExecResult>((resolve) => {
     cmd.on('close', ({ code, signal }) => {
@@ -226,6 +237,26 @@ function normalizeResult(res: ExecResult): NormalizedResult {
       ? { type: 'unknown', message: firstLine, detail: firstLine }
       : undefined,
     message: firstLine ?? 'Command failed.',
+  }
+}
+
+// Quick preflight check to verify the sidecar + resources are available.
+export async function checkOpenXliffRuntime(): Promise<{
+  ok: boolean
+  message?: string
+  detail?: string
+}> {
+  try {
+    // Prefer '-version' to avoid heavy work; wrappers typically support it.
+    const res = await runStream('convert', ['-version'])
+    const normalized = normalizeResult(res)
+    if (normalized.ok) return { ok: true }
+    const msg = normalized.knownError?.message || normalized.message || 'OpenXLIFF not available.'
+    const detail = normalized.knownError?.detail || firstNonEmptyLine(normalized.stderr || normalized.stdout)
+    return { ok: false, message: msg, detail }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Failed to run OpenXLIFF sidecar.'
+    return { ok: false, message: msg, detail: msg }
   }
 }
 

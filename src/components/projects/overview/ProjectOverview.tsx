@@ -19,7 +19,7 @@ import {
   type ProjectFileConversionDto,
   type ProjectListItem,
 } from "@/ipc";
-import { convertStream, validateStream } from "@/lib/openxliff";
+import { convertStream, validateStream, checkOpenXliffRuntime } from "@/lib/openxliff";
 import { getAppSettings } from "@/ipc";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
@@ -148,6 +148,37 @@ export function ProjectOverview({ projectSummary }: Props) {
     setLogs([]);
     setEnsureProgress({ current: 0, total: ensurePlan.tasks.length });
     setQueueSummary(null);
+
+    // Preflight: verify sidecar + resources are available
+    try {
+      const check = await checkOpenXliffRuntime();
+      if (!check.ok) {
+        const reason = check.message || "OpenXLIFF runtime not available.";
+        setLogs((cur) => [...cur, `Preflight failed: ${reason}`, ...(check.detail ? [check.detail] : [])]);
+        // Fail all pending tasks with a clear error message
+        for (const task of ensurePlan.tasks) {
+          try {
+            await updateConversionStatus(task.conversionId, "failed", { errorMessage: reason });
+          } catch {
+            // continue
+          }
+        }
+        setQueueSummary({ completed: 0, failed: ensurePlan.tasks.length });
+        setIsEnsuring(false);
+        return;
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "OpenXLIFF preflight error.";
+      setLogs((cur) => [...cur, `Preflight error: ${msg}`]);
+      for (const task of ensurePlan.tasks) {
+        try {
+          await updateConversionStatus(task.conversionId, "failed", { errorMessage: msg });
+        } catch {}
+      }
+      setQueueSummary({ completed: 0, failed: ensurePlan.tasks.length });
+      setIsEnsuring(false);
+      return;
+    }
     let failed = 0;
     let completed = 0;
     for (let i = 0; i < ensurePlan.tasks.length; i++) {

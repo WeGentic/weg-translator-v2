@@ -7,7 +7,7 @@ Progress (Sep 22):
    - [x] 1) Provision OpenXLIFF per platform: scripts present (`scripts/fetch-openxliff.sh`, `scripts/sync-openxliff-resources.sh`); `src-tauri/resources/openxliff/macos-arm64` committed. Action: fetch/build for other platforms in CI/dev envs before packaging.
    - [x] 2) Harden sidecar wrappers: wrappers standardized to emit "[<tool> wrapper] Could not locate OpenXLIFF resources..." across `.sh`/`.cmd` (see `src-tauri/sidecars/openxliff/bin`).
    - [x] 3) Ensure bundling: `src-tauri/tauri.conf.json` already bundles `resources/openxliff`; local macOS arm64 layout verified. Build-time verification required on Windows/Linux.
-   - [x] 4) Error propagation: updated `src/lib/openxliff.ts` to detect missing-resources patterns and surface a clear message to UI/DB.
+   - [x] 4) Error propagation: updated `src/lib/openxliff.ts` to detect missing-resources patterns and surface a clear message to UI/DB; added `checkOpenXliffRuntime()` preflight. `ProjectOverview` now fails all tasks upfront with a clear error and persists `error_message`.
    - [ ] Acceptance criteria
 - [x] 1–2 Migrations added (006, 007)
 - [x] 3–4 DbManager structs + CRUD + helpers
@@ -20,8 +20,8 @@ Progress (Sep 22):
 - [x] 25 Feature flag: Auto-convert on open (default enabled)
 - [x] UX polish: banner + tooltip when auto-convert is disabled
 - [x] 23–24, 26 Docs/rollout finalized (added rollout doc; checklist documented; migration order verified)
-  - [ ] Code review: CodeRabbit CLI attempted (`coderabbit --plain --type uncommitted`); currently unauthenticated → rate-limited. Pending `coderabbit auth login` to proceed and apply suggestions.
-
+  - [ ] Code review: CodeRabbit CLI attempted (`coderabbit --plain --type uncommitted`); currently unauthenticated → rate-limited. Pending `coderabbit auth login` to proceed and apply suggestions (deferred by user).
+n
 Note on sidecars: We will execute the packaged OpenXLIFF sidecar from the frontend via `@tauri-apps/plugin-shell` (`Command.sidecar`), which is already wired in `src/lib/openxliff.ts`. This aligns with the existing capabilities config and avoids duplicating process control on the backend.
 
 
