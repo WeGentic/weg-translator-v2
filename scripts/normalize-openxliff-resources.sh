@@ -28,3 +28,9 @@ while IFS= read -r -d '' link; do
 done < <(find "${BASE}" -type l -print0)
 
 echo "[normalize-openxliff] Done."
+
+# Ensure executables are marked as executable
+echo "[normalize-openxliff] Ensuring execute bits on shell and java binaries…"
+find "${BASE}" -type f -name "*.sh" -exec chmod +x {} +
+find "${BASE}" -type f -path "*/bin/java" -exec chmod +x {} +
+echo "[normalize-openxliff] Executable permissions set."

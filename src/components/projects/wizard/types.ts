@@ -1,0 +1,47 @@
+import type { ProjectType } from "@/ipc";
+
+export type WizardStep = 0 | 1 | 2;
+
+export interface NewProjectForm {
+  name: string;
+  type: ProjectType | "";
+  srcLang: string;
+  tgtLang: string;
+  files: string[];
+}
+
+export interface ProjectFormErrors {
+  name?: string;
+  type?: string;
+  srcLang?: string;
+  tgtLang?: string;
+  files?: string;
+  general?: string;
+}
+
+export interface CreateProjectStatus {
+  error: string | null;
+}
+
+export const INITIAL_PROJECT_FORM: NewProjectForm = {
+  name: "",
+  type: "",
+  srcLang: "en-US",
+  tgtLang: "it-IT",
+  files: [],
+};
+
+export const ALLOWED_EXTENSIONS = [
+  // Convertible document formats
+  "doc", "docx", "ppt", "pptx", "xls", "xlsx", "odt", "odp", "ods", "html", "xml", "dita", "md",
+  // XLIFF-like formats
+  "xlf", "xliff", "mqxliff", "sdlxliff",
+] as const;
+
+export const CREATE_PROJECT_STEP_LABELS = [
+  "Project details",
+  "Select files",
+  "Review",
+] as const;
+
+export type WizardStepLabel = (typeof CREATE_PROJECT_STEP_LABELS)[number];

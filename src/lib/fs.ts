@@ -7,8 +7,7 @@ export type PathInfo = {
 }
 
 export async function pathExists(path: string): Promise<PathInfo> {
-  const tuple = (await invoke('path_exists', { path })) as [boolean, boolean, boolean]
+  const tuple = await invoke<[boolean, boolean, boolean]>('path_exists', { path })
   const [exists, isFile, isDir] = tuple
   return { exists, isFile, isDir }
 }
-

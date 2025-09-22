@@ -30,9 +30,9 @@ export function LoginForm() {
 
       try {
         await login(email, password);
-        const search = router.state.location.search as { redirect?: "/" | "/dashboard" };
-        const redirect = search?.redirect ?? "/dashboard";
-        await router.navigate({ to: redirect });
+        const search = router.state.location.search as { redirect?: "/" };
+        const redirectTo = search?.redirect ?? "/";
+        await router.navigate({ to: redirectTo });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Login failed");
       }

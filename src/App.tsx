@@ -1,14 +1,27 @@
 import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
+import { PanelsTopLeft, FolderKanban, Briefcase, History, Settings, FileText } from "lucide-react";
 
+import { WorkspaceFooter, CollapsedFooterBar } from "./components/layout/WorkspaceFooter";
+import { CollapsedHeaderBar } from "./components/layout/WorkspaceHeader";
+import { AppHeader } from "./components/layout/AppHeader";
+import {
+  WorkspaceMainContent,
+  type TranslationJobViewModel,
+} from "./components/layout/WorkspaceMainContent";
+import { type SidebarState } from "./components/layout/WorkspaceSidebar";
+import { AppSidebar, type MenuItem } from "./components/layout/AppSidebar";
+import { ProjectsPanel } from "./components/projects/ProjectsPanel";
+import { ProjectOverviewPlaceholder } from "./components/projects/overview/ProjectOverviewPlaceholder";
+import { ProjectOverview } from "./components/projects/overview/ProjectOverview";
+import { AppSettingsPanel } from "./components/settings/AppSettingsPanel";
 import { useAuth } from "./contexts/AuthContext";
-import { Button } from "./components/ui/button";
-import { LogConsole } from "./components/logging/LogConsole";
 import { logger } from "./logging";
+import { useHeaderTitle } from "./hooks/useHeaderTitle";
+import { cn } from "./lib/utils";
 
 import "./App.css";
 import {
-  IPC_EVENT,
   healthCheck,
   listActiveJobs,
   startTranslation,
@@ -20,20 +33,21 @@ import {
   type TranslationProgressPayload,
   type TranslationRequest,
   type TranslationStage,
+  type ProjectListItem,
 } from "./ipc";
 
-interface TranslationJobViewModel {
-  jobId: string;
-  sourceLanguage: string;
-  targetLanguage: string;
-  text: string;
-  stage: TranslationStage;
-  progress: number;
-  status: "queued" | "running" | "completed" | "failed";
-  message?: string;
-  outputText?: string;
-  durationMs?: number;
-  errorReason?: string;
+const PROJECT_VIEW_PREFIX = "project:" as const;
+type ProjectViewKey = `${typeof PROJECT_VIEW_PREFIX}${string}`;
+type MainView = "workspace" | "projects" | "jobs" | "history" | "settings" | ProjectViewKey;
+
+function toProjectViewKey(projectId: string): ProjectViewKey {
+  // The template string preserves the literal prefix; cast keeps the precise key type for lookups.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+  return `${PROJECT_VIEW_PREFIX}${projectId}` as ProjectViewKey;
+}
+
+function parseProjectIdFromKey(key: string): string | null {
+  return key.startsWith(PROJECT_VIEW_PREFIX) ? key.slice(PROJECT_VIEW_PREFIX.length) : null;
 }
 
 const INITIAL_FORM: TranslationRequest = {
@@ -107,6 +121,11 @@ function App() {
   const [jobs, setJobs] = useState<Record<string, TranslationJobViewModel>>({});
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [systemError, setSystemError] = useState<string | null>(null);
+  const [sidebarState, setSidebarState] = useState<SidebarState>("expanded");
+  const [mainView, setMainView] = useState<MainView>("workspace");
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [isFooterVisible, setIsFooterVisible] = useState(true);
+  const [openProjects, setOpenProjects] = useState<ProjectListItem[]>([]);
 
   const selectedJob = selectedJobId ? jobs[selectedJobId] : undefined;
   const jobList = useMemo(
@@ -346,209 +365,217 @@ function App() {
     }));
   }, []);
 
+  const cycleSidebarState = useCallback(() => {
+    setSidebarState((prev) => {
+      if (prev === "expanded") return "compact";
+      if (prev === "compact") return "hidden";
+      return "expanded";
+    });
+  }, []);
+
+  const toggleFooter = useCallback(() => {
+    setIsFooterVisible((prev) => !prev);
+  }, []);
+
+  const handleHideHeader = useCallback(() => {
+    setIsHeaderVisible(false);
+  }, []);
+
+  const handleShowHeader = useCallback(() => {
+    setIsHeaderVisible(true);
+  }, []);
+
+  // Removed unused create-project placeholder when migrating to AppSidebar
+
+  const handleTranslationFormAction = useCallback(
+    (formData: FormData) => {
+      void submitTranslation(formData);
+    },
+    [submitTranslation],
+  );
+
+  const handleLogoutFormAction = useCallback(
+    (formData: FormData) => {
+      void triggerLogout(formData);
+    },
+    [triggerLogout],
+  );
+
   const formIsValid =
     form.sourceLanguage.trim().length > 1 &&
     form.targetLanguage.trim().length > 1 &&
     form.text.trim().length > 0 &&
     form.sourceLanguage.trim().toLowerCase() !== form.targetLanguage.trim().toLowerCase();
 
+  const displayName = user?.name || user?.email || "Authenticated user";
+  const activeJobCount = jobList.length;
+  const fixedItems: MenuItem[] = useMemo(
+    () => [
+      { key: "workspace", label: "Workspace", icon: PanelsTopLeft },
+      { key: "projects", label: "Projects", icon: FolderKanban },
+      { key: "jobs", label: "Jobs", icon: Briefcase },
+      { key: "history", label: "History", icon: History },
+      { key: "settings", label: "Settings", icon: Settings },
+    ],
+    [],
+  );
+
+  const handleCloseProject = useCallback(
+    (projectId: string) => {
+      setOpenProjects((previous) => {
+        const next = previous.filter((project) => project.projectId !== projectId);
+        setMainView((current) => {
+          if (parseProjectIdFromKey(current) === projectId) {
+            if (next.length > 0) {
+              const fallback = next[next.length - 1];
+              return toProjectViewKey(fallback.projectId);
+            }
+            return "projects";
+          }
+          return current;
+        });
+        return next;
+      });
+    },
+    [setMainView],
+  );
+
+  const temporaryProjectItems: MenuItem[] = useMemo(
+    () =>
+      openProjects.map((project) => ({
+        key: toProjectViewKey(project.projectId),
+        label: project.name,
+        icon: FileText,
+        onClose: () => handleCloseProject(project.projectId),
+      })),
+    [handleCloseProject, openProjects],
+  );
+
+  const currentProjectId = useMemo(() => parseProjectIdFromKey(mainView), [mainView]);
+  const activeProject = useMemo(() => {
+    if (!currentProjectId) return null;
+    return openProjects.find((project) => project.projectId === currentProjectId) ?? null;
+  }, [currentProjectId, openProjects]);
+
+  const handleOpenProject = useCallback(
+    (project: ProjectListItem) => {
+      setOpenProjects((previous) => {
+        const existingIndex = previous.findIndex((item) => item.projectId === project.projectId);
+        if (existingIndex >= 0) {
+          const next = [...previous];
+          next[existingIndex] = project;
+          return next;
+        }
+        return [...previous, project];
+      });
+      setMainView(toProjectViewKey(project.projectId));
+    },
+    [setMainView],
+  );
+
+  const headerTitle = useHeaderTitle({
+    explicit:
+      activeProject?.name ?? fixedItems.find((i) => i.key === mainView)?.label ?? undefined,
+  });
+  const contentPaddingClass = isHeaderVisible ? "pt-24" : "pt-6";
+  const contentLeftPadClass = useMemo(() => {
+    if (sidebarState === "expanded") return "pl-64"; // 16rem matches w-64
+    if (sidebarState === "compact") return "pl-16"; // 4rem matches w-16
+    return "pl-0";
+  }, [sidebarState]);
+
+  // Global navigation events (e.g., from child components)
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<{ view?: string } | undefined>;
+      const view = custom.detail?.view;
+      if (view === "settings" || view === "projects" || view === "workspace" || view === "history" || view === "jobs") {
+        setMainView(view as MainView);
+      }
+    };
+    window.addEventListener("app:navigate", handler as EventListener);
+    return () => window.removeEventListener("app:navigate", handler as EventListener);
+  }, []);
+
   return (
-    <main className="app-shell">
-      <header className="app-header">
-        <div>
-          <h1>Weg Translator IPC Playground</h1>
-          <p className="muted">
-            React ↔︎ Rust communication via Tauri commands ({IPC_EVENT.translationProgress}).
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          {health && (
-            <dl className="health">
-              <div>
-                <dt>App</dt>
-                <dd>{health.appVersion}</dd>
-              </div>
-              <div>
-                <dt>Tauri</dt>
-                <dd>{health.tauriVersion}</dd>
-              </div>
-              <div>
-                <dt>Profile</dt>
-                <dd>{health.buildProfile}</dd>
-              </div>
-            </dl>
-          )}
-          <div className="flex flex-col items-end gap-2">
-            {logoutStatus.error && <p className="text-xs text-red-500">{logoutStatus.error}</p>}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                Welcome, {user?.name || user?.email}
-              </span>
-              <form action={triggerLogout} className="inline-flex">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="submit"
-                  disabled={isLogoutPending}
-                >
-                  {isLogoutPending ? "Logging out…" : "Logout"}
-                </Button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="flex min-h-screen flex-col bg-background/60">
+      <a
+        href="#main-content"
+        className="sr-only focus-visible:not-sr-only fixed left-3 top-3 z-[60] rounded-md border border-border/60 bg-background px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      >
+        Skip to content
+      </a>
+      {isHeaderVisible ? (
+        <AppHeader
+          title={headerTitle}
+          onToggleSidebar={cycleSidebarState}
+          state={sidebarState}
+          hideUser={!user}
+        />
+      ) : (
+        <CollapsedHeaderBar onExpand={handleShowHeader} />
+      )}
 
-      <section className="panel">
-        <h2>Request Translation</h2>
-        <form className="translation-form" action={submitTranslation}>
-          <div className="row">
-            <label className="field">
-              <span>Source language</span>
-              <input
-                name="sourceLanguage"
-                value={form.sourceLanguage}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, sourceLanguage: event.target.value }))
-                }
-                placeholder="e.g. en"
+      <div className={cn("flex flex-1 flex-col", contentPaddingClass)}>
+        <AppSidebar
+          state={sidebarState}
+          fixedItems={fixedItems}
+          temporaryItems={temporaryProjectItems}
+          selectedKey={mainView}
+          onSelect={(key) => setMainView(key as MainView)}
+          style={{
+            top: isHeaderVisible ? "5rem" : "3.25rem", // header(3.5rem) + gaps vs collapsed bar(2.5rem) + gap
+            bottom: isFooterVisible ? "4.25rem" : "3.25rem", // footer(3.5rem)/collapsed(2.5rem) + gap
+          }}
+        />
+        <main id="main-content" role="main" className="contents">
+          <div className={cn("flex flex-1 overflow-hidden", contentLeftPadClass)}>
+            {mainView === "workspace" ? (
+              <WorkspaceMainContent
+                systemError={systemError}
+                form={form}
+                onFormChange={setForm}
+                onSwapLanguages={handleSwapLanguages}
+                submitTranslation={handleTranslationFormAction}
+                isSubmitting={isSubmitting}
+                formStatus={formStatus}
+                isFormValid={formIsValid}
+                health={health}
+                jobList={jobList}
+                selectedJobId={selectedJobId}
+                selectedJob={selectedJob}
+                onSelectJob={setSelectedJobId}
+                activeJobCount={activeJobCount}
               />
-            </label>
-            <button
-              type="button"
-              className="swap"
-              onClick={handleSwapLanguages}
-              title="Swap languages"
-            >
-              ⇄
-            </button>
-            <label className="field">
-              <span>Target language</span>
-              <input
-                name="targetLanguage"
-                value={form.targetLanguage}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, targetLanguage: event.target.value }))
-                }
-                placeholder="e.g. es"
-              />
-            </label>
-          </div>
-
-          <label className="field">
-            <span>Text</span>
-            <textarea
-              name="text"
-              value={form.text}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, text: event.target.value }))
-              }
-              rows={4}
-              placeholder="Enter text to translate"
-            />
-          </label>
-
-          <div className="actions">
-            <button type="submit" disabled={!formIsValid || isSubmitting}>
-              {isSubmitting ? "Submitting…" : "Start translation"}
-            </button>
-            {(formStatus.error || systemError) && (
-              <p className="error">{formStatus.error ?? systemError}</p>
-            )}
-          </div>
-        </form>
-      </section>
-
-      <section className="panel">
-        <div className="panel-header">
-          <h2>Tracked Jobs</h2>
-          <span className="badge">{jobList.length}</span>
-        </div>
-        {jobList.length === 0 ? (
-          <p className="muted">No active jobs yet. Submit a translation to get started.</p>
-        ) : (
-          <ul className="job-list">
-            {jobList.map((job) => (
-              <li key={job.jobId}>
-                <button
-                  className={job.jobId === selectedJobId ? "job-button active" : "job-button"}
-                  type="button"
-                  onClick={() => setSelectedJobId(job.jobId)}
-                >
-                  <div className="job-row">
-                    <strong>
-                      {job.sourceLanguage} → {job.targetLanguage}
-                    </strong>
-                    <span className={`status status-${job.status}`}>
-                      {job.status.toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="job-row">
-                    <span className="job-text">{job.text || "(empty)"}</span>
-                    <span>{Math.round(job.progress * 100)}%</span>
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="panel">
-        <div className="panel-header">
-          <h2>Job Details</h2>
-          {selectedJob && <span className="badge">{selectedJob.jobId}</span>}
-        </div>
-        {!selectedJob ? (
-          <p className="muted">Select a translation job to see live updates.</p>
-        ) : (
-          <div className="job-detail">
-            <div className="progress">
-              <div className="progress-bar" style={{ width: `${selectedJob.progress * 100}%` }} />
-            </div>
-            <dl>
-              <div>
-                <dt>Status</dt>
-                <dd>{selectedJob.status}</dd>
+            ) : mainView === "projects" ? (
+              <ProjectsPanel onOpenProject={handleOpenProject} />
+            ) : mainView === "settings" ? (
+              <div className="w-full overflow-y-auto p-6">
+                <AppSettingsPanel />
               </div>
-              <div>
-                <dt>Stage</dt>
-                <dd>{selectedJob.stage}</dd>
-              </div>
-              {selectedJob.message && (
-                <div>
-                  <dt>Message</dt>
-                  <dd>{selectedJob.message}</dd>
+            ) : currentProjectId ? (
+              activeProject ? (
+                <ProjectOverview projectSummary={activeProject} />
+              ) : (
+                <ProjectOverviewPlaceholder project={activeProject} />
+              )
+            ) : (
+              <div className="flex w-full items-center justify-center p-6">
+                <div className="rounded-xl border border-border/60 bg-background/70 p-8 text-center text-sm text-muted-foreground shadow-sm">
+                  {fixedItems.find((i) => i.key === mainView)?.label} coming soon
                 </div>
-              )}
-              {selectedJob.durationMs != null && (
-                <div>
-                  <dt>Duration</dt>
-                  <dd>{selectedJob.durationMs} ms</dd>
-                </div>
-              )}
-              {selectedJob.errorReason && (
-                <div>
-                  <dt>Error</dt>
-                  <dd className="error">{selectedJob.errorReason}</dd>
-                </div>
-              )}
-            </dl>
-
-            {selectedJob.outputText && (
-              <div className="result">
-                <h3>Translated Output</h3>
-                <pre>{selectedJob.outputText}</pre>
               </div>
             )}
           </div>
-        )}
-      </section>
+        </main>
+      </div>
 
-      <section className="panel">
-        <LogConsole />
-      </section>
-    </main>
+      {isFooterVisible ? (
+        <WorkspaceFooter health={health} onHide={() => setIsFooterVisible(false)} />
+      ) : (
+        <CollapsedFooterBar onExpand={toggleFooter} />
+      )}
+    </div>
   );
 }
 

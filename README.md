@@ -6,7 +6,7 @@ Tauri 2.8.5 desktop application with a **React 19.1** frontend and **Rust 1.89**
 
 - React UI (ShadCN v3.3.1 + TailwindCSS 4.1.1) with streaming logs, file pickers, and OpenXLIFF controls.
 - Tauri sidecars bundle OpenXLIFF CLI scripts (`convert`, `merge`, `xliffchecker`) plus a slimmed Java runtime for offline operation.
-- Rust IPC layer exposes translation job simulation, path validation, and structured logging via `tauri-plugin-log`.
+- Rust IPC layer exposes translation job simulation, path validation, structured logging, and SQLite-backed job persistence via `tauri-plugin-sql`.
 - Capability hardening: shell sidecars limited to an allowlisted flag set; opener/dialog permissions scoped to user actions.
 - CI workflow builds macOS/Windows bundles, caches vendored OpenXLIFF dists, and uploads artifacts.
 
@@ -35,9 +35,12 @@ Plan.md                   Detailed project roadmap and status
 ## Getting started
 
 ```bash
-npm install
-npm run tauri dev
+pnpm install
+pnpm tauri dev
 ```
+
+> Prefer `pnpm` for development to stay aligned with the workspace lockfile. If you must
+> use npm, run `npm install` and adjust the scripts accordingly.
 
 During development `tauri dev` launches Vite together with the Tauri backend. Logs are streamed to the in-app console (powered by `tauri-plugin-log`).
 
@@ -46,7 +49,7 @@ During development `tauri dev` launches Vite together with the Tauri backend. Lo
 Debug build (bundles the macOS `.app` / `.dmg` or Windows `.msi`/`.exe` depending on host):
 
 ```bash
-npm run tauri build -- --debug
+pnpm tauri build -- --debug
 ```
 
 Artifacts land in `src-tauri/target/debug/bundle/…`. Example macOS output:
@@ -55,6 +58,33 @@ Artifacts land in `src-tauri/target/debug/bundle/…`. Example macOS output:
 - `bundle/dmg/weg-translator_0.1.0_aarch64.dmg`
 
 The `Resources/resources/openxliff/<platform>` directory inside the bundle carries the vendored CLI + jlink runtime. Wrapper scripts were validated to resolve this location automatically.
+
+## Testing
+
+Frontend and IPC surface tests rely on Vitest + Testing Library:
+
+```bash
+pnpm test            # watch mode
+pnpm test:run        # single run (CI friendly)
+pnpm test:coverage   # collect coverage via c8
+```
+
+Rust integration tests exercise the SQLite persistence layer:
+
+```bash
+cargo test --manifest-path src-tauri/Cargo.toml
+```
+
+## SQLite persistence
+
+- Database file lives under the platform-specific app config directory (via
+  `BaseDirectory::AppConfig`) as `weg_translator.db`.
+- Migrations reside in `src-tauri/migrations/*.sql` and are embedded at build time; the
+  `DbManager` helper applies them during setup.
+- The SQLite plugin is registered through `src-tauri/src/lib.rs` and gated by the
+  `src-tauri/capabilities/sqlite.json` manifest to avoid arbitrary URI access from the frontend.
+- In-memory integration tests (`src-tauri/tests/db_integration.rs`) verify migrations, duplicate
+  insert handling, status updates, and the clear-history path.
 
 ## OpenXLIFF integration
 
@@ -100,7 +130,7 @@ APP=src-tauri/target/debug/bundle/macos/weg-translator.app/Contents/MacOS/conver
 
 ## Frontend components
 
-- `src/routes/dashboard.tsx`: authenticated dashboard shell; buttons to trigger sidecar smoke tests.
+- `src/routes/index.tsx`: authenticated translator workspace; surfaces OpenXLIFF tooling and job controls.
 - `src/components/openxliff/OpenXliffPanel.tsx`: full convert/validate/merge UI with path validation, dialogs, and streaming logs.
 - `src/lib/openxliff.ts`: `Command.sidecar` wrappers (execute + streaming variants) returning structured results.
 - `src/lib/fs.ts`: client helper around the Rust `path_exists` command (exists/isFile/isDir).

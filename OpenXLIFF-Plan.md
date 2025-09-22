@@ -39,6 +39,22 @@ src-tauri/tauri.conf.json → add the sidecar path(s) under bundle.externalBin.
 - Invoke sidecars via @tauri-apps/plugin-shell Command.sidecar
 - Note: Tauri v2 capabilities schema changes across minors; copy exact snippets from v2.tauri.app/develop/sidecar when implementing
 
+### SQLite Integration Baseline — 2025-09-20
+
+- Branch `feature/sqlite-integration` created for database work.
+- Baseline checks pass: `cargo check` (warns about unused `TranslationStage::Failed`), `pnpm lint`.
+- No dedicated Rust or JS automated tests yet; will backfill during SQLite rollout.
+- `.gitignore` currently lacks SQLite patterns — add alongside migration files later.
+- Key risks: ensuring migrations run before IPC usage, avoiding concurrency issues with existing translation queue, and keeping capability manifests scoped to the new database file.
+
+### SQLite Integration Progress — 2025-03-18
+
+- Embedded migrations (`001`–`003`) now execute via the SQL plugin during setup; helper integration tests run them against in-memory SQLite before each assertion.
+- `DbManager` serialises writes with a Tokio mutex and emits structured logs under `target="db::jobs"`, improving observability for insert/update/store-output flows.
+- Friendly error mapping: database errors bubble up as actionable IPC messages (e.g., duplicate job IDs or missing files) and the React UI presents them in Alert components.
+- New Vitest suite (`src/ipc/client.test.ts`, `src/components/history/TranslationHistoryTable.test.tsx`) verifies IPC payloads and history rendering, complementing Rust integration tests in `src-tauri/tests/db_integration.rs`.
+- Documentation refreshed (README.md, sqlite-plan.md) with testing commands, database locations, and QA expectations; `.gitignore` excludes local `*.db` / `*.sqlite` artefacts.
+
 ### Phase 0 — Validate Inputs
 
 [x] Confirm OpenXLIFF CLI scripts available and supported on JDK 21
@@ -139,11 +155,11 @@ Scripts in dist call its own jlink runtime (bin/java) — no extra wiring needed
 
 ### Phase 12 — React Integration (Minimal UI)
 
-[x] Add UI actions in src/routes/dashboard.tsx to call utils
+[x] Add UI actions in src/routes/index.tsx to call utils
 [x] Use ShadCN 3.3.1 components for inputs/buttons/progress
 [x] Tailwind 4.1.1 classes for layout; avoid custom CSS
 [x] Show live logs; final status; reveal/open output path (added opener actions)
-[x] Add OpenXLIFF panel with file pickers (convert + validate) on dashboard
+[x] Add OpenXLIFF panel with file pickers (convert + validate) on translator workspace
 
 ### Phase 13 — File Dialogs & Paths
 

@@ -34,37 +34,43 @@ export function OpenXliffPanel() {
     return true
   }, [inputFile, srcLang, tgtLang])
 
-  const pickInput = useCallback(async () => {
-    const sel = await open({ multiple: false, directory: false })
-    if (typeof sel === "string") {
-      setInputFile(sel)
-      if (!xliffOut) {
-        try {
-          const base = sel.split("/").pop() ?? "output"
-          const stem = base.replace(/\.[^/.]+$/, "")
-          setXliffOut(`${stem}.xlf`)
-        } catch {
-          // noop
+  const pickInput = useCallback(() => {
+    void (async () => {
+      const sel = await open({ multiple: false, directory: false })
+      if (typeof sel === "string") {
+        setInputFile(sel)
+        if (!xliffOut) {
+          try {
+            const base = sel.split("/").pop() ?? "output"
+            const stem = base.replace(/\.[^/.]+$/, "")
+            setXliffOut(`${stem}.xlf`)
+          } catch {
+            // noop
+          }
         }
       }
-    }
+    })()
   }, [xliffOut])
 
-  const pickXliff = useCallback(async () => {
-    const sel = await save({
-      defaultPath: xliffOut || "out.xlf",
-      filters: [{ name: "XLIFF", extensions: ["xlf", "xliff"] }],
-    })
-    if (typeof sel === "string") setXliffOut(sel)
+  const pickXliff = useCallback(() => {
+    void (async () => {
+      const sel = await save({
+        defaultPath: xliffOut || "out.xlf",
+        filters: [{ name: "XLIFF", extensions: ["xlf", "xliff"] }],
+      })
+      if (typeof sel === "string") setXliffOut(sel)
+    })()
   }, [xliffOut])
 
-  const revealXliff = useCallback(async () => {
+  const revealXliff = useCallback(() => {
     if (!xliffOut) return
-    try {
-      await revealItemInDir(xliffOut)
-    } catch {
-      await openPath(xliffOut)
-    }
+    void (async () => {
+      try {
+        await revealItemInDir(xliffOut)
+      } catch {
+        await openPath(xliffOut)
+      }
+    })()
   }, [xliffOut])
 
   const pickFileInto = useCallback(async (setter: (p: string) => void) => {
@@ -77,123 +83,138 @@ export function OpenXliffPanel() {
     if (typeof sel === "string") setter(sel)
   }, [])
 
-  const handleConvert = useCallback(async () => {
+  const handleConvert = useCallback(() => {
     if (!formValid || running) return
     setRunning(true)
     setLog("")
     setStatus("")
-    try {
-      const info = await pathExists(inputFile)
-      if (!info.exists || !info.isFile) {
-        setStatus("Error: source file does not exist")
-        return
-      }
-      const res = await convertStream(
-        {
-          file: inputFile,
-          srcLang,
-          tgtLang: tgtLang || undefined,
-          xliff: xliffOut || undefined,
-          version,
-          type: docType || undefined,
-          srx: srx || undefined,
-          catalog: catalog || undefined,
-          config: config || undefined,
-          xmlfilter: xmlfilter || undefined,
-        },
-        {
-          onStdout: (line) => setLog((prev) => (prev ? prev + "\n" + line : line)),
-          onStderr: (line) => setLog((prev) => (prev ? prev + "\n[err] " + line : "[err] " + line)),
+    const run = async () => {
+      try {
+        const info = await pathExists(inputFile)
+        if (!info.exists || !info.isFile) {
+          setStatus("Error: source file does not exist")
+          return
         }
-      )
-      if (res.ok) {
-        setStatus(`Done (code ${res.code})`)
-      } else if (res.message) {
-        setStatus(`Error: ${res.message}`)
-      } else {
-        const codeLabel = res.code ?? 'unknown'
-        setStatus(`Failed (code ${codeLabel})`)
+        const res = await convertStream(
+          {
+            file: inputFile,
+            srcLang,
+            tgtLang: tgtLang || undefined,
+            xliff: xliffOut || undefined,
+            version,
+            type: docType || undefined,
+            srx: srx || undefined,
+            catalog: catalog || undefined,
+            config: config || undefined,
+            xmlfilter: xmlfilter || undefined,
+          },
+          {
+            onStdout: (line) => setLog((prev) => (prev ? prev + "\n" + line : line)),
+            onStderr: (line) => setLog((prev) => (prev ? prev + "\n[err] " + line : "[err] " + line)),
+          }
+        )
+        if (res.ok) {
+          setStatus(`Done (code ${res.code})`)
+        } else if (res.message) {
+          setStatus(`Error: ${res.message}`)
+        } else {
+          const codeLabel = res.code ?? 'unknown'
+          setStatus(`Failed (code ${codeLabel})`)
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        setStatus(`Error: ${msg}`)
+      } finally {
+        setRunning(false)
       }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      setStatus(`Error: ${msg}`)
-    } finally {
-      setRunning(false)
     }
-  }, [docType, formValid, inputFile, running, srcLang, tgtLang, version, xliffOut])
+    void run()
+  }, [catalog, config, docType, formValid, inputFile, running, srcLang, srx, tgtLang, version, xliffOut, xmlfilter])
 
-  const handleValidate = useCallback(async () => {
+  const handleValidate = useCallback(() => {
     if (!xliffOut || running) return
     setRunning(true)
     setLog("")
     setStatus("")
-    try {
-      const info = await pathExists(xliffOut)
-      if (!info.exists || !info.isFile) {
-        setStatus("Error: XLIFF file not found")
-        return
-      }
-      const res = await validateStream(
-        { xliff: xliffOut },
-        {
-          onStdout: (line) => setLog((prev) => (prev ? prev + "\n" + line : line)),
-          onStderr: (line) => setLog((prev) => (prev ? prev + "\n[err] " + line : "[err] " + line)),
+    const run = async () => {
+      try {
+        const info = await pathExists(xliffOut)
+        if (!info.exists || !info.isFile) {
+          setStatus("Error: XLIFF file not found")
+          return
         }
-      )
-      if (res.ok) {
-        setStatus(`Valid (code ${res.code})`)
-      } else if (res.message) {
-        setStatus(`Invalid: ${res.message}`)
-      } else {
-        const codeLabel = res.code ?? 'unknown'
-        setStatus(`Invalid (code ${codeLabel})`)
+        const res = await validateStream(
+          { xliff: xliffOut },
+          {
+            onStdout: (line) => setLog((prev) => (prev ? prev + "\n" + line : line)),
+            onStderr: (line) => setLog((prev) => (prev ? prev + "\n[err] " + line : "[err] " + line)),
+          }
+        )
+        if (res.ok) {
+          setStatus(`Valid (code ${res.code})`)
+        } else if (res.message) {
+          setStatus(`Invalid: ${res.message}`)
+        } else {
+          const codeLabel = res.code ?? 'unknown'
+          setStatus(`Invalid (code ${codeLabel})`)
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        setStatus(`Error: ${msg}`)
+      } finally {
+        setRunning(false)
       }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      setStatus(`Error: ${msg}`)
-    } finally {
-      setRunning(false)
     }
+    void run()
   }, [running, xliffOut])
 
   const [mergeIn, setMergeIn] = useState("")
   const [mergeOut, setMergeOut] = useState("")
-  const handlePickMergeIn = useCallback(async () => {
-    const sel = await open({ multiple: false, directory: false, filters: [{ name: "XLIFF", extensions: ["xlf","xliff"] }] })
-    if (typeof sel === "string") setMergeIn(sel)
+  const handlePickMergeIn = useCallback(() => {
+    void (async () => {
+      const sel = await open({ multiple: false, directory: false, filters: [{ name: "XLIFF", extensions: ["xlf","xliff"] }] })
+      if (typeof sel === "string") setMergeIn(sel)
+    })()
   }, [])
-  const handlePickMergeOut = useCallback(async () => {
-    const sel = await save({ defaultPath: mergeOut || "output.docx" })
-    if (typeof sel === "string") setMergeOut(sel)
+  const handlePickMergeOut = useCallback(() => {
+    void (async () => {
+      const sel = await save({ defaultPath: mergeOut || "output.docx" })
+      if (typeof sel === "string") setMergeOut(sel)
+    })()
   }, [mergeOut])
-  const handleMerge = useCallback(async () => {
+  const handleMerge = useCallback(() => {
     if (!mergeIn || !mergeOut || running) return
     setRunning(true)
     setLog("")
     setStatus("")
-    try {
-      const infoIn = await pathExists(mergeIn)
-      if (!infoIn.exists || !infoIn.isFile) {
-        setStatus("Error: merge XLIFF file not found")
-        return
+    const run = async () => {
+      try {
+        const infoIn = await pathExists(mergeIn)
+        if (!infoIn.exists || !infoIn.isFile) {
+          setStatus("Error: merge XLIFF file not found")
+          return
+        }
+        const res = await mergeStream(
+          { xliff: mergeIn, target: mergeOut, catalog: catalog || undefined },
+          { onStdout: (l) => setLog((p) => (p ? p + "\n" + l : l)), onStderr: (l) => setLog((p) => (p ? p + "\n[err] " + l : "[err] " + l)) }
+        )
+        if (res.ok) {
+          setStatus(`Merged (code ${res.code})`)
+        } else if (res.message) {
+          setStatus(`Merge failed: ${res.message}`)
+        } else {
+          const codeLabel = res.code ?? 'unknown'
+          setStatus(`Merge failed (code ${codeLabel})`)
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        setStatus(`Error: ${msg}`)
+      } finally {
+        setRunning(false)
       }
-      const res = await mergeStream(
-        { xliff: mergeIn, target: mergeOut, catalog: catalog || undefined },
-        { onStdout: (l) => setLog((p) => (p ? p + "\n" + l : l)), onStderr: (l) => setLog((p) => (p ? p + "\n[err] " + l : "[err] " + l)) }
-      )
-      if (res.ok) {
-        setStatus(`Merged (code ${res.code})`)
-      } else if (res.message) {
-        setStatus(`Merge failed: ${res.message}`)
-      } else {
-        const codeLabel = res.code ?? 'unknown'
-        setStatus(`Merge failed (code ${codeLabel})`)
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      setStatus(`Error: ${msg}`)
-    } finally { setRunning(false) }
-  }, [catalog, mergeIn, mergeOut, mergeStream, running])
+    }
+    void run()
+  }, [catalog, mergeIn, mergeOut, running])
 
   return (
     <Card className="border-border/60 bg-card/80">

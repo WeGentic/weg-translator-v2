@@ -25,6 +25,16 @@ export default defineConfig(() => ({
     },
   },
 
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: ["./src/test/setup.ts"],
+    coverage: {
+      reporter: ["text", "lcov"],
+    },
+    restoreMocks: true,
+  },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors
