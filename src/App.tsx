@@ -516,7 +516,7 @@ function App() {
         const projectId = custom.detail?.projectId;
         const fileId = custom.detail?.fileId ?? null;
         if (projectId) {
-          logger.debug?.(`Navigate: editor view for project=${projectId}${fileId ? ` file=${fileId}` : ""}`);
+          void logger.debug?.(`Navigate: editor view for project=${projectId}${fileId ? ` file=${fileId}` : ""}`);
           setSelectedFileId(fileId);
           setMainView(toEditorViewKey(projectId));
         } else {

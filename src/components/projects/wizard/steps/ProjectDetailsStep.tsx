@@ -27,7 +27,7 @@ export function ProjectDetailsStep({ form, errors, onChange }: ProjectDetailsSte
   const srcInvalid = Boolean(errors.srcLang) || (form.srcLang ? !isWellFormedBcp47(form.srcLang) : false);
   const tgtInvalid = Boolean(errors.tgtLang) || (form.tgtLang ? !isWellFormedBcp47(form.tgtLang) : false);
 
-  const selectPlaceholder = useMemo(() => ({ src: "Select source language", tgt: "Select target language" }), []);
+  const selectPlaceholder = { src: "Select source language", tgt: "Select target language" } as const;
 
   const orderedLanguages = useMemo(() => {
     const preferred = new Set(["en-US", "it-IT"]);

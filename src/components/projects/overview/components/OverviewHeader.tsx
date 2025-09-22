@@ -15,7 +15,7 @@ type OverviewHeaderProps = {
 };
 
 export function OverviewHeader({ project, details, onAddFiles, autoConvertOnOpen }: OverviewHeaderProps) {
-  const fileCount = typeof details?.files?.length === "number" ? details!.files.length : project.fileCount;
+  const fileCount = typeof details?.files?.length === "number" ? details.files.length : project.fileCount;
   const src = details?.defaultSrcLang ?? "";
   const tgt = details?.defaultTgtLang ?? "";
   const created = safeFormatDate(project.createdAt);
@@ -66,4 +66,3 @@ function safeFormatDate(isoDate: string) {
 }
 
 export default OverviewHeader;
-
