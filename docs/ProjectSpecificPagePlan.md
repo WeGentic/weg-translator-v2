@@ -20,6 +20,7 @@ Progress (Sep 22):
 - [x] 25 Feature flag: Auto-convert on open (default enabled)
 - [x] UX polish: banner + tooltip when auto-convert is disabled
 - [x] 23–24, 26 Docs/rollout finalized (added rollout doc; checklist documented; migration order verified)
+  - [ ] Code review: CodeRabbit CLI attempted (`coderabbit --plain --type uncommitted`); currently unauthenticated → rate-limited. Pending `coderabbit auth login` to proceed and apply suggestions.
 
 Note on sidecars: We will execute the packaged OpenXLIFF sidecar from the frontend via `@tauri-apps/plugin-shell` (`Command.sidecar`), which is already wired in `src/lib/openxliff.ts`. This aligns with the existing capabilities config and avoids duplicating process control on the backend.
 
