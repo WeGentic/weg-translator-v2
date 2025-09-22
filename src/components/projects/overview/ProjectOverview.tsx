@@ -4,8 +4,11 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+// Table replaced by compact list
 import { Separator } from "@/components/ui/separator";
+import { FileList } from "./components/files/FileList";
+import { OverviewHeader } from "./components/OverviewHeader";
+import { OverviewAutoConvertBanner } from "./components/OverviewAutoConvertBanner";
 
 import {
   addFilesToProject,
@@ -288,44 +291,14 @@ export function ProjectOverview({ projectSummary }: Props) {
 
   return (
     <section className="flex w-full flex-col gap-6 overflow-y-auto p-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Project</p>
-          <h2 className="text-2xl font-semibold text-foreground">{projectSummary.name}</h2>
-          <p className="text-sm text-muted-foreground">{projectSummary.slug}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={() => setIsAddOpen(true)}
-            title={
-              !autoConvertOnOpen
-                ? "Auto-conversion is disabled; conversions won’t start automatically"
-                : undefined
-            }
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add files
-          </Button>
-        </div>
-      </div>
+      <OverviewHeader
+        project={projectSummary}
+        details={details}
+        onAddFiles={() => setIsAddOpen(true)}
+        autoConvertOnOpen={autoConvertOnOpen}
+      />
 
-      {!autoConvertOnOpen ? (
-        <div className="flex items-center justify-between gap-3 rounded-md border border-blue-500/40 bg-blue-500/10 p-3 text-sm text-blue-700 dark:text-blue-300">
-          <div>
-            Auto-convert on open is disabled. Conversions will not start automatically.
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              // Navigate to settings via global app event
-              window.dispatchEvent(new CustomEvent("app:navigate", { detail: { view: "settings" } }));
-            }}
-          >
-            Open settings
-          </Button>
-        </div>
-      ) : null}
+      <OverviewAutoConvertBanner autoConvertOnOpen={autoConvertOnOpen} />
 
       {error ? (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
@@ -333,24 +306,7 @@ export function ProjectOverview({ projectSummary }: Props) {
         </div>
       ) : null}
 
-      <Card>
-        <CardHeader className="border-border/60 border-b pb-4">
-          <CardTitle className="text-base font-semibold">Languages</CardTitle>
-          <CardDescription>Default conversion pair for this project.</CardDescription>
-        </CardHeader>
-        <CardContent className="px-6 py-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Source</p>
-              <p className="text-sm font-medium text-foreground">{defaultSrc}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Target</p>
-              <p className="text-sm font-medium text-foreground">{defaultTgt}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Languages card removed in favor of compact header */}
 
       <Card>
         <CardHeader className="border-border/60 border-b pb-4">
@@ -358,60 +314,18 @@ export function ProjectOverview({ projectSummary }: Props) {
           <CardDescription>Imported files and conversion status.</CardDescription>
         </CardHeader>
         <CardContent className="px-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="pl-6">File</TableHead>
-                <TableHead>Ext</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[40%]">Conversions</TableHead>
-                <TableHead className="pr-6 text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="pl-6">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : details && details.files.length > 0 ? (
-                details.files.map((row) => (
-                  <TableRow key={row.file.id}>
-                    <TableCell className="pl-6 font-medium">{row.file.originalName}</TableCell>
-                    <TableCell className="text-muted-foreground">{row.file.ext}</TableCell>
-                    <TableCell className="text-muted-foreground">{formatSize(row.file.sizeBytes)}</TableCell>
-                    <TableCell>{formatImportStatus(row.file.importStatus)}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {row.conversions.length === 0 ? (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        ) : (
-                          row.conversions.map((c) => (
-                            <StatusBadge key={c.id} conversion={c} />
-                          ))
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="pr-6 text-right">
-                      <Button size="icon" variant="ghost" onClick={() => setIsRemoveOpen(row.file.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="pl-6 text-sm text-muted-foreground">
-                    No files yet. Use "Add files" to import.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <FileList
+            files={details?.files ?? []}
+            isLoading={isLoading}
+            onRemove={(fileId) => setIsRemoveOpen(fileId)}
+            onOpenEditor={(fileId) => {
+              window.dispatchEvent(
+                new CustomEvent("app:navigate", {
+                  detail: { view: "editor", projectId, fileId },
+                }),
+              );
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -493,19 +407,6 @@ export function ProjectOverview({ projectSummary }: Props) {
   );
 }
 
-function StatusBadge({ conversion }: { conversion: ProjectFileConversionDto }) {
-  const color =
-    conversion.status === "completed"
-      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-      : conversion.status === "running"
-      ? "bg-primary/10 text-primary"
-      : conversion.status === "failed"
-      ? "bg-destructive/10 text-destructive"
-      : "bg-muted text-muted-foreground";
-  const label = `${conversion.srcLang}→${conversion.tgtLang} (${conversion.version}) — ${conversion.status}`;
-  return <span className={`inline-flex rounded px-2 py-0.5 text-[0.7rem] ${color}`}>{label}</span>;
-}
-
 function ProgressBar({ current, total, running }: { current: number; total: number; running: boolean }) {
   const pct = total > 0 ? Math.round((current / total) * 100) : 0;
   return (
@@ -520,15 +421,4 @@ function ProgressBar({ current, total, running }: { current: number; total: numb
   );
 }
 
-function formatSize(size?: number) {
-  if (!size || size <= 0) return "—";
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${Math.round(size / 10.24) / 100} KB`;
-  return `${Math.round(size / 10485.76) / 100} MB`;
-}
-
-function formatImportStatus(status: string) {
-  if (status === "imported") return <span className="inline-flex rounded bg-emerald-500/15 px-2 py-0.5 text-[0.7rem] text-emerald-700 dark:text-emerald-300">imported</span>;
-  if (status === "failed") return <span className="inline-flex rounded bg-destructive/10 px-2 py-0.5 text-[0.7rem] text-destructive">failed</span>;
-  return <span className="inline-flex rounded bg-muted px-2 py-0.5 text-[0.7rem] text-muted-foreground">{status}</span>;
-}
+// formatSize and import status styles now live in FileListItem

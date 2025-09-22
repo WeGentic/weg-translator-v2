@@ -19,6 +19,7 @@ type AppSidebarProps = {
   state: SidebarState;
   fixedItems: MenuItem[];
   temporaryItems?: MenuItem[];
+  editorItems?: MenuItem[];
   selectedKey: string;
   onSelect: (key: string) => void;
   className?: string;
@@ -30,6 +31,7 @@ export function AppSidebar({
   state,
   fixedItems,
   temporaryItems = EMPTY_MENU_ITEMS,
+  editorItems = EMPTY_MENU_ITEMS,
   selectedKey,
   onSelect,
   className,
@@ -44,6 +46,9 @@ export function AppSidebar({
     state === "compact" && "w-16",
     className,
   );
+
+  const settingsItem = fixedItems.find((i) => i.key === "settings");
+  const topFixedItems = fixedItems.filter((i) => i.key !== "settings");
 
   const renderItem = (
     item: MenuItem,
@@ -116,40 +121,67 @@ export function AppSidebar({
 
   return (
     <aside className={container} aria-hidden={false} style={style}>
-      <nav role="navigation" aria-label="Primary" className="flex min-h-0 flex-1 flex-col gap-3 p-2">
-        <div className="space-y-1" aria-label="Fixed">
-          <p
-            className={cn(
-              "px-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground",
-              state === "compact" && "sr-only",
-            )}
-          >
-            Navigation
-          </p>
-          <ul className="flex max-h-full flex-col gap-1 overflow-y-auto pr-1" role="list">
-            {fixedItems.map((item) => {
-              const isProjectsNode = item.key === "projects" && temporaryItems.length > 0;
-              const children = isProjectsNode ? (
-                <ul
-                  className={cn(
-                    "mt-1 flex flex-col gap-1 border-l border-border/40 pl-3",
-                    state === "compact" && "pl-2",
-                  )}
-                  role="list"
-                >
-                  {temporaryItems.map((temp) =>
-                    renderItem(temp, {
-                      isTemporary: true,
-                      className: state !== "compact" ? "pl-2" : undefined,
-                    }),
-                  )}
-                </ul>
-              ) : null;
-              return renderItem(item, { children });
-            })}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <nav role="navigation" aria-label="Project navigation" className="flex min-h-0 flex-col gap-3 p-2">
+          <div className="space-y-1" aria-label="Projects">
+            <p
+              className={cn(
+                "px-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground",
+                state === "compact" && "sr-only",
+              )}
+            >
+              Project
+            </p>
+            <ul className="flex max-h-full flex-col gap-1 overflow-y-auto pr-1" role="list">
+              {topFixedItems
+                .filter((item) => item.key === "projects")
+                .map((item) => {
+                  const children = temporaryItems.length > 0 ? (
+                    <ul
+                      className={cn(
+                        "mt-1 flex flex-col gap-1 border-l border-border/40 pl-3",
+                        state === "compact" && "pl-2",
+                      )}
+                      role="list"
+                    >
+                      {temporaryItems.map((temp) =>
+                        renderItem(temp, {
+                          isTemporary: true,
+                          className: state !== "compact" ? "pl-2" : undefined,
+                        }),
+                      )}
+                    </ul>
+                  ) : null;
+                  return renderItem(item, { children });
+                })}
+            </ul>
+          </div>
+        </nav>
+
+        <nav role="navigation" aria-label="Editor navigation" className="flex min-h-0 flex-col gap-2 p-2 pt-0">
+          <div className="space-y-1" aria-label="Editor">
+            <p
+              className={cn(
+                "px-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground",
+                state === "compact" && "sr-only",
+              )}
+            >
+              Editor
+            </p>
+            <ul className="flex max-h-full flex-col gap-1 overflow-y-auto pr-1" role="list">
+              {editorItems.map((item) => renderItem(item, { isTemporary: true }))}
+            </ul>
+          </div>
+        </nav>
+      </div>
+
+      {settingsItem ? (
+        <div className="sticky bottom-0 border-t border-border bg-background/70 p-2">
+          <ul role="list">
+            {renderItem(settingsItem)}
           </ul>
         </div>
-      </nav>
+      ) : null}
     </aside>
   );
 }

@@ -1,19 +1,17 @@
 import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
-import { PanelsTopLeft, FolderKanban, Briefcase, History, Settings, FileText } from "lucide-react";
+import { FolderKanban, Settings, FileText } from "lucide-react";
 
 import { WorkspaceFooter, CollapsedFooterBar } from "./components/layout/WorkspaceFooter";
 import { CollapsedHeaderBar } from "./components/layout/WorkspaceHeader";
 import { AppHeader } from "./components/layout/AppHeader";
-import {
-  WorkspaceMainContent,
-  type TranslationJobViewModel,
-} from "./components/layout/WorkspaceMainContent";
+import type { TranslationJobViewModel } from "./components/layout/WorkspaceMainContent";
 import { type SidebarState } from "./components/layout/WorkspaceSidebar";
 import { AppSidebar, type MenuItem } from "./components/layout/AppSidebar";
 import { ProjectsPanel } from "./components/projects/ProjectsPanel";
 import { ProjectOverviewPlaceholder } from "./components/projects/overview/ProjectOverviewPlaceholder";
 import { ProjectOverview } from "./components/projects/overview/ProjectOverview";
+import { ProjectEditor } from "./components/projects/editor/ProjectEditor";
 import { AppSettingsPanel } from "./components/settings/AppSettingsPanel";
 import { useAuth } from "./contexts/AuthContext";
 import { logger } from "./logging";
@@ -37,8 +35,10 @@ import {
 } from "./ipc";
 
 const PROJECT_VIEW_PREFIX = "project:" as const;
+const EDITOR_VIEW_PREFIX = "editor:" as const;
 type ProjectViewKey = `${typeof PROJECT_VIEW_PREFIX}${string}`;
-type MainView = "workspace" | "projects" | "jobs" | "history" | "settings" | ProjectViewKey;
+type EditorViewKey = `${typeof EDITOR_VIEW_PREFIX}${string}`;
+type MainView = "projects" | "settings" | ProjectViewKey | EditorViewKey;
 
 function toProjectViewKey(projectId: string): ProjectViewKey {
   // The template string preserves the literal prefix; cast keeps the precise key type for lookups.
@@ -48,6 +48,15 @@ function toProjectViewKey(projectId: string): ProjectViewKey {
 
 function parseProjectIdFromKey(key: string): string | null {
   return key.startsWith(PROJECT_VIEW_PREFIX) ? key.slice(PROJECT_VIEW_PREFIX.length) : null;
+}
+
+function toEditorViewKey(projectId: string): EditorViewKey {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+  return `${EDITOR_VIEW_PREFIX}${projectId}` as EditorViewKey;
+}
+
+function parseEditorProjectIdFromKey(key: string): string | null {
+  return key.startsWith(EDITOR_VIEW_PREFIX) ? key.slice(EDITOR_VIEW_PREFIX.length) : null;
 }
 
 const INITIAL_FORM: TranslationRequest = {
@@ -120,9 +129,10 @@ function App() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [jobs, setJobs] = useState<Record<string, TranslationJobViewModel>>({});
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [systemError, setSystemError] = useState<string | null>(null);
   const [sidebarState, setSidebarState] = useState<SidebarState>("expanded");
-  const [mainView, setMainView] = useState<MainView>("workspace");
+  const [mainView, setMainView] = useState<MainView>("projects");
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [isFooterVisible, setIsFooterVisible] = useState(true);
   const [openProjects, setOpenProjects] = useState<ProjectListItem[]>([]);
@@ -411,10 +421,7 @@ function App() {
   const activeJobCount = jobList.length;
   const fixedItems: MenuItem[] = useMemo(
     () => [
-      { key: "workspace", label: "Workspace", icon: PanelsTopLeft },
       { key: "projects", label: "Projects", icon: FolderKanban },
-      { key: "jobs", label: "Jobs", icon: Briefcase },
-      { key: "history", label: "History", icon: History },
       { key: "settings", label: "Settings", icon: Settings },
     ],
     [],
@@ -451,7 +458,19 @@ function App() {
     [handleCloseProject, openProjects],
   );
 
+  const temporaryEditorItems: MenuItem[] = useMemo(
+    () =>
+      openProjects.map((project) => ({
+        key: toEditorViewKey(project.projectId),
+        label: `Editor — ${project.name}`,
+        icon: FileText,
+        onClose: () => handleCloseProject(project.projectId),
+      })),
+    [handleCloseProject, openProjects],
+  );
+
   const currentProjectId = useMemo(() => parseProjectIdFromKey(mainView), [mainView]);
+  const currentEditorProjectId = useMemo(() => parseEditorProjectIdFromKey(mainView), [mainView]);
   const activeProject = useMemo(() => {
     if (!currentProjectId) return null;
     return openProjects.find((project) => project.projectId === currentProjectId) ?? null;
@@ -487,10 +506,22 @@ function App() {
   // Global navigation events (e.g., from child components)
   useEffect(() => {
     const handler = (event: Event) => {
-      const custom = event as CustomEvent<{ view?: string } | undefined>;
+      const custom = event as CustomEvent<{ view?: string; projectId?: string; fileId?: string } | undefined>;
       const view = custom.detail?.view;
-      if (view === "settings" || view === "projects" || view === "workspace" || view === "history" || view === "jobs") {
+      if (view === "settings" || view === "projects") {
         setMainView(view as MainView);
+        return;
+      }
+      if (view === "editor") {
+        const projectId = custom.detail?.projectId;
+        const fileId = custom.detail?.fileId ?? null;
+        if (projectId) {
+          logger.debug?.(`Navigate: editor view for project=${projectId}${fileId ? ` file=${fileId}` : ""}`);
+          setSelectedFileId(fileId);
+          setMainView(toEditorViewKey(projectId));
+        } else {
+          setMainView("projects");
+        }
       }
     };
     window.addEventListener("app:navigate", handler as EventListener);
@@ -521,6 +552,7 @@ function App() {
           state={sidebarState}
           fixedItems={fixedItems}
           temporaryItems={temporaryProjectItems}
+          editorItems={temporaryEditorItems}
           selectedKey={mainView}
           onSelect={(key) => setMainView(key as MainView)}
           style={{
@@ -530,29 +562,14 @@ function App() {
         />
         <main id="main-content" role="main" className="contents">
           <div className={cn("flex flex-1 overflow-hidden", contentLeftPadClass)}>
-            {mainView === "workspace" ? (
-              <WorkspaceMainContent
-                systemError={systemError}
-                form={form}
-                onFormChange={setForm}
-                onSwapLanguages={handleSwapLanguages}
-                submitTranslation={handleTranslationFormAction}
-                isSubmitting={isSubmitting}
-                formStatus={formStatus}
-                isFormValid={formIsValid}
-                health={health}
-                jobList={jobList}
-                selectedJobId={selectedJobId}
-                selectedJob={selectedJob}
-                onSelectJob={setSelectedJobId}
-                activeJobCount={activeJobCount}
-              />
-            ) : mainView === "projects" ? (
+            {mainView === "projects" ? (
               <ProjectsPanel onOpenProject={handleOpenProject} />
             ) : mainView === "settings" ? (
               <div className="w-full overflow-y-auto p-6">
                 <AppSettingsPanel />
               </div>
+            ) : currentEditorProjectId ? (
+              <ProjectEditor projectId={currentEditorProjectId} fileId={selectedFileId} />
             ) : currentProjectId ? (
               activeProject ? (
                 <ProjectOverview projectSummary={activeProject} />

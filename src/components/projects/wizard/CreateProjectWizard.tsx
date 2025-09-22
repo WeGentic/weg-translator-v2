@@ -96,6 +96,14 @@ export function CreateProjectWizard({ open, onOpenChange, onProjectCreated }: Cr
             <span>{stepLabel}</span>
           </div>
 
+          {/* Lightweight progress bar for clearer sense of progress */}
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-label="Wizard progress">
+            <div
+              className="h-full bg-primary transition-[width] duration-300"
+              style={{ width: `${Math.round(((step + 1) / CREATE_PROJECT_STEP_LABELS.length) * 100)}%` }}
+            />
+          </div>
+
           {bannerError ? (
             <Alert variant="destructive">
               <AlertTitle>Unable to create project</AlertTitle>
