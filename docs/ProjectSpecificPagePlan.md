@@ -9,9 +9,11 @@ Progress (Sep 21):
 - [x] 8–10 Wizard language fields + validation + request wiring
 - [x] 11 Frontend IPC wrappers
 - [x] 12–15 Project page (details, file table, add/remove, auto‑conversion modal + statuses)
-- [ ] 16–20 Paths/UX: implemented as described; monitor for refinements
-- [ ] 21–22 Unit tests (next)
-- [ ] 23–26 Docs/rollout (docs updated incrementally; finalize after tests)
+- [x] 16–20 Paths/UX: implemented as described; minor refinements applied
+- [x] 21–22 Unit tests added (Rust + TS)
+- [x] 25 Feature flag: Auto-convert on open (default enabled)
+- [x] UX polish: banner + tooltip when auto-convert is disabled
+- [ ] 23–24, 26 Docs/rollout (docs updated incrementally; finalize after tests)
 
 Note on sidecars: We will execute the packaged OpenXLIFF sidecar from the frontend via `@tauri-apps/plugin-shell` (`Command.sidecar`), which is already wired in `src/lib/openxliff.ts`. This aligns with the existing capabilities config and avoids duplicating process control on the backend.
 

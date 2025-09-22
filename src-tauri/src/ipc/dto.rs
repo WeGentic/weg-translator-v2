@@ -181,6 +181,7 @@ pub struct AppSettingsDto {
     pub settings_file_exists: bool,
     pub default_app_folder: String,
     pub is_using_default_location: bool,
+    pub auto_convert_on_open: bool,
 }
 
 // ===== Projects: Details & Conversions DTOs =====

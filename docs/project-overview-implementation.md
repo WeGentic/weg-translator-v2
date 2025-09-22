@@ -7,7 +7,7 @@ What changed
   - Loads details via `getProjectDetails(projectId)`.
   - Renders default languages, files table, per‑conversion status badges.
   - Actions: Add files (dialog via `@tauri-apps/plugin-dialog`), Remove file (confirm).
-  - Auto‑conversion on open: calls `ensureProjectConversionsPlan(projectId)`, opens modal, sequentially executes tasks with streaming logs using `convertStream` and validates via `validateStream`.
+  - Auto‑conversion on open: calls `ensureProjectConversionsPlan(projectId)` when `autoConvertOnOpen` is enabled in app settings, opens modal, sequentially executes tasks with streaming logs using `convertStream` and validates via `validateStream`.
   - Persists status transitions with `updateConversionStatus` and stores relative `xliff_rel_path`.
 - App integration: `src/App.tsx`
   - Uses `ProjectOverview` for opened projects instead of placeholder.
@@ -20,4 +20,3 @@ Behavior
 Notes
 - Status badges: pending, running, completed, failed.
 - Output files live under `<project.root_path>/xliff/` as `<stem>.<src>-<tgt>.xlf`.
-

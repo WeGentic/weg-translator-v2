@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { getAppSettings, updateAppFolder } from "@/ipc";
+import { getAppSettings, updateAppFolder, updateAutoConvertOnOpen } from "@/ipc";
 import type { AppSettings } from "@/ipc";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const PATH_DESCRIPTIONS = [
   {
@@ -84,6 +86,23 @@ export function AppSettingsPanel() {
       setIsUpdating(false);
     }
   }, []);
+
+  const handleToggleAutoConvert = useCallback(async () => {
+    if (!settings) return;
+    setIsUpdating(true);
+    setError(null);
+    try {
+      const updated = await updateAutoConvertOnOpen(!settings.autoConvertOnOpen);
+      setSettings(updated);
+      setStatus("Preference updated.");
+    } catch (unknownError) {
+      const message =
+        unknownError instanceof Error ? unknownError.message : "Unable to update settings.";
+      setError(message);
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [settings]);
 
   const derived = useMemo(() => {
     if (!settings) return null;
@@ -204,6 +223,16 @@ export function AppSettingsPanel() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </section>
+
+              <Separator />
+
+              <section className="space-y-3">
+                <p className="text-sm font-medium text-foreground">Preferences</p>
+                <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/10 p-3">
+                  <Checkbox id="auto-convert" checked={settings.autoConvertOnOpen} onCheckedChange={handleToggleAutoConvert} />
+                  <Label htmlFor="auto-convert" className="cursor-pointer">Auto-convert on open</Label>
                 </div>
               </section>
             </div>

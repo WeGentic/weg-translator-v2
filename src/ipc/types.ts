@@ -124,6 +124,7 @@ export interface AppSettings {
   settingsFileExists: boolean;
   defaultAppFolder: string;
   isUsingDefaultLocation: boolean;
+  autoConvertOnOpen: boolean;
 }
 
 // ===== Project Details & Conversions =====

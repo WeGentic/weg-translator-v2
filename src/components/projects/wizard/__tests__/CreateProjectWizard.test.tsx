@@ -102,6 +102,8 @@ describe("CreateProjectWizard", () => {
     expect(createProjectMock).toHaveBeenCalledWith({
       name: "Marketing Launch",
       projectType: "translation",
+      defaultSrcLang: "en-US",
+      defaultTgtLang: "it-IT",
       files: ["/Users/test/launch.docx"],
     });
 

@@ -20,6 +20,7 @@ import {
   type ProjectListItem,
 } from "@/ipc";
 import { convertStream, validateStream } from "@/lib/openxliff";
+import { getAppSettings } from "@/ipc";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 type Props = {
@@ -40,6 +41,9 @@ export function ProjectOverview({ projectSummary }: Props) {
   const [ensureProgress, setEnsureProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
   const [logs, setLogs] = useState<string[]>([]);
   const cancelRequested = useRef(false);
+  const [autoConvertOnOpen, setAutoConvertOnOpen] = useState<boolean>(true);
+  const initialEnsureDone = useRef(false);
+  const [queueSummary, setQueueSummary] = useState<{ completed: number; failed: number } | null>(null);
 
   const defaultSrc = details?.defaultSrcLang ?? "en-US";
   const defaultTgt = details?.defaultTgtLang ?? "it-IT";
@@ -53,18 +57,31 @@ export function ProjectOverview({ projectSummary }: Props) {
     } catch (unknownError) {
       const message = unknownError instanceof Error ? unknownError.message : "Failed to load project details.";
       setError(message);
+      if (/not found|missing required key|invalid args/i.test(message)) {
+        // Navigate back to projects when the project cannot be loaded
+        window.dispatchEvent(new CustomEvent("app:navigate", { detail: { view: "projects" } }));
+      }
     } finally {
       setIsLoading(false);
     }
   }, [projectId]);
 
   useEffect(() => {
-    void loadDetails();
+    void (async () => {
+      void loadDetails();
+      try {
+        const settings = await getAppSettings();
+        setAutoConvertOnOpen(settings.autoConvertOnOpen ?? true);
+      } catch {
+        setAutoConvertOnOpen(true);
+      }
+    })();
   }, [loadDetails]);
 
   // Auto-ensure conversions on first load
   useEffect(() => {
-    if (!details) return;
+    if (!details || !autoConvertOnOpen || initialEnsureDone.current) return;
+    initialEnsureDone.current = true;
     void (async () => {
       try {
         const plan = await ensureProjectConversionsPlan(details.id);
@@ -72,11 +89,11 @@ export function ProjectOverview({ projectSummary }: Props) {
           setEnsurePlan(plan);
           setEnsureProgress({ current: 0, total: plan.tasks.length });
         }
-      } catch (e) {
+      } catch {
         // non-blocking
       }
     })();
-  }, [details]);
+  }, [details, autoConvertOnOpen]);
 
   // (moved below to avoid TS use-before-assign)
 
@@ -130,18 +147,26 @@ export function ProjectOverview({ projectSummary }: Props) {
     cancelRequested.current = false;
     setLogs([]);
     setEnsureProgress({ current: 0, total: ensurePlan.tasks.length });
-
+    setQueueSummary(null);
+    let failed = 0;
+    let completed = 0;
     for (let i = 0; i < ensurePlan.tasks.length; i++) {
       if (cancelRequested.current) break;
       const task = ensurePlan.tasks[i];
       setEnsureProgress({ current: i, total: ensurePlan.tasks.length });
-      await processTask(task);
+      const ok = await processTask(task);
+      if (ok) completed += 1;
+      else failed += 1;
     }
 
     setIsEnsuring(false);
-    setEnsurePlan(null);
     setEnsureProgress({ current: 0, total: 0 });
+    setQueueSummary({ completed, failed });
     await loadDetails();
+    if (failed === 0) {
+      // Auto-close only on full success
+      setEnsurePlan(null);
+    }
   }, [ensurePlan, loadDetails]);
 
   const processTask = useCallback(async (task: EnsureConversionsTask) => {
@@ -149,32 +174,79 @@ export function ProjectOverview({ projectSummary }: Props) {
     const onStderr = (line: string) => setLogs((cur) => [...cur, line]);
     try {
       await updateConversionStatus(task.conversionId, "running");
+      const fileExt = task.inputAbsPath.split(".").pop()?.toLowerCase();
+      const knownTypes = new Set([
+        "doc", "docx", "ppt", "pptx", "xls", "xlsx", "odt", "odp", "ods", "html", "xml", "dita", "md",
+      ] as const);
+      const convType = fileExt && knownTypes.has(fileExt as any) ? (fileExt as string) : undefined;
+      setLogs((cur) => [
+        ...cur,
+        `> convert -file ${task.inputAbsPath} -srcLang ${task.srcLang} -tgtLang ${task.tgtLang} -xliff ${task.outputAbsPath} ${convType ? `-type ${convType} ` : ""}-${task.version}`,
+      ]);
       const res = await convertStream({
         file: task.inputAbsPath,
         srcLang: task.srcLang,
         tgtLang: task.tgtLang,
         xliff: task.outputAbsPath,
         version: task.version as "2.0" | "2.1" | "2.2",
+        type: convType,
         paragraph: task.paragraph,
         embed: task.embed,
       }, { onStdout, onStderr });
 
       if (!res.ok) {
-        await updateConversionStatus(task.conversionId, "failed", { errorMessage: res.message ?? "Conversion failed" });
-        return;
+        const detail = res.knownError?.detail || res.message || `Conversion failed (code ${res.code ?? "?"}).`;
+        setLogs((cur) => {
+          const lines: string[] = [];
+          lines.push(`Exit code: ${res.code ?? "?"}`);
+          const stderrLines = (res.stderr || "").split(/\r?\n/).filter(Boolean);
+          const stdoutLines = (res.stdout || "").split(/\r?\n/).filter(Boolean);
+          if (stderrLines.length) {
+            lines.push("--- stderr (tail) ---");
+            lines.push(...stderrLines.slice(-10));
+          }
+          if (stdoutLines.length) {
+            lines.push("--- stdout (tail) ---");
+            lines.push(...stdoutLines.slice(-10));
+          }
+          lines.push(`ERROR: ${detail}`);
+          return [...cur, ...lines];
+        });
+        await updateConversionStatus(task.conversionId, "failed", { errorMessage: detail });
+        return false;
       }
 
       const val = await validateStream({ xliff: task.outputAbsPath }, { onStdout, onStderr });
       if (!val.ok) {
-        await updateConversionStatus(task.conversionId, "failed", { errorMessage: val.message ?? "Validation failed" });
-        return;
+        const detail = val.knownError?.detail || val.message || `Validation failed (code ${val.code ?? "?"}).`;
+        setLogs((cur) => {
+          const lines: string[] = [];
+          lines.push(`Exit code: ${val.code ?? "?"}`);
+          const stderrLines = (val.stderr || "").split(/\r?\n/).filter(Boolean);
+          const stdoutLines = (val.stdout || "").split(/\r?\n/).filter(Boolean);
+          if (stderrLines.length) {
+            lines.push("--- stderr (tail) ---");
+            lines.push(...stderrLines.slice(-10));
+          }
+          if (stdoutLines.length) {
+            lines.push("--- stdout (tail) ---");
+            lines.push(...stdoutLines.slice(-10));
+          }
+          lines.push(`ERROR: ${detail}`);
+          return [...cur, ...lines];
+        });
+        await updateConversionStatus(task.conversionId, "failed", { errorMessage: detail });
+        return false;
       }
 
       const rel = relativeToProject(task.outputAbsPath);
       await updateConversionStatus(task.conversionId, "completed", { xliffRelPath: rel });
+      return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Conversion error";
+      setLogs((cur) => [...cur, `ERROR: ${msg}`]);
       await updateConversionStatus(task.conversionId, "failed", { errorMessage: msg });
+      return false;
     }
   }, [relativeToProject]);
 
@@ -184,14 +256,38 @@ export function ProjectOverview({ projectSummary }: Props) {
 
   // Auto-start queue once plan is ready (after callbacks are defined)
   useEffect(() => {
-    if (!ensurePlan || isEnsuring) return;
+    // Auto-start only when a new plan arrives and no summary exists yet
+    if (!ensurePlan || isEnsuring || queueSummary) return;
     void startEnsureQueue();
-  }, [ensurePlan, isEnsuring, startEnsureQueue]);
+  }, [ensurePlan, isEnsuring, queueSummary, startEnsureQueue]);
 
   const anyFailures = useMemo(() => {
     if (!details) return false;
     return details.files.some((f) => f.conversions.some((c) => c.status === "failed"));
   }, [details]);
+
+  const retryFailed = useCallback(async () => {
+    if (!details) return;
+    try {
+      // Mark all failed conversions as pending
+      for (const entry of details.files) {
+        for (const conv of entry.conversions) {
+          if (conv.status === "failed") {
+            await updateConversionStatus(conv.id, "pending");
+          }
+        }
+      }
+      // Refresh and ensure plan again
+      await loadDetails();
+      const plan = await ensureProjectConversionsPlan(details.id);
+      if (plan.tasks.length > 0) {
+        setEnsurePlan(plan);
+        setEnsureProgress({ current: 0, total: plan.tasks.length });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to retry conversions.");
+    }
+  }, [details, loadDetails]);
 
   return (
     <section className="flex w-full flex-col gap-6 overflow-y-auto p-6">
@@ -202,11 +298,37 @@ export function ProjectOverview({ projectSummary }: Props) {
           <p className="text-sm text-muted-foreground">{projectSummary.slug}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={() => setIsAddOpen(true)}>
+          <Button
+            size="sm"
+            onClick={() => setIsAddOpen(true)}
+            title={
+              !autoConvertOnOpen
+                ? "Auto-conversion is disabled; conversions won’t start automatically"
+                : undefined
+            }
+          >
             <Plus className="mr-2 h-4 w-4" /> Add files
           </Button>
         </div>
       </div>
+
+      {!autoConvertOnOpen ? (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-blue-500/40 bg-blue-500/10 p-3 text-sm text-blue-700 dark:text-blue-300">
+          <div>
+            Auto-convert on open is disabled. Conversions will not start automatically.
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              // Navigate to settings via global app event
+              window.dispatchEvent(new CustomEvent("app:navigate", { detail: { view: "settings" } }));
+            }}
+          >
+            Open settings
+          </Button>
+        </div>
+      ) : null}
 
       {error ? (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
@@ -297,8 +419,9 @@ export function ProjectOverview({ projectSummary }: Props) {
       </Card>
 
       {anyFailures ? (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
-          Some conversions failed. You can retry after fixing the source content.
+        <div className="flex items-center justify-between gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+          <div>Some conversions failed. You can retry after fixing the source content.</div>
+          <Button variant="outline" size="sm" onClick={retryFailed}>Retry failed</Button>
         </div>
       ) : null}
 
@@ -340,6 +463,11 @@ export function ProjectOverview({ projectSummary }: Props) {
           </DialogHeader>
           <div className="space-y-3">
             <ProgressBar current={ensureProgress.current} total={ensureProgress.total} running={isEnsuring} />
+            {queueSummary ? (
+              <div className="text-xs text-muted-foreground">
+                Completed: {queueSummary.completed} • Failed: {queueSummary.failed}
+              </div>
+            ) : null}
             <div className="h-48 overflow-auto rounded-md border border-border/60 bg-muted/30 p-2 text-xs">
               {logs.map((line, idx) => (
                 <div key={idx} className="whitespace-pre-wrap text-muted-foreground">
@@ -354,9 +482,11 @@ export function ProjectOverview({ projectSummary }: Props) {
             ) : (
               <>
                 <Button variant="ghost" onClick={() => setEnsurePlan(null)}>Close</Button>
-                <Button onClick={startEnsureQueue}>
-                  <Loader2 className="mr-2 h-4 w-4" /> Start
-                </Button>
+                {!queueSummary ? (
+                  <Button onClick={startEnsureQueue}>
+                    <Loader2 className="mr-2 h-4 w-4" /> Start
+                  </Button>
+                ) : null}
               </>
             )}
           </DialogFooter>

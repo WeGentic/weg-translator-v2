@@ -33,7 +33,13 @@ const MAX_TEXT_LENGTH: usize = 20_000;
 const PROJECT_NAME_MIN_LEN: usize = 2;
 const PROJECT_NAME_MAX_LEN: usize = 120;
 const PROJECTS_DIR_NAME: &str = "projects";
-const ALLOWED_PROJECT_EXTENSIONS: &[&str] = &["docx", "doc", "xliff", "mqxliff", "sdlxliff"];
+// Accept all convertible inputs plus XLIFF variants (already-converted)
+const ALLOWED_PROJECT_EXTENSIONS: &[&str] = &[
+    // Convertible document formats
+    "doc", "docx", "ppt", "pptx", "xls", "xlsx", "odt", "odp", "ods", "html", "xml", "dita", "md",
+    // XLIFF-like formats (treated as already-converted)
+    "xlf", "xliff", "mqxliff", "sdlxliff",
+];
 
 async fn build_app_settings_dto(
     app: &AppHandle,
@@ -69,6 +75,7 @@ async fn build_app_settings_dto(
         settings_file_exists,
         default_app_folder: default_app_folder.to_string_lossy().into_owned(),
         is_using_default_location: app_folder == default_app_folder,
+        auto_convert_on_open: current.auto_convert_on_open,
     })
 }
 
@@ -517,7 +524,7 @@ pub async fn add_files_to_project(
 
     let inserted_dtos = inserted
         .into_iter()
-        .map(project_file_to_dto)
+        .map(|file| project_file_to_dto(&file))
         .collect::<Vec<_>>();
 
     Ok(AddFilesResponseDto {
@@ -1144,6 +1151,22 @@ pub async fn update_app_folder(
         .into());
     }
 
+    build_app_settings_dto(&app, &settings)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub async fn update_auto_convert_on_open(
+    app: AppHandle,
+    settings: State<'_, SettingsManager>,
+    _db: State<'_, DbManager>,
+    enabled: bool,
+) -> IpcResult<AppSettingsDto> {
+    if let Err(error) = settings.update_and_save_auto_convert_on_open(enabled).await {
+        warn!(target: "ipc::settings", "failed to update auto-convert flag: {error}");
+        return Err(IpcError::Internal("Unable to update setting. Please retry.".into()).into());
+    }
     build_app_settings_dto(&app, &settings)
         .await
         .map_err(Into::into)

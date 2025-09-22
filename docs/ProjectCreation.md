@@ -7,7 +7,9 @@ This plan designs and specifies a create-project Wizard integrated with `Project
 - Inputs:
   - Project name (required)
   - Project type: Translation | RAG (required)
-  - Add File(s) button (DOCX/DOC/XLIFF/MQXLIFF/SDLXLIFF)
+  - Source language (BCP‑47, e.g. en-US)
+  - Target language (BCP‑47, e.g. it-IT)
+  - Add File(s) button (DOC/DOCX/PPT/PPTX/XLS/XLSX/ODT/ODP/ODS/HTML/XML/DITA/MD and XLIFF variants)
 - Temporary “datagrid” (table) shows files selected during the wizard.
 - Actions: Cancel, Create Project.
 - Create Project performs atomically:
@@ -62,8 +64,11 @@ export interface NewProjectForm {
 - Validation rules:
   - name: trimmed, 2–120 chars; must not be only punctuation; will be slugified server-side.
   - type: required; enum("translation","rag").
+  - src/tgt languages: required, well‑formed BCP‑47; must differ (case-insensitive).
   - files: at least one, unique paths, extensions in allowlist.
-- Allowlist: `docx`, `doc`, `xliff`, `mqxliff`, `sdlxliff`.
+- Allowlist (UI + backend):
+  - Convertible: `doc`, `docx`, `ppt`, `pptx`, `xls`, `xlsx`, `odt`, `odp`, `ods`, `html`, `xml`, `dita`, `md`
+  - Already-converted: `xlf`, `xliff`, `mqxliff`, `sdlxliff`
 
 ### File Picker (Tauri v2)
 - Use `@tauri-apps/plugin-dialog` open with filters and multi-select.

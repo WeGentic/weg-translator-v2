@@ -31,7 +31,12 @@ export const INITIAL_PROJECT_FORM: NewProjectForm = {
   files: [],
 };
 
-export const ALLOWED_EXTENSIONS = ["docx", "doc", "xliff", "mqxliff", "sdlxliff"] as const;
+export const ALLOWED_EXTENSIONS = [
+  // Convertible document formats
+  "doc", "docx", "ppt", "pptx", "xls", "xlsx", "odt", "odp", "ods", "html", "xml", "dita", "md",
+  // XLIFF-like formats
+  "xlf", "xliff", "mqxliff", "sdlxliff",
+] as const;
 
 export const CREATE_PROJECT_STEP_LABELS = [
   "Project details",

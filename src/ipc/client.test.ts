@@ -12,6 +12,7 @@ import {
   listTranslationHistory,
   startTranslation,
   updateAppFolder,
+  updateAutoConvertOnOpen,
 } from "./client";
 import type { AppSettings } from "./types";
 import type { TranslationHistoryRecord, TranslationRequest } from "./types";
@@ -69,6 +70,7 @@ describe("ipc/client", () => {
       settingsFileExists: true,
       defaultAppFolder: "/tmp/default",
       isUsingDefaultLocation: false,
+      autoConvertOnOpen: true,
     };
     invokeMock.mockResolvedValueOnce(settings);
 
@@ -86,5 +88,27 @@ describe("ipc/client", () => {
 
     expect(invokeMock).toHaveBeenCalledWith("update_app_folder", { new_folder: "/tmp/new" });
     expect(result).toBe(payload);
+  });
+
+  it("updates auto-convert on open", async () => {
+    const settings: AppSettings = {
+      appFolder: "/tmp/app",
+      appFolderExists: true,
+      databasePath: "/tmp/app/db.sqlite",
+      databaseExists: true,
+      projectsPath: "/tmp/app/projects",
+      projectsPathExists: true,
+      settingsFile: "/config/settings.yaml",
+      settingsFileExists: true,
+      defaultAppFolder: "/tmp/default",
+      isUsingDefaultLocation: false,
+      autoConvertOnOpen: false,
+    };
+    invokeMock.mockResolvedValueOnce(settings);
+
+    const result = await updateAutoConvertOnOpen(true);
+
+    expect(invokeMock).toHaveBeenCalledWith("update_auto_convert_on_open", { enabled: true });
+    expect(result).toBe(settings);
   });
 });

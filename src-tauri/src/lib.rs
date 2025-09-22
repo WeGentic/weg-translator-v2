@@ -2,7 +2,11 @@ mod db;
 mod ipc;
 mod settings;
 
-pub use crate::db::{DbError, DbManager, NewTranslationRecord, PersistedTranslationOutput};
+pub use crate::db::{
+    DbError, DbManager, NewProject, NewProjectFile, NewTranslationRecord, PersistedTranslationOutput,
+    ProjectFileConversionRequest, ProjectFileConversionStatus, ProjectFileImportStatus, ProjectStatus,
+    ProjectType,
+};
 pub use crate::ipc::dto::{TranslationHistoryRecord, TranslationRequest, TranslationStage};
 
 use ipc::{
@@ -10,7 +14,7 @@ use ipc::{
     ensure_project_conversions_plan, fail_translation, get_app_settings, get_project_details,
     get_translation_job, health_check, list_active_jobs, list_projects, list_translation_history,
     path_exists, remove_project_file, start_translation, update_app_folder,
-    update_conversion_status,
+    update_auto_convert_on_open, update_conversion_status,
 };
 use log::LevelFilter;
 use log::kv::VisitSource;
@@ -90,6 +94,7 @@ pub fn run() {
             remove_project_file,
             ensure_project_conversions_plan,
             update_conversion_status,
+            update_auto_convert_on_open,
             health_check,
             get_translation_job,
             get_app_settings,

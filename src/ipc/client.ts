@@ -15,12 +15,22 @@ import type {
   TranslationRequest,
 } from "./types";
 
+function normalizeIpcError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object") {
+    const anyErr = err as Record<string, unknown>;
+    if (typeof anyErr.message === "string") return anyErr.message as string;
+    if (typeof (anyErr as any).toString === "function") return String(err);
+  }
+  return "Unknown error calling backend";
+}
+
 async function safeInvoke<T>(command: string, payload?: Record<string, unknown>) {
   try {
     return await invoke<T>(command, payload);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown error calling backend";
+    const message = normalizeIpcError(error);
     throw new Error(`[IPC] ${command} failed: ${message}`);
   }
 }
@@ -93,22 +103,26 @@ export async function updateAppFolder(newFolder: string) {
   return safeInvoke<AppSettings>("update_app_folder", { new_folder: newFolder });
 }
 
+export async function updateAutoConvertOnOpen(enabled: boolean) {
+  return safeInvoke<AppSettings>("update_auto_convert_on_open", { enabled });
+}
+
 // ===== Project: Details & Conversions IPC =====
 
 export async function getProjectDetails(projectId: string) {
-  return safeInvoke<ProjectDetails>("get_project_details", { project_id: projectId });
+  return safeInvoke<ProjectDetails>("get_project_details", { project_id: projectId, projectId });
 }
 
 export async function addFilesToProject(projectId: string, files: string[]) {
-  return safeInvoke<AddFilesResponse>("add_files_to_project", { project_id: projectId, files });
+  return safeInvoke<AddFilesResponse>("add_files_to_project", { project_id: projectId, projectId, files });
 }
 
 export async function removeProjectFile(projectId: string, projectFileId: string) {
-  return safeInvoke<number>("remove_project_file", { project_id: projectId, project_file_id: projectFileId });
+  return safeInvoke<number>("remove_project_file", { project_id: projectId, projectId, project_file_id: projectFileId, projectFileId });
 }
 
 export async function ensureProjectConversionsPlan(projectId: string) {
-  return safeInvoke<EnsureConversionsPlan>("ensure_project_conversions_plan", { project_id: projectId });
+  return safeInvoke<EnsureConversionsPlan>("ensure_project_conversions_plan", { project_id: projectId, projectId });
 }
 
 export async function updateConversionStatus(
@@ -118,5 +132,14 @@ export async function updateConversionStatus(
 ) {
   const xliff_rel_path = payload?.xliffRelPath;
   const error_message = payload?.errorMessage;
-  return safeInvoke<void>("update_conversion_status", { conversion_id: conversionId, status, xliff_rel_path, error_message });
+  return safeInvoke<void>("update_conversion_status", {
+    // send both snake_case and camelCase for compatibility
+    conversion_id: conversionId,
+    conversionId,
+    status,
+    xliff_rel_path,
+    xliffRelPath: xliff_rel_path,
+    error_message,
+    errorMessage: error_message,
+  });
 }

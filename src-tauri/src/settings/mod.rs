@@ -13,6 +13,7 @@ use libc::EXDEV;
 #[derive(Debug, Clone)]
 pub struct AppSettings {
     pub app_folder: PathBuf,
+    pub auto_convert_on_open: bool,
 }
 
 impl AppSettings {
@@ -29,12 +30,15 @@ impl AppSettings {
 struct RawSettings {
     #[serde(default)]
     app_folder: Option<PathBuf>,
+    #[serde(default = "default_true")]
+    auto_convert_on_open: bool,
 }
 
 impl RawSettings {
     fn from_settings(settings: &AppSettings) -> Self {
         Self {
             app_folder: Some(settings.app_folder.clone()),
+            auto_convert_on_open: settings.auto_convert_on_open,
         }
     }
 }
@@ -96,6 +100,22 @@ impl SettingsManager {
         }
         Ok(())
     }
+
+    pub async fn update_and_save_auto_convert_on_open(
+        &self,
+        enabled: bool,
+    ) -> Result<(), SettingsError> {
+        {
+            let mut guard = self.inner.settings.write().await;
+            let original = guard.auto_convert_on_open;
+            guard.auto_convert_on_open = enabled;
+            if let Err(error) = Self::write_to_disk(&self.inner.file_path, &guard) {
+                guard.auto_convert_on_open = original;
+                return Err(error);
+            }
+        }
+        Ok(())
+    }
 }
 
 pub fn load_or_init(
@@ -107,10 +127,12 @@ pub fn load_or_init(
         let raw: RawSettings = serde_yaml::from_str(&text)?;
         Ok(AppSettings {
             app_folder: raw.app_folder.unwrap_or(default_app_folder),
+            auto_convert_on_open: raw.auto_convert_on_open,
         })
     } else {
         Ok(AppSettings {
             app_folder: default_app_folder,
+            auto_convert_on_open: true,
         })
     }
 }
@@ -126,6 +148,8 @@ impl SettingsManager {
         Ok(())
     }
 }
+
+fn default_true() -> bool { true }
 
 pub async fn move_directory(old_path: &Path, new_path: &Path) -> io::Result<()> {
     let source = old_path.to_path_buf();
