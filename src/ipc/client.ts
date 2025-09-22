@@ -87,6 +87,10 @@ export async function listProjects(query: ProjectListQuery = {}) {
   return safeInvoke<ProjectListItem[]>("list_projects", payload);
 }
 
+export async function deleteProject(projectId: string) {
+  return safeInvoke<number>("delete_project", { project_id: projectId, projectId });
+}
+
 export async function clearTranslationHistory() {
   return safeInvoke<number>("clear_translation_history");
 }

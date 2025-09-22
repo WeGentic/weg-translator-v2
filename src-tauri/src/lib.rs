@@ -13,7 +13,7 @@ use ipc::{
     TranslationState, add_files_to_project, clear_translation_history, create_project_with_files,
     ensure_project_conversions_plan, fail_translation, get_app_settings, get_project_details,
     get_translation_job, health_check, list_active_jobs, list_projects, list_translation_history,
-    path_exists, remove_project_file, start_translation, update_app_folder,
+    path_exists, remove_project_file, delete_project, start_translation, update_app_folder,
     update_auto_convert_on_open, update_conversion_status,
 };
 use log::LevelFilter;
@@ -92,6 +92,7 @@ pub fn run() {
             get_project_details,
             add_files_to_project,
             remove_project_file,
+            delete_project,
             ensure_project_conversions_plan,
             update_conversion_status,
             update_auto_convert_on_open,

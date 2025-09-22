@@ -1276,6 +1276,21 @@ impl DbManager {
         }
     }
 
+    pub async fn delete_project(&self, project_id: Uuid) -> DbResult<u64> {
+        let _guard = self.write_lock.lock().await;
+        let pool = self.pool().await;
+        let mut tx = pool.begin().await?;
+
+        let deleted = sqlx::query("DELETE FROM projects WHERE id = ?1")
+            .bind(&project_id.to_string())
+            .execute(tx.as_mut())
+            .await?;
+
+        tx.commit().await?;
+
+        Ok(deleted.rows_affected())
+    }
+
     pub fn ensure_subdir(root: &Path, name: &str) -> DbResult<PathBuf> {
         let target = root.join(name);
         fs::create_dir_all(&target)?;

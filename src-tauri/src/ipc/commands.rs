@@ -586,6 +586,46 @@ pub async fn remove_project_file(
 }
 
 #[tauri::command]
+pub async fn delete_project(
+    db: State<'_, DbManager>,
+    project_id: Uuid,
+    // We don't need AppHandle here; file removal is local
+) -> IpcResult<u64> {
+    // Snapshot project root path (if any) before deleting DB row
+    let root = match db.project_root_path(project_id).await {
+        Ok(path) => Some(path),
+        Err(err) => {
+            // If the project isn't found, attempt DB delete anyway
+            warn!(
+                target: "ipc::projects",
+                "failed to resolve project root path before deletion: {err}"
+            );
+            None
+        }
+    };
+
+    let deleted = db.delete_project(project_id).await?;
+
+    if deleted > 0 {
+        if let Some(root_path) = root {
+            match fs::remove_dir_all(&root_path).await {
+                Ok(_) => {}
+                Err(error) if error.kind() == ErrorKind::NotFound => {}
+                Err(error) => {
+                    warn!(
+                        target: "ipc::projects",
+                        "failed to remove project directory {:?}: {error}",
+                        root_path
+                    );
+                }
+            }
+        }
+    }
+
+    Ok(deleted)
+}
+
+#[tauri::command]
 pub async fn ensure_project_conversions_plan(
     db: State<'_, DbManager>,
     project_id: Uuid,

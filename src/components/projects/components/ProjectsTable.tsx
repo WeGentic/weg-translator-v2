@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export interface ProjectManagerRow {
   id: string;
   name: string;
-  languagePair: string;
-  files: number;
+  created: string;
   updated: string;
   status: string;
 }
@@ -12,56 +12,64 @@ export interface ProjectManagerRow {
 interface ProjectsTableProps {
   rows: ProjectManagerRow[];
   onOpenProject?: (projectId: string) => void;
+  onRequestDelete?: (projectId: string, projectName: string) => void;
 }
 
-export function ProjectsTable({ rows, onOpenProject }: ProjectsTableProps) {
+export function ProjectsTable({ rows, onOpenProject, onRequestDelete }: ProjectsTableProps) {
   return (
-    <div
-      className="space-y-1 overflow-hidden rounded-md border border-border/60 bg-background/80 shadow-sm"
-      role="table"
-      aria-label="Projects table"
-    >
-      <div
-        className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_72px_110px_minmax(0,1fr)_minmax(0,0.9fr)] gap-3 border-b border-border/60 bg-muted/40 px-3 py-2 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
-        role="row"
-      >
-        <span role="columnheader">Project</span>
-        <span role="columnheader">Languages</span>
-        <span role="columnheader">Files</span>
-        <span role="columnheader">Updated</span>
-        <span role="columnheader">Status</span>
-        <span role="columnheader" className="text-right">
-          Actions
-        </span>
-      </div>
-      {rows.map((row) => (
-        <div
-          key={row.id}
-          className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_72px_110px_minmax(0,1fr)_minmax(0,0.9fr)] items-center gap-3 px-3 py-2 text-xs"
-          role="row"
-        >
-          <div className="truncate font-medium text-foreground" role="cell">
-            {row.name}
-          </div>
-          <div className="truncate text-muted-foreground" role="cell">
-            {row.languagePair}
-          </div>
-          <div className="text-muted-foreground" role="cell">
-            {row.files}
-          </div>
-          <div className="text-muted-foreground" role="cell">
-            {row.updated}
-          </div>
-          <div className="truncate text-foreground" role="cell">
-            {row.status}
-          </div>
-          <div className="flex justify-end" role="cell">
-            <Button size="sm" variant="outline" onClick={() => onOpenProject?.(row.id)} disabled={!onOpenProject}>
-              Open Project
-            </Button>
-          </div>
-        </div>
-      ))}
+    <div className="overflow-hidden rounded-md border border-border/60 bg-background/80 shadow-sm">
+      <Table aria-label="Projects table">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[45%]">Project</TableHead>
+            <TableHead className="w-[25%]">Dates</TableHead>
+            <TableHead className="w-[15%]">Status</TableHead>
+            <TableHead className="w-[15%] text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow key={row.id} role="row">
+              <TableCell role="cell">
+                <div className="truncate font-medium text-foreground" title={row.name}>
+                  {row.name}
+                </div>
+              </TableCell>
+              <TableCell role="cell">
+                <div className="flex flex-col text-xs text-muted-foreground">
+                  <span>
+                    <span className="text-foreground/80">Created:</span> {row.created}
+                  </span>
+                  <span>
+                    <span className="text-foreground/80">Updated:</span> {row.updated}
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell role="cell">
+                <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-foreground/90">
+                  {row.status}
+                </span>
+              </TableCell>
+              <TableCell role="cell" className="text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <Button size="sm" variant="outline" onClick={() => onOpenProject?.(row.id)} disabled={!onOpenProject}>
+                    Open
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => onRequestDelete?.(row.id, row.name)}
+                    disabled={!onRequestDelete}
+                    aria-label={`Delete project ${row.name}`}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
