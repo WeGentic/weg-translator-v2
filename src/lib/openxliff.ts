@@ -40,6 +40,14 @@ function detectKnownError(stdout: string, stderr: string): KnownError | undefine
     detail?: (match: RegExpMatchArray) => string
   }> = [
     {
+      type: 'missing_resources',
+      pattern:
+        /\[(convert|merge|xliffchecker) wrapper\].*Could not locate OpenXLIFF resources/i,
+      message:
+        'OpenXLIFF components are missing; reinstall or run scripts/fetch-openxliff.sh',
+      detail: (m) => m[0] ?? 'Missing OpenXLIFF resources',
+    },
+    {
       type: 'missing_source',
       pattern: /ERROR:\s*Source file does not exist/i,
       message: 'Source file does not exist or cannot be read.',
