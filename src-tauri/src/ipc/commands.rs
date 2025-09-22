@@ -599,7 +599,8 @@ pub async fn ensure_project_conversions_plan(
         .default_tgt_lang
         .clone()
         .unwrap_or_else(|| "it-IT".to_string());
-    let version = "2.1".to_string();
+    // Default to XLIFF 2.0 (supported by toolchain and DB schema)
+    let version = "2.0".to_string();
 
     // Ensure xliff subdir exists
     let root_path = PathBuf::from(&details.root_path);

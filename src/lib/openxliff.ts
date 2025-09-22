@@ -40,6 +40,19 @@ function detectKnownError(stdout: string, stderr: string): KnownError | undefine
     detail?: (match: RegExpMatchArray) => string
   }> = [
     {
+      type: 'missing_resources',
+      pattern:
+        /\[(convert|merge|xliffchecker) wrapper\].*Could not locate OpenXLIFF resources/i,
+      message:
+        'OpenXLIFF components are missing; reinstall or run scripts/fetch-openxliff.sh',
+      detail: (m) => m[0] ?? 'Missing OpenXLIFF resources',
+    },
+    {
+      type: 'spawn',
+      pattern: /ENOENT|No such file or directory|exec format error/i,
+      message: 'Failed to start sidecar (missing or incompatible binary).',
+    },
+    {
       type: 'missing_source',
       pattern: /ERROR:\s*Source file does not exist/i,
       message: 'Source file does not exist or cannot be read.',
@@ -172,7 +185,13 @@ async function runStream(
     })
   }
 
-  await cmd.spawn()
+  try {
+    await cmd.spawn()
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    // Return a synthetic ExecResult so callers can normalize and extract a helpful error
+    return { code: null, signal: null, stdout: '', stderr: msg }
+  }
 
   return await new Promise<ExecResult>((resolve) => {
     cmd.on('close', ({ code, signal }) => {
@@ -221,6 +240,26 @@ function normalizeResult(res: ExecResult): NormalizedResult {
   }
 }
 
+// Quick preflight check to verify the sidecar + resources are available.
+export async function checkOpenXliffRuntime(): Promise<{
+  ok: boolean
+  message?: string
+  detail?: string
+}> {
+  try {
+    // Use a lightweight help check that satisfies capability allowlists
+    const res = await runStream('xliffchecker', ['-help'])
+    const normalized = normalizeResult(res)
+    if (normalized.ok || normalized.knownError?.type === 'usage') return { ok: true }
+    const msg = normalized.knownError?.message || normalized.message || 'OpenXLIFF not available.'
+    const detail = normalized.knownError?.detail || firstNonEmptyLine(normalized.stderr || normalized.stdout)
+    return { ok: false, message: msg, detail }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Failed to run OpenXLIFF sidecar.'
+    return { ok: false, message: msg, detail: msg }
+  }
+}
+
 export async function convert(opts: {
   file: string
   srcLang: string
@@ -240,28 +279,23 @@ export async function convert(opts: {
   xmlfilter?: string
   ignoretc?: boolean
   ignoresvg?: boolean
-  strict?: boolean
-  charsets?: boolean
-  types?: boolean
 }): Promise<ExecResult> {
+  // Order strictly matches src-tauri/capabilities/default.json allowlist
   const args: string[] = ['-file', opts.file, '-srcLang', opts.srcLang]
   if (opts.tgtLang) args.push('-tgtLang', opts.tgtLang)
+  if (opts.skl) args.push('-skl', opts.skl)
   if (opts.xliff) args.push('-xliff', opts.xliff)
   if (opts.type) args.push('-type', opts.type)
+  if (opts.enc) args.push('-enc', opts.enc)
   if (opts.srx) args.push('-srx', opts.srx)
   if (opts.catalog) args.push('-catalog', opts.catalog)
-  if (opts.config) args.push('-config', opts.config)
-  if (opts.paragraph) args.push('-paragraph')
-  if (opts.embed) args.push('-embed')
-  if (opts.skl) args.push('-skl', opts.skl)
-  if (opts.enc) args.push('-enc', opts.enc)
   if (opts.ditaval) args.push('-ditaval', opts.ditaval)
+  if (opts.config) args.push('-config', opts.config)
+  if (opts.embed) args.push('-embed')
+  if (opts.paragraph) args.push('-paragraph')
   if (opts.xmlfilter) args.push('-xmlfilter', opts.xmlfilter)
-  if (opts.ignoresvg) args.push('-ignoresvg')
   if (opts.ignoretc) args.push('-ignoretc')
-  if (opts.strict) args.push('-strict')
-  if (opts.charsets) args.push('-charsets')
-  if (opts.types) args.push('-types')
+  if (opts.ignoresvg) args.push('-ignoresvg')
   if (opts.version === '2.0') args.push('-2.0')
   if (opts.version === '2.1') args.push('-2.1')
   if (opts.version === '2.2') args.push('-2.2')
@@ -283,7 +317,7 @@ export async function merge(opts: {
 }
 
 export async function validate(opts: { xliff: string; catalog?: string }): Promise<ExecResult> {
-  const args: string[] = ['-file', opts.xliff]
+  const args: string[] = ['-xliff', opts.xliff]
   if (opts.catalog) args.push('-catalog', opts.catalog)
   return run('xliffchecker', args)
 }
@@ -293,24 +327,22 @@ export async function convertStream(
   opts: Parameters<typeof convert>[0],
   handlers?: StreamHandlers
 ): Promise<NormalizedResult> {
+  // Order strictly matches src-tauri/capabilities/default.json allowlist
   const args: string[] = ['-file', opts.file, '-srcLang', opts.srcLang]
   if (opts.tgtLang) args.push('-tgtLang', opts.tgtLang)
+  if (opts.skl) args.push('-skl', opts.skl)
   if (opts.xliff) args.push('-xliff', opts.xliff)
   if (opts.type) args.push('-type', opts.type)
+  if (opts.enc) args.push('-enc', opts.enc)
   if (opts.srx) args.push('-srx', opts.srx)
   if (opts.catalog) args.push('-catalog', opts.catalog)
-  if (opts.config) args.push('-config', opts.config)
-  if (opts.paragraph) args.push('-paragraph')
-  if (opts.embed) args.push('-embed')
-  if (opts.skl) args.push('-skl', opts.skl)
-  if (opts.enc) args.push('-enc', opts.enc)
   if (opts.ditaval) args.push('-ditaval', opts.ditaval)
+  if (opts.config) args.push('-config', opts.config)
+  if (opts.embed) args.push('-embed')
+  if (opts.paragraph) args.push('-paragraph')
   if (opts.xmlfilter) args.push('-xmlfilter', opts.xmlfilter)
-  if (opts.ignoresvg) args.push('-ignoresvg')
   if (opts.ignoretc) args.push('-ignoretc')
-  if (opts.strict) args.push('-strict')
-  if (opts.charsets) args.push('-charsets')
-  if (opts.types) args.push('-types')
+  if (opts.ignoresvg) args.push('-ignoresvg')
   if (opts.version === '2.0') args.push('-2.0')
   if (opts.version === '2.1') args.push('-2.1')
   if (opts.version === '2.2') args.push('-2.2')
@@ -334,7 +366,7 @@ export async function validateStream(
   opts: Parameters<typeof validate>[0],
   handlers?: StreamHandlers
 ): Promise<NormalizedResult> {
-  const args: string[] = ['-file', opts.xliff]
+  const args: string[] = ['-xliff', opts.xliff]
   if (opts.catalog) args.push('-catalog', opts.catalog)
   const res = await runStream('xliffchecker', args, handlers)
   return normalizeResult(res)

@@ -148,6 +148,8 @@ export function ProjectOverview({ projectSummary }: Props) {
     setLogs([]);
     setEnsureProgress({ current: 0, total: ensurePlan.tasks.length });
     setQueueSummary(null);
+
+    // No preflight: call convert directly and surface its stderr/stdout.
     let failed = 0;
     let completed = 0;
     for (let i = 0; i < ensurePlan.tasks.length; i++) {
@@ -174,22 +176,17 @@ export function ProjectOverview({ projectSummary }: Props) {
     const onStderr = (line: string) => setLogs((cur) => [...cur, line]);
     try {
       await updateConversionStatus(task.conversionId, "running");
-      const fileExt = task.inputAbsPath.split(".").pop()?.toLowerCase();
-      const knownTypes = new Set([
-        "doc", "docx", "ppt", "pptx", "xls", "xlsx", "odt", "odp", "ods", "html", "xml", "dita", "md",
-      ] as const);
-      const convType = fileExt && knownTypes.has(fileExt as any) ? (fileExt as string) : undefined;
+      const showVersion = /^2\./.test(task.version) ? ` -${task.version}` : '';
       setLogs((cur) => [
         ...cur,
-        `> convert -file ${task.inputAbsPath} -srcLang ${task.srcLang} -tgtLang ${task.tgtLang} -xliff ${task.outputAbsPath} ${convType ? `-type ${convType} ` : ""}-${task.version}`,
+        `> convert -file ${task.inputAbsPath} -srcLang ${task.srcLang} -tgtLang ${task.tgtLang} -xliff ${task.outputAbsPath}${showVersion}`,
       ]);
       const res = await convertStream({
         file: task.inputAbsPath,
         srcLang: task.srcLang,
         tgtLang: task.tgtLang,
         xliff: task.outputAbsPath,
-        version: task.version as "2.0" | "2.1" | "2.2",
-        type: convType,
+        version: /^2\./.test(task.version) ? (task.version as "2.0" | "2.1" | "2.2") : undefined,
         paragraph: task.paragraph,
         embed: task.embed,
       }, { onStdout, onStderr });

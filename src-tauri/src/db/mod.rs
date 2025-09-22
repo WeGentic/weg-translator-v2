@@ -1213,7 +1213,7 @@ impl DbManager {
         let pool = self.pool().await;
         let mut tx = pool.begin().await?;
 
-        let request = ProjectFileConversionRequest::new(src_lang, tgt_lang, "2.1");
+        let request = ProjectFileConversionRequest::new(src_lang, tgt_lang, "2.0");
         let select_files =
             sqlx::query("SELECT id, ext, import_status FROM project_files WHERE project_id = ?1")
                 .bind(&project_id.to_string())

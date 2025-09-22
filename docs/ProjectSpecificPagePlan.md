@@ -2,7 +2,21 @@
 
 Goal: Implement a project-specific page with file management and automatic XLIFF conversion on open, plus wizard language selectors and SQLite persistence for file/conversion status. Uses React 19.1.1, ShadCN v3.3.1, TailwindCSS 4.1.1, and Tauri 2.8.5 sidecars.
 
-Progress (Sep 21):
+Progress (Sep 22):
+- [ ] Fix plan
+   - [x] 1) Provision OpenXLIFF per platform: scripts present (`scripts/fetch-openxliff.sh`, `scripts/sync-openxliff-resources.sh`); `src-tauri/resources/openxliff/macos-arm64` committed. Action: fetch/build for other platforms in CI/dev envs before packaging.
+   - [x] 2) Harden sidecar wrappers: wrappers standardized to emit "[<tool> wrapper] Could not locate OpenXLIFF resources..." across `.sh`/`.cmd` (see `src-tauri/sidecars/openxliff/bin`).
+   - [x] 3) Ensure bundling: `src-tauri/tauri.conf.json` already bundles `resources/openxliff`; local macOS arm64 layout verified. Build-time verification required on Windows/Linux.
+   - [x] 4) Error propagation: updated `src/lib/openxliff.ts` to detect missing-resources patterns and surface a clear message to UI/DB; added `checkOpenXliffRuntime()` preflight. `ProjectOverview` now fails all tasks upfront with a clear error and persists `error_message`.
+   - [x] Acceptance criteria
+     - Opening a project with `autoConvertOnOpen=true` triggers `ensureProjectConversionsPlan(projectId)` and, when tasks exist, opens a modal with a progress bar and live logs.
+     - Tasks execute sequentially using `convertStream` followed by `validateStream`. Status transitions are persisted via `updateConversionStatus` (pending → running → completed/failed) and `xliff_rel_path` is stored on success.
+     - XLIFF inputs (`.xlf/.xliff/.mqxliff/.sdlxliff`) are skipped for conversion; convertible formats (`doc/docx/ppt/pptx/xls/xlsx/odt/odp/ods/html/xml/dita/md`) are included.
+     - Failures do not block the page: errors are logged, items are marked `failed` with `error_message`, a banner appears on the page, and a "Retry failed" action requeues only failed items.
+     - Cancellation stops the queue after the current item; already completed items remain persisted; the modal can be closed without data loss.
+     - Add/Remove: adding files imports them into the project folder and refreshes the ensure plan; removing a file deletes DB rows and on-disk artifacts (original + generated XLIFF if present).
+     - Paths: outputs are written under `<project.root_path>/xliff/` with filename `<stem>.<src>-<tgt>.xlf`, storing relative paths only.
+     - Schema: migrations `006/007` define defaults on `projects` and a unique conversion key `(file, src, tgt, version)` with indexes; DB helpers enforce consistent states.
 - [x] 1–2 Migrations added (006, 007)
 - [x] 3–4 DbManager structs + CRUD + helpers
 - [x] 5–7 IPC DTOs + commands + capabilities
@@ -13,10 +27,73 @@ Progress (Sep 21):
 - [x] 21–22 Unit tests added (Rust + TS)
 - [x] 25 Feature flag: Auto-convert on open (default enabled)
 - [x] UX polish: banner + tooltip when auto-convert is disabled
-- [ ] 23–24, 26 Docs/rollout (docs updated incrementally; finalize after tests)
-
+- [x] 23–24, 26 Docs/rollout finalized (added rollout doc; checklist documented; migration order verified)
+  - [ ] Code review: CodeRabbit CLI attempted (`coderabbit --plain --type uncommitted`); currently unauthenticated → rate-limited. Pending `coderabbit auth login` to proceed and apply suggestions (deferred by user).
 Note on sidecars: We will execute the packaged OpenXLIFF sidecar from the frontend via `@tauri-apps/plugin-shell` (`Command.sidecar`), which is already wired in `src/lib/openxliff.ts`. This aligns with the existing capabilities config and avoids duplicating process control on the backend.
 
+
+## Fix Plan — New‑Project→XLIFF conversion flow
+
+Root cause summary
+- Sidecar wrappers start but exit immediately with a non‑zero code when resources are missing. The wrapper prints a helpful line, but the distribution for the current platform is not present under `src-tauri/resources/openxliff/<platform>`, causing early failure. Mac ARM64 exists; other platforms are missing.
+- Unknown failure messages are not consistently propagated to the DB/UI. Orphan conversions may appear if foreign keys are not enforced at runtime.
+
+Actions
+1) Provision OpenXLIFF distributions per platform
+   - Build or fetch OpenXLIFF for each target OS/arch (macOS x64/arm64, Linux x64/arm64, Windows x64/arm64).
+   - Use existing scripts:
+     - `scripts/fetch-openxliff.sh [--version vX.Y.Z]` to clone/build upstream and mirror `dist` to `vendor/openxliff/dist-<platform>`.
+     - `scripts/sync-openxliff-resources.sh` to place the built `dist-<platform>` under `src-tauri/resources/openxliff/<platform>`.
+     - `scripts/build-jre.sh` if a local jlink image is needed (kept under `resources/jre`, already included in bundle resources).
+   - Platform folder names must match wrappers: `macos-<uname -m>` (e.g., `macos-arm64`), `linux-<uname -m>` (e.g., `linux-x86_64`), and `win-x64` for Windows.
+   - Ensure `convert.sh`/`merge.sh`/`xliffchecker.sh` (or `.cmd`) inside each platform folder are executable and runnable.
+   - Commit platform resources or document a pre‑packaging fetch step in CI.
+
+2) Harden sidecar wrappers
+   - Extend search paths for packaged and dev layouts where needed (Windows/Linux): ensure the wrappers check a path relative to the executable directory for `resources/openxliff/<platform>`.
+   - Keep current macOS candidates in `src-tauri/sidecars/openxliff/bin/*.sh`; extend Windows `.cmd` counterparts to support `win-arm64` if we later add it and to probe both `..\resources\openxliff\%ARCH%` and `resources\openxliff\%ARCH%` plus one level up if needed.
+   - Preserve and standardize the error line when resources are missing (e.g., `[convert wrapper] Could not locate OpenXLIFF resources for <platform>`), so the JS helper can surface it.
+
+3) Ensure bundling
+   - `src-tauri/tauri.conf.json` already includes `bundle.resources: ["resources/jre", "resources/openxliff"]` and sidecar binaries in `externalBin`. After adding platform folders, run a build and verify the packaged app contains `resources/openxliff/<platform>` for the current OS/arch.
+   - Do not add the JRE or OpenXLIFF binaries to `externalBin`; the upstream scripts locate their own runtime inside `resources`.
+
+4) Improve error handling and propagation
+   - Frontend: `src/lib/openxliff.ts` already normalizes results and captures the first non‑empty stderr/stdout line. Add a known‑error pattern for missing resources to provide a clear message in the UI/DB:
+     - Change: extend `detectKnownError(stdout, stderr)` to match `/\[(convert|merge|xliffchecker) wrapper\].*Could not locate OpenXLIFF resources/i` and return `{ type: 'missing_resources', message: 'OpenXLIFF components are missing; reinstall or run scripts/fetch-openxliff.sh', detail: '<first-line>' }`.
+     - Ensure `convertStream/mergeStream/validateStream` return this `message` and that `ProjectOverview` forwards it to `updateConversionStatus(..., 'failed', { errorMessage: message })`.
+   - UI: `src/components/projects/overview/ProjectOverview.tsx` forwards `errorMessage` to `updateConversionStatus` on failures. Keep this path and display the message in the modal log and conversion badges.
+   - Backend: `update_conversion_status` already persists `error_message`. No change required there; ensure we do not drop unknown error text.
+
+5) Database integrity and cleanup
+   - Schema: `project_file_conversions.project_file_id` already has `ON DELETE CASCADE` in `src-tauri/migrations/007_create_project_file_conversions.sql`. Keep as is.
+   - Connection: enforce foreign keys on every connection by enabling `PRAGMA foreign_keys = ON` during pool setup in `DbManager::connect_pool` (`src-tauri/src/db/mod.rs`).
+     - Change: configure the pool with `SqlitePoolOptions::new().after_connect(|conn| Box::pin(async move { sqlx::query("PRAGMA foreign_keys = ON").execute(conn).await?; Ok(()) }))` before `.connect(...)`, or append `?_foreign_keys=on` to the SQLite URL.
+   - Add a lightweight cleanup routine that removes conversions whose files no longer exist on disk (use existing path/FS helpers) and/or whose `project_files` row is missing (defensive in case foreign keys were previously off).
+
+6) Windows .cmd wrappers and ARM64
+   - Extend `src-tauri/sidecars/openxliff/bin/*.cmd` to detect architecture and probe additional candidate paths.
+     - Change: detect ARM64 and set `%ARCH%` accordingly:
+       - `set ARCH=win-x64`
+       - `if "%PROCESSOR_ARCHITECTURE%"=="ARM64" set ARCH=win-arm64`
+     - Add extra candidates mirroring `.sh` wrappers, e.g. `..\..\resources\openxliff\%ARCH%` and `..\..\..\resources\openxliff\%ARCH%`.
+     - Keep the standardized error line: `[convert wrapper] Could not locate OpenXLIFF resources for %ARCH% relative to %DIR%` so the JS pattern matches.
+     - Ensure CR/LF line endings are preserved (normalize during fetch/sync if needed).
+
+6) Cross‑platform QA and tests
+   - Add integration checks that run `convert`+`xliffchecker` for a tiny sample (`Test.docx`) on macOS, Windows, Linux. In CI, fetch the correct `resources/openxliff/<platform>` snapshot for each runner.
+   - Verify Windows `.cmd` line endings and quoting; normalize in `scripts/fetch-openxliff.sh` if necessary.
+   - Validate that paths with spaces are handled (arguments are already passed as separate array elements via `Command.sidecar`).
+
+7) Documentation and recovery UX
+   - Update `README.md` and `OpenXLIFF-Plan.md` to document: building/fetching OpenXLIFF, platform folder names, wrapper lookup strategy, and troubleshooting missing resources.
+   - Add a “Reinstall Components” action in settings that triggers a small orchestrator to refresh resources (runs `fetch-openxliff.sh` + `sync-openxliff-resources.sh` or downloads CI artifacts), then prompts to restart.
+
+Acceptance criteria
+- A new project with a DOCX import triggers conversions that succeed on supported platforms with resources present.
+- When resources are missing, the UI shows a clear error (e.g., “OpenXLIFF components are missing; reinstall or run scripts/fetch-openxliff.sh”), and the same message is stored in `project_file_conversions.error_message`.
+- Deleting a project file removes its conversions (with foreign keys enforced) and no orphan tasks run.
+- CI verifies convert+validate on macOS, Windows, and Linux.
 
 ## Prerequisites
 - Ensure sidecars are present (scripts under `src-tauri/sidecars/openxliff`) and capabilities allow `convert`, `merge`, `xliffchecker` (already configured in `src-tauri/capabilities/default.json`).
