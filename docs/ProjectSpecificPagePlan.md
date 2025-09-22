@@ -8,7 +8,15 @@ Progress (Sep 22):
    - [x] 2) Harden sidecar wrappers: wrappers standardized to emit "[<tool> wrapper] Could not locate OpenXLIFF resources..." across `.sh`/`.cmd` (see `src-tauri/sidecars/openxliff/bin`).
    - [x] 3) Ensure bundling: `src-tauri/tauri.conf.json` already bundles `resources/openxliff`; local macOS arm64 layout verified. Build-time verification required on Windows/Linux.
    - [x] 4) Error propagation: updated `src/lib/openxliff.ts` to detect missing-resources patterns and surface a clear message to UI/DB; added `checkOpenXliffRuntime()` preflight. `ProjectOverview` now fails all tasks upfront with a clear error and persists `error_message`.
-   - [ ] Acceptance criteria
+   - [x] Acceptance criteria
+     - Opening a project with `autoConvertOnOpen=true` triggers `ensureProjectConversionsPlan(projectId)` and, when tasks exist, opens a modal with a progress bar and live logs.
+     - Tasks execute sequentially using `convertStream` followed by `validateStream`. Status transitions are persisted via `updateConversionStatus` (pending → running → completed/failed) and `xliff_rel_path` is stored on success.
+     - XLIFF inputs (`.xlf/.xliff/.mqxliff/.sdlxliff`) are skipped for conversion; convertible formats (`doc/docx/ppt/pptx/xls/xlsx/odt/odp/ods/html/xml/dita/md`) are included.
+     - Failures do not block the page: errors are logged, items are marked `failed` with `error_message`, a banner appears on the page, and a "Retry failed" action requeues only failed items.
+     - Cancellation stops the queue after the current item; already completed items remain persisted; the modal can be closed without data loss.
+     - Add/Remove: adding files imports them into the project folder and refreshes the ensure plan; removing a file deletes DB rows and on-disk artifacts (original + generated XLIFF if present).
+     - Paths: outputs are written under `<project.root_path>/xliff/` with filename `<stem>.<src>-<tgt>.xlf`, storing relative paths only.
+     - Schema: migrations `006/007` define defaults on `projects` and a unique conversion key `(file, src, tgt, version)` with indexes; DB helpers enforce consistent states.
 - [x] 1–2 Migrations added (006, 007)
 - [x] 3–4 DbManager structs + CRUD + helpers
 - [x] 5–7 IPC DTOs + commands + capabilities
@@ -21,7 +29,6 @@ Progress (Sep 22):
 - [x] UX polish: banner + tooltip when auto-convert is disabled
 - [x] 23–24, 26 Docs/rollout finalized (added rollout doc; checklist documented; migration order verified)
   - [ ] Code review: CodeRabbit CLI attempted (`coderabbit --plain --type uncommitted`); currently unauthenticated → rate-limited. Pending `coderabbit auth login` to proceed and apply suggestions (deferred by user).
-n
 Note on sidecars: We will execute the packaged OpenXLIFF sidecar from the frontend via `@tauri-apps/plugin-shell` (`Command.sidecar`), which is already wired in `src/lib/openxliff.ts`. This aligns with the existing capabilities config and avoids duplicating process control on the backend.
 
 

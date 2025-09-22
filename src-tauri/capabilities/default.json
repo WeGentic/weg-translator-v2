@@ -73,7 +73,7 @@
             "-unapproved",
             "-export",
             "-getTarget",
-            { "validator": "^[^-].*$" }
+            { "validator": "^[^-].+" }
           ]
         },
         {
@@ -149,7 +149,7 @@
             "-unapproved",
             "-export",
             "-getTarget",
-            { "validator": "^[^-].*$" }
+            { "validator": "^[^-].+" }
           ]
         },
         {
@@ -195,7 +195,7 @@
             "-ignoretc",
             "-ignoresvg",
             { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" },
-            { "validator": "^[^-].*$" }
+            { "validator": "^[^-].+" }
           ]
         },
         {
@@ -210,7 +210,7 @@
             "-unapproved",
             "-export",
             "-getTarget",
-            { "validator": "^[^-].*$" }
+            { "validator": "^[^-].+" }
           ]
         },
         {
@@ -220,7 +220,7 @@
             "-help",
             "-xliff",
             "-catalog",
-            { "validator": "^[^-].*$" }
+            { "validator": "^[^-].+" }
           ]
         },
         {
@@ -246,7 +246,7 @@
             "-ignoretc",
             "-ignoresvg",
             { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" },
-            { "validator": "^[^-].*$" }
+            { "validator": "^[^-].+" }
           ]
         },
         {
@@ -261,7 +261,7 @@
             "-unapproved",
             "-export",
             "-getTarget",
-            { "validator": "^[^-].*$" }
+            { "validator": "^[^-].+" }
           ]
         },
         {
@@ -271,7 +271,7 @@
             "-help",
             "-xliff",
             "-catalog",
-            { "validator": "^[^-].*$" }
+            { "validator": "^[^-].+" }
           ]
         }
       ]
