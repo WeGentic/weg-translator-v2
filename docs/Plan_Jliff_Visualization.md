@@ -94,15 +94,19 @@ Step 5.4 - Add Rust tests under `src-tauri/tests/` for both IPCs (happy path, in
   - `src-tauri/tests/ipc_artifacts.rs` covers successful read/write flows and validation errors for unknown transunits.
 
 
-Task 6 - Frontend Data Loading - Status: NOT COMPLETED
+Task 6 - Frontend Data Loading - Status: COMPLETED (2025-09-23)
 
-Step 6.1 - Extend `ProjectEditor` flow to fetch `ProjectDetails` → locate selected file’s latest completed conversion with both `jliffRelPath` and `tagMapRelPath`. - Status: NOT COMPLETED
+Step 6.1 - Extend `ProjectEditor` flow to fetch `ProjectDetails` → locate selected file’s latest completed conversion with both `jliffRelPath` and `tagMapRelPath`. - Status: COMPLETED (2025-09-23)
+  - `ProjectEditor` now loads project details on mount, selects the newest completed conversion with both artifacts, and surfaces meaningful error copy when none exist.
 
-Step 6.2 - Read artifacts via IPC (`read_project_artifact`), `JSON.parse` into `JliffRoot` and `TagsRoot`. - Status: NOT COMPLETED
+Step 6.2 - Read artifacts via IPC (`read_project_artifact`), `JSON.parse` into `JliffRoot` and `TagsRoot`. - Status: COMPLETED (2025-09-23)
+  - Added guarded artifact loading with JSON parsing helpers that validate required arrays before continuing; errors bubble into user-facing alerts.
 
-Step 6.3 - Normalize into `SegmentRow[]` via `normalize(...)`. Store in component state (or a small editor-scoped store). - Status: NOT COMPLETED
+Step 6.3 - Normalize into `SegmentRow[]` via `normalize(...)`. Store in component state (or a small editor-scoped store). - Status: COMPLETED (2025-09-23)
+  - Cached artifact state contains normalized `SegmentRow[]`, raw JLIFF/tag metadata, and conversion identifiers for downstream table wiring.
 
-Step 6.4 - Compute summary metrics (total segments, untranslated, placeholder mismatches) for header. - Status: NOT COMPLETED
+Step 6.4 - Compute summary metrics (total segments, untranslated, placeholder mismatches) for header. - Status: COMPLETED (2025-09-23)
+  - Derived metrics drive new header cards plus language/path metadata, keeping counts in sync with normalization results.
 
 
 Task 7 - Virtualized Segments Table (TanStack) - Status: NOT COMPLETED

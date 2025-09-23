@@ -1,6 +1,21 @@
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, FileText, Hash, Layers } from "lucide-react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ProjectListItem } from "@/ipc";
-import { FileText, Hash, Layers } from "lucide-react";
+import type {
+  ProjectDetails,
+  ProjectFileConversionDto,
+  ProjectFileDto,
+  ProjectListItem,
+} from "@/ipc";
+import { getProjectDetails, readProjectArtifact } from "@/ipc";
+import {
+  normalizeJliffArtifacts,
+  type JliffRoot,
+  type SegmentRow,
+  type TagsRoot,
+} from "@/lib/jliff";
 
 type ProjectEditorProps = {
   project: ProjectListItem;
@@ -8,6 +23,228 @@ type ProjectEditorProps = {
 };
 
 export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
+  const [details, setDetails] = useState<ProjectDetails | null>(null);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+  const [artifactState, setArtifactState] = useState<EditorArtifactsState>(
+    fileId ? { status: "loading", fileId } : { status: "idle" },
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsDetailsLoading(true);
+    setDetailsError(null);
+
+    void (async () => {
+      try {
+        const projectDetails = await getProjectDetails(project.projectId);
+        if (cancelled) {
+          return;
+        }
+        setDetails(projectDetails);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        const message =
+          error instanceof Error ? error.message : "Failed to load project details for the editor.";
+        setDetails(null);
+        setDetailsError(message);
+      } finally {
+        if (!cancelled) {
+          setIsDetailsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [project.projectId]);
+
+  useEffect(() => {
+    if (!fileId) {
+      setArtifactState({ status: "idle" });
+      return;
+    }
+
+    if (isDetailsLoading) {
+      setArtifactState({ status: "loading", fileId });
+      return;
+    }
+
+    if (detailsError) {
+      setArtifactState({ status: "error", message: detailsError });
+      return;
+    }
+
+    if (!details) {
+      setArtifactState({ status: "error", message: "Project details are not available yet." });
+      return;
+    }
+
+    const fileEntry = details.files.find((candidate) => candidate.file.id === fileId);
+    if (!fileEntry) {
+      setArtifactState({ status: "error", message: "Selected file is no longer part of this project." });
+      return;
+    }
+
+    const conversion = selectLatestCompletedConversion(fileEntry.conversions);
+    if (!conversion || !conversion.jliffRelPath || !conversion.tagMapRelPath) {
+      setArtifactState({
+        status: "error",
+        message: "No completed conversion with stored JLIFF artifacts is available for this file yet.",
+      });
+      return;
+    }
+
+    let cancelled = false;
+    setArtifactState({ status: "loading", fileId });
+
+    void (async () => {
+      try {
+        const [jliffRaw, tagMapRaw] = await Promise.all([
+          readProjectArtifact(details.id, conversion.jliffRelPath),
+          readProjectArtifact(details.id, conversion.tagMapRelPath),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        const jliff = parseJliff(jliffRaw);
+        const tags = parseTagMap(tagMapRaw);
+
+        if (cancelled) {
+          return;
+        }
+
+        const versionSeed = coerceTimestamp(conversion.updatedAt ?? conversion.completedAt);
+        const rows = normalizeJliffArtifacts(jliff, tags, { version: versionSeed });
+        const summary = computeSegmentSummary(rows);
+
+        if (cancelled) {
+          return;
+        }
+
+        setArtifactState({
+          status: "ready",
+          rows,
+          jliff,
+          tags,
+          summary,
+          conversion,
+          file: fileEntry.file,
+          paths: {
+            jliff: conversion.jliffRelPath,
+            tagMap: conversion.tagMapRelPath,
+          },
+        });
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        const message =
+          error instanceof Error ? error.message : "Failed to load translation artifacts for this file.";
+        setArtifactState({ status: "error", message });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [details, detailsError, fileId, isDetailsLoading]);
+
+  const activeFileLabel = useMemo(() => {
+    if (!fileId) {
+      return null;
+    }
+
+    if (artifactState.status === "ready") {
+      return artifactState.file.originalName || fileId;
+    }
+
+    return fileId;
+  }, [artifactState, fileId]);
+
+  const languageSummary = useMemo(() => {
+    if (artifactState.status !== "ready") {
+      return null;
+    }
+    return {
+      source: artifactState.jliff.Source_language,
+      target: artifactState.jliff.Target_language,
+    };
+  }, [artifactState]);
+
+  const editorBody = useMemo(() => {
+    if (!fileId) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+          <p className="text-sm font-medium text-foreground">Translation canvas</p>
+          <p className="text-sm text-muted-foreground">
+            Select a file from the project overview to load it into the editor.
+          </p>
+        </div>
+      );
+    }
+
+    if (artifactState.status === "loading") {
+      return (
+        <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          Loading translation artifacts…
+        </div>
+      );
+    }
+
+    if (artifactState.status === "error") {
+      return (
+        <Alert variant="destructive" className="h-full justify-center">
+          <AlertDescription>{artifactState.message}</AlertDescription>
+        </Alert>
+      );
+    }
+
+    if (artifactState.status === "ready") {
+      const previewRows = artifactState.rows.slice(0, 3);
+      const remaining = artifactState.rows.length - previewRows.length;
+
+      return (
+        <div className="flex h-full flex-col gap-4">
+          <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-foreground">
+            Virtualized segments table renders here. Data hydration complete — {artifactState.rows.length.toLocaleString()} segment
+            {artifactState.rows.length === 1 ? "" : "s"} ready.
+          </div>
+          <div className="space-y-3 overflow-y-auto pr-1 text-sm text-foreground">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
+            <ul className="space-y-3">
+              {previewRows.map((row) => (
+                <li key={row.key} className="rounded-lg border border-border/60 bg-background/80 p-3 shadow-sm">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="font-mono text-[11px] text-foreground/70">{row.key}</span>
+                    <span>{row.status === "ok" ? "PH parity ok" : `Parity ${row.status}`}</span>
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm font-semibold text-foreground">{row.sourceRaw || "(empty source)"}</p>
+                    <p className="text-sm text-muted-foreground">{row.targetRaw || "(empty target)"}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {remaining > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {remaining.toLocaleString()} additional segment{remaining === 1 ? "" : "s"} will display in the virtualized table.
+              </p>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  }, [artifactState, fileId]);
+
   return (
     <div className="flex w-full overflow-y-auto p-6">
       <Card className="w-full rounded-2xl border border-border/60 bg-background/80 shadow-sm">
@@ -21,7 +258,11 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <MetaPill icon={Hash} label={project.projectId} ariaLabel="Project identifier" />
-              <MetaPill icon={Layers} label={`${project.fileCount} file${project.fileCount === 1 ? "" : "s"}`} ariaLabel="File count" />
+              <MetaPill
+                icon={Layers}
+                label={`${project.fileCount} file${project.fileCount === 1 ? "" : "s"}`}
+                ariaLabel="File count"
+              />
             </div>
           </div>
         </CardHeader>
@@ -31,24 +272,53 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
               <FileText className="h-4 w-4" aria-hidden="true" />
               Active file
             </header>
-            <p className="text-sm text-muted-foreground">
-              {fileId ? (
-                <span className="inline-flex items-center rounded-md bg-background/80 px-2 py-1 font-mono text-xs text-foreground shadow-sm">
-                  {fileId}
-                </span>
-              ) : (
-                "Select a file from the project overview to load it into the editor."
-              )}
-            </p>
+            {fileId ? (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  <span className="inline-flex items-center rounded-md bg-background/80 px-2 py-1 font-mono text-xs text-foreground shadow-sm">
+                    {activeFileLabel}
+                  </span>
+                  <span className="ml-2 text-xs text-muted-foreground/90">(ID: {fileId})</span>
+                </p>
+                {artifactState.status === "ready" ? (
+                  <div className="space-y-4">
+                    <div className="grid gap-3 text-xs sm:grid-cols-3">
+                      <MetricCard label="Segments" value={formatNumber(artifactState.summary.total)} />
+                      <MetricCard
+                        label="Untranslated"
+                        value={formatNumber(artifactState.summary.untranslated)}
+                        tone={artifactState.summary.untranslated > 0 ? "muted" : "default"}
+                      />
+                      <MetricCard
+                        label="Placeholder mismatches"
+                        value={formatNumber(artifactState.summary.mismatches)}
+                        tone={artifactState.summary.mismatches > 0 ? "alert" : "default"}
+                      />
+                    </div>
+                    {languageSummary ? (
+                      <dl className="grid gap-3 text-xs sm:grid-cols-2">
+                        <MetaRow label="Source language" value={languageSummary.source || "—"} />
+                        <MetaRow label="Target language" value={languageSummary.target || "—"} />
+                        <MetaRow label="JLIFF path" value={artifactState.paths.jliff} />
+                        <MetaRow label="Tag map path" value={artifactState.paths.tagMap} />
+                      </dl>
+                    ) : null}
+                  </div>
+                ) : artifactState.status === "error" ? (
+                  <p className="text-sm text-destructive">{artifactState.message}</p>
+                ) : artifactState.status === "loading" ? (
+                  <p className="text-sm text-muted-foreground">Loading translation artifacts…</p>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Select a file from the project overview to load it into the editor.
+              </p>
+            )}
           </section>
 
           <section className="min-h-[340px] rounded-xl border border-border/60 bg-background/90 p-6 shadow-inner">
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-              <p className="text-sm font-medium text-foreground">Translation canvas</p>
-              <p className="text-sm text-muted-foreground">
-                Editing tools, AI suggestions, and translation memory will render here in upcoming iterations.
-              </p>
-            </div>
+            {editorBody}
           </section>
         </CardContent>
       </Card>
@@ -75,3 +345,147 @@ function MetaPill({ icon: Icon, label, ariaLabel }: MetaPillProps) {
     </span>
   );
 }
+
+type EditorArtifactsState =
+  | { status: "idle" }
+  | { status: "loading"; fileId: string }
+  | { status: "error"; message: string }
+  | {
+      status: "ready";
+      rows: SegmentRow[];
+      jliff: JliffRoot;
+      tags: TagsRoot;
+      summary: SegmentSummary;
+      conversion: ProjectFileConversionDto;
+      file: ProjectFileDto;
+      paths: {
+        jliff: string;
+        tagMap: string;
+      };
+    };
+
+interface SegmentSummary {
+  total: number;
+  untranslated: number;
+  mismatches: number;
+}
+
+function selectLatestCompletedConversion(conversions: ProjectFileConversionDto[]): ProjectFileConversionDto | null {
+  let latest: ProjectFileConversionDto | null = null;
+  let latestTimestamp = Number.NEGATIVE_INFINITY;
+
+  for (const conversion of conversions) {
+    if (conversion.status !== "completed") {
+      continue;
+    }
+    if (!conversion.jliffRelPath || !conversion.tagMapRelPath) {
+      continue;
+    }
+
+    const timestamp = coerceTimestamp(
+      conversion.completedAt ?? conversion.updatedAt ?? conversion.createdAt ?? conversion.startedAt,
+    );
+    if (timestamp > latestTimestamp) {
+      latest = conversion;
+      latestTimestamp = timestamp;
+    }
+  }
+
+  return latest;
+}
+
+function coerceTimestamp(input?: string): number {
+  if (!input) {
+    return Date.now();
+  }
+  const parsed = Date.parse(input);
+  return Number.isFinite(parsed) ? parsed : Date.now();
+}
+
+function computeSegmentSummary(rows: SegmentRow[]): SegmentSummary {
+  let untranslated = 0;
+  let mismatches = 0;
+
+  for (const row of rows) {
+    if (!row.targetRaw || row.targetRaw.trim().length === 0) {
+      untranslated += 1;
+    }
+    if (row.status !== "ok") {
+      mismatches += 1;
+    }
+  }
+
+  return {
+    total: rows.length,
+    untranslated,
+    mismatches,
+  };
+}
+
+function parseJliff(raw: string): JliffRoot {
+  const jliff = safeParse<JliffRoot>(raw, "JLIFF");
+  if (!jliff || !Array.isArray(jliff.Transunits)) {
+    throw new Error("JLIFF artifact is missing required Transunits array.");
+  }
+  return jliff;
+}
+
+function parseTagMap(raw: string): TagsRoot {
+  const tags = safeParse<TagsRoot>(raw, "tag map");
+  if (!tags || !Array.isArray(tags.units)) {
+    throw new Error("Tag map artifact is missing required units array.");
+  }
+  return tags;
+}
+
+function safeParse<T>(raw: string, label: string): T {
+  try {
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown parse error.";
+    throw new Error(`Failed to parse ${label} artifact: ${message}`);
+  }
+}
+
+type MetricCardTone = "default" | "muted" | "alert";
+
+type MetricCardProps = {
+  label: string;
+  value: string;
+  tone?: MetricCardTone;
+};
+
+function MetricCard({ label, value, tone = "default" }: MetricCardProps) {
+  const toneClassName =
+    tone === "alert"
+      ? "border-destructive/60 bg-destructive/5 text-destructive"
+      : tone === "muted"
+        ? "border-border/60 bg-background/60 text-muted-foreground"
+        : "border-border/60 bg-background/80 text-foreground";
+
+  return (
+    <div className={`rounded-lg border px-3 py-2 shadow-sm ${toneClassName}`}>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-semibold">{value}</p>
+    </div>
+  );
+}
+
+type MetaRowProps = {
+  label: string;
+  value: string;
+};
+
+function MetaRow({ label, value }: MetaRowProps) {
+  return (
+    <div className="rounded-lg border border-border/40 bg-background/60 px-3 py-2 shadow-sm">
+      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="mt-1 text-sm font-medium text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat().format(value);
+}
+
