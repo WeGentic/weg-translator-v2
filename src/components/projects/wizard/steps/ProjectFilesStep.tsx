@@ -56,7 +56,12 @@ export function ProjectFilesStep({ files, errors, onFilesChange }: ProjectFilesS
             Add documents to import into the project. You can remove files before creating the project.
           </p>
         </div>
-        <Button type="button" variant="outline" onClick={handleAddFiles} className="w-full sm:w-auto">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void handleAddFiles()}
+          className="w-full sm:w-auto"
+        >
           Add files
         </Button>
       </div>

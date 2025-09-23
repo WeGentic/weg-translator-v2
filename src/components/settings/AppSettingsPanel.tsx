@@ -70,7 +70,11 @@ export function AppSettingsPanel() {
     setError(null);
 
     const selection = await open({ directory: true, multiple: false });
-    const nextFolder = Array.isArray(selection) ? selection[0] : selection;
+    const nextFolder = typeof selection === "string"
+      ? selection
+      : Array.isArray(selection)
+        ? selection[0] ?? null
+        : null;
     if (!nextFolder) return;
 
     setIsUpdating(true);
@@ -231,7 +235,13 @@ export function AppSettingsPanel() {
               <section className="space-y-3">
                 <p className="text-sm font-medium text-foreground">Preferences</p>
                 <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/10 p-3">
-                  <Checkbox id="auto-convert" checked={settings.autoConvertOnOpen} onCheckedChange={handleToggleAutoConvert} />
+                  <Checkbox
+                    id="auto-convert"
+                    checked={settings.autoConvertOnOpen}
+                    onCheckedChange={() => {
+                      void handleToggleAutoConvert();
+                    }}
+                  />
                   <Label htmlFor="auto-convert" className="cursor-pointer">Auto-convert on open</Label>
                 </div>
               </section>

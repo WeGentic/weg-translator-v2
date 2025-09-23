@@ -12,6 +12,7 @@ Your highest priority is accuracy and reliability. When you are unsure, you must
 
 ## Coding Standards
 
+- Project is based on the Tauri + React + TypeScript + TailwindCSS, with npm workspaces.
 - Any UI components must use ShadCN (v. 3.3.1) and TailwindCSS 4.1.1
 - Frontend must be written in React 19.1.1, using most recent patterns and best practices, and the new Compiler.
 

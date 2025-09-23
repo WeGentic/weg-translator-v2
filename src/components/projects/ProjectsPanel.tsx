@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { deleteProject, listProjects, type CreateProjectResponse, type ProjectListItem } from "@/ipc";
+import { deleteProject, listProjects, type ProjectListItem } from "@/ipc";
 
 import { ProjectsTable, type ProjectManagerRow } from "./components/ProjectsTable";
 import { CreateProjectWizard } from "./wizard/CreateProjectWizard";
@@ -66,10 +66,8 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
     }, 1500);
     pollingRef.current = id;
     return () => {
-      if (pollingRef.current != null) {
-        window.clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
+      window.clearInterval(id);
+      pollingRef.current = null;
     };
   }, [loadProjects]);
 
@@ -85,7 +83,7 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
     [onOpenProject, projects],
   );
 
-  const handleProjectCreated = useCallback((_: CreateProjectResponse) => {
+  const handleProjectCreated = useCallback(() => {
     void loadProjects();
   }, [loadProjects]);
 
@@ -200,7 +198,7 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
             <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
             <Button
               variant="destructive"
-              onClick={handleConfirmDelete}
+              onClick={() => void handleConfirmDelete()}
               disabled={!deleteTarget || deleteConfirm.trim() !== (deleteTarget?.name ?? "")}
             >
               <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />

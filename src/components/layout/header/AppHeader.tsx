@@ -1,8 +1,7 @@
 import { CircleUser, PanelLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useActionState, useState } from "react";
+import type { MouseEvent } from "react";
 import { useRouter } from "@tanstack/react-router";
-import { useAuth } from "@/contexts/AuthContext";
-import { logger } from "@/logging";
 import {
   Action as AlertDialogAction,
   Cancel as AlertDialogCancel,
@@ -13,11 +12,18 @@ import {
   Root as AlertDialog,
   Title as AlertDialogTitle,
 } from "@radix-ui/react-alert-dialog";
-import type { SidebarState } from "./WorkspaceSidebar";
 
+import { useAuth } from "@/contexts/AuthContext";
+import { logger } from "@/logging";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import type { SidebarState } from "@/components/layout/sidebar/sidebar-state";
+
+/**
+ * Presentation contract for {@link AppHeader}. Optional knobs allow the root App component to
+ * configure behaviour without tightly coupling state ownership to the header itself.
+ */
 type AppHeaderProps = {
   title: string;
   onToggleSidebar?: () => void;
@@ -27,6 +33,11 @@ type AppHeaderProps = {
   hideUser?: boolean;
 };
 
+/**
+ * High-level workspace header that surfaces navigation affordances, the current view title, and
+ * the authenticated user controls. The component keeps its own surface-level dialogs (account and
+ * logout confirmation) to avoid leaking modal plumbing into the App shell.
+ */
 export function AppHeader({
   title,
   onToggleSidebar,
@@ -65,6 +76,7 @@ export function AppHeader({
   };
 
   const Icon = state === "hidden" ? PanelLeftOpen : state === "compact" ? PanelLeftClose : PanelLeft;
+
   return (
     <header role="banner" className={cn("fixed inset-x-3 top-3 z-50", className)}>
       <div
@@ -117,8 +129,7 @@ export function AppHeader({
           <AlertDialogPortal>
             <AlertDialogOverlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:fade-in" />
             <AlertDialogContent
-              onEscapeKeyDown={(e) => e.preventDefault()}
-              onInteractOutside={(e) => e.preventDefault()}
+              onEscapeKeyDown={(event) => event.preventDefault()}
               className="fixed left-1/2 top-1/2 z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border border-border/60 bg-popover p-6 shadow-lg duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:fade-in"
             >
               <div className="flex flex-col space-y-2 text-center sm:text-left">
@@ -179,7 +190,7 @@ export function AppHeader({
                 <AlertDialogAction
                   disabled={isLogoutPending}
                   className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50"
-                  onClick={(event) => {
+                  onClick={(event: MouseEvent<HTMLButtonElement>) => {
                     event.preventDefault();
                     const data = new FormData();
                     void triggerLogout(data);

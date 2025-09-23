@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -26,6 +28,14 @@ export function EnsureQueueModal({
 }: EnsureQueueModalProps) {
   const open = Boolean(plan);
   const totalTasks = plan?.tasks.length ?? 0;
+  const logEntries = useMemo(() => {
+    const seen = new Map<string, number>();
+    return logs.map((line) => {
+      const count = seen.get(line) ?? 0;
+      seen.set(line, count + 1);
+      return { key: `${line}-${count}`, line };
+    });
+  }, [logs]);
 
   return (
     <Dialog
@@ -57,12 +67,12 @@ export function EnsureQueueModal({
             role="log"
             aria-live="polite"
           >
-            {logs.map((line, idx) => (
-              <div key={`${idx}-${line}`} className="whitespace-pre-wrap text-muted-foreground">
-                {line}
+            {logEntries.map((entry) => (
+              <div key={entry.key} className="whitespace-pre-wrap text-muted-foreground">
+                {entry.line}
               </div>
             ))}
-            {logs.length === 0 ? (
+            {logEntries.length === 0 ? (
               <div className="text-muted-foreground/70">Logs will appear here as conversions run.</div>
             ) : null}
           </div>

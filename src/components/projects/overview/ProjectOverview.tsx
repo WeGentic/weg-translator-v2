@@ -17,7 +17,6 @@ import {
   type EnsureConversionsPlan,
   type EnsureConversionsTask,
   type ProjectDetails,
-  type ProjectFileConversionDto,
   type ProjectListItem,
 } from "@/ipc";
 import { convertStream, validateStream } from "@/lib/openxliff";
@@ -45,9 +44,6 @@ export function ProjectOverview({ projectSummary }: Props) {
   const [autoConvertOnOpen, setAutoConvertOnOpen] = useState<boolean>(true);
   const initialEnsureDone = useRef(false);
   const [queueSummary, setQueueSummary] = useState<{ completed: number; failed: number } | null>(null);
-
-  const defaultSrc = details?.defaultSrcLang ?? "en-US";
-  const defaultTgt = details?.defaultTgtLang ?? "it-IT";
 
   const loadDetails = useCallback(async () => {
     setIsLoading(true);
@@ -142,36 +138,6 @@ export function ProjectOverview({ projectSummary }: Props) {
     }
   }, [isRemoveOpen, loadDetails, projectId]);
 
-  const startEnsureQueue = useCallback(async () => {
-    if (!ensurePlan || ensurePlan.tasks.length === 0) return;
-    setIsEnsuring(true);
-    cancelRequested.current = false;
-    setLogs([]);
-    setEnsureProgress({ current: 0, total: ensurePlan.tasks.length });
-    setQueueSummary(null);
-
-    // No preflight: call convert directly and surface its stderr/stdout.
-    let failed = 0;
-    let completed = 0;
-    for (let i = 0; i < ensurePlan.tasks.length; i++) {
-      if (cancelRequested.current) break;
-      const task = ensurePlan.tasks[i];
-      setEnsureProgress({ current: i, total: ensurePlan.tasks.length });
-      const ok = await processTask(task);
-      if (ok) completed += 1;
-      else failed += 1;
-    }
-
-    setIsEnsuring(false);
-    setEnsureProgress({ current: 0, total: 0 });
-    setQueueSummary({ completed, failed });
-    await loadDetails();
-    if (failed === 0) {
-      // Auto-close only on full success
-      setEnsurePlan(null);
-    }
-  }, [ensurePlan, loadDetails]);
-
   const processTask = useCallback(async (task: EnsureConversionsTask) => {
     const onStdout = (line: string) => setLogs((cur) => [...cur, line]);
     const onStderr = (line: string) => setLogs((cur) => [...cur, line]);
@@ -247,6 +213,36 @@ export function ProjectOverview({ projectSummary }: Props) {
       return false;
     }
   }, [relativeToProject]);
+
+  const startEnsureQueue = useCallback(async () => {
+    if (!ensurePlan || ensurePlan.tasks.length === 0) return;
+    setIsEnsuring(true);
+    cancelRequested.current = false;
+    setLogs([]);
+    setEnsureProgress({ current: 0, total: ensurePlan.tasks.length });
+    setQueueSummary(null);
+
+    // No preflight: call convert directly and surface its stderr/stdout.
+    let failed = 0;
+    let completed = 0;
+    for (let i = 0; i < ensurePlan.tasks.length; i++) {
+      if (cancelRequested.current) break;
+      const task = ensurePlan.tasks[i];
+      setEnsureProgress({ current: i, total: ensurePlan.tasks.length });
+      const ok = await processTask(task);
+      if (ok) completed += 1;
+      else failed += 1;
+    }
+
+    setIsEnsuring(false);
+    setEnsureProgress({ current: 0, total: 0 });
+    setQueueSummary({ completed, failed });
+    await loadDetails();
+    if (failed === 0) {
+      // Auto-close only on full success
+      setEnsurePlan(null);
+    }
+  }, [ensurePlan, loadDetails, processTask]);
 
   const cancelEnsureQueue = useCallback(() => {
     cancelRequested.current = true;
@@ -339,16 +335,22 @@ export function ProjectOverview({ projectSummary }: Props) {
       {anyFailures ? (
         <div className="flex items-center justify-between gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
           <div>Some conversions failed. You can retry after fixing the source content.</div>
-          <Button variant="outline" size="sm" onClick={retryFailed}>Retry failed</Button>
+          <Button variant="outline" size="sm" onClick={() => void retryFailed()}>
+            Retry failed
+          </Button>
         </div>
       ) : null}
 
-      <AddFilesDialog open={isAddOpen} onOpenChange={setIsAddOpen} onConfirm={handleAddFiles} />
+      <AddFilesDialog
+        open={isAddOpen}
+        onOpenChange={setIsAddOpen}
+        onConfirm={() => void handleAddFiles()}
+      />
 
       <RemoveFileDialog
         open={isRemoveOpen !== null}
         onOpenChange={(open) => setIsRemoveOpen(open ? isRemoveOpen : null)}
-        onConfirm={handleRemoveFile}
+        onConfirm={() => void handleRemoveFile()}
       />
 
       <EnsureQueueModal

@@ -1,9 +1,15 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 import { X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { SidebarState } from "./WorkspaceSidebar";
 
+import type { SidebarState } from "./sidebar-state";
+
+/**
+ * Describes a navigation affordance rendered in the application sidebar.
+ * The optional {@link MenuItem.onClose} handler enables detachable tabs.
+ */
 export type MenuItem = {
   key: string;
   label: string;
@@ -15,6 +21,9 @@ export type MenuItem = {
 
 const EMPTY_MENU_ITEMS: MenuItem[] = [];
 
+/**
+ * Props contract for {@link AppSidebar}; exported so consuming components can share the shape.
+ */
 type AppSidebarProps = {
   state: SidebarState;
   fixedItems: MenuItem[];
@@ -27,6 +36,10 @@ type AppSidebarProps = {
   style?: CSSProperties;
 };
 
+/**
+ * Application sidebar that unifies workspace navigation, open project tabs, and editor shortcuts.
+ * The component remains purely presentational so the React Compiler can optimise re-renders.
+ */
 export function AppSidebar({
   state,
   fixedItems,
@@ -38,7 +51,9 @@ export function AppSidebar({
   floating = true,
   style,
 }: AppSidebarProps) {
-  if (state === "hidden") return null;
+  if (state === "hidden") {
+    return null;
+  }
 
   const container = cn(
     floating && "fixed left-3 z-40",
@@ -47,9 +62,12 @@ export function AppSidebar({
     className,
   );
 
-  const settingsItem = fixedItems.find((i) => i.key === "settings");
-  const topFixedItems = fixedItems.filter((i) => i.key !== "settings");
+  const settingsItem = fixedItems.find((item) => item.key === "settings");
+  const topFixedItems = fixedItems.filter((item) => item.key !== "settings");
 
+  /**
+   * Renders a nav item while accounting for compact mode, badges, and optional close affordance.
+   */
   const renderItem = (
     item: MenuItem,
     options?: { isTemporary?: boolean; className?: string; children?: ReactNode },
@@ -57,6 +75,7 @@ export function AppSidebar({
     const isTemporary = options?.isTemporary ?? false;
     const active = selectedKey === item.key;
     const closable = isTemporary && typeof item.onClose === "function";
+
     return (
       <li
         key={item.key}
@@ -67,10 +86,8 @@ export function AppSidebar({
           size="sm"
           data-active={active}
           className={cn(
-            // layout
             "relative w-full justify-start px-3",
             state === "compact" && "justify-center px-0",
-            // active indicator bar (modern nav affordance)
             "before:absolute before:left-1 before:top-1/2 before:h-6 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-primary/70 before:opacity-0 before:transition-opacity",
             "data-[active=true]:before:opacity-100 hover:before:opacity-60",
             isTemporary && state !== "compact" && "pl-6",
@@ -152,6 +169,7 @@ export function AppSidebar({
                       )}
                     </ul>
                   ) : null;
+
                   return renderItem(item, { children });
                 })}
             </ul>

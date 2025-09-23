@@ -4,6 +4,7 @@ Tauri 2.8.5 desktop application with a **React 19.1** frontend and **Rust 1.89**
 
 ## Highlights
 
+- Project is based on the Tauri + React + TypeScript + TailwindCSS, with npm workspaces.
 - React UI (ShadCN v3.3.1 + TailwindCSS 4.1.1) with streaming logs, file pickers, and OpenXLIFF controls.
 - Tauri sidecars bundle OpenXLIFF CLI scripts (`convert`, `merge`, `xliffchecker`) plus a slimmed Java runtime for offline operation.
 - Rust IPC layer exposes translation job simulation, path validation, structured logging, and SQLite-backed job persistence via `tauri-plugin-sql`.
@@ -22,7 +23,6 @@ src-tauri/resources/      Vendored OpenXLIFF dist + Java runtime per platform
 scripts/                  Helper scripts (fetch, sync, normalize, build JRE)
 vendor/openxliff/         Source-of-truth OpenXLIFF assets
 .github/workflows/ci.yml  macOS/Windows build workflow
-Plan.md                   Detailed project roadmap and status
 ```
 
 ## Prerequisites

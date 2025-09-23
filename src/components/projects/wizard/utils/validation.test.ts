@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { validateDetails, validateFiles } from "./validation";
+import type { NewProjectForm } from "../types";
 
-const baseForm = {
+const baseForm: NewProjectForm = {
   name: "My Project",
   type: "translation",
   srcLang: "en-US",
   tgtLang: "it-IT",
   files: ["/abs/file.docx"],
-} as const;
+};
 
 describe("wizard validation", () => {
   it("rejects invalid BCP-47 tags", () => {
@@ -38,4 +39,3 @@ describe("wizard validation", () => {
     expect(ok.valid).toBe(true);
   });
 });
-

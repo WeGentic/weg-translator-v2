@@ -15,14 +15,41 @@ import type {
   TranslationRequest,
 } from "./types";
 
+function hasCustomToString(value: { toString?: unknown }): value is { toString: () => string } {
+  return typeof value.toString === "function" && value.toString !== Object.prototype.toString;
+}
+
 function normalizeIpcError(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "string") return err;
-  if (err && typeof err === "object") {
-    const anyErr = err as Record<string, unknown>;
-    if (typeof anyErr.message === "string") return anyErr.message as string;
-    if (typeof (anyErr as any).toString === "function") return String(err);
+  if (err instanceof Error) {
+    return err.message;
   }
+
+  if (typeof err === "string") {
+    return err;
+  }
+
+  if (err && typeof err === "object") {
+    const candidate = err as { message?: unknown; toString?: unknown };
+
+    if (typeof candidate.message === "string") {
+      return candidate.message;
+    }
+
+    if (hasCustomToString(candidate)) {
+      try {
+        return candidate.toString();
+      } catch {
+        // fall through to JSON serialization
+      }
+    }
+
+    try {
+      return JSON.stringify(candidate);
+    } catch {
+      // ignore JSON serialization errors
+    }
+  }
+
   return "Unknown error calling backend";
 }
 

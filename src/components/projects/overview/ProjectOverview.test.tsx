@@ -23,12 +23,16 @@ import {
   removeProjectFile,
   ensureProjectConversionsPlan,
   getAppSettings,
+  type AppSettings,
+  type EnsureConversionsPlan,
+  type ProjectDetails,
+  type ProjectListItem,
 } from "@/ipc";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 import { ProjectOverview } from "./ProjectOverview";
 
-const projectSummary = {
+const projectSummary: ProjectListItem = {
   projectId: "11111111-1111-1111-1111-111111111111",
   name: "Demo",
   slug: "demo",
@@ -39,7 +43,7 @@ const projectSummary = {
   updatedAt: "2024-01-01T00:00:00Z",
 };
 
-const details = {
+const details: ProjectDetails = {
   id: projectSummary.projectId,
   name: projectSummary.name,
   slug: projectSummary.slug,
@@ -89,8 +93,30 @@ const details = {
   ],
 };
 
+const basePlan: EnsureConversionsPlan = {
+  projectId: projectSummary.projectId,
+  srcLang: details.defaultSrcLang ?? "en-US",
+  tgtLang: details.defaultTgtLang ?? "it-IT",
+  version: "2.1",
+  tasks: [],
+};
+
+const baseSettings: AppSettings = {
+  appFolder: "/projects/demo",
+  appFolderExists: true,
+  databasePath: "/projects/demo/app.db",
+  databaseExists: true,
+  projectsPath: "/projects/demo/projects",
+  projectsPathExists: true,
+  settingsFile: "/projects/demo/settings.json",
+  settingsFileExists: true,
+  defaultAppFolder: "/projects/demo",
+  isUsingDefaultLocation: true,
+  autoConvertOnOpen: true,
+};
+
 beforeEach(() => {
-  vi.mocked(ensureProjectConversionsPlan).mockResolvedValue({ tasks: [] } as any);
+  vi.mocked(ensureProjectConversionsPlan).mockResolvedValue({ ...basePlan, tasks: [] });
 });
 
 afterEach(() => {
@@ -99,10 +125,10 @@ afterEach(() => {
 
 describe("ProjectOverview", () => {
   it("renders files and conversion badges", async () => {
-    vi.mocked(getProjectDetails).mockResolvedValue(details as any);
-    vi.mocked(getAppSettings).mockResolvedValue({ autoConvertOnOpen: true } as any);
+    vi.mocked(getProjectDetails).mockResolvedValue(details);
+    vi.mocked(getAppSettings).mockResolvedValue({ ...baseSettings });
 
-    render(<ProjectOverview projectSummary={projectSummary as any} />);
+    render(<ProjectOverview projectSummary={projectSummary} />);
 
     const title = await screen.findByRole("heading", { level: 2, name: projectSummary.name });
     expect(title).toBeInTheDocument();
@@ -116,11 +142,11 @@ describe("ProjectOverview", () => {
   });
 
   it("invokes IPC on add/remove actions", async () => {
-    vi.mocked(getProjectDetails).mockResolvedValue(details as any);
-    vi.mocked(getAppSettings).mockResolvedValue({ autoConvertOnOpen: true } as any);
+    vi.mocked(getProjectDetails).mockResolvedValue(details);
+    vi.mocked(getAppSettings).mockResolvedValue({ ...baseSettings });
     vi.mocked(openDialog).mockResolvedValueOnce(["/abs/new.pptx"]);
 
-    render(<ProjectOverview projectSummary={projectSummary as any} />);
+    render(<ProjectOverview projectSummary={projectSummary} />);
 
     await screen.findByRole("list");
 
@@ -141,10 +167,10 @@ describe("ProjectOverview", () => {
   });
 
   it("shows tooltip title when auto-convert is disabled", async () => {
-    vi.mocked(getProjectDetails).mockResolvedValue(details as any);
-    vi.mocked(getAppSettings).mockResolvedValue({ autoConvertOnOpen: false } as any);
+    vi.mocked(getProjectDetails).mockResolvedValue(details);
+    vi.mocked(getAppSettings).mockResolvedValue({ ...baseSettings, autoConvertOnOpen: false });
 
-    render(<ProjectOverview projectSummary={projectSummary as any} />);
+    render(<ProjectOverview projectSummary={projectSummary} />);
 
     const addButton = await screen.findByRole("button", { name: /add files/i });
     expect(addButton).toHaveAttribute(
