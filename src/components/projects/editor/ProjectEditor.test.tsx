@@ -20,8 +20,12 @@ describe("ProjectEditor", () => {
   it("renders editor header and selected file", () => {
     render(<ProjectEditor project={project} fileId="f1" />);
 
-    expect(screen.getByText(/Editor — Demo Project/)).toBeInTheDocument();
-    expect(screen.getByText(/Selected file context/i)).toHaveTextContent(/f1/);
+    expect(screen.getByText(/Editor workspace/i)).toBeInTheDocument();
+    expect(screen.getByText(/Focus translations and agent-assisted edits/i)).toHaveTextContent(
+      /Demo Project/,
+    );
+    expect(screen.getByText(/Active file/i)).toBeInTheDocument();
+    expect(screen.getByText((content) => content.trim() === "f1")).toBeInTheDocument();
   });
 
   it("renders placeholder when context is missing", () => {

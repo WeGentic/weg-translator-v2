@@ -31,3 +31,4 @@ vendor/
 # SQLite databases
 *.sqlite
 *.db
+integration_code/

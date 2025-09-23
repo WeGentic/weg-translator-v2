@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use log::{debug, error, info, warn};
+use serde::Serialize;
 use tauri::async_runtime::spawn;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::{fs, time::sleep};
@@ -26,6 +27,7 @@ use crate::db::{
     ProjectDetails, ProjectFileConversionRow, ProjectFileDetails, ProjectFileImportStatus,
     ProjectListItem, ProjectStatus, ProjectType, SQLITE_DB_FILE,
 };
+use crate::jliff::{ConversionOptions, convert_xliff};
 use crate::settings::{SettingsManager, move_directory};
 
 const MAX_LANGUAGE_LENGTH: usize = 64;
@@ -373,7 +375,7 @@ pub async fn get_project_details(
 #[tauri::command]
 pub async fn add_files_to_project(
     _app: AppHandle,
-    settings: State<'_, SettingsManager>,
+    _settings: State<'_, SettingsManager>,
     db: State<'_, DbManager>,
     project_id: Uuid,
     files: Vec<String>,
@@ -397,10 +399,9 @@ pub async fn add_files_to_project(
             Ok(path) => path,
             Err(error) => {
                 warn!(target: "ipc::projects", "failed to canonicalize file '{trimmed}': {error}");
-                return Err(IpcError::Validation(format!(
-                    "File '{trimmed}' is not accessible."
-                ))
-                .into());
+                return Err(
+                    IpcError::Validation(format!("File '{trimmed}' is not accessible.")).into(),
+                );
             }
         };
         if !unique_paths.insert(canonical_path.clone()) {
@@ -518,9 +519,7 @@ pub async fn add_files_to_project(
         });
     }
 
-    let inserted = db
-        .add_files_to_project(project_id, &imported_files)
-        .await?;
+    let inserted = db.add_files_to_project(project_id, &imported_files).await?;
 
     let inserted_dtos = inserted
         .into_iter()
@@ -549,9 +548,7 @@ pub async fn remove_project_file(
         .find(|f| f.file.id.to_string() == project_file_id.to_string())
         .cloned();
 
-    let removed = db
-        .remove_project_file(project_id, project_file_id)
-        .await?;
+    let removed = db.remove_project_file(project_id, project_file_id).await?;
 
     if let Some(entry) = target {
         // Remove original file
@@ -690,12 +687,118 @@ pub async fn ensure_project_conversions_plan(
     })
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JliffConversionResultDto {
+    pub file_id: String,
+    pub jliff_abs_path: String,
+    pub jliff_rel_path: String,
+    pub tag_map_abs_path: String,
+    pub tag_map_rel_path: String,
+}
+
+#[tauri::command]
+pub async fn convert_xliff_to_jliff(
+    db: State<'_, DbManager>,
+    project_id: Uuid,
+    conversion_id: Uuid,
+    xliff_abs_path: String,
+    operator: Option<String>,
+    schema_abs_path: Option<String>,
+) -> IpcResult<JliffConversionResultDto> {
+    let details = db.list_project_details(project_id).await?;
+    let root_path = PathBuf::from(&details.root_path);
+
+    let conversion = details
+        .files
+        .iter()
+        .flat_map(|file| &file.conversions)
+        .find(|row| row.id == conversion_id)
+        .ok_or_else(|| IpcError::Validation("Conversion was not found for project.".into()))?;
+
+    let jliff_dir = DbManager::ensure_subdir(&root_path, "jliff")?;
+
+    let operator = operator
+        .and_then(|value| {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        })
+        .unwrap_or_else(|| "Unknown operator".to_string());
+
+    let schema_path = schema_abs_path.as_ref().and_then(|value| {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(PathBuf::from(trimmed))
+        }
+    });
+
+    let mut options = ConversionOptions::new(
+        PathBuf::from(&xliff_abs_path),
+        jliff_dir.clone(),
+        details.name.clone(),
+        details.id.to_string(),
+        operator,
+    );
+    options.schema_path = schema_path;
+
+    let artifacts = convert_xliff(&options).map_err(|error| {
+        error!(
+            target: "ipc::projects",
+            "failed to convert XLIFF to JLIFF for conversion {conversion_id}: {error}"
+        );
+        IpcError::Internal(format!("Failed to convert XLIFF to JLIFF: {}", error))
+    })?;
+
+    if artifacts.is_empty() {
+        return Err(IpcError::Internal("No <file> element found in XLIFF document.".into()).into());
+    }
+    let artifact_count = artifacts.len();
+    let mut artifact_iter = artifacts.into_iter();
+    let artifact = artifact_iter
+        .next()
+        .ok_or_else(|| IpcError::Internal("JLIFF converter returned no artifacts.".into()))?;
+
+    if artifact_count > 1 {
+        warn!(
+            target: "ipc::projects",
+            "XLIFF produced {artifact_count} <file> elements; selecting '{file_id}' for conversion {conversion_id}",
+            file_id = artifact.file_id
+        );
+    }
+
+    let jliff_rel = artifact.jliff_path.strip_prefix(&root_path).map_err(|_| {
+        IpcError::Internal("JLIFF output path is outside the project folder.".into())
+    })?;
+    let tag_map_rel = artifact
+        .tag_map_path
+        .strip_prefix(&root_path)
+        .map_err(|_| {
+            IpcError::Internal("Tag-map output path is outside the project folder.".into())
+        })?;
+
+    Ok(JliffConversionResultDto {
+        file_id: conversion.project_file_id.to_string(),
+        jliff_abs_path: artifact.jliff_path.to_string_lossy().to_string(),
+        jliff_rel_path: jliff_rel.to_string_lossy().to_string(),
+        tag_map_abs_path: artifact.tag_map_path.to_string_lossy().to_string(),
+        tag_map_rel_path: tag_map_rel.to_string_lossy().to_string(),
+    })
+}
+
 #[tauri::command]
 pub async fn update_conversion_status(
     db: State<'_, DbManager>,
     conversion_id: Uuid,
     status: String,
     xliff_rel_path: Option<String>,
+    jliff_rel_path: Option<String>,
+    tag_map_rel_path: Option<String>,
     error_message: Option<String>,
 ) -> IpcResult<()> {
     use crate::db::ProjectFileConversionStatus as S;
@@ -717,17 +820,18 @@ pub async fn update_conversion_status(
         S::Pending => (None, None, None),
     };
 
-    db
-        .upsert_conversion_status(
-            conversion_id,
-            parsed,
-            xliff_rel_path,
-            error_message,
-            started_at,
-            completed_at,
-            failed_at,
-        )
-        .await?;
+    db.upsert_conversion_status(
+        conversion_id,
+        parsed,
+        xliff_rel_path,
+        jliff_rel_path,
+        tag_map_rel_path,
+        error_message,
+        started_at,
+        completed_at,
+        failed_at,
+    )
+    .await?;
     Ok(())
 }
 
@@ -1398,6 +1502,8 @@ fn project_file_conversion_to_dto(row: &ProjectFileConversionRow) -> ProjectFile
         paragraph: row.paragraph,
         embed: row.embed,
         xliff_rel_path: row.xliff_rel_path.clone(),
+        jliff_rel_path: row.jliff_rel_path.clone(),
+        tag_map_rel_path: row.tag_map_rel_path.clone(),
         status: row.status.as_str().to_string(),
         started_at: row.started_at.clone(),
         completed_at: row.completed_at.clone(),

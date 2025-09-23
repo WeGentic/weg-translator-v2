@@ -1,20 +1,21 @@
 mod db;
 mod ipc;
+mod jliff;
 mod settings;
 
 pub use crate::db::{
-    DbError, DbManager, NewProject, NewProjectFile, NewTranslationRecord, PersistedTranslationOutput,
-    ProjectFileConversionRequest, ProjectFileConversionStatus, ProjectFileImportStatus, ProjectStatus,
-    ProjectType,
+    DbError, DbManager, NewProject, NewProjectFile, NewTranslationRecord,
+    PersistedTranslationOutput, ProjectFileConversionRequest, ProjectFileConversionStatus,
+    ProjectFileImportStatus, ProjectStatus, ProjectType,
 };
 pub use crate::ipc::dto::{TranslationHistoryRecord, TranslationRequest, TranslationStage};
 
 use ipc::{
-    TranslationState, add_files_to_project, clear_translation_history, create_project_with_files,
-    ensure_project_conversions_plan, fail_translation, get_app_settings, get_project_details,
-    get_translation_job, health_check, list_active_jobs, list_projects, list_translation_history,
-    path_exists, remove_project_file, delete_project, start_translation, update_app_folder,
-    update_auto_convert_on_open, update_conversion_status,
+    TranslationState, add_files_to_project, clear_translation_history, convert_xliff_to_jliff,
+    create_project_with_files, delete_project, ensure_project_conversions_plan, fail_translation,
+    get_app_settings, get_project_details, get_translation_job, health_check, list_active_jobs,
+    list_projects, list_translation_history, path_exists, remove_project_file, start_translation,
+    update_app_folder, update_auto_convert_on_open, update_conversion_status,
 };
 use log::LevelFilter;
 use log::kv::VisitSource;
@@ -94,6 +95,7 @@ pub fn run() {
             remove_project_file,
             delete_project,
             ensure_project_conversions_plan,
+            convert_xliff_to_jliff,
             update_conversion_status,
             update_auto_convert_on_open,
             health_check,

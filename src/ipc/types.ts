@@ -152,6 +152,8 @@ export interface ProjectFileConversionDto {
   paragraph: boolean;
   embed: boolean;
   xliffRelPath?: string;
+  jliffRelPath?: string;
+  tagMapRelPath?: string;
   status: ProjectFileConversionStatus;
   startedAt?: string;
   completedAt?: string;
@@ -159,6 +161,14 @@ export interface ProjectFileConversionDto {
   errorMessage?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface JliffConversionResult {
+  fileId: string;
+  jliffAbsPath: string;
+  jliffRelPath: string;
+  tagMapAbsPath: string;
+  tagMapRelPath: string;
 }
 
 export interface ProjectFileWithConversionsDto {

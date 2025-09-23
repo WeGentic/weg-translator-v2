@@ -13,6 +13,7 @@ import type {
   ProjectListItem,
   TranslationHistoryRecord,
   TranslationRequest,
+  JliffConversionResult,
 } from "./types";
 
 function hasCustomToString(value: { toString?: unknown }): value is { toString: () => string } {
@@ -159,9 +160,11 @@ export async function ensureProjectConversionsPlan(projectId: string) {
 export async function updateConversionStatus(
   conversionId: string,
   status: "pending" | "running" | "completed" | "failed",
-  payload?: { xliffRelPath?: string; errorMessage?: string },
+  payload?: { xliffRelPath?: string; jliffRelPath?: string; tagMapRelPath?: string; errorMessage?: string },
 ) {
   const xliff_rel_path = payload?.xliffRelPath;
+  const jliff_rel_path = payload?.jliffRelPath;
+  const tag_map_rel_path = payload?.tagMapRelPath;
   const error_message = payload?.errorMessage;
   return safeInvoke<void>("update_conversion_status", {
     // send both snake_case and camelCase for compatibility
@@ -170,7 +173,40 @@ export async function updateConversionStatus(
     status,
     xliff_rel_path,
     xliffRelPath: xliff_rel_path,
+    jliff_rel_path,
+    jliffRelPath: jliff_rel_path,
+    tag_map_rel_path,
+    tagMapRelPath: tag_map_rel_path,
     error_message,
     errorMessage: error_message,
   });
+}
+
+export interface ConvertXliffToJliffArgs {
+  projectId: string;
+  conversionId: string;
+  xliffAbsPath: string;
+  operator?: string;
+  schemaAbsPath?: string;
+}
+
+export async function convertXliffToJliff(args: ConvertXliffToJliffArgs) {
+  const payload: Record<string, unknown> = {
+    project_id: args.projectId,
+    projectId: args.projectId,
+    conversion_id: args.conversionId,
+    conversionId: args.conversionId,
+    xliff_abs_path: args.xliffAbsPath,
+    xliffAbsPath: args.xliffAbsPath,
+  };
+
+  if (typeof args.operator === "string" && args.operator.trim().length > 0) {
+    payload.operator = args.operator;
+  }
+  if (typeof args.schemaAbsPath === "string" && args.schemaAbsPath.trim().length > 0) {
+    payload.schema_abs_path = args.schemaAbsPath;
+    payload.schemaAbsPath = args.schemaAbsPath;
+  }
+
+  return safeInvoke<JliffConversionResult>("convert_xliff_to_jliff", payload);
 }

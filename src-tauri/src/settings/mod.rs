@@ -149,7 +149,9 @@ impl SettingsManager {
     }
 }
 
-fn default_true() -> bool { true }
+fn default_true() -> bool {
+    true
+}
 
 pub async fn move_directory(old_path: &Path, new_path: &Path) -> io::Result<()> {
     let source = old_path.to_path_buf();

@@ -8,6 +8,7 @@ vi.mock("@/ipc", () => ({
   removeProjectFile: vi.fn(),
   ensureProjectConversionsPlan: vi.fn(),
   updateConversionStatus: vi.fn(),
+  convertXliffToJliff: vi.fn(),
   convertStream: vi.fn(),
   validateStream: vi.fn(),
   getAppSettings: vi.fn(),
@@ -17,11 +18,23 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
 }));
 
+vi.mock("@/contexts/AuthContext", () => ({
+  useAuth: () => ({
+    user: { id: "auth-user", email: "tester@example.com", name: "Tester" },
+    isAuthenticated: true,
+    login: vi.fn(),
+    logout: vi.fn(),
+    isLoading: false,
+    session: null,
+  }),
+}));
+
 import {
   getProjectDetails,
   addFilesToProject,
   removeProjectFile,
   ensureProjectConversionsPlan,
+  convertXliffToJliff,
   getAppSettings,
   type AppSettings,
   type EnsureConversionsPlan,
@@ -117,6 +130,13 @@ const baseSettings: AppSettings = {
 
 beforeEach(() => {
   vi.mocked(ensureProjectConversionsPlan).mockResolvedValue({ ...basePlan, tasks: [] });
+  vi.mocked(convertXliffToJliff).mockResolvedValue({
+    fileId: "c1",
+    jliffAbsPath: "/projects/demo/jliff/demo-file1.jliff.json",
+    jliffRelPath: "jliff/demo-file1.jliff.json",
+    tagMapAbsPath: "/projects/demo/jliff/demo-file1.tags.json",
+    tagMapRelPath: "jliff/demo-file1.tags.json",
+  });
 });
 
 afterEach(() => {

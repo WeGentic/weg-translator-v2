@@ -11,18 +11,21 @@ import { EnsureQueueModal } from "./components/EnsureQueueModal";
 
 import {
   addFilesToProject,
+  convertXliffToJliff,
   ensureProjectConversionsPlan,
   getProjectDetails,
   removeProjectFile,
   updateConversionStatus,
   type EnsureConversionsPlan,
   type EnsureConversionsTask,
+  type JliffConversionResult,
   type ProjectDetails,
   type ProjectListItem,
 } from "@/ipc";
 import { convertStream, validateStream } from "@/lib/openxliff";
 import { getAppSettings } from "@/ipc";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Props = {
   projectSummary: ProjectListItem;
@@ -30,6 +33,7 @@ type Props = {
 
 export function ProjectOverview({ projectSummary }: Props) {
   const projectId = projectSummary.projectId;
+  const { user } = useAuth();
   const [details, setDetails] = useState<ProjectDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -204,8 +208,39 @@ export function ProjectOverview({ projectSummary }: Props) {
         return false;
       }
 
+      setLogs((cur) => [
+        ...cur,
+        `> convert_xliff_to_jliff --project ${projectId} --conversion ${task.conversionId}`,
+      ]);
+
+      let jliffResult: JliffConversionResult;
+      try {
+        jliffResult = await convertXliffToJliff({
+          projectId,
+          conversionId: task.conversionId,
+          xliffAbsPath: task.outputAbsPath,
+          operator: user?.name || user?.email || undefined,
+        });
+      } catch (jliffError) {
+        const message =
+          jliffError instanceof Error ? jliffError.message : "JLIFF conversion failed";
+        setLogs((cur) => [...cur, `ERROR: ${message}`]);
+        await updateConversionStatus(task.conversionId, "failed", { errorMessage: message });
+        return false;
+      }
+
+      setLogs((cur) => [
+        ...cur,
+        `Generated ${jliffResult.jliffRelPath}`,
+        `Generated ${jliffResult.tagMapRelPath}`,
+      ]);
+
       const rel = relativeToProject(task.outputAbsPath);
-      await updateConversionStatus(task.conversionId, "completed", { xliffRelPath: rel });
+      await updateConversionStatus(task.conversionId, "completed", {
+        xliffRelPath: rel,
+        jliffRelPath: jliffResult.jliffRelPath,
+        tagMapRelPath: jliffResult.tagMapRelPath,
+      });
       return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Conversion error";
@@ -213,7 +248,7 @@ export function ProjectOverview({ projectSummary }: Props) {
       await updateConversionStatus(task.conversionId, "failed", { errorMessage: msg });
       return false;
     }
-  }, [relativeToProject]);
+  }, [projectId, relativeToProject, user]);
 
   const startEnsureQueue = useCallback(async () => {
     if (!ensurePlan || ensurePlan.tasks.length === 0) return;

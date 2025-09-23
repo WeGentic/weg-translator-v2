@@ -47,7 +47,7 @@ export function ResolutionGuard({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-3xl">
         <div className="flex h-full items-center justify-center p-4">
           <Card className="max-w-md animate-in fade-in-0 zoom-in-95 duration-200">
             <CardHeader className="text-center">
@@ -93,7 +93,7 @@ export function ResolutionGuard({
           </Card>
         </div>
       </div>
-      <div aria-hidden="true" className="pointer-events-none">
+      <div aria-hidden="true" className="pointer-events-none relative z-0">
         {children}
       </div>
     </>

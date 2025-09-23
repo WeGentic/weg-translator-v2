@@ -16,7 +16,7 @@ use crate::ipc::dto::{
 };
 
 pub const SQLITE_DB_FILE: &str = "weg_translator.db";
-const PROJECT_FILE_CONVERSION_COLUMNS: &str = "id, project_file_id, src_lang, tgt_lang, version, paragraph, embed, xliff_rel_path, status, started_at, completed_at, failed_at, error_message, created_at, updated_at";
+const PROJECT_FILE_CONVERSION_COLUMNS: &str = "id, project_file_id, src_lang, tgt_lang, version, paragraph, embed, xliff_rel_path, jliff_rel_path, tag_map_rel_path, status, started_at, completed_at, failed_at, error_message, created_at, updated_at";
 const SKIP_CONVERSION_EXTENSIONS: &[&str] = &["xlf", "xliff", "mqxliff", "sdlxliff"];
 const CONVERTIBLE_EXTENSIONS: &[&str] = &[
     "doc", "docx", "ppt", "pptx", "xls", "xlsx", "odt", "odp", "ods", "html", "xml", "dita", "md",
@@ -191,6 +191,8 @@ pub struct NewProjectFileConversion {
     pub paragraph: bool,
     pub embed: bool,
     pub xliff_rel_path: Option<String>,
+    pub jliff_rel_path: Option<String>,
+    pub tag_map_rel_path: Option<String>,
     pub status: ProjectFileConversionStatus,
     pub started_at: Option<String>,
     pub completed_at: Option<String>,
@@ -246,6 +248,8 @@ pub struct ProjectFileConversionRow {
     pub paragraph: bool,
     pub embed: bool,
     pub xliff_rel_path: Option<String>,
+    pub jliff_rel_path: Option<String>,
+    pub tag_map_rel_path: Option<String>,
     pub status: ProjectFileConversionStatus,
     pub started_at: Option<String>,
     pub completed_at: Option<String>,
@@ -868,6 +872,8 @@ impl DbManager {
                      paragraph,
                      embed,
                      xliff_rel_path,
+                     jliff_rel_path,
+                     tag_map_rel_path,
                      status,
                      started_at,
                      completed_at,
@@ -875,7 +881,7 @@ impl DbManager {
                      error_message,
                      created_at,
                      updated_at
-                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?14)",
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?16)",
             )
             .bind(&id)
             .bind(&project_file_id)
@@ -885,6 +891,8 @@ impl DbManager {
             .bind(row.paragraph as i64)
             .bind(row.embed as i64)
             .bind(row.xliff_rel_path.as_deref())
+            .bind(row.jliff_rel_path.as_deref())
+            .bind(row.tag_map_rel_path.as_deref())
             .bind(row.status.as_str())
             .bind(row.started_at.as_deref())
             .bind(row.completed_at.as_deref())
@@ -911,6 +919,8 @@ impl DbManager {
         conversion_id: Uuid,
         status: ProjectFileConversionStatus,
         xliff_rel_path: Option<String>,
+        jliff_rel_path: Option<String>,
+        tag_map_rel_path: Option<String>,
         error_message: Option<String>,
         started_at: Option<String>,
         completed_at: Option<String>,
@@ -927,15 +937,19 @@ impl DbManager {
             "UPDATE project_file_conversions
              SET status = ?1,
                  xliff_rel_path = ?2,
-                 error_message = ?3,
-                 started_at = ?4,
-                 completed_at = ?5,
-                 failed_at = ?6,
-                 updated_at = ?7
-             WHERE id = ?8",
+                 jliff_rel_path = ?3,
+                 tag_map_rel_path = ?4,
+                 error_message = ?5,
+                 started_at = ?6,
+                 completed_at = ?7,
+                 failed_at = ?8,
+                 updated_at = ?9
+             WHERE id = ?10",
         )
         .bind(status.as_str())
         .bind(xliff_rel_path.as_deref())
+        .bind(jliff_rel_path.as_deref())
+        .bind(tag_map_rel_path.as_deref())
         .bind(error_message.as_deref())
         .bind(started_at.as_deref())
         .bind(completed_at.as_deref())
@@ -1022,6 +1036,8 @@ impl DbManager {
             paragraph: request.paragraph,
             embed: request.embed,
             xliff_rel_path: None,
+            jliff_rel_path: None,
+            tag_map_rel_path: None,
             status: ProjectFileConversionStatus::Pending,
             started_at: None,
             completed_at: None,
@@ -1459,6 +1475,8 @@ fn build_project_file_conversion(
         paragraph: paragraph_value != 0,
         embed: embed_value != 0,
         xliff_rel_path: row.try_get("xliff_rel_path")?,
+        jliff_rel_path: row.try_get("jliff_rel_path")?,
+        tag_map_rel_path: row.try_get("tag_map_rel_path")?,
         status,
         started_at: row.try_get("started_at")?,
         completed_at: row.try_get("completed_at")?,

@@ -212,6 +212,10 @@ pub struct ProjectFileConversionDto {
     pub embed: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub xliff_rel_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jliff_rel_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tag_map_rel_path: Option<String>,
     pub status: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub started_at: Option<String>,

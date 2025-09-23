@@ -1,16 +1,16 @@
-use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::SqlitePool;
+use sqlx::sqlite::SqlitePoolOptions;
 use uuid::Uuid;
 
-use weg_translator_lib::DbManager;
 use weg_translator_lib::DbError;
+use weg_translator_lib::DbManager;
+use weg_translator_lib::NewProject;
+use weg_translator_lib::NewProjectFile;
 use weg_translator_lib::ProjectFileConversionRequest;
 use weg_translator_lib::ProjectFileConversionStatus as CStatus;
 use weg_translator_lib::ProjectFileImportStatus as FStatus;
 use weg_translator_lib::ProjectStatus as PStatus;
 use weg_translator_lib::ProjectType as PType;
-use weg_translator_lib::NewProject;
-use weg_translator_lib::NewProjectFile;
 
 const MIGRATIONS: &[&str] = &[
     include_str!("../migrations/004_create_projects.sql"),
@@ -70,7 +70,17 @@ async fn conversions_unique_and_status_transitions() {
 
     // Status transitions: running -> completed with xliff path
     manager
-        .upsert_conversion_status(conv1.id, CStatus::Running, None, None, Some(now()), None, None)
+        .upsert_conversion_status(
+            conv1.id,
+            CStatus::Running,
+            None,
+            None,
+            None,
+            None,
+            Some(now()),
+            None,
+            None,
+        )
         .await
         .expect("set running");
     manager
@@ -78,9 +88,12 @@ async fn conversions_unique_and_status_transitions() {
             conv1.id,
             CStatus::Completed,
             Some("xliff/file.en-US-it-IT.xlf".into()),
+            Some("jliff/file.en-US-it-IT.jliff.json".into()),
+            Some("jliff/file.en-US-it-IT.tags.json".into()),
             None,
             None,
             Some(now()),
+            None,
             None,
         )
         .await
@@ -162,7 +175,17 @@ async fn list_pending_skips_non_convertible_and_failed_only() {
         .expect("docx conv");
     // Set failed to be included in pending
     manager
-        .upsert_conversion_status(conv_docx.id, CStatus::Failed, None, Some("error".into()), None, None, Some(now()))
+        .upsert_conversion_status(
+            conv_docx.id,
+            CStatus::Failed,
+            None,
+            None,
+            None,
+            Some("error".into()),
+            None,
+            None,
+            Some(now()),
+        )
         .await
         .expect("set failed");
 
@@ -204,4 +227,3 @@ fn now() -> String {
     // ISO-8601 string acceptable for tests
     "2024-01-01T00:00:00Z".to_string()
 }
-
