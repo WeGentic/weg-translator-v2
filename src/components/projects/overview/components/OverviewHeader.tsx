@@ -1,5 +1,5 @@
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CalendarClock, FileText, Languages, Sparkles } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { ProjectDetails, ProjectListItem } from "@/ipc";
 
 const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
@@ -7,14 +7,18 @@ const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short",
 });
 
+const DATE_DETAIL_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "full",
+  timeStyle: "long",
+});
+
 type OverviewHeaderProps = {
   project: ProjectListItem;
   details?: ProjectDetails | null;
-  onAddFiles: () => void;
   autoConvertOnOpen: boolean;
 };
 
-export function OverviewHeader({ project, details, onAddFiles, autoConvertOnOpen }: OverviewHeaderProps) {
+export function OverviewHeader({ project, details, autoConvertOnOpen }: OverviewHeaderProps) {
   const fileCount = typeof details?.files?.length === "number" ? details.files.length : project.fileCount;
   const src = details?.defaultSrcLang ?? "";
   const tgt = details?.defaultTgtLang ?? "";
@@ -22,38 +26,29 @@ export function OverviewHeader({ project, details, onAddFiles, autoConvertOnOpen
   const updated = safeFormatDate(project.updatedAt);
 
   return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 space-y-1">
-        <h2 className="truncate text-xl font-semibold text-foreground" title={project.name}>
-          {project.name}
-        </h2>
-        <div className="text-xs text-muted-foreground">
-          <span className="truncate" title={project.slug}>
-            {project.slug}
-          </span>
-          {src && tgt ? <span className="mx-2">•</span> : null}
-          {src && tgt ? (
-            <span title={`${src} to ${tgt}`}>
-              {src} → {tgt}
-            </span>
-          ) : null}
-          <span className="mx-2">•</span>
-          <span>{fileCount} file{fileCount === 1 ? "" : "s"}</span>
-          <span className="mx-2">•</span>
-          <span title={`Created ${created}`}>Created {created}</span>
-          <span className="mx-2">•</span>
-          <span title={`Updated ${updated}`}>Updated {updated}</span>
+    <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-background/90 via-background/70 to-background/90 p-6 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Project overview</p>
+          <h2 className="truncate text-2xl font-semibold leading-tight text-foreground" title={project.name}>
+            {project.name}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Organise, convert, and fine-tune your translation assets in one place.
+          </p>
         </div>
       </div>
-      <div className="shrink-0">
-        <Button
-          size="sm"
-          onClick={onAddFiles}
-          title={!autoConvertOnOpen ? "Auto-conversion is disabled; conversions won’t start automatically" : undefined}
-        >
-          <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Add files
-        </Button>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <MetaChip icon={FileText} label={`${fileCount} file${fileCount === 1 ? "" : "s"}`} />
+        {src && tgt ? <MetaChip icon={Languages} label={`${src} → ${tgt}`} /> : null}
+        <MetaChip icon={CalendarClock} label={`Created ${created.label}`} title={`Created ${created.detail}`} />
+        <MetaChip icon={CalendarClock} label={`Updated ${updated.label}`} title={`Updated ${updated.detail}`} />
+        <MetaChip
+          icon={Sparkles}
+          label={autoConvertOnOpen ? "Auto convert on open" : "Manual conversions"}
+          title="Project conversion automation preference"
+        />
       </div>
     </div>
   );
@@ -61,8 +56,29 @@ export function OverviewHeader({ project, details, onAddFiles, autoConvertOnOpen
 
 function safeFormatDate(isoDate: string) {
   const parsed = Number.isNaN(Date.parse(isoDate)) ? null : new Date(isoDate);
-  if (!parsed) return "—";
-  return DATE_FORMATTER.format(parsed);
+  if (!parsed) return { label: "—", detail: "—" } as const;
+  return {
+    label: DATE_FORMATTER.format(parsed),
+    detail: DATE_DETAIL_FORMATTER.format(parsed),
+  } as const;
+}
+
+type MetaChipProps = {
+  icon: LucideIcon;
+  label: string;
+  title?: string;
+};
+
+function MetaChip({ icon: Icon, label, title }: MetaChipProps) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/50 px-3 py-1 font-medium text-foreground/90"
+      title={title ?? label}
+    >
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+      {label}
+    </span>
+  );
 }
 
 export default OverviewHeader;

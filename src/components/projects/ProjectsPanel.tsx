@@ -15,7 +15,15 @@ type ProjectsPanelProps = {
   onOpenProject?: (project: ProjectListItem) => void;
 };
 
-const DATE_FORMATTER = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+const DATE_TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+const DATE_DETAIL_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "full",
+  timeStyle: "long",
+});
 
 export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
@@ -120,25 +128,18 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
   return (
     <section className="flex w-full flex-col gap-4 p-6" aria-labelledby="projects-heading">
       <div className="px-2">
-        <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Projects</p>
+        <div className="flex items-center justify-between">
           <h2 id="projects-heading" className="text-lg font-semibold text-foreground">
-            Active Projects
+            Projects
           </h2>
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Preview your translation projects and continue where you left off.
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-3 px-2">
-        <div className="flex items-center justify-end gap-2">
           <Button type="button" onClick={() => setWizardOpen(true)}>
             <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
             Create new project
           </Button>
         </div>
+      </div>
 
+      <div className="flex flex-col gap-3 px-2">
         {error ? (
           <Alert variant="destructive">
             <AlertTitle>Could not load projects</AlertTitle>
@@ -228,11 +229,15 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
 }
 
 function toRowViewModel(project: ProjectListItem): ProjectManagerRow {
+  const created = formatDate(project.createdAt);
+  const updated = formatDate(project.updatedAt);
   return {
     id: project.projectId,
     name: project.name,
-    created: formatDate(project.createdAt),
-    updated: formatDate(project.updatedAt),
+    createdLabel: created.label,
+    createdDetail: created.detail,
+    updatedLabel: updated.label,
+    updatedDetail: updated.detail,
     status: formatStatus(project.status),
   } satisfies ProjectManagerRow;
 }
@@ -240,9 +245,12 @@ function toRowViewModel(project: ProjectListItem): ProjectManagerRow {
 function formatDate(isoDate: string) {
   const parsed = Number.isNaN(Date.parse(isoDate)) ? null : new Date(isoDate);
   if (!parsed) {
-    return "—";
+    return { label: "—", detail: "—" };
   }
-  return DATE_FORMATTER.format(parsed);
+  return {
+    label: DATE_TIME_FORMATTER.format(parsed),
+    detail: DATE_DETAIL_FORMATTER.format(parsed),
+  } as const;
 }
 
 function formatStatus(status: ProjectListItem["status"]) {

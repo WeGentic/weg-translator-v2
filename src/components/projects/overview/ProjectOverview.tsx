@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileList } from "./components/files/FileList";
 import { OverviewHeader } from "./components/OverviewHeader";
@@ -300,12 +301,7 @@ export function ProjectOverview({ projectSummary }: Props) {
 
   return (
     <section className="flex w-full flex-col gap-6 overflow-y-auto p-6">
-      <OverviewHeader
-        project={projectSummary}
-        details={details}
-        onAddFiles={() => setIsAddOpen(true)}
-        autoConvertOnOpen={autoConvertOnOpen}
-      />
+      <OverviewHeader project={projectSummary} details={details} autoConvertOnOpen={autoConvertOnOpen} />
 
       <OverviewAutoConvertBanner autoConvertOnOpen={autoConvertOnOpen} />
 
@@ -317,10 +313,21 @@ export function ProjectOverview({ projectSummary }: Props) {
 
       {/* Languages card removed in favor of compact header */}
 
-      <Card>
-        <CardHeader className="border-border/60 border-b pb-4">
-          <CardTitle className="text-base font-semibold">Files</CardTitle>
-          <CardDescription>Imported files and conversion status.</CardDescription>
+      <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
+        <CardHeader className="flex flex-col gap-2 border-border/60 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-base font-semibold">Files</CardTitle>
+            <CardDescription>Imported files and conversion status.</CardDescription>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setIsAddOpen(true)}
+            title={!autoConvertOnOpen ? "Auto-conversion is disabled; conversions won’t start automatically" : undefined}
+            className="sm:mt-0"
+          >
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+            Add files
+          </Button>
         </CardHeader>
         <CardContent className="px-0">
           <FileList

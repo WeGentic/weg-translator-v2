@@ -45,9 +45,13 @@ function App() {
   const {
     mainView,
     setMainView,
-    openProjects,
+    openEditorIds,
+    openProjectOverviews,
+    openProjectEditors,
     handleOpenProject,
-    handleCloseProject,
+    handleCloseOverview,
+    handleCloseEditor,
+    openEditorView,
     currentProjectId,
     currentEditorProjectId,
     activeProject,
@@ -74,25 +78,27 @@ function App() {
 
   const temporaryProjectItems: MenuItem[] = useMemo(
     () =>
-      openProjects.map((project) => ({
+      openProjectOverviews.map((project) => ({
         key: toProjectViewKey(project.projectId),
         label: project.name,
         icon: FileText,
-        onClose: () => handleCloseProject(project.projectId),
+        onClose: () => handleCloseOverview(project.projectId),
       })),
-    [handleCloseProject, openProjects],
+    [handleCloseOverview, openProjectOverviews],
   );
 
-  const temporaryEditorItems: MenuItem[] = useMemo(
-    () =>
-      openProjects.map((project) => ({
-        key: toEditorViewKey(project.projectId),
-        label: `Editor — ${project.name}`,
+  const temporaryEditorItems: MenuItem[] = useMemo(() => {
+    const lookup = new Map(openProjectEditors.map((project) => [project.projectId, project]));
+    return openEditorIds.map((projectId) => {
+      const project = lookup.get(projectId);
+      return {
+        key: toEditorViewKey(projectId),
+        label: project ? `Editor — ${project.name}` : "Editor",
         icon: FileText,
-        onClose: () => handleCloseProject(project.projectId),
-      })),
-    [handleCloseProject, openProjects],
-  );
+        onClose: () => handleCloseEditor(projectId),
+      } satisfies MenuItem;
+    });
+  }, [handleCloseEditor, openEditorIds, openProjectEditors]);
 
   const headerTitle = useHeaderTitle({
     explicit:
@@ -108,9 +114,15 @@ function App() {
     handleOpenProject(project);
   }, [handleOpenProject]);
 
-  const focusEditor = useCallback((_: string, fileId: string | null) => {
-    setSelectedFileId(fileId);
-  }, [setSelectedFileId]);
+  const focusEditor = useCallback(
+    (projectId: string, fileId: string | null) => {
+      if (projectId) {
+        openEditorView(projectId);
+      }
+      setSelectedFileId(fileId);
+    },
+    [openEditorView, setSelectedFileId],
+  );
 
   useGlobalNavigationEvents({
     onChangeView: setMainView,
@@ -209,7 +221,7 @@ function App() {
       ) : (
         <CollapsedFooterBar onExpand={toggleFooter} />
       )}
-    </div>
+      </div>
   );
 }
 
