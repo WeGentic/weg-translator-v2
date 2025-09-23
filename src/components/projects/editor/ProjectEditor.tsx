@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, FileText, Hash, Layers } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, FileText, Hash, Layers, Languages } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,7 @@ type ProjectEditorProps = {
 };
 
 export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [details, setDetails] = useState<ProjectDetails | null>(null);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
@@ -63,6 +64,19 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
       cancelled = true;
     };
   }, [project.projectId]);
+
+  useEffect(() => {
+    if (fileId) {
+      const scrollElement = scrollContainerRef.current;
+      if (scrollElement) {
+        if (typeof scrollElement.scrollTo === "function") {
+          scrollElement.scrollTo({ top: 0, behavior: "auto" });
+        } else {
+          scrollElement.scrollTop = 0;
+        }
+      }
+    }
+  }, [fileId]);
 
   useEffect(() => {
     if (!fileId) {
@@ -141,6 +155,7 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
             jliff: conversion.jliffRelPath,
             tagMap: conversion.tagMapRelPath,
           },
+          version: versionSeed,
         });
       } catch (error) {
         if (cancelled) {
@@ -179,7 +194,59 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
     };
   }, [artifactState]);
 
-  const editorBody = useMemo(() => {
+  const handleTargetSave = useCallback(
+    ({
+      transunitId,
+      newTarget,
+    }: {
+      rowKey: string;
+      transunitId: string;
+      newTarget: string;
+      updatedAt: string;
+    }) => {
+      setArtifactState((prev) => {
+        if (prev.status !== "ready") {
+          return prev;
+        }
+
+        let matched = false;
+        const updatedTransunits = prev.jliff.Transunits.map((transunit) => {
+          if (transunit.transunit_id === transunitId) {
+            matched = true;
+            return {
+              ...transunit,
+              Target_translation: newTarget,
+            };
+          }
+          return transunit;
+        });
+
+        if (!matched) {
+          return prev;
+        }
+
+        const updatedJliff: JliffRoot = {
+          ...prev.jliff,
+          Transunits: updatedTransunits,
+        };
+
+        const versionSeed = Date.now();
+        const nextRows = normalizeJliffArtifacts(updatedJliff, prev.tags, { version: versionSeed });
+        const nextSummary = computeSegmentSummary(nextRows);
+
+        return {
+          ...prev,
+          jliff: updatedJliff,
+          rows: nextRows,
+          summary: nextSummary,
+          version: versionSeed,
+        };
+      });
+    },
+    [],
+  );
+
+  const editorBody = (() => {
     if (!fileId) {
       return (
         <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
@@ -209,14 +276,22 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
     }
 
     if (artifactState.status === "ready") {
-      return <SegmentsTable rows={artifactState.rows} />;
+      return (
+        <SegmentsTable
+          rows={artifactState.rows}
+          projectId={project.projectId}
+          jliffRelPath={artifactState.paths.jliff}
+          onTargetSave={handleTargetSave}
+          activeFileId={artifactState.file.id}
+        />
+      );
     }
 
     return null;
-  }, [artifactState, fileId]);
+  })();
 
   return (
-    <div className="flex w-full overflow-y-auto p-6">
+    <div ref={scrollContainerRef} className="flex w-full overflow-y-auto p-6">
       <Card className="w-full rounded-2xl border border-border/60 bg-background/80 shadow-sm">
         <CardHeader className="border-border/60 border-b pb-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -233,8 +308,37 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
                 label={`${project.fileCount} file${project.fileCount === 1 ? "" : "s"}`}
                 ariaLabel="File count"
               />
+              {languageSummary ? (
+                <>
+                  <MetaPill
+                    icon={Languages}
+                    label={`Source ${languageSummary.source || "—"}`}
+                    ariaLabel="Source language"
+                  />
+                  <MetaPill
+                    icon={Languages}
+                    label={`Target ${languageSummary.target || "—"}`}
+                    ariaLabel="Target language"
+                  />
+                </>
+              ) : null}
             </div>
           </div>
+          {artifactState.status === "ready" ? (
+            <div className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
+              <MetricCard label="Segments" value={formatNumber(artifactState.summary.total)} />
+              <MetricCard
+                label="Untranslated"
+                value={formatNumber(artifactState.summary.untranslated)}
+                tone={artifactState.summary.untranslated > 0 ? "muted" : "default"}
+              />
+              <MetricCard
+                label="Placeholder mismatches"
+                value={formatNumber(artifactState.summary.mismatches)}
+                tone={artifactState.summary.mismatches > 0 ? "alert" : "default"}
+              />
+            </div>
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-6">
           <section className="rounded-xl border border-dashed border-border/60 bg-muted/30 p-4">
@@ -251,29 +355,12 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
                   <span className="ml-2 text-xs text-muted-foreground/90">(ID: {fileId})</span>
                 </p>
                 {artifactState.status === "ready" ? (
-                  <div className="space-y-4">
-                    <div className="grid gap-3 text-xs sm:grid-cols-3">
-                      <MetricCard label="Segments" value={formatNumber(artifactState.summary.total)} />
-                      <MetricCard
-                        label="Untranslated"
-                        value={formatNumber(artifactState.summary.untranslated)}
-                        tone={artifactState.summary.untranslated > 0 ? "muted" : "default"}
-                      />
-                      <MetricCard
-                        label="Placeholder mismatches"
-                        value={formatNumber(artifactState.summary.mismatches)}
-                        tone={artifactState.summary.mismatches > 0 ? "alert" : "default"}
-                      />
-                    </div>
-                    {languageSummary ? (
-                      <dl className="grid gap-3 text-xs sm:grid-cols-2">
-                        <MetaRow label="Source language" value={languageSummary.source || "—"} />
-                        <MetaRow label="Target language" value={languageSummary.target || "—"} />
-                        <MetaRow label="JLIFF path" value={artifactState.paths.jliff} />
-                        <MetaRow label="Tag map path" value={artifactState.paths.tagMap} />
-                      </dl>
-                    ) : null}
-                  </div>
+                  <dl className="grid gap-3 text-xs sm:grid-cols-2">
+                    <MetaRow label="Source language" value={languageSummary?.source || "—"} />
+                    <MetaRow label="Target language" value={languageSummary?.target || "—"} />
+                    <MetaRow label="JLIFF path" value={artifactState.paths.jliff} />
+                    <MetaRow label="Tag map path" value={artifactState.paths.tagMap} />
+                  </dl>
                 ) : artifactState.status === "error" ? (
                   <p className="text-sm text-destructive">{artifactState.message}</p>
                 ) : artifactState.status === "loading" ? (
@@ -332,6 +419,7 @@ type EditorArtifactsState =
         jliff: string;
         tagMap: string;
       };
+      version: number;
     };
 
 interface SegmentSummary {

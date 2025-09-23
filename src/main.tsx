@@ -5,6 +5,7 @@ import { routeTree } from "./routeTree.gen";
 import { ResolutionGuard } from "./components/ResolutionGuard";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
+import { ToastProvider } from "@/components/ui/toast";
 import { LogProvider } from "@/logging";
 
 interface RouterContext {
@@ -46,9 +47,11 @@ createRoot(document.getElementById("root") as HTMLElement).render(
     <LogProvider>
       <AppErrorBoundary>
         <AuthProvider>
-          <ResolutionGuard minWidth={768} minHeight={600}>
-            <InnerApp />
-          </ResolutionGuard>
+          <ToastProvider>
+            <ResolutionGuard minWidth={768} minHeight={600}>
+              <InnerApp />
+            </ResolutionGuard>
+          </ToastProvider>
         </AuthProvider>
       </AppErrorBoundary>
     </LogProvider>

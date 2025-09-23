@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { rankItem } from "@tanstack/match-sorter-utils";
 import {
   flexRender,
@@ -8,6 +8,7 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type ColumnFiltersState,
   type FilterFn,
   type ExpandedState,
   type Row,
@@ -15,18 +16,23 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import type { CheckedState } from "@radix-ui/react-checkbox";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { SegmentRow } from "@/lib/jliff";
 import { cn } from "@/lib/utils";
 
 import { PlaceholderInspector } from "./PlaceholderInspector";
 import { PlaceholderParityBadge } from "./PlaceholderParityBadge";
+import { TargetEditor } from "./TargetEditor";
 import { TokenLine } from "./TokenLine";
 
 const ROW_HEIGHT_ESTIMATE = 64;
-const DETAIL_ROW_HEIGHT_ESTIMATE = 224;
+const DETAIL_ROW_HEIGHT_ESTIMATE = 360;
 const OVERSCAN_COUNT = 12;
 
 const fuzzyGlobalFilter: FilterFn<SegmentRow> = (row, _columnId, value) => {
@@ -39,6 +45,13 @@ const fuzzyGlobalFilter: FilterFn<SegmentRow> = (row, _columnId, value) => {
     (candidate): candidate is string => typeof candidate === "string" && candidate.trim().length > 0,
   );
   return haystacks.some((candidate) => rankItem(candidate, search).passed);
+};
+
+const statusMismatchFilter: FilterFn<SegmentRow> = (row, _columnId, value) => {
+  if (!value) {
+    return true;
+  }
+  return row.original.status !== "ok";
 };
 
 type VirtualRowEntry = {
@@ -58,16 +71,36 @@ function buildFlatRows(rows: Row<SegmentRow>[]): VirtualRowEntry[] {
   return entries;
 }
 
-type SegmentsTableProps = {
-  rows: SegmentRow[];
-  className?: string;
-  isLoading?: boolean;
+type TargetSavePayload = {
+  rowKey: string;
+  transunitId: string;
+  newTarget: string;
+  updatedAt: string;
 };
 
-export function SegmentsTable({ rows, className, isLoading = false }: SegmentsTableProps) {
+type SegmentsTableProps = {
+  rows: SegmentRow[];
+  projectId: string;
+  jliffRelPath: string;
+  onTargetSave: (payload: TargetSavePayload) => Promise<void> | void;
+  className?: string;
+  isLoading?: boolean;
+  activeFileId?: string;
+};
+
+export function SegmentsTable({
+  rows,
+  projectId,
+  jliffRelPath,
+  onTargetSave,
+  className,
+  isLoading = false,
+  activeFileId,
+}: SegmentsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [expanded, setExpanded] = useState<ExpandedState>({});
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const columns = useMemo<ColumnDef<SegmentRow>[]>(
@@ -150,12 +183,13 @@ export function SegmentsTable({ rows, className, isLoading = false }: SegmentsTa
       {
         id: "parity",
         header: "Placeholders",
-        accessorFn: (row) => row.placeholderCounts.target,
+        accessorFn: (row) => row.status,
         enableSorting: false,
         meta: {
           align: "center" as const,
           label: "Placeholders",
         },
+        filterFn: "statusMismatch",
         cell: ({ row }) => (
           <div className="flex justify-center">
             <PlaceholderParityBadge counts={row.original.placeholderCounts} status={row.original.status} />
@@ -170,11 +204,26 @@ export function SegmentsTable({ rows, className, isLoading = false }: SegmentsTa
           align: "right" as const,
           label: "Actions",
         },
-        cell: () => (
-          <div className="flex justify-end">
-            <span className="text-[11px] uppercase tracking-wide text-muted-foreground/70">Coming soon</span>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const canExpand = row.getCanExpand();
+          const isExpanded = row.getIsExpanded();
+          const toggle = row.getToggleExpandedHandler();
+          const canEdit = Boolean(row.original.segmentId);
+
+          return (
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={toggle}
+                disabled={!canExpand}
+              >
+                {isExpanded ? "Close" : canEdit ? "Edit" : "Inspect"}
+              </Button>
+            </div>
+          );
+        },
       },
     ],
     [],
@@ -187,12 +236,17 @@ export function SegmentsTable({ rows, className, isLoading = false }: SegmentsTa
       sorting,
       globalFilter,
       expanded,
+      columnFilters,
     },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onExpandedChange: setExpanded,
+    onColumnFiltersChange: setColumnFilters,
+    filterFns: {
+      statusMismatch: statusMismatchFilter,
+    },
     globalFilterFn: fuzzyGlobalFilter,
-    getRowCanExpand: (row) => row.original.placeholders.length > 0 || Boolean(row.original.issues),
+    getRowCanExpand: (row) => Boolean(row.original.segmentId),
     getExpandedRowModel: getExpandedRowModel(),
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -214,6 +268,36 @@ export function SegmentsTable({ rows, className, isLoading = false }: SegmentsTa
     getItemKey: (index) => flatRows[index]?.key ?? index,
   });
 
+  const scrollToTop = useCallback(() => {
+    const scrollElement = scrollContainerRef.current;
+    if (scrollElement) {
+      if (typeof scrollElement.scrollTo === "function") {
+        scrollElement.scrollTo({ top: 0, behavior: "auto" });
+      } else {
+        scrollElement.scrollTop = 0;
+      }
+    }
+    rowVirtualizer.scrollToOffset(0, { behavior: "auto" });
+  }, [rowVirtualizer]);
+
+  useEffect(() => {
+    if (!activeFileId) {
+      return;
+    }
+    scrollToTop();
+  }, [activeFileId, scrollToTop]);
+
+  const mismatchOnly = columnFilters.some((filter) => filter.id === "parity" && Boolean(filter.value));
+
+  const handleMismatchToggle = useCallback(
+    (checked: CheckedState) => {
+      const next = checked === true;
+      const parityColumn = table.getColumn("parity");
+      parityColumn?.setFilterValue(next ? true : undefined);
+    },
+    [table],
+  );
+
   const virtualRows = rowVirtualizer.getVirtualItems();
   const hasVirtualRows = virtualRows.length > 0;
   const totalSize = rowVirtualizer.getTotalSize();
@@ -230,21 +314,40 @@ export function SegmentsTable({ rows, className, isLoading = false }: SegmentsTa
     [rowVirtualizer],
   );
 
+  const mismatchLabelId = "segments-filter-mismatches-label";
+
   return (
     <section className={cn("flex h-full flex-col", className)} aria-label="Segments table" role="region">
       <div className="flex flex-wrap items-center gap-3">
-        <Input
-          value={globalFilter}
-          onChange={(event) => setGlobalFilter(event.target.value)}
-          placeholder="Search segments"
-          className="max-w-sm"
-          aria-label="Search segments"
-        />
-        {isLoading ? (
-          <span className="inline-flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Loading rows…
-          </span>
-        ) : null}
+        <div className="flex items-center gap-3">
+          <Input
+            value={globalFilter}
+            onChange={(event) => setGlobalFilter(event.target.value)}
+            placeholder="Search segments"
+            className="max-w-sm"
+            aria-label="Search segments"
+          />
+          {isLoading ? (
+            <span className="inline-flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> Loading rows…
+            </span>
+          ) : null}
+        </div>
+        <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+          <Checkbox
+            id="segments-filter-mismatches"
+            checked={mismatchOnly}
+            onCheckedChange={handleMismatchToggle}
+            aria-labelledby={mismatchLabelId}
+          />
+          <Label
+            id={mismatchLabelId}
+            htmlFor="segments-filter-mismatches"
+            className="cursor-pointer text-xs font-medium"
+          >
+            Only mismatches
+          </Label>
+        </div>
       </div>
 
       <div
@@ -342,8 +445,15 @@ export function SegmentsTable({ rows, className, isLoading = false }: SegmentsTa
                             id={inspectorId}
                             role="region"
                             aria-labelledby={segmentLabelId}
-                            className="border-t border-border/60 p-4"
+                            className="border-t border-border/60 p-4 space-y-6"
                           >
+                            <TargetEditor
+                              key={`target-editor-${item.row.id}`}
+                              row={item.row.original}
+                              projectId={projectId}
+                              jliffRelPath={jliffRelPath}
+                              onSaveSuccess={onTargetSave}
+                            />
                             <PlaceholderInspector row={item.row.original} />
                           </div>
                         </TableCell>
@@ -408,8 +518,15 @@ export function SegmentsTable({ rows, className, isLoading = false }: SegmentsTa
                             id={inspectorId}
                             role="region"
                             aria-labelledby={segmentLabelId}
-                            className="border-t border-border/60 p-4"
+                            className="border-t border-border/60 p-4 space-y-6"
                           >
+                            <TargetEditor
+                              key={`target-editor-${row.id}`}
+                              row={row.original}
+                              projectId={projectId}
+                              jliffRelPath={jliffRelPath}
+                              onSaveSuccess={onTargetSave}
+                            />
                             <PlaceholderInspector row={row.original} />
                           </div>
                         </TableCell>

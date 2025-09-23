@@ -1,6 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import {
+  afterAll,
   afterEach,
+  beforeAll,
   beforeEach,
   describe,
   expect,
@@ -11,9 +15,11 @@ import {
 import {
   getProjectDetails,
   readProjectArtifact,
+  updateJliffSegment,
   type ProjectDetails,
   type ProjectListItem,
 } from "@/ipc";
+import { ToastProvider } from "@/components/ui/toast";
 import { ProjectEditor } from "./ProjectEditor";
 import { ProjectEditorPlaceholder } from "./ProjectEditorPlaceholder";
 
@@ -23,6 +29,38 @@ vi.mock("@/ipc", async (importOriginal) => {
     ...actual,
     getProjectDetails: vi.fn(),
     readProjectArtifact: vi.fn(),
+    updateJliffSegment: vi.fn(),
+  };
+});
+
+vi.mock("./RowActions", () => {
+  const MockRowActions = ({
+    isDirty,
+    canEdit,
+    onCopySource,
+    onReset,
+  }: {
+    isDirty: boolean;
+    canEdit: boolean;
+    onCopySource: () => void;
+    onReset: () => void;
+  }) => (
+    <div data-testid="row-actions-mock">
+      <button type="button" onClick={onCopySource} disabled={!canEdit}>
+        Copy source
+      </button>
+      <button type="button" onClick={onReset} disabled={!canEdit}>
+        Reset
+      </button>
+      <button type="submit" disabled={!canEdit || !isDirty}>
+        Save
+      </button>
+    </div>
+  );
+  return {
+    __esModule: true,
+    RowActions: MockRowActions,
+    default: MockRowActions,
   };
 });
 
@@ -48,7 +86,7 @@ const jliffArtifact = {
     {
       "unit id": "1",
       transunit_id: "seg-1",
-      Source: "Hello",
+      Source: "Hello {{ph:ph1}}",
       Target_translation: "",
     },
     {
@@ -69,14 +107,23 @@ const tagMapArtifact = {
   units: [
     {
       unit_id: "1",
-      segments: [
-        {
-          segment_id: "seg-1",
-          placeholders_in_order: [],
-          originalData_bucket: {},
-        },
-        {
-          segment_id: "seg-2",
+          segments: [
+            {
+              segment_id: "seg-1",
+              placeholders_in_order: [
+                {
+                  placeholder: "{{ph:ph1}}",
+                  elem: "ph",
+                  id: "seg-1-ph1",
+                  attrs: {
+                    id: "ph1",
+                  },
+                },
+              ],
+              originalData_bucket: {},
+            },
+            {
+              segment_id: "seg-2",
           placeholders_in_order: [],
           originalData_bucket: {},
         },
@@ -129,6 +176,10 @@ const details: ProjectDetails = {
   ],
 };
 
+function renderWithProviders(ui: ReactElement) {
+  return render(<ToastProvider>{ui}</ToastProvider>);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(getProjectDetails).mockResolvedValue(details);
@@ -141,6 +192,10 @@ beforeEach(() => {
     }
     return Promise.reject(new Error(`Unexpected artifact path: ${relPath}`));
   });
+  vi.mocked(updateJliffSegment).mockResolvedValue({
+    updatedCount: 1,
+    updatedAt: "2024-01-02T12:00:00Z",
+  });
 });
 
 afterEach(() => {
@@ -149,7 +204,7 @@ afterEach(() => {
 
 describe("ProjectEditor", () => {
   it("renders editor header and hydrated artifact summary", async () => {
-    render(<ProjectEditor project={baseProject} fileId="file-1" />);
+    renderWithProviders(<ProjectEditor project={baseProject} fileId="file-1" />);
 
     expect(screen.getByText(/Editor workspace/i)).toBeInTheDocument();
 
@@ -163,6 +218,26 @@ describe("ProjectEditor", () => {
     expect(screen.getByText("en-US")).toBeInTheDocument();
     expect(screen.getByText("de-DE")).toBeInTheDocument();
     expect(screen.getAllByRole("status")).toHaveLength(2);
+  });
+
+  it("filters segments by placeholder mismatches", async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(<ProjectEditor project={baseProject} fileId="file-1" />);
+
+    const mismatchToggle = await screen.findByRole("checkbox", { name: /Only mismatches/i });
+
+    expect(screen.getByText("u1::sseg-1")).toBeInTheDocument();
+    expect(screen.getByText("u1::sseg-2")).toBeInTheDocument();
+
+    await user.click(mismatchToggle);
+
+    await waitFor(() => {
+      expect(screen.queryByText("u1::sseg-2")).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByText("u1::sseg-1")).toBeInTheDocument();
+    expect(mismatchToggle).toHaveAttribute("aria-checked", "true");
   });
 
   it("shows error when no completed conversion is available", async () => {
@@ -183,7 +258,7 @@ describe("ProjectEditor", () => {
       ],
     });
 
-    render(<ProjectEditor project={baseProject} fileId="file-1" />);
+    renderWithProviders(<ProjectEditor project={baseProject} fileId="file-1" />);
 
     const errors = await screen.findAllByText(/No completed conversion with stored JLIFF artifacts/i);
     expect(errors).toHaveLength(2);
@@ -191,7 +266,7 @@ describe("ProjectEditor", () => {
   });
 
   it("renders placeholder when context is missing", async () => {
-    render(<ProjectEditor project={baseProject} />);
+    renderWithProviders(<ProjectEditor project={baseProject} />);
 
     await waitFor(() => expect(getProjectDetails).toHaveBeenCalled());
     expect(screen.getByText(/Translation canvas/i)).toBeInTheDocument();
@@ -199,8 +274,42 @@ describe("ProjectEditor", () => {
     expect(prompts.length).toBeGreaterThan(0);
   });
 
+  it("saves target translation and updates summary", async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(<ProjectEditor project={baseProject} fileId="file-1" />);
+
+    const actionButtons = await screen.findAllByRole("button", { name: /edit/i });
+    await user.click(actionButtons[0]);
+
+    const textarea = await screen.findByLabelText(/Target translation/i);
+    await user.clear(textarea);
+    await user.type(textarea, "Hallo");
+
+    const form = textarea.closest("form");
+    expect(form).not.toBeNull();
+    const saveButton = within(form as HTMLFormElement).getByRole("button", { name: "Save" });
+    await user.click(saveButton);
+
+    await waitFor(() => {
+      expect(updateJliffSegment).toHaveBeenCalledWith({
+        projectId: baseProject.projectId,
+        jliffRelPath: "artifacts/demo.jliff.json",
+        transunitId: "seg-1",
+        newTarget: "Hallo",
+      });
+    });
+
+    const untranslatedCard = screen.getByText("Untranslated").parentElement as HTMLElement;
+    await waitFor(() => {
+      expect(untranslatedCard).toHaveTextContent("0");
+    });
+
+    expect(screen.getByLabelText(/Target translation/i)).toHaveValue("Hallo");
+  });
+
   it("renders fallback component when editor context missing", () => {
-    render(<ProjectEditorPlaceholder projectId="missing" />);
+    renderWithProviders(<ProjectEditorPlaceholder projectId="missing" />);
 
     expect(screen.getByText(/Editor unavailable/i)).toBeInTheDocument();
     expect(screen.getByText(/Project missing is not open yet/i)).toBeInTheDocument();
