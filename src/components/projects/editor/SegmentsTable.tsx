@@ -1,27 +1,32 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 import { rankItem } from "@tanstack/match-sorter-utils";
 import {
   flexRender,
   getCoreRowModel,
+  getExpandedRowModel,
   getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
   type FilterFn,
+  type ExpandedState,
+  type Row,
   type SortingState,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDown, ArrowUp, ArrowUpDown, Loader2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { SegmentRow } from "@/lib/jliff";
 import { cn } from "@/lib/utils";
 
+import { PlaceholderInspector } from "./PlaceholderInspector";
 import { PlaceholderParityBadge } from "./PlaceholderParityBadge";
 import { TokenLine } from "./TokenLine";
 
 const ROW_HEIGHT_ESTIMATE = 64;
+const DETAIL_ROW_HEIGHT_ESTIMATE = 224;
 const OVERSCAN_COUNT = 12;
 
 const fuzzyGlobalFilter: FilterFn<SegmentRow> = (row, _columnId, value) => {
@@ -36,6 +41,23 @@ const fuzzyGlobalFilter: FilterFn<SegmentRow> = (row, _columnId, value) => {
   return haystacks.some((candidate) => rankItem(candidate, search).passed);
 };
 
+type VirtualRowEntry = {
+  key: string;
+  row: Row<SegmentRow>;
+  type: "data" | "detail";
+};
+
+function buildFlatRows(rows: Row<SegmentRow>[]): VirtualRowEntry[] {
+  const entries: VirtualRowEntry[] = [];
+  for (const row of rows) {
+    entries.push({ key: row.id, row, type: "data" });
+    if (row.getCanExpand() && row.getIsExpanded()) {
+      entries.push({ key: `${row.id}-detail`, row, type: "detail" });
+    }
+  }
+  return entries;
+}
+
 type SegmentsTableProps = {
   rows: SegmentRow[];
   className?: string;
@@ -45,6 +67,7 @@ type SegmentsTableProps = {
 export function SegmentsTable({ rows, className, isLoading = false }: SegmentsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
+  const [expanded, setExpanded] = useState<ExpandedState>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const columns = useMemo<ColumnDef<SegmentRow>[]>(
@@ -59,13 +82,43 @@ export function SegmentsTable({ rows, className, isLoading = false }: SegmentsTa
         },
         cell: ({ row }) => {
           const value = row.original;
+          const canExpand = row.getCanExpand();
+          const isExpanded = row.getIsExpanded();
+          const inspectorId = `placeholder-inspector-${row.id}`;
+          const segmentLabelId = `segment-label-${row.id}`;
+
           return (
             <div className="flex flex-col gap-1">
-              <span className="font-mono text-[11px] font-medium text-muted-foreground/80">{value.key}</span>
+              <span
+                id={segmentLabelId}
+                className="font-mono text-[11px] font-medium text-muted-foreground/80"
+              >
+                {value.key}
+              </span>
               <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground/80">
                 <span>Unit {value.unitId}</span>
                 <span>Segment {value.segmentId || "—"}</span>
               </div>
+              {canExpand ? (
+                <button
+                  type="button"
+                  onClick={row.getToggleExpandedHandler()}
+                  aria-expanded={isExpanded}
+                  aria-controls={inspectorId}
+                  className="inline-flex w-fit items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  <span>{isExpanded ? "Hide details" : "Inspect placeholders"}</span>
+                </button>
+              ) : (
+                <span className="text-[11px] uppercase tracking-wide text-muted-foreground/70">
+                  No placeholder metadata
+                </span>
+              )}
             </div>
           );
         },
@@ -133,24 +186,32 @@ export function SegmentsTable({ rows, className, isLoading = false }: SegmentsTa
     state: {
       sorting,
       globalFilter,
+      expanded,
     },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
+    onExpandedChange: setExpanded,
     globalFilterFn: fuzzyGlobalFilter,
+    getRowCanExpand: (row) => row.original.placeholders.length > 0 || Boolean(row.original.issues),
+    getExpandedRowModel: getExpandedRowModel(),
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId: (row) => row.key,
+    enableExpanding: true,
   });
 
   const tableRows = table.getRowModel().rows;
+  const flatRows = buildFlatRows(tableRows);
   const columnCount = table.getAllLeafColumns().length;
 
   const rowVirtualizer = useVirtualizer({
-    count: tableRows.length,
+    count: flatRows.length,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => ROW_HEIGHT_ESTIMATE,
+    estimateSize: (index) =>
+      flatRows[index]?.type === "detail" ? DETAIL_ROW_HEIGHT_ESTIMATE : ROW_HEIGHT_ESTIMATE,
     overscan: OVERSCAN_COUNT,
+    getItemKey: (index) => flatRows[index]?.key ?? index,
   });
 
   const virtualRows = rowVirtualizer.getVirtualItems();
@@ -257,17 +318,49 @@ export function SegmentsTable({ rows, className, isLoading = false }: SegmentsTa
                 ) : null}
 
                 {virtualRows.map((virtualRow) => {
-                  const row = tableRows[virtualRow.index];
+                  const item = flatRows[virtualRow.index];
+                  if (!item) {
+                    return null;
+                  }
+
+                  if (item.type === "detail") {
+                    const inspectorId = `placeholder-inspector-${item.row.id}`;
+                    const segmentLabelId = `segment-label-${item.row.id}`;
+
+                    return (
+                      <TableRow
+                        key={item.key}
+                        ref={measureRow}
+                        data-index={virtualRow.index}
+                        data-virtual-start={virtualRow.start}
+                        data-virtual-end={virtualRow.end}
+                        className="border-border/60 bg-muted/40"
+                        data-expanded-detail
+                      >
+                        <TableCell colSpan={columnCount} className="p-0">
+                          <div
+                            id={inspectorId}
+                            role="region"
+                            aria-labelledby={segmentLabelId}
+                            className="border-t border-border/60 p-4"
+                          >
+                            <PlaceholderInspector row={item.row.original} />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+
                   return (
                     <TableRow
-                      key={row.id}
+                      key={item.key}
                       ref={measureRow}
                       data-index={virtualRow.index}
                       data-virtual-start={virtualRow.start}
                       data-virtual-end={virtualRow.end}
                       className="border-border/60"
                     >
-                      {row.getVisibleCells().map((cell) => (
+                      {item.row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
                           className={cn(
@@ -289,21 +382,42 @@ export function SegmentsTable({ rows, className, isLoading = false }: SegmentsTa
                 ) : null}
               </>
             ) : (
-              tableRows.map((row) => (
-                <TableRow key={row.id} className="border-border/60">
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={cn(
-                        cell.column.columnDef.meta?.align === "center" && "text-center",
-                        cell.column.columnDef.meta?.align === "right" && "text-right",
-                      )}
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              tableRows.map((row) => {
+                const inspectorId = `placeholder-inspector-${row.id}`;
+                const segmentLabelId = `segment-label-${row.id}`;
+
+                return (
+                  <Fragment key={row.id}>
+                    <TableRow className="border-border/60">
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className={cn(
+                            cell.column.columnDef.meta?.align === "center" && "text-center",
+                            cell.column.columnDef.meta?.align === "right" && "text-right",
+                          )}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                    {row.getIsExpanded() ? (
+                      <TableRow className="border-border/60 bg-muted/40" data-expanded-detail>
+                        <TableCell colSpan={columnCount} className="p-0">
+                          <div
+                            id={inspectorId}
+                            role="region"
+                            aria-labelledby={segmentLabelId}
+                            className="border-t border-border/60 p-4"
+                          >
+                            <PlaceholderInspector row={row.original} />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </Fragment>
+                );
+              })
             )}
           </TableBody>
         </table>

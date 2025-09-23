@@ -125,7 +125,7 @@ Step 7.4 - Use ShadCN table primitives from `src/components/ui/table.tsx` for co
   - Table markup composes ShadCN header/body/cell components and adds sticky header styling plus focusable sort buttons.
 
 
-Task 8 - Token Rendering & Placeholder Chips - Status: IN PROGRESS (2025-02-15)
+Task 8 - Token Rendering & Placeholder Chips - Status: COMPLETED (2025-09-23)
 
 Step 8.1 - Implement `TokenLine` to render `text` as escaped spans and `ph` as chip buttons with aria‑labels; include `data-ph` for testing. - Status: COMPLETED (2025-02-15)
   - Added `TokenLine` component emitting token spans and accessible placeholder chips with deterministic keys and optional click handler.
@@ -133,7 +133,9 @@ Step 8.1 - Implement `TokenLine` to render `text` as escaped spans and `ph` as c
 Step 8.2 - Implement `PhBadge` showing `source/target` counts; color OK vs WARN. - Status: COMPLETED (2025-02-15)
   - Created `PlaceholderParityBadge` rendering counts, status coloring, and `role="status"` messaging.
 
-Step 8.3 - Add row expansion region with `PlaceholderInspector` listing chips and `originalData` previews (read‑only textarea/mono, scrollable). - Status: NOT COMPLETED
+Step 8.3 - Add row expansion region with `PlaceholderInspector` listing chips and `originalData` previews (read-only textarea/mono, scrollable). - Status: COMPLETED (2025-09-23)
+  - Implemented `PlaceholderInspector` component showing placeholder chips, attribute metadata, and read-only original data snapshots, surfacing QC issues inline.
+  - Integrated expandable detail rows in `SegmentsTable` with virtualization-aware measurement and accessible controls (`aria-expanded`, `aria-controls`).
 
 
 Task 9 - Editing & Save (React 19 Actions) - Status: NOT COMPLETED
