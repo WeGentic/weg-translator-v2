@@ -81,6 +81,12 @@ export interface PlaceholderCounts {
 
 export type PlaceholderParityStatus = "ok" | "missing" | "extra" | "unknown";
 
+export interface SegmentIssues {
+  unknownSource: string[];
+  unknownTarget: string[];
+  orderMismatch: boolean;
+}
+
 export interface SegmentRow {
   key: string;
   unitId: string;
@@ -92,4 +98,5 @@ export interface SegmentRow {
   placeholders: PlaceholderChip[];
   placeholderCounts: PlaceholderCounts;
   status: PlaceholderParityStatus;
+  issues: SegmentIssues | null;
 }

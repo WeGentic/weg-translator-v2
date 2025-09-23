@@ -47,26 +47,30 @@ Step 3.3 - Place types in `src/lib/jliff/types.ts` and export from index to keep
   - Established `src/lib/jliff/index.ts` barrel re-export to enable `import { SegmentRow } from "@/lib/jliff"` without leaking file paths.
 
 
-Task 4 - Normalization & Tokenization Utilities - Status: NOT COMPLETED
+Task 4 - Normalization & Tokenization Utilities - Status: COMPLETED (2025-02-14)
 
-Step 4.1 - Implement `mkKey(unitId, segId) => \`u${unitId}-s${segId}\`` to join artifacts. - Status: NOT COMPLETED
+Step 4.1 - Implement `mkKey(unitId, segId) => \`u${unitId}-s${segId}\`` to join artifacts. - Status: COMPLETED (2025-02-14)
 
-Step 4.2 - Implement tokenizer for `{{ph:phN}}` (double-curly style) using `/\{\{ph:([a-zA-Z0-9_]+)\}\}/g`, returning stable token arrays `{kind: 'text'|'ph'}`. - Status: NOT COMPLETED
+Step 4.2 - Implement tokenizer for `{{ph:phN}}` (double-curly style) using `/\{\{ph:([a-zA-Z0-9_]+)\}\}/g`, returning stable token arrays `{kind: 'text'|'ph'}`. - Status: COMPLETED (2025-02-14)
+  - Introduced `src/lib/jliff/tokenize.ts` with placeholder parser, cache utilities, and regex covering suffix variants (e.g., `{{ph:ph1:auto}}`).
 
 Step 4.3 - Implement `normalize(jliff, tags): SegmentRow[]`:
 - Build `transunit_id → tu` map.
 - Iterate tags.units[].segments[], compute key, find TU.
 - Build placeholder map from `placeholders_in_order` + `originalData_bucket`.
 - Tokenize `Source` and `Target_translation` into sourceTokens/targetTokens.
-- Compute `phCounts` and `status`. - Status: NOT COMPLETED
+- Compute `phCounts` and `status`. - Status: COMPLETED (2025-02-14)
+  - `normalizeJliffArtifacts` constructs `SegmentRow`s, joining tag metadata and backfilling orphan transunits with status `unknown`.
 
-Step 4.4 - Implement QC helpers: placeholder counts, unknown/dangling tokens, optional ordering check. - Status: NOT COMPLETED
+Step 4.4 - Implement QC helpers: placeholder counts, unknown/dangling tokens, optional ordering check. - Status: COMPLETED (2025-02-14)
+  - QC layer reports frequency deltas, placeholder order mismatches, and unknown tokens into `SegmentRow.issues`.
 
-Step 4.5 - Memoize tokenization by `key+text+version` to avoid rework during scroll. - Status: NOT COMPLETED
+Step 4.5 - Memoize tokenization by `key+text+version` to avoid rework during scroll. - Status: COMPLETED (2025-02-14)
+  - Cache keyed via `composeTokenCacheKey`; normalization passes segment key + variant + version to reuse tokens safely.
 
 Files:
 - `src/lib/jliff/normalize.ts`
-- `src/lib/jliff/tokenize.ts` - Status: NOT COMPLETED
+- `src/lib/jliff/tokenize.ts` - Status: COMPLETED (2025-02-14)
 
 
 Task 5 - Backend IPC: Read/Write Artifacts - Status: NOT COMPLETED
@@ -284,13 +288,13 @@ Step 3.A.1 - Implement `JliffRoot`, `JliffTransunit` with exact field names (e.g
 Step 3.A.2 - Implement `TagsRoot`, `TagsUnit`, `TagsSegment`, `TagsPlaceholder` with `placeholder_style: "double-curly"`, `placeholders_in_order`, `originalData_bucket`. - Status: COMPLETED (2025-02-14)
 
 
-Sub-task 4.B - Tokenization & QC - Status: NOT COMPLETED
+Sub-task 4.B - Tokenization & QC - Status: COMPLETED (2025-02-14)
 
-Step 4.B.1 - Tokenize source/target strings; chips map via placeholderMap; preserve offsets. - Status: NOT COMPLETED
+Step 4.B.1 - Tokenize source/target strings; chips map via placeholderMap; preserve offsets. - Status: COMPLETED (2025-02-14)
 
-Step 4.B.2 - Compute `phCounts` and `equal` flag; surface in a colored badge. - Status: NOT COMPLETED
+Step 4.B.2 - Compute `phCounts` and `equal` flag; surface in a colored badge. - Status: COMPLETED (2025-02-14)
 
-Step 4.B.3 - Detect unknown tokens in target and duplicate placeholders; mark row warning. - Status: NOT COMPLETED
+Step 4.B.3 - Detect unknown tokens in target and duplicate placeholders; mark row warning. - Status: COMPLETED (2025-02-14)
 
 
 Sub-task 7.C - Table & Virtualizer Wiring - Status: NOT COMPLETED
