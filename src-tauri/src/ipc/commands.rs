@@ -1,13 +1,14 @@
 use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::io::ErrorKind;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use log::{debug, error, info, warn};
 use serde::Serialize;
 use tauri::async_runtime::spawn;
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::ipc::InvokeError;
 use tokio::{fs, time::sleep};
 use uuid::Uuid;
 
@@ -27,7 +28,7 @@ use crate::db::{
     ProjectDetails, ProjectFileConversionRow, ProjectFileDetails, ProjectFileImportStatus,
     ProjectListItem, ProjectStatus, ProjectType, SQLITE_DB_FILE,
 };
-use crate::jliff::{ConversionOptions, convert_xliff};
+use crate::jliff::{ConversionOptions, JliffDocument, convert_xliff};
 use crate::settings::{SettingsManager, move_directory};
 
 const MAX_LANGUAGE_LENGTH: usize = 64;
@@ -697,6 +698,13 @@ pub struct JliffConversionResultDto {
     pub tag_map_rel_path: String,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateJliffSegmentResultDto {
+    pub updated_count: usize,
+    pub updated_at: String,
+}
+
 #[tauri::command]
 pub async fn convert_xliff_to_jliff(
     db: State<'_, DbManager>,
@@ -789,6 +797,30 @@ pub async fn convert_xliff_to_jliff(
         tag_map_abs_path: artifact.tag_map_path.to_string_lossy().to_string(),
         tag_map_rel_path: tag_map_rel.to_string_lossy().to_string(),
     })
+}
+
+#[tauri::command]
+pub async fn read_project_artifact(
+    db: State<'_, DbManager>,
+    project_id: Uuid,
+    rel_path: String,
+) -> IpcResult<String> {
+    read_project_artifact_impl(&db, project_id, &rel_path)
+        .await
+        .map_err(InvokeError::from)
+}
+
+#[tauri::command]
+pub async fn update_jliff_segment(
+    db: State<'_, DbManager>,
+    project_id: Uuid,
+    jliff_rel_path: String,
+    transunit_id: String,
+    new_target: String,
+) -> IpcResult<UpdateJliffSegmentResultDto> {
+    update_jliff_segment_impl(&db, project_id, &jliff_rel_path, &transunit_id, new_target)
+        .await
+        .map_err(InvokeError::from)
 }
 
 #[tauri::command]
@@ -1405,6 +1437,170 @@ async fn cleanup_project_dir(path: &Path) {
                 "failed to cleanup project directory {:?}: {error}",
                 path
             );
+        }
+    }
+}
+
+pub async fn read_project_artifact_impl(
+    db: &DbManager,
+    project_id: Uuid,
+    rel_path: &str,
+) -> Result<String, IpcError> {
+    let root = project_root(db, project_id).await?;
+    let artifact_path = resolve_project_relative_path(&root, rel_path, "resolve project artifact")?;
+
+    fs::read_to_string(&artifact_path).await.map_err(|error| {
+        if error.kind() == ErrorKind::NotFound {
+            return IpcError::Validation(format!(
+                "Artifact '{rel_path}' was not found for the requested project."
+            ));
+        }
+        error!(
+            target: "ipc::projects",
+            "failed to read project artifact {}: {error}",
+            artifact_path.display()
+        );
+        fs_error("read project artifact", error)
+    })
+}
+
+pub async fn update_jliff_segment_impl(
+    db: &DbManager,
+    project_id: Uuid,
+    jliff_rel_path: &str,
+    transunit_id: &str,
+    new_target: String,
+) -> Result<UpdateJliffSegmentResultDto, IpcError> {
+    let root = project_root(db, project_id).await?;
+    let artifact_path = resolve_project_relative_path(&root, jliff_rel_path, "resolve JLIFF path")?;
+
+    let current = fs::read_to_string(&artifact_path).await.map_err(|error| {
+        if error.kind() == ErrorKind::NotFound {
+            return IpcError::Validation(format!(
+                "JLIFF document '{jliff_rel_path}' was not found for the requested project."
+            ));
+        }
+        error!(
+            target: "ipc::projects",
+            "failed to read JLIFF document {}: {error}",
+            artifact_path.display()
+        );
+        fs_error("read JLIFF document", error)
+    })?;
+
+    let mut document: JliffDocument = serde_json::from_str(&current).map_err(|error| {
+        error!(
+            target: "ipc::projects",
+            "failed to parse JLIFF document {}: {error}",
+            artifact_path.display()
+        );
+        IpcError::Internal("Stored JLIFF document is invalid JSON.".into())
+    })?;
+
+    let Some(transunit) = document
+        .transunits
+        .iter_mut()
+        .find(|unit| unit.transunit_id == transunit_id) else {
+        return Err(IpcError::Validation(format!(
+            "Transunit '{transunit_id}' was not found in the provided JLIFF document."
+        )));
+    };
+
+    transunit.target_translation = new_target;
+
+    let payload = serde_json::to_string_pretty(&document).map_err(|error| {
+        error!(
+            target: "ipc::projects",
+            "failed to serialize updated JLIFF document {}: {error}",
+            artifact_path.display()
+        );
+        IpcError::Internal("Failed to serialize updated JLIFF document.".into())
+    })?;
+
+    fs::write(&artifact_path, payload).await.map_err(|error| {
+        error!(
+            target: "ipc::projects",
+            "failed to write updated JLIFF document {}: {error}",
+            artifact_path.display()
+        );
+        fs_error("write JLIFF document", error)
+    })?;
+
+    let updated_at = time::OffsetDateTime::now_utc()
+        .format(&time::format_description::well_known::Rfc3339)
+        .unwrap_or_else(|_| time::OffsetDateTime::now_utc().to_string());
+
+    Ok(UpdateJliffSegmentResultDto {
+        updated_count: 1,
+        updated_at,
+    })
+}
+
+async fn project_root(db: &DbManager, project_id: Uuid) -> Result<PathBuf, IpcError> {
+    let details = db
+        .list_project_details(project_id)
+        .await
+        .map_err(IpcError::from)?;
+    let root = PathBuf::from(&details.root_path);
+    match std::fs::canonicalize(&root) {
+        Ok(path) => Ok(path),
+        Err(error) => {
+            error!(
+                target: "ipc::projects",
+                "failed to canonicalize project root {}: {error}",
+                root.display()
+            );
+            Err(fs_error("resolve project root", error))
+        }
+    }
+}
+
+fn resolve_project_relative_path(
+    root: &Path,
+    rel_path: &str,
+    action: &str,
+) -> Result<PathBuf, IpcError> {
+    let trimmed = rel_path.trim();
+    if trimmed.is_empty() {
+        return Err(IpcError::Validation("Artifact path cannot be empty.".into()));
+    }
+
+    let rel = Path::new(trimmed);
+    if rel.is_absolute() {
+        return Err(IpcError::Validation("Artifact path must be relative to the project root.".into()));
+    }
+
+    for component in rel.components() {
+        if matches!(component, Component::ParentDir | Component::RootDir | Component::Prefix(_)) {
+            return Err(IpcError::Validation(
+                "Artifact path cannot traverse outside the project root.".into(),
+            ));
+        }
+    }
+
+    let candidate = root.join(rel);
+    match std::fs::canonicalize(&candidate) {
+        Ok(path) => {
+            if !path.starts_with(root) {
+                return Err(IpcError::Validation(
+                    "Artifact path resolves outside the project root.".into(),
+                ));
+            }
+            Ok(path)
+        }
+        Err(error) => {
+            if error.kind() == ErrorKind::NotFound {
+                return Err(IpcError::Validation(format!(
+                    "Artifact '{}' was not found for the requested project.",
+                    rel_path
+                )));
+            }
+            error!(
+                target: "ipc::projects",
+                "failed to canonicalize artifact path {}: {error}",
+                candidate.display()
+            );
+            Err(fs_error(action, error))
         }
     }
 }

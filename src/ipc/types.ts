@@ -171,6 +171,11 @@ export interface JliffConversionResult {
   tagMapRelPath: string;
 }
 
+export interface UpdateJliffSegmentResult {
+  updatedCount: number;
+  updatedAt: string;
+}
+
 export interface ProjectFileWithConversionsDto {
   file: ProjectFileDto;
   conversions: ProjectFileConversionDto[];

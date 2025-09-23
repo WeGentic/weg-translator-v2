@@ -2,7 +2,6 @@ use sqlx::SqlitePool;
 use sqlx::sqlite::SqlitePoolOptions;
 use uuid::Uuid;
 
-use weg_translator_lib::DbError;
 use weg_translator_lib::DbManager;
 use weg_translator_lib::NewProject;
 use weg_translator_lib::NewProjectFile;
@@ -17,6 +16,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("../migrations/005_create_project_files.sql"),
     include_str!("../migrations/006_add_project_languages.sql"),
     include_str!("../migrations/007_create_project_file_conversions.sql"),
+    include_str!("../migrations/008_add_jliff_columns.sql"),
 ];
 
 #[tokio::test]
@@ -54,7 +54,7 @@ async fn conversions_unique_and_status_transitions() {
         .expect("seed project and file");
 
     // Create or find conversion entry (should insert)
-    let request = ProjectFileConversionRequest::new("en-US", "it-IT", "2.1");
+    let request = ProjectFileConversionRequest::new("en-US", "it-IT", "2.0");
     let conv1 = manager
         .find_or_create_conversion_for_file(file_id, &request)
         .await
@@ -93,7 +93,6 @@ async fn conversions_unique_and_status_transitions() {
             None,
             None,
             Some(now()),
-            None,
             None,
         )
         .await
@@ -168,7 +167,7 @@ async fn list_pending_skips_non_convertible_and_failed_only() {
         .expect("seed project files");
 
     // Mark one conversion as failed to include in pending
-    let request = ProjectFileConversionRequest::new("en-US", "it-IT", "2.1");
+    let request = ProjectFileConversionRequest::new("en-US", "it-IT", "2.0");
     let conv_docx = manager
         .find_or_create_conversion_for_file(f_docx, &request)
         .await

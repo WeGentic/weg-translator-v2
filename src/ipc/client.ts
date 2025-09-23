@@ -14,6 +14,7 @@ import type {
   TranslationHistoryRecord,
   TranslationRequest,
   JliffConversionResult,
+  UpdateJliffSegmentResult,
 } from "./types";
 
 function hasCustomToString(value: { toString?: unknown }): value is { toString: () => string } {
@@ -209,4 +210,33 @@ export async function convertXliffToJliff(args: ConvertXliffToJliffArgs) {
   }
 
   return safeInvoke<JliffConversionResult>("convert_xliff_to_jliff", payload);
+}
+
+export async function readProjectArtifact(projectId: string, relPath: string) {
+  return safeInvoke<string>("read_project_artifact", {
+    project_id: projectId,
+    projectId,
+    rel_path: relPath,
+    relPath,
+  });
+}
+
+export interface UpdateJliffSegmentArgs {
+  projectId: string;
+  jliffRelPath: string;
+  transunitId: string;
+  newTarget: string;
+}
+
+export async function updateJliffSegment(args: UpdateJliffSegmentArgs) {
+  return safeInvoke<UpdateJliffSegmentResult>("update_jliff_segment", {
+    project_id: args.projectId,
+    projectId: args.projectId,
+    jliff_rel_path: args.jliffRelPath,
+    jliffRelPath: args.jliffRelPath,
+    transunit_id: args.transunitId,
+    transunitId: args.transunitId,
+    new_target: args.newTarget,
+    newTarget: args.newTarget,
+  });
 }

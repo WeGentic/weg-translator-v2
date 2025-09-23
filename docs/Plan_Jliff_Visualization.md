@@ -73,21 +73,25 @@ Files:
 - `src/lib/jliff/tokenize.ts` - Status: COMPLETED (2025-02-14)
 
 
-Task 5 - Backend IPC: Read/Write Artifacts - Status: NOT COMPLETED
+Task 5 - Backend IPC: Read/Write Artifacts - Status: COMPLETED (2025-02-14)
 
 Step 5.1 - Add `read_project_artifact(project_id, rel_path)` IPC (Rust):
 - Resolve project root (`ProjectDetails.root_path`).
 - Join + normalize `rel_path`, ensure it’s within project folder.
-- Read file as UTF‑8 string, return JSON text. - Status: NOT COMPLETED
+- Read file as UTF‑8 string, return JSON text. - Status: COMPLETED (2025-02-14)
+  - Implemented `read_project_artifact` command delegating to `read_project_artifact_impl`, performing canonicalization and parent-dir guards before streaming file contents.
 
 Step 5.2 - Add `update_jliff_segment(project_id, jliff_rel_path, transunit_id, new_target)` IPC (Rust):
 - Load JLIFF JSON into `JliffDocument`.
 - Locate `TransUnit` by `transunit_id`, update `target_translation`.
-- Persist pretty JSON back to disk; return updated timestamp and maybe `updated_count`. - Status: NOT COMPLETED
+- Persist pretty JSON back to disk; return updated timestamp and maybe `updated_count`. - Status: COMPLETED (2025-02-14)
+  - `update_jliff_segment` rewrites documents via serde with pretty formatting, emits `UpdateJliffSegmentResultDto { updatedCount, updatedAt }`.
 
-Step 5.3 - Wire client helpers in `src/ipc/client.ts` + types in `src/ipc/types.ts` for both commands. - Status: NOT COMPLETED
+Step 5.3 - Wire client helpers in `src/ipc/client.ts` + types in `src/ipc/types.ts` for both commands. - Status: COMPLETED (2025-02-14)
+  - Added `readProjectArtifact`/`updateJliffSegment` wrappers and `UpdateJliffSegmentResult` type definitions for React clients.
 
-Step 5.4 - Add Rust tests under `src-tauri/tests/` for both IPCs (happy path, invalid path, missing TU). - Status: NOT COMPLETED
+Step 5.4 - Add Rust tests under `src-tauri/tests/` for both IPCs (happy path, invalid path, missing TU). - Status: COMPLETED (2025-02-14)
+  - `src-tauri/tests/ipc_artifacts.rs` covers successful read/write flows and validation errors for unknown transunits.
 
 
 Task 6 - Frontend Data Loading - Status: NOT COMPLETED

@@ -1,5 +1,5 @@
 mod converter;
-mod model;
+pub mod model;
 mod options;
 mod tag_map;
 
@@ -10,6 +10,7 @@ use anyhow::{Context, Result, anyhow};
 use jsonschema::Validator;
 use serde_json::Value;
 
+pub use model::JliffDocument;
 pub use options::ConversionOptions;
 
 /// Output metadata describing where generated artifacts were written.
@@ -165,13 +166,13 @@ mod tests {
         let xliff_path = tmp_dir.path().join("sample.xlf");
         let output_dir = tmp_dir.path().join("out");
 
-        let xliff_payload = r#"<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<xliff xmlns=\"urn:oasis:names:tc:xliff:document:2.0\" version=\"2.0\" srcLang=\"en-US\" trgLang=\"it-IT\">
-  <file original=\"sample.docx\" id=\"1\">
-    <unit id=\"u1\">
-      <segment id=\"s1\">
-        <source>Hello <ph id=\"ph1\"/> world</source>
-        <target>Ciao <ph id=\"ph1\"/> mondo</target>
+        let xliff_payload = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="en-US" trgLang="it-IT">
+  <file original="sample.docx" id="1">
+    <unit id="u1">
+      <segment id="s1">
+        <source>Hello <ph id="ph1"/> world</source>
+        <target>Ciao <ph id="ph1"/> mondo</target>
       </segment>
     </unit>
   </file>
