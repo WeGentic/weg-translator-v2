@@ -132,14 +132,14 @@ const details: ProjectDetails = {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(getProjectDetails).mockResolvedValue(details);
-  vi.mocked(readProjectArtifact).mockImplementation(async (_projectId, relPath) => {
+  vi.mocked(readProjectArtifact).mockImplementation((_projectId, relPath) => {
     if (relPath === "artifacts/demo.jliff.json") {
-      return JSON.stringify(jliffArtifact);
+      return Promise.resolve(JSON.stringify(jliffArtifact));
     }
     if (relPath === "artifacts/demo.tag-map.json") {
-      return JSON.stringify(tagMapArtifact);
+      return Promise.resolve(JSON.stringify(tagMapArtifact));
     }
-    throw new Error(`Unexpected artifact path: ${relPath}`);
+    return Promise.reject(new Error(`Unexpected artifact path: ${relPath}`));
   });
 });
 
@@ -155,18 +155,14 @@ describe("ProjectEditor", () => {
 
     await screen.findByText("Segments");
 
-    expect(screen.getByText(/Focus translations and agent-assisted edits/i)).toHaveTextContent(
-      /Demo Project/,
-    );
-    expect(screen.getByText(/Virtualized segments table renders here/i)).toBeInTheDocument();
+    expect(screen.getByText(/Focus translations and agent-assisted edits/i)).toHaveTextContent(/Demo Project/);
+    expect(screen.getByLabelText("Search segments")).toBeInTheDocument();
     expect(screen.getByText(/Demo Project/)).toBeInTheDocument();
     expect(screen.getByText("demo.xliff")).toBeInTheDocument();
     expect(screen.getByText(/Placeholder mismatches/i)).toBeInTheDocument();
     expect(screen.getByText("en-US")).toBeInTheDocument();
     expect(screen.getByText("de-DE")).toBeInTheDocument();
-
-    const parityBadges = screen.getAllByText(/PH parity ok/i);
-    expect(parityBadges).toHaveLength(2);
+    expect(screen.getAllByRole("status")).toHaveLength(2);
   });
 
   it("shows error when no completed conversion is available", async () => {

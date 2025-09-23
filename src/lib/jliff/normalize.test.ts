@@ -78,7 +78,6 @@ describe("normalizeJliffArtifacts", () => {
   });
 
   it("flags missing placeholders in the target string", () => {
-    const placeholder = "{{ph:ph1}}";
     const { jliff, tags } = buildFixtures({ target: "Bonjour" });
     const [row] = normalizeJliffArtifacts(jliff, tags);
     expect(row.placeholderCounts).toMatchObject({ missing: 1, extra: 0 });

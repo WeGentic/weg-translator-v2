@@ -64,7 +64,7 @@ export function normalizeJliffArtifacts(
     if (!transunit) {
       continue;
     }
-    const { unitId, segmentId } = parseSegmentKey(key);
+    const { unitId } = parseSegmentKey(key);
     rows.push(
       buildSegmentRow({
         key,

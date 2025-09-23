@@ -10,6 +10,9 @@ use tokio::task;
 #[cfg(target_family = "unix")]
 use libc::EXDEV;
 
+#[cfg(target_family = "windows")]
+const ERROR_NOT_SAME_DEVICE: i32 = 17;
+
 #[derive(Debug, Clone)]
 pub struct AppSettings {
     pub app_folder: PathBuf,
@@ -176,11 +179,17 @@ fn move_directory_blocking(old_path: &Path, new_path: &Path) -> io::Result<()> {
 fn is_cross_device_link(error: &io::Error) -> bool {
     #[cfg(target_family = "unix")]
     {
-        error.raw_os_error() == Some(EXDEV)
+        return error.raw_os_error() == Some(EXDEV);
     }
-    #[cfg(not(target_family = "unix"))]
+
+    #[cfg(target_family = "windows")]
     {
-        false
+        return error.raw_os_error() == Some(ERROR_NOT_SAME_DEVICE);
+    }
+
+    #[cfg(not(any(target_family = "unix", target_family = "windows")))]
+    {
+        return false;
     }
 }
 

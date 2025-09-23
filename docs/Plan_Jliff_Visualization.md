@@ -109,23 +109,29 @@ Step 6.4 - Compute summary metrics (total segments, untranslated, placeholder mi
   - Derived metrics drive new header cards plus language/path metadata, keeping counts in sync with normalization results.
 
 
-Task 7 - Virtualized Segments Table (TanStack) - Status: NOT COMPLETED
+Task 7 - Virtualized Segments Table (TanStack) - Status: IN PROGRESS (2025-02-15)
 
 Step 7.1 - Create `src/components/projects/editor/SegmentsTable.tsx` using TanStack Table v8:
-- Columns: ID, Source (tokens), Target (editable), PH badge, Actions. - Status: NOT COMPLETED
+- Columns: ID, Source (tokens), Target (editable), PH badge, Actions. - Status: COMPLETED (2025-02-15)
+  - Implemented `SegmentsTable` with Segment/Source/Target/Placeholders/Actions columns and placeholder actions stub; renders tokenized source/target content via `TokenLine` and placeholder parity via `PlaceholderParityBadge`.
 
-Step 7.2 - Integrate `@tanstack/react-virtual` for rows; parent scroll container, estimate size 44–52px, absolute positioning per official example. - Status: NOT COMPLETED
+Step 7.2 - Integrate `@tanstack/react-virtual` for rows; parent scroll container, estimate size 44–52px, absolute positioning per official example. - Status: COMPLETED (2025-02-15)
+  - Connected `useVirtualizer` with scroll container ref (including fallback rendering when virtual rows unavailable) using 64px estimate and overscan.
 
-Step 7.3 - Sorting/filtering row models and global fuzzy search via `@tanstack/match-sorter-utils` (`rankItem`) across `sourceRaw` + `targetRaw`. - Status: NOT COMPLETED
+Step 7.3 - Sorting/filtering row models and global fuzzy search via `@tanstack/match-sorter-utils` (`rankItem`) across `sourceRaw` + `targetRaw`. - Status: COMPLETED (2025-02-15)
+  - Enabled TanStack sorting state with header toggle on Segment column and wired fuzzy global filter using `rankItem`; provided search input UI.
 
-Step 7.4 - Use ShadCN table primitives from `src/components/ui/table.tsx` for consistent semantics and styles (sticky header optional). - Status: NOT COMPLETED
+Step 7.4 - Use ShadCN table primitives from `src/components/ui/table.tsx` for consistent semantics and styles (sticky header optional). - Status: COMPLETED (2025-02-15)
+  - Table markup composes ShadCN header/body/cell components and adds sticky header styling plus focusable sort buttons.
 
 
-Task 8 - Token Rendering & Placeholder Chips - Status: NOT COMPLETED
+Task 8 - Token Rendering & Placeholder Chips - Status: IN PROGRESS (2025-02-15)
 
-Step 8.1 - Implement `TokenLine` to render `text` as escaped spans and `ph` as chip buttons with aria‑labels; include `data-ph` for testing. - Status: NOT COMPLETED
+Step 8.1 - Implement `TokenLine` to render `text` as escaped spans and `ph` as chip buttons with aria‑labels; include `data-ph` for testing. - Status: COMPLETED (2025-02-15)
+  - Added `TokenLine` component emitting token spans and accessible placeholder chips with deterministic keys and optional click handler.
 
-Step 8.2 - Implement `PhBadge` showing `source/target` counts; color OK vs WARN. - Status: NOT COMPLETED
+Step 8.2 - Implement `PhBadge` showing `source/target` counts; color OK vs WARN. - Status: COMPLETED (2025-02-15)
+  - Created `PlaceholderParityBadge` rendering counts, status coloring, and `role="status"` messaging.
 
 Step 8.3 - Add row expansion region with `PlaceholderInspector` listing chips and `originalData` previews (read‑only textarea/mono, scrollable). - Status: NOT COMPLETED
 
@@ -178,7 +184,8 @@ Step 13.1 - Extend `ProjectEditor` to load conversions for `fileId` and show loa
 
 Step 13.2 - Render a header with project name, languages (from JLIFF), and counters (total, untranslated, mismatches). - Status: NOT COMPLETED
 
-Step 13.3 - Embed `SegmentsTable` inside the editor canvas; preserve existing layout and responsiveness. - Status: NOT COMPLETED
+Step 13.3 - Embed `SegmentsTable` inside the editor canvas; preserve existing layout and responsiveness. - Status: COMPLETED (2025-02-15)
+  - Replaced placeholder preview panel with live `SegmentsTable` instance within `ProjectEditor`, preserving header metrics and responsive card layout.
 
 
 Task 14 - Documentation & Developer Notes - Status: NOT COMPLETED

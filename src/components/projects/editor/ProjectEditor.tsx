@@ -17,6 +17,8 @@ import {
   type TagsRoot,
 } from "@/lib/jliff";
 
+import { SegmentsTable } from "./SegmentsTable";
+
 type ProjectEditorProps = {
   project: ProjectListItem;
   fileId?: string | null;
@@ -207,39 +209,7 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
     }
 
     if (artifactState.status === "ready") {
-      const previewRows = artifactState.rows.slice(0, 3);
-      const remaining = artifactState.rows.length - previewRows.length;
-
-      return (
-        <div className="flex h-full flex-col gap-4">
-          <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-foreground">
-            Virtualized segments table renders here. Data hydration complete — {artifactState.rows.length.toLocaleString()} segment
-            {artifactState.rows.length === 1 ? "" : "s"} ready.
-          </div>
-          <div className="space-y-3 overflow-y-auto pr-1 text-sm text-foreground">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
-            <ul className="space-y-3">
-              {previewRows.map((row) => (
-                <li key={row.key} className="rounded-lg border border-border/60 bg-background/80 p-3 shadow-sm">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-mono text-[11px] text-foreground/70">{row.key}</span>
-                    <span>{row.status === "ok" ? "PH parity ok" : `Parity ${row.status}`}</span>
-                  </div>
-                  <div className="mt-2 space-y-1">
-                    <p className="text-sm font-semibold text-foreground">{row.sourceRaw || "(empty source)"}</p>
-                    <p className="text-sm text-muted-foreground">{row.targetRaw || "(empty target)"}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            {remaining > 0 ? (
-              <p className="text-xs text-muted-foreground">
-                {remaining.toLocaleString()} additional segment{remaining === 1 ? "" : "s"} will display in the virtualized table.
-              </p>
-            ) : null}
-          </div>
-        </div>
-      );
+      return <SegmentsTable rows={artifactState.rows} />;
     }
 
     return null;
@@ -317,7 +287,7 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
             )}
           </section>
 
-          <section className="min-h-[340px] rounded-xl border border-border/60 bg-background/90 p-6 shadow-inner">
+          <section className="min-h-[420px] rounded-xl border border-border/60 bg-background/90 p-6 shadow-inner flex flex-col">
             {editorBody}
           </section>
         </CardContent>
@@ -488,4 +458,3 @@ function MetaRow({ label, value }: MetaRowProps) {
 function formatNumber(value: number): string {
   return new Intl.NumberFormat().format(value);
 }
-
