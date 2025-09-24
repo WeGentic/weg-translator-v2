@@ -13,12 +13,23 @@ import {
   Title as AlertDialogTitle,
 } from "@radix-ui/react-alert-dialog";
 
+import { useLayoutSelector } from "@/app/layout/MainLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { logger } from "@/logging";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import type { SidebarState } from "@/components/layout/sidebar/sidebar-state";
+const SIDEMENU_TOGGLE_LABELS = {
+  expanded: "Compact sidebar",
+  compact: "Hide sidebar",
+  hidden: "Show sidebar",
+} as const;
+
+const SIDEMENU_TOGGLE_ICONS = {
+  expanded: PanelLeft,
+  compact: PanelLeftClose,
+  hidden: PanelLeftOpen,
+} as const;
 
 /**
  * Presentation contract for {@link AppHeader}. Optional knobs allow the root App component to
@@ -26,8 +37,6 @@ import type { SidebarState } from "@/components/layout/sidebar/sidebar-state";
  */
 type AppHeaderProps = {
   title: string;
-  onToggleSidebar?: () => void;
-  state?: SidebarState;
   className?: string;
   elevated?: boolean;
   hideUser?: boolean;
@@ -40,14 +49,14 @@ type AppHeaderProps = {
  */
 export function AppHeader({
   title,
-  onToggleSidebar,
-  state,
   className,
   elevated = false,
   hideUser = false,
 }: AppHeaderProps) {
   const { user, logout: signOut } = useAuth();
   const router = useRouter();
+  const cycleSidemenu = useLayoutSelector((state) => state.cycleSidemenu);
+  const sidemenu = useLayoutSelector((state) => state.sidemenu);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
@@ -69,62 +78,62 @@ export function AppHeader({
     { error: null },
   );
 
-  const ariaLabel: Record<SidebarState, string> = {
-    expanded: "Compact sidebar",
-    compact: "Hide sidebar",
-    hidden: "Show sidebar",
-  };
-
-  const Icon = state === "hidden" ? PanelLeftOpen : state === "compact" ? PanelLeftClose : PanelLeft;
+  const toggleMode = sidemenu.mode;
+  const normalizedMode: "expanded" | "compact" | "hidden" =
+    toggleMode === "compact" ? "compact" : toggleMode === "hidden" ? "hidden" : "expanded";
+  const Icon = SIDEMENU_TOGGLE_ICONS[normalizedMode];
+  const ariaLabel = SIDEMENU_TOGGLE_LABELS[normalizedMode];
+  const sidemenuInteractive = sidemenu.mounted || toggleMode !== "unmounted";
 
   return (
-    <header role="banner" className={cn("fixed inset-x-3 top-3 z-50", className)}>
-      <div
-        className={cn(
-          "relative mx-auto flex min-h-[3.5rem] items-center justify-between gap-2 rounded-2xl border border-border/50 bg-background/70 px-2.5 py-2 shadow-lg backdrop-blur",
-          "sm:px-4",
-          elevated && "ring-1 ring-border/50 shadow-xl",
-        )}
-      >
-        <div className="flex min-w-0 items-center">
+    <div
+      className={cn(
+        "flex h-full w-full items-center justify-between gap-3 border-b border-border/50 bg-background px-4",
+        elevated && "shadow-lg shadow-border/20",
+        className,
+      )}
+      role="banner"
+    >
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={ariaLabel}
+          onClick={() => cycleSidemenu()}
+          disabled={!sidemenuInteractive}
+          type="button"
+        >
+          <Icon className="size-5" aria-hidden="true" />
+          <span className="sr-only">Toggle sidebar</span>
+        </Button>
+      </div>
+
+      <div className="pointer-events-none flex flex-1 items-center justify-center">
+        <h1
+          className="truncate text-base font-medium text-foreground"
+          title={title}
+          aria-live="polite"
+        >
+          {title}
+        </h1>
+      </div>
+
+      <div className="flex items-center gap-1">
+        {hideUser ? null : (
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            aria-label={state ? ariaLabel[state] : "Toggle sidebar"}
-            onClick={onToggleSidebar}
+            aria-label="User"
             type="button"
+            onClick={() => setIsUserDialogOpen(true)}
           >
-            <Icon className="size-5" aria-hidden="true" />
-            <span className="sr-only">Toggle sidebar</span>
+            <CircleUser className="size-5" aria-hidden="true" />
+            <span className="sr-only">User</span>
           </Button>
-        </div>
+        )}
+      </div>
 
-        <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center">
-          <h1
-            className="truncate text-sm font-medium text-foreground sm:text-base"
-            title={title}
-            aria-live="polite"
-          >
-            {title}
-          </h1>
-        </div>
-
-        <div className="flex items-center gap-1">
-          {hideUser ? null : (
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="User"
-              type="button"
-              onClick={() => setIsUserDialogOpen(true)}
-            >
-              <CircleUser className="size-5" aria-hidden="true" />
-              <span className="sr-only">User</span>
-            </Button>
-          )}
-        </div>
-
-        {/* User Account Dialog */}
+      {/* User Account Dialog */}
         <AlertDialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
           <AlertDialogPortal>
             <AlertDialogOverlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:fade-in" />
@@ -164,7 +173,7 @@ export function AppHeader({
           </AlertDialogPortal>
         </AlertDialog>
 
-        {/* Logout Confirmation */}
+      {/* Logout Confirmation */}
         <AlertDialog open={isLogoutConfirmOpen} onOpenChange={setIsLogoutConfirmOpen}>
           <AlertDialogPortal>
             <AlertDialogOverlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:fade-in" />
@@ -202,8 +211,7 @@ export function AppHeader({
             </AlertDialogContent>
           </AlertDialogPortal>
         </AlertDialog>
-      </div>
-    </header>
+    </div>
   );
 }
 

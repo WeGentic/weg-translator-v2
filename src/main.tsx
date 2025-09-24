@@ -2,11 +2,12 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
-import { ResolutionGuard } from "./components/ResolutionGuard";
+import { ScreenGuard } from "@/app/layout/screen-guard";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { ToastProvider } from "@/components/ui/toast";
 import { LogProvider } from "@/logging";
+import "./App.css";
 
 interface RouterContext {
   auth: ReturnType<typeof useAuth>;
@@ -48,9 +49,9 @@ createRoot(document.getElementById("root") as HTMLElement).render(
       <AppErrorBoundary>
         <AuthProvider>
           <ToastProvider>
-            <ResolutionGuard minWidth={768} minHeight={600}>
+            <ScreenGuard minWidth={768} minHeight={600}>
               <InnerApp />
-            </ResolutionGuard>
+            </ScreenGuard>
           </ToastProvider>
         </AuthProvider>
       </AppErrorBoundary>

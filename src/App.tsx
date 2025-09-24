@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useMemo, type CSSProperties } from "react";
 import { FileText, FolderKanban, Settings } from "lucide-react";
 
 import { useAppHealth } from "@/app/hooks/useAppHealth";
 import { useGlobalNavigationEvents } from "@/app/hooks/useGlobalNavigationEvents";
 import { useWorkspaceShell } from "@/app/hooks/useWorkspaceShell";
+import { useFooterVisible, useHeaderVisible, useSidemenuState } from "@/app/layout/layout-store";
 import {
   toEditorViewKey,
   toProjectViewKey,
@@ -14,7 +15,6 @@ import { CollapsedHeaderBar } from "@/components/layout/header/CollapsedHeaderBa
 import { CollapsedFooterBar } from "@/components/layout/footer/CollapsedFooterBar";
 import { WorkspaceFooter } from "@/components/layout/footer/WorkspaceFooter";
 import { AppSidebar, type MenuItem } from "@/components/layout/sidebar/AppSidebar";
-import { getNextSidebarState, type SidebarState } from "@/components/layout/sidebar/sidebar-state";
 import { ProjectsPanel } from "@/components/projects/ProjectsPanel";
 import { ProjectEditor } from "@/components/projects/editor/ProjectEditor";
 import { ProjectEditorPlaceholder } from "@/components/projects/editor/ProjectEditorPlaceholder";
@@ -60,21 +60,11 @@ function App() {
     setSelectedFileId,
   } = useWorkspaceShell();
 
-  const [sidebarState, setSidebarState] = useState<SidebarState>("expanded");
-  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-  const [isFooterVisible, setIsFooterVisible] = useState(true);
+  const headerVisible = useHeaderVisible();
+  const footerVisible = useFooterVisible();
+  const sidemenu = useSidemenuState();
 
-  const cycleSidebarState = useCallback(() => {
-    setSidebarState((prev) => getNextSidebarState(prev));
-  }, []);
-
-  const toggleFooter = useCallback(() => {
-    setIsFooterVisible((prev) => !prev);
-  }, []);
-
-  const handleShowHeader = useCallback(() => {
-    setIsHeaderVisible(true);
-  }, []);
+  const sidebarState = sidemenu.kind;
 
   const temporaryProjectItems: MenuItem[] = useMemo(
     () =>
@@ -113,11 +103,8 @@ function App() {
   const FOOTER_HEIGHT_REM = 3.5;
   const COLLAPSED_FOOTER_HEIGHT_REM = 2.5;
   const SIDEBAR_MARGIN_REM = 0.75;
-  const SIDEBAR_EXPANDED_WIDTH_REM = 16;
-  const SIDEBAR_COMPACT_WIDTH_REM = 4;
-
-  const headerInsetRem = isHeaderVisible ? FLOAT_HEADER_HEIGHT_REM + FLOAT_HEADER_OFFSET_REM : 0;
-  const footerInsetRem = isFooterVisible ? FOOTER_HEIGHT_REM : COLLAPSED_FOOTER_HEIGHT_REM;
+  const headerInsetRem = headerVisible ? FLOAT_HEADER_HEIGHT_REM + FLOAT_HEADER_OFFSET_REM : 0;
+  const footerInsetRem = footerVisible ? FOOTER_HEIGHT_REM : COLLAPSED_FOOTER_HEIGHT_REM;
 
   const contentTopInset = `${headerInsetRem}rem`;
   const contentBottomInset = `${footerInsetRem}rem`;
@@ -128,14 +115,14 @@ function App() {
     height: `calc(100dvh - ${contentBottomInset})`,
   };
 
-  const sidebarTopInset = isHeaderVisible ? contentTopInset : `${COLLAPSED_HEADER_HEIGHT_REM}rem`;
-  const sidebarBottomInset = isFooterVisible ? contentBottomInset : `${COLLAPSED_FOOTER_HEIGHT_REM}rem`;
+  const sidebarTopInset = headerVisible ? contentTopInset : `${COLLAPSED_HEADER_HEIGHT_REM}rem`;
+  const sidebarBottomInset = footerVisible ? contentBottomInset : `${COLLAPSED_FOOTER_HEIGHT_REM}rem`;
 
   const sidebarWidthRem =
     sidebarState === "expanded"
-      ? SIDEBAR_EXPANDED_WIDTH_REM
+      ? sidemenu.width / 16
       : sidebarState === "compact"
-        ? SIDEBAR_COMPACT_WIDTH_REM
+        ? sidemenu.width / 16
         : 0;
 
   const horizontalOffsetRem = sidebarWidthRem + SIDEBAR_MARGIN_REM;
@@ -212,20 +199,14 @@ function App() {
         Skip to content
       </a>
 
-      {isHeaderVisible ? (
-        <AppHeader
-          title={headerTitle}
-          onToggleSidebar={cycleSidebarState}
-          state={sidebarState}
-          hideUser={!user}
-        />
+      {headerVisible ? (
+        <AppHeader title={headerTitle} hideUser={!user} />
       ) : (
-        <CollapsedHeaderBar onExpand={handleShowHeader} />
+        <CollapsedHeaderBar />
       )}
 
       <div className={cn("relative flex flex-1 min-h-0 flex-col overflow-hidden")} style={contentViewportStyle}>
         <AppSidebar
-          state={sidebarState}
           fixedItems={FIXED_MENU_ITEMS}
           temporaryItems={temporaryProjectItems}
           editorItems={temporaryEditorItems}
@@ -255,11 +236,7 @@ function App() {
         </main>
       </div>
 
-      {isFooterVisible ? (
-        <WorkspaceFooter health={health} onHide={() => setIsFooterVisible(false)} />
-      ) : (
-        <CollapsedFooterBar onExpand={toggleFooter} />
-      )}
+      {footerVisible ? <WorkspaceFooter health={health} /> : <CollapsedFooterBar />}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { EyeOff } from "lucide-react";
 
+import { useLayoutActions } from "@/app/layout/MainLayout";
 import type { AppHealthReport } from "@/ipc";
 
 import { Button } from "@/components/ui/button";
@@ -9,11 +10,11 @@ import { Button } from "@/components/ui/button";
  */
 export function WorkspaceFooter({
   health,
-  onHide,
 }: {
   health: AppHealthReport | null;
-  onHide: () => void;
 }) {
+  const setFooter = useLayoutActions((state) => state.setFooter);
+
   return (
     <footer className="sticky bottom-0 z-30 flex h-14 w-full items-center justify-between border-t border-border/60 bg-background/90 px-6 text-xs text-muted-foreground backdrop-blur">
       <div className="flex items-center gap-6">
@@ -21,7 +22,7 @@ export function WorkspaceFooter({
         <FooterMetric label="Tauri" value={health?.tauriVersion ?? "—"} />
         <FooterMetric label="Profile" value={health?.buildProfile ?? "—"} />
       </div>
-      <Button variant="ghost" size="sm" type="button" onClick={onHide}>
+      <Button variant="ghost" size="sm" type="button" onClick={() => setFooter({ visible: false })}>
         <EyeOff className="mr-2 h-4 w-4" aria-hidden="true" />
         Hide footer
       </Button>

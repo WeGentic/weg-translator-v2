@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { IconTooltipButton } from "@/components/IconTooltipButton";
 import { Plus } from "lucide-react";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileList } from "./components/files/FileList";
+import { FileTable } from "./components/files/FileTable";
 import { OverviewHeader } from "./components/OverviewHeader";
 import { OverviewAutoConvertBanner } from "./components/OverviewAutoConvertBanner";
 import { AddFilesDialog } from "./components/dialogs/AddFilesDialog";
@@ -403,10 +403,9 @@ export function ProjectOverview({ projectSummary }: Props) {
           </div>
           <CardAction className="flex items-center gap-1.5">
             <IconTooltipButton
-              label="Add files"
+              label={!autoConvertOnOpen ? "Add files (Auto-conversion disabled)" : "Add files"}
               ariaLabel="Add files"
               onClick={() => setIsAddOpen(true)}
-              title={!autoConvertOnOpen ? "Auto-conversion is disabled; conversions won’t start automatically" : undefined}
               className={
                 autoConvertOnOpen
                   ? undefined
@@ -417,13 +416,14 @@ export function ProjectOverview({ projectSummary }: Props) {
             </IconTooltipButton>
           </CardAction>
         </CardHeader>
-        <CardContent className="px-0">
-          <FileList
+        <CardContent className="p-6">
+          <FileTable
             files={details?.files ?? []}
             isLoading={isLoading}
             onRemove={handleRequestRemove}
             onOpenEditor={handleOpenEditor}
             onRebuild={handleRequestRebuild}
+            onAddFiles={() => setIsAddOpen(true)}
             rebuildingFileId={rebuildingFileId}
           />
         </CardContent>
