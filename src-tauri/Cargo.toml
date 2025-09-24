@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Inference-based Multilingual Text Generator"
 authors = ["you"]
 edition = "2024"
+default-run = "weg-translator"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

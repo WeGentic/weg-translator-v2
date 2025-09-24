@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import { FileText, FolderKanban, Settings } from "lucide-react";
 
 import { useAppHealth } from "@/app/hooks/useAppHealth";
@@ -107,8 +107,43 @@ function App() {
         : activeProject?.name ?? FIXED_MENU_ITEMS.find((item) => item.key === mainView)?.label ?? undefined,
   });
 
-  const contentPaddingClass = isHeaderVisible ? "pt-18" : "pt-6";
-  const contentLeftPadClass = sidebarState === "expanded" ? "pl-64" : sidebarState === "compact" ? "pl-16" : "pl-0";
+  const FLOAT_HEADER_HEIGHT_REM = 3.5;
+  const FLOAT_HEADER_OFFSET_REM = 0.75;
+  const COLLAPSED_HEADER_HEIGHT_REM = 2.5;
+  const FOOTER_HEIGHT_REM = 3.5;
+  const COLLAPSED_FOOTER_HEIGHT_REM = 2.5;
+  const SIDEBAR_MARGIN_REM = 0.75;
+  const SIDEBAR_EXPANDED_WIDTH_REM = 16;
+  const SIDEBAR_COMPACT_WIDTH_REM = 4;
+
+  const headerInsetRem = isHeaderVisible ? FLOAT_HEADER_HEIGHT_REM + FLOAT_HEADER_OFFSET_REM : 0;
+  const footerInsetRem = isFooterVisible ? FOOTER_HEIGHT_REM : COLLAPSED_FOOTER_HEIGHT_REM;
+
+  const contentTopInset = `${headerInsetRem}rem`;
+  const contentBottomInset = `${footerInsetRem}rem`;
+
+  const contentViewportStyle: CSSProperties = {
+    paddingTop: contentTopInset,
+    paddingBottom: `${SIDEBAR_MARGIN_REM}rem`,
+    height: `calc(100dvh - ${contentBottomInset})`,
+  };
+
+  const sidebarTopInset = isHeaderVisible ? contentTopInset : `${COLLAPSED_HEADER_HEIGHT_REM}rem`;
+  const sidebarBottomInset = isFooterVisible ? contentBottomInset : `${COLLAPSED_FOOTER_HEIGHT_REM}rem`;
+
+  const sidebarWidthRem =
+    sidebarState === "expanded"
+      ? SIDEBAR_EXPANDED_WIDTH_REM
+      : sidebarState === "compact"
+        ? SIDEBAR_COMPACT_WIDTH_REM
+        : 0;
+
+  const horizontalOffsetRem = sidebarWidthRem + SIDEBAR_MARGIN_REM;
+
+  const contentFrameStyle: CSSProperties = {
+    paddingLeft: `${horizontalOffsetRem}rem`,
+    paddingRight: `${SIDEBAR_MARGIN_REM}rem`,
+  };
 
   const handleProjectOpen = useCallback((project: ProjectListItem) => {
     handleOpenProject(project);
@@ -139,7 +174,7 @@ function App() {
 
     if (mainView === "settings") {
       return (
-        <div className="w-full overflow-y-auto p-6">
+        <div className="w-full p-6">
           <AppSettingsPanel />
         </div>
       );
@@ -169,7 +204,7 @@ function App() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background/60">
+    <div className="relative flex h-dvh flex-col overflow-hidden bg-background/60">
       <a
         href="#main-content"
         className="sr-only focus-visible:not-sr-only fixed left-3 top-3 z-[60] rounded-md border border-border/60 bg-background px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -188,7 +223,7 @@ function App() {
         <CollapsedHeaderBar onExpand={handleShowHeader} />
       )}
 
-      <div className={cn("flex flex-1 flex-col", contentPaddingClass)}>
+      <div className={cn("relative flex flex-1 min-h-0 flex-col overflow-hidden")} style={contentViewportStyle}>
         <AppSidebar
           state={sidebarState}
           fixedItems={FIXED_MENU_ITEMS}
@@ -197,21 +232,25 @@ function App() {
           selectedKey={mainView}
           onSelect={(key) => setMainView(key as MainView)}
           style={{
-            top: isHeaderVisible ? "5rem" : "3.25rem",
-            bottom: isFooterVisible ? "4.25rem" : "3.25rem",
+            top: sidebarTopInset,
+            bottom: sidebarBottomInset,
           }}
         />
 
-        <main id="main-content" role="main" className="contents">
-          <div className={cn("flex flex-1 flex-col overflow-hidden", contentLeftPadClass)}>
+        <main id="main-content" role="main" className="relative flex flex-1 min-h-0 flex-col overflow-hidden">
+          <div className="flex flex-1 min-h-0 flex-col" style={contentFrameStyle}>
             {systemError ? (
-              <div className="px-6 pb-4">
+              <div className="flex-shrink-0 px-6 pb-4">
                 <Alert variant="destructive">
                   <AlertDescription>{systemError}</AlertDescription>
                 </Alert>
               </div>
             ) : null}
-            <div className="flex flex-1 overflow-hidden">{renderMainContent()}</div>
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+                {renderMainContent()}
+              </div>
+            </div>
           </div>
         </main>
       </div>
@@ -221,7 +260,7 @@ function App() {
       ) : (
         <CollapsedFooterBar onExpand={toggleFooter} />
       )}
-      </div>
+    </div>
   );
 }
 

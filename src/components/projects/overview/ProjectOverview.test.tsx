@@ -9,9 +9,12 @@ vi.mock("@/ipc", () => ({
   ensureProjectConversionsPlan: vi.fn(),
   updateConversionStatus: vi.fn(),
   convertXliffToJliff: vi.fn(),
+  getAppSettings: vi.fn(),
+}));
+
+vi.mock("@/lib/openxliff", () => ({
   convertStream: vi.fn(),
   validateStream: vi.fn(),
-  getAppSettings: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
@@ -34,6 +37,7 @@ import {
   addFilesToProject,
   removeProjectFile,
   ensureProjectConversionsPlan,
+  updateConversionStatus,
   convertXliffToJliff,
   getAppSettings,
   type AppSettings,
@@ -42,6 +46,7 @@ import {
   type ProjectListItem,
 } from "@/ipc";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { convertStream, validateStream } from "@/lib/openxliff";
 
 import { ProjectOverview } from "./ProjectOverview";
 
@@ -137,6 +142,24 @@ beforeEach(() => {
     tagMapAbsPath: "/projects/demo/jliff/demo-file1.tags.json",
     tagMapRelPath: "jliff/demo-file1.tags.json",
   });
+  vi.mocked(convertStream).mockResolvedValue({
+    ok: true,
+    code: 0,
+    signal: 0,
+    stdout: "",
+    stderr: "",
+    knownError: undefined,
+    message: undefined,
+  });
+  vi.mocked(validateStream).mockResolvedValue({
+    ok: true,
+    code: 0,
+    signal: 0,
+    stdout: "",
+    stderr: "",
+    knownError: undefined,
+    message: undefined,
+  });
 });
 
 afterEach(() => {
@@ -197,5 +220,54 @@ describe("ProjectOverview", () => {
       "title",
       expect.stringMatching(/disabled; conversions won’t start automatically/i),
     );
+  });
+
+  it("rebuilds conversions after confirmation", async () => {
+    const planWithTask = {
+      ...basePlan,
+      tasks: [
+        {
+          conversionId: "c1",
+          projectFileId: "f1",
+          inputAbsPath: "/projects/demo/a.docx",
+          outputAbsPath: "/projects/demo/a.xliff",
+          srcLang: "en-US",
+          tgtLang: "it-IT",
+          version: "2.1",
+          paragraph: true,
+          embed: true,
+        },
+      ],
+    } as EnsureConversionsPlan;
+
+    vi.mocked(getProjectDetails).mockResolvedValue(details);
+    vi.mocked(getAppSettings).mockResolvedValue({ ...baseSettings });
+    vi.mocked(ensureProjectConversionsPlan)
+      .mockResolvedValueOnce({ ...basePlan, tasks: [] })
+      .mockResolvedValueOnce(planWithTask);
+
+    render(<ProjectOverview projectSummary={projectSummary} />);
+
+    await screen.findByRole("list");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /rebuild conversions for a\.docx/i }));
+
+    const confirm = await screen.findByRole("button", { name: /^rebuild$/i });
+    await user.click(confirm);
+
+    await waitFor(() => {
+      expect(updateConversionStatus).toHaveBeenCalledWith("c1", "pending");
+    });
+
+    await waitFor(() =>
+      expect(convertStream).toHaveBeenCalledWith(
+        expect.objectContaining({ file: planWithTask.tasks[0].inputAbsPath }),
+        expect.objectContaining({ onStdout: expect.any(Function), onStderr: expect.any(Function) }),
+      ),
+    );
+    await waitFor(() => expect(validateStream).toHaveBeenCalled());
+
+    expect(ensureProjectConversionsPlan).toHaveBeenCalledTimes(2);
   });
 });

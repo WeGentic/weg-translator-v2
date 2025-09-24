@@ -1,9 +1,6 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-
-import { Button } from "@/components/ui/button";
+import { IconTooltipButton } from "@/components/IconTooltipButton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FolderOpen, Trash2 } from "lucide-react";
-import { createPortal } from "react-dom";
 
 export interface ProjectManagerRow {
   id: string;
@@ -78,7 +75,7 @@ export function ProjectsTable({ rows, onOpenProject, onRequestDelete }: Projects
                       ariaLabel={`Delete project ${row.name}`}
                       onClick={() => onRequestDelete?.(row.id, row.name)}
                       disabled={!onRequestDelete}
-                      variant="ghost-destructive"
+                      tone="destructive"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </IconTooltipButton>
@@ -89,88 +86,5 @@ export function ProjectsTable({ rows, onOpenProject, onRequestDelete }: Projects
           </TableBody>
         </Table>
       </div>
-  );
-}
-
-type IconTooltipButtonProps = {
-  label: string;
-  ariaLabel: string;
-  disabled?: boolean;
-  onClick?: () => void;
-  variant?: "ghost" | "ghost-destructive";
-  children: React.ReactNode;
-};
-
-function IconTooltipButton({ label, ariaLabel, disabled, onClick, variant = "ghost", children }: IconTooltipButtonProps) {
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const tooltipId = useId();
-
-  const updatePosition = useCallback(() => {
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setPosition({
-      top: rect.top - 8,
-      left: rect.left + rect.width / 2,
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen) return undefined;
-
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("resize", updatePosition);
-    return () => {
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [isOpen, updatePosition]);
-
-  const handleOpen = () => {
-    if (disabled) return;
-    updatePosition();
-    setIsOpen(true);
-  };
-
-  const handleClose = () => setIsOpen(false);
-
-  const buttonClasses =
-    variant === "ghost-destructive"
-      ? "text-destructive hover:text-destructive focus-visible:text-destructive"
-      : "";
-
-  return (
-    <>
-      <Button
-        ref={buttonRef}
-        size="icon"
-        variant="ghost"
-        aria-label={ariaLabel}
-        aria-describedby={isOpen ? tooltipId : undefined}
-        disabled={disabled}
-        onClick={onClick}
-        onMouseEnter={handleOpen}
-        onMouseLeave={handleClose}
-        onFocus={handleOpen}
-        onBlur={handleClose}
-        className={buttonClasses}
-      >
-        {children}
-      </Button>
-      {isOpen && !disabled
-        ? createPortal(
-            <div
-              id={tooltipId}
-              role="tooltip"
-              className="pointer-events-none fixed z-[999] -translate-x-1/2 rounded-md border border-border/50 bg-foreground px-2 py-1 text-xs font-medium text-background shadow-md"
-              style={{ top: `${Math.max(position.top, 8)}px`, left: `${position.left}px` }}
-            >
-              {label}
-            </div>,
-            document.body,
-          )
-        : null}
-    </>
   );
 }

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { IconTooltipButton } from "@/components/IconTooltipButton";
 import { Plus } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileList } from "./components/files/FileList";
 import { OverviewHeader } from "./components/OverviewHeader";
 import { OverviewAutoConvertBanner } from "./components/OverviewAutoConvertBanner";
 import { AddFilesDialog } from "./components/dialogs/AddFilesDialog";
 import { RemoveFileDialog } from "./components/dialogs/RemoveFileDialog";
+import { RebuildFileDialog } from "./components/dialogs/RebuildFileDialog";
 import { EnsureQueueModal } from "./components/EnsureQueueModal";
 
 import {
@@ -39,6 +41,8 @@ export function ProjectOverview({ projectSummary }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isRemoveOpen, setIsRemoveOpen] = useState<null | string>(null);
+  const [rebuildTarget, setRebuildTarget] = useState<{ fileId: string; name: string } | null>(null);
+  const [rebuildingFileId, setRebuildingFileId] = useState<string | null>(null);
 
   // Conversion queue modal state
   const [ensurePlan, setEnsurePlan] = useState<EnsureConversionsPlan | null>(null);
@@ -323,6 +327,49 @@ export function ProjectOverview({ projectSummary }: Props) {
     setIsRemoveOpen(fileId);
   }, [setIsRemoveOpen]);
 
+  const handleRequestRebuild = useCallback(
+    (fileId: string) => {
+      if (!details) return;
+      const entry = details.files.find((file) => file.file.id === fileId);
+      if (!entry) return;
+      setRebuildTarget({ fileId, name: entry.file.originalName });
+    },
+    [details],
+  );
+
+  const handleConfirmRebuild = useCallback(async () => {
+    if (!details || !rebuildTarget) return;
+    const target = rebuildTarget;
+    const entry = details.files.find((file) => file.file.id === target.fileId);
+    const conversions = entry?.conversions ?? [];
+    setRebuildTarget(null);
+    if (conversions.length === 0) {
+      return;
+    }
+
+    setRebuildingFileId(target.fileId);
+    setError(null);
+    try {
+      for (const conversion of conversions) {
+        await updateConversionStatus(conversion.id, "pending");
+      }
+
+      const plan = await ensureProjectConversionsPlan(details.id);
+      const fileTasks = plan.tasks.filter((task) => task.projectFileId === target.fileId);
+      if (fileTasks.length > 0) {
+        setQueueSummary(null);
+        setLogs([]);
+        setEnsurePlan({ ...plan, tasks: fileTasks });
+        setEnsureProgress({ current: 0, total: fileTasks.length });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to rebuild file.");
+    } finally {
+      setRebuildingFileId(null);
+      void loadDetails();
+    }
+  }, [details, rebuildTarget, loadDetails]);
+
   const handleOpenEditor = useCallback(
     (fileId: string) => {
       window.dispatchEvent(
@@ -349,20 +396,26 @@ export function ProjectOverview({ projectSummary }: Props) {
       {/* Languages card removed in favor of compact header */}
 
       <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
-        <CardHeader className="flex flex-col gap-2 border-border/60 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
+        <CardHeader className="border-border/60 border-b pb-4">
           <div className="space-y-1">
             <CardTitle className="text-base font-semibold">Files</CardTitle>
             <CardDescription>Imported files and conversion status.</CardDescription>
           </div>
-          <Button
-            size="sm"
-            onClick={() => setIsAddOpen(true)}
-            title={!autoConvertOnOpen ? "Auto-conversion is disabled; conversions won’t start automatically" : undefined}
-            className="sm:mt-0"
-          >
-            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-            Add files
-          </Button>
+          <CardAction className="flex items-center gap-1.5">
+            <IconTooltipButton
+              label="Add files"
+              ariaLabel="Add files"
+              onClick={() => setIsAddOpen(true)}
+              title={!autoConvertOnOpen ? "Auto-conversion is disabled; conversions won’t start automatically" : undefined}
+              className={
+                autoConvertOnOpen
+                  ? undefined
+                  : "border-amber-500/50 bg-amber-500/10 text-amber-700 hover:border-amber-500/60 hover:text-amber-800 dark:text-amber-200"
+              }
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+            </IconTooltipButton>
+          </CardAction>
         </CardHeader>
         <CardContent className="px-0">
           <FileList
@@ -370,6 +423,8 @@ export function ProjectOverview({ projectSummary }: Props) {
             isLoading={isLoading}
             onRemove={handleRequestRemove}
             onOpenEditor={handleOpenEditor}
+            onRebuild={handleRequestRebuild}
+            rebuildingFileId={rebuildingFileId}
           />
         </CardContent>
       </Card>
@@ -393,6 +448,14 @@ export function ProjectOverview({ projectSummary }: Props) {
         open={isRemoveOpen !== null}
         onOpenChange={(open) => setIsRemoveOpen(open ? isRemoveOpen : null)}
         onConfirm={() => void handleRemoveFile()}
+      />
+
+      <RebuildFileDialog
+        open={rebuildTarget !== null}
+        onOpenChange={(open) => setRebuildTarget((prev) => (open ? prev : null))}
+        onConfirm={() => void handleConfirmRebuild()}
+        isBusy={isEnsuring || (rebuildTarget ? rebuildingFileId === rebuildTarget.fileId : false)}
+        fileName={rebuildTarget?.name}
       />
 
       <EnsureQueueModal
