@@ -13,7 +13,7 @@ import {
   Title as AlertDialogTitle,
 } from "@radix-ui/react-alert-dialog";
 
-import { useLayoutSelector } from "@/app/layout/MainLayout";
+import { useLayoutSelector, useLayoutStoreApi } from "@/app/layout/MainLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { logger } from "@/logging";
 import { Button } from "@/components/ui/button";
@@ -55,7 +55,7 @@ export function AppHeader({
 }: AppHeaderProps) {
   const { user, logout: signOut } = useAuth();
   const router = useRouter();
-  const cycleSidemenu = useLayoutSelector((state) => state.cycleSidemenu);
+  const layoutStore = useLayoutStoreApi();
   const sidemenu = useLayoutSelector((state) => state.sidemenu);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
@@ -84,6 +84,11 @@ export function AppHeader({
   const Icon = SIDEMENU_TOGGLE_ICONS[normalizedMode];
   const ariaLabel = SIDEMENU_TOGGLE_LABELS[normalizedMode];
   const sidemenuInteractive = sidemenu.mounted || toggleMode !== "unmounted";
+  // Cycling the sidemenu via the store ensures we don't leak unbound methods while keeping
+  // the selector subscriptions scoped to the stateful parts of the header.
+  const handleCycleSidemenu = () => {
+    layoutStore.getState().cycleSidemenu();
+  };
 
   return (
     <div
@@ -99,7 +104,7 @@ export function AppHeader({
           variant="ghost"
           size="icon"
           aria-label={ariaLabel}
-          onClick={() => cycleSidemenu()}
+          onClick={handleCycleSidemenu}
           disabled={!sidemenuInteractive}
           type="button"
         >

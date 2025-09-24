@@ -1,4 +1,4 @@
-import { forwardRef, type CSSProperties, type HTMLAttributes } from "react";
+import type { ComponentPropsWithRef, CSSProperties } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -12,30 +12,23 @@ const TONE_CLASSES = {
 
 type Tone = keyof typeof TONE_CLASSES;
 
+type DivPropsWithRef = ComponentPropsWithRef<"div">;
+
 export type BlankBackgroundProps = {
   tone?: Tone;
   style?: CSSProperties;
-} & Omit<HTMLAttributes<HTMLDivElement>, "style">;
+} & Omit<DivPropsWithRef, "style">;
 
 /**
  * Minimal surface background that keeps layout regions blank by default while
  * still allowing routes to opt-in to specific tones or custom utility classes.
  */
-export const BlankBackground = forwardRef<HTMLDivElement, BlankBackgroundProps>(
-  ({ tone = "default", className, children, style, ...props }, ref) => {
-    const toneClass = TONE_CLASSES[tone] ?? TONE_CLASSES.default;
+export function BlankBackground({ tone = "default", className, children, style, ref, ...props }: BlankBackgroundProps) {
+  const toneClass = TONE_CLASSES[tone] ?? TONE_CLASSES.default;
 
-    return (
-      <div
-        ref={ref}
-        className={cn("h-full w-full", toneClass, className)}
-        style={style}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  },
-);
-
-BlankBackground.displayName = "BlankBackground";
+  return (
+    <div ref={ref} className={cn("h-full w-full", toneClass, className)} style={style} {...props}>
+      {children}
+    </div>
+  );
+}

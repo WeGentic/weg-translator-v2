@@ -192,18 +192,7 @@ export function createLayoutStore(initialConfig?: LayoutConfig) {
       }
     },
     reset: () => {
-      const snapshot = createSnapshot();
-      set((state) => ({
-        ...state,
-        header: snapshot.header,
-        footer: snapshot.footer,
-        background: snapshot.background,
-        sidemenu: snapshot.sidemenu,
-        main: snapshot.main,
-        headerContent: snapshot.headerContent,
-        footerContent: snapshot.footerContent,
-        sidemenuContent: snapshot.sidemenuContent,
-      }));
+      set(() => createSnapshot());
     },
   }));
 
@@ -232,31 +221,6 @@ export type LayoutActions = {
   applyConfig: LayoutState["applyConfig"];
   reset: LayoutState["reset"];
 };
-
-// Legacy selectors retained temporarily so legacy components continue to type-check.
-export function useLayoutStore(): any {
-  throw new Error("useLayoutStore legacy hook is not available in the base layout skeleton.");
-}
-
-export function useHeaderVisible(): any {
-  throw new Error("useHeaderVisible legacy hook is not available in the base layout skeleton.");
-}
-
-export function useFooterVisible(): any {
-  throw new Error("useFooterVisible legacy hook is not available in the base layout skeleton.");
-}
-
-export function useSidemenuState(): any {
-  throw new Error("useSidemenuState legacy hook is not available in the base layout skeleton.");
-}
-
-export function useBackground(): any {
-  throw new Error("useBackground legacy hook is not available in the base layout skeleton.");
-}
-
-export function useSlots(): any {
-  throw new Error("useSlots legacy hook is not available in the base layout skeleton.");
-}
 
 function nextSidemenuMode(current: SidemenuMode): SidemenuMode {
   switch (current) {

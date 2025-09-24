@@ -26,27 +26,25 @@ describe("layout store", () => {
 
   it("merges runtime updates for regions", () => {
     const store = createLayoutStore();
-    const { setHeader, setSidemenu, cycleSidemenu } = store.getState();
-
-    setHeader({ mounted: true });
+    store.getState().setHeader({ mounted: true });
     expect(store.getState().header.height).toBe(DEFAULT_HEADER_HEIGHT);
 
-    setHeader({ height: 80, visible: false });
+    store.getState().setHeader({ height: 80, visible: false });
     expect(store.getState().header.height).toBe(80);
     expect(store.getState().header.visible).toBe(false);
 
-    setSidemenu({ mounted: true, mode: "expanded" });
+    store.getState().setSidemenu({ mounted: true, mode: "expanded" });
     expect(store.getState().sidemenu.mode).toBe("expanded");
     expect(store.getState().sidemenu.expandedWidth).toBe(DEFAULT_SIDEMENU_EXPANDED_WIDTH);
 
-    setSidemenu({ mode: "compact", compactWidth: 96 });
+    store.getState().setSidemenu({ mode: "compact", compactWidth: 96 });
     expect(store.getState().sidemenu.mode).toBe("compact");
     expect(store.getState().sidemenu.compactWidth).toBe(96);
 
-    setSidemenu({ mode: "hidden" });
+    store.getState().setSidemenu({ mode: "hidden" });
     expect(store.getState().sidemenu.mode).toBe("hidden");
 
-    cycleSidemenu();
+    store.getState().cycleSidemenu();
     expect(store.getState().sidemenu.mode).toBe("expanded");
   });
 
