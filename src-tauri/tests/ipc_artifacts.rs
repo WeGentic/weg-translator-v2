@@ -1,15 +1,17 @@
-use std::fs;
 use serde_json::json;
 use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
+use std::fs;
+use std::time::{Duration, Instant};
 use tempfile::{TempDir, tempdir};
+use tokio::sync::oneshot;
+use tokio::time::sleep;
 use uuid::Uuid;
 use weg_translator_lib::DbManager;
 use weg_translator_lib::NewProject;
 use weg_translator_lib::ProjectStatus as PStatus;
 use weg_translator_lib::ProjectType as PType;
 use weg_translator_lib::ipc_test::{
-    read_project_artifact_impl,
-    update_jliff_segment_impl,
+    read_project_artifact_impl, update_jliff_segment_impl, with_project_file_lock,
 };
 
 const MIGRATIONS: &[&str] = &[
@@ -55,7 +57,11 @@ async fn update_jliff_segment_updates_target() {
             "Target_translation": "Bonjour",
         })],
     });
-    fs::write(&jliff_path, serde_json::to_string_pretty(&jliff_doc).unwrap()).expect("seed jliff");
+    fs::write(
+        &jliff_path,
+        serde_json::to_string_pretty(&jliff_doc).unwrap(),
+    )
+    .expect("seed jliff");
 
     let result = update_jliff_segment_impl(
         &manager,
@@ -89,7 +95,11 @@ async fn update_jliff_segment_rejects_unknown_transunit() {
         "Target_language": "fr-FR",
         "Transunits": [],
     });
-    fs::write(&jliff_path, serde_json::to_string_pretty(&jliff_doc).unwrap()).expect("seed jliff");
+    fs::write(
+        &jliff_path,
+        serde_json::to_string_pretty(&jliff_doc).unwrap(),
+    )
+    .expect("seed jliff");
 
     let err = update_jliff_segment_impl(
         &manager,
@@ -102,6 +112,68 @@ async fn update_jliff_segment_rejects_unknown_transunit() {
     .expect_err("missing transunit should error");
 
     assert!(err.to_string().contains("was not found"));
+}
+
+#[tokio::test]
+async fn update_jliff_segment_respects_file_lock() {
+    let (manager, project_id, _temp, root) = seed_project().await;
+    let jliff_rel = "jliff/concurrent.jliff.json";
+    let jliff_path = root.join(jliff_rel);
+    fs::create_dir_all(jliff_path.parent().unwrap()).expect("create jliff dir");
+    let jliff_doc = json!({
+        "Project_name": "Demo",
+        "Project_ID": "proj-1",
+        "File": "demo.xlf",
+        "User": "tester",
+        "Source_language": "en-US",
+        "Target_language": "fr-FR",
+        "Transunits": [json!({
+            "unit id": "u1",
+            "transunit_id": "seg-1",
+            "Source": "Hello",
+            "Target_translation": "Bonjour",
+        })],
+    });
+    fs::write(
+        &jliff_path,
+        serde_json::to_string_pretty(&jliff_doc).unwrap(),
+    )
+    .expect("seed jliff");
+
+    let lock_path = std::fs::canonicalize(&jliff_path).expect("canonicalize jliff path");
+    let (tx, rx) = oneshot::channel();
+    let hold_task = tokio::spawn(async move {
+        with_project_file_lock(&lock_path, move || async move {
+            let _ = tx.send(());
+            sleep(Duration::from_millis(150)).await;
+        })
+        .await;
+    });
+
+    rx.await.expect("lock guard acquired");
+
+    let start = Instant::now();
+    update_jliff_segment_impl(
+        &manager,
+        project_id,
+        jliff_rel,
+        "seg-1",
+        "Bonsoir".to_string(),
+    )
+    .await
+    .expect("update waits for lock");
+    let elapsed = start.elapsed();
+
+    assert!(
+        elapsed >= Duration::from_millis(140),
+        "expected update to wait on file lock, elapsed = {:?}",
+        elapsed
+    );
+
+    hold_task.await.expect("lock holder completed");
+
+    let updated = fs::read_to_string(&jliff_path).expect("read updated jliff");
+    assert!(updated.contains("Bonsoir"));
 }
 
 async fn seed_project() -> (DbManager, Uuid, TempDir, std::path::PathBuf) {

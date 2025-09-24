@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="en-US" trgLang="fr-FR">
+  <file id="f1" original="sample.docx">
+    <unit id="intro">
+      <segment id="1">
+        <source>Hello world</source>
+        <target>Bonjour le monde</target>
+      </segment>
+    </unit>
+    <unit id="body">
+      <originalData>
+        <data id="ph1"><![CDATA[<w:b/>]]></data>
+      </originalData>
+      <segment id="2">
+        <source>Dear <ph id="name" dataRef="ph1"/> customer</source>
+        <target>Cher <ph id="name" dataRef="ph1"/> client</target>
+      </segment>
+    </unit>
+    <unit id="footer">
+      <originalData>
+        <data id="d1"><![CDATA[<w:pStyle w:val="Strong"/>]]></data>
+      </originalData>
+      <segment id="3">
+        <source>Total: <pc id="fmt1" dataRef="d1"><ph id="count" dataRef="d1"/></pc> items</source>
+        <target>Total : <pc id="fmt1" dataRef="d1"><ph id="count" dataRef="d1"/></pc> articles</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

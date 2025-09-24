@@ -1,15 +1,17 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
+use std::future::Future;
 use std::io::ErrorKind;
 use std::path::{Component, Path, PathBuf};
+use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
 use log::{debug, error, info, warn};
 use serde::Serialize;
 use tauri::async_runtime::spawn;
-use tauri::{AppHandle, Emitter, Manager, State};
 use tauri::ipc::InvokeError;
-use tokio::{fs, time::sleep};
+use tauri::{AppHandle, Emitter, Manager, State};
+use tokio::{fs, sync::Mutex as AsyncMutex, time::sleep};
 use uuid::Uuid;
 
 use super::dto::{
@@ -107,6 +109,44 @@ fn fs_error(action: &str, error: std::io::Error) -> IpcError {
         "filesystem error while attempting to {action}: {error}"
     );
     IpcError::Internal("File system operation failed. Check folder permissions and retry.".into())
+}
+
+type FileLock = Arc<AsyncMutex<()>>;
+
+struct FileLockRegistry {
+    locks: AsyncMutex<HashMap<PathBuf, FileLock>>,
+}
+
+impl FileLockRegistry {
+    fn new() -> Self {
+        Self {
+            locks: AsyncMutex::new(HashMap::new()),
+        }
+    }
+
+    async fn lock_for_path(&self, path: &Path) -> FileLock {
+        let mut map = self.locks.lock().await;
+        Arc::clone(
+            map.entry(path.to_path_buf())
+                .or_insert_with(|| Arc::new(AsyncMutex::new(()))),
+        )
+    }
+}
+
+static FILE_LOCKS: OnceLock<FileLockRegistry> = OnceLock::new();
+
+fn file_lock_registry() -> &'static FileLockRegistry {
+    FILE_LOCKS.get_or_init(FileLockRegistry::new)
+}
+
+pub async fn with_project_file_lock<F, Fut, T>(path: &Path, work: F) -> T
+where
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = T>,
+{
+    let lock = file_lock_registry().lock_for_path(path).await;
+    let _guard = lock.lock().await;
+    work().await
 }
 
 #[tauri::command]
@@ -1473,67 +1513,79 @@ pub async fn update_jliff_segment_impl(
 ) -> Result<UpdateJliffSegmentResultDto, IpcError> {
     let root = project_root(db, project_id).await?;
     let artifact_path = resolve_project_relative_path(&root, jliff_rel_path, "resolve JLIFF path")?;
+    let transunit_id = transunit_id.to_owned();
+    let new_target_value = new_target;
+    let path_for_lock = artifact_path.clone();
 
-    let current = fs::read_to_string(&artifact_path).await.map_err(|error| {
-        if error.kind() == ErrorKind::NotFound {
-            return IpcError::Validation(format!(
-                "JLIFF document '{jliff_rel_path}' was not found for the requested project."
-            ));
+    with_project_file_lock(&artifact_path, move || {
+        let artifact_path = path_for_lock.clone();
+        let transunit_id = transunit_id.clone();
+        let new_target = new_target_value.clone();
+        async move {
+            let current = fs::read_to_string(&artifact_path).await.map_err(|error| {
+                if error.kind() == ErrorKind::NotFound {
+                    return IpcError::Validation(format!(
+                        "JLIFF document '{jliff_rel_path}' was not found for the requested project."
+                    ));
+                }
+                error!(
+                    target: "ipc::projects",
+                    "failed to read JLIFF document {}: {error}",
+                    artifact_path.display()
+                );
+                fs_error("read JLIFF document", error)
+            })?;
+
+            let mut document: JliffDocument = serde_json::from_str(&current).map_err(|error| {
+                error!(
+                    target: "ipc::projects",
+                    "failed to parse JLIFF document {}: {error}",
+                    artifact_path.display()
+                );
+                IpcError::Internal("Stored JLIFF document is invalid JSON.".into())
+            })?;
+
+            let Some(transunit) = document
+                .transunits
+                .iter_mut()
+                .find(|unit| unit.transunit_id == transunit_id)
+            else {
+                return Err(IpcError::Validation(format!(
+                    "Transunit '{transunit_id}' was not found in the provided JLIFF document."
+                )));
+            };
+
+            transunit.target_translation = new_target;
+
+            let payload = serde_json::to_string_pretty(&document).map_err(|error| {
+                error!(
+                    target: "ipc::projects",
+                    "failed to serialize updated JLIFF document {}: {error}",
+                    artifact_path.display()
+                );
+                IpcError::Internal("Failed to serialize updated JLIFF document.".into())
+            })?;
+
+            fs::write(&artifact_path, payload).await.map_err(|error| {
+                error!(
+                    target: "ipc::projects",
+                    "failed to write updated JLIFF document {}: {error}",
+                    artifact_path.display()
+                );
+                fs_error("write JLIFF document", error)
+            })?;
+
+            let updated_at = time::OffsetDateTime::now_utc()
+                .format(&time::format_description::well_known::Rfc3339)
+                .unwrap_or_else(|_| time::OffsetDateTime::now_utc().to_string());
+
+            Ok(UpdateJliffSegmentResultDto {
+                updated_count: 1,
+                updated_at,
+            })
         }
-        error!(
-            target: "ipc::projects",
-            "failed to read JLIFF document {}: {error}",
-            artifact_path.display()
-        );
-        fs_error("read JLIFF document", error)
-    })?;
-
-    let mut document: JliffDocument = serde_json::from_str(&current).map_err(|error| {
-        error!(
-            target: "ipc::projects",
-            "failed to parse JLIFF document {}: {error}",
-            artifact_path.display()
-        );
-        IpcError::Internal("Stored JLIFF document is invalid JSON.".into())
-    })?;
-
-    let Some(transunit) = document
-        .transunits
-        .iter_mut()
-        .find(|unit| unit.transunit_id == transunit_id) else {
-        return Err(IpcError::Validation(format!(
-            "Transunit '{transunit_id}' was not found in the provided JLIFF document."
-        )));
-    };
-
-    transunit.target_translation = new_target;
-
-    let payload = serde_json::to_string_pretty(&document).map_err(|error| {
-        error!(
-            target: "ipc::projects",
-            "failed to serialize updated JLIFF document {}: {error}",
-            artifact_path.display()
-        );
-        IpcError::Internal("Failed to serialize updated JLIFF document.".into())
-    })?;
-
-    fs::write(&artifact_path, payload).await.map_err(|error| {
-        error!(
-            target: "ipc::projects",
-            "failed to write updated JLIFF document {}: {error}",
-            artifact_path.display()
-        );
-        fs_error("write JLIFF document", error)
-    })?;
-
-    let updated_at = time::OffsetDateTime::now_utc()
-        .format(&time::format_description::well_known::Rfc3339)
-        .unwrap_or_else(|_| time::OffsetDateTime::now_utc().to_string());
-
-    Ok(UpdateJliffSegmentResultDto {
-        updated_count: 1,
-        updated_at,
     })
+    .await
 }
 
 async fn project_root(db: &DbManager, project_id: Uuid) -> Result<PathBuf, IpcError> {
@@ -1562,16 +1614,23 @@ fn resolve_project_relative_path(
 ) -> Result<PathBuf, IpcError> {
     let trimmed = rel_path.trim();
     if trimmed.is_empty() {
-        return Err(IpcError::Validation("Artifact path cannot be empty.".into()));
+        return Err(IpcError::Validation(
+            "Artifact path cannot be empty.".into(),
+        ));
     }
 
     let rel = Path::new(trimmed);
     if rel.is_absolute() {
-        return Err(IpcError::Validation("Artifact path must be relative to the project root.".into()));
+        return Err(IpcError::Validation(
+            "Artifact path must be relative to the project root.".into(),
+        ));
     }
 
     for component in rel.components() {
-        if matches!(component, Component::ParentDir | Component::RootDir | Component::Prefix(_)) {
+        if matches!(
+            component,
+            Component::ParentDir | Component::RootDir | Component::Prefix(_)
+        ) {
             return Err(IpcError::Validation(
                 "Artifact path cannot traverse outside the project root.".into(),
             ));

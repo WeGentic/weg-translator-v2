@@ -39,3 +39,7 @@ jsonschema = "0.33.0"
 
 [dev-dependencies]
 tempfile = "3.23.0"
+
+[[bin]]
+name = "seed-demo-project"
+path = "src/bin/seed_demo_project.rs"
