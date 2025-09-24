@@ -25,6 +25,8 @@ export interface ToastOptions {
 
 interface ToastRecord extends ToastOptions {
   id: string;
+  signature: string;
+  createdAt: number;
 }
 
 interface ToastController {
@@ -59,33 +61,51 @@ function useToastController(): ToastController {
     [clearTimer],
   );
 
+  const createSignature = useCallback((options: ToastOptions) => {
+    return [options.variant ?? "default", options.title ?? "", options.description ?? "", options.action?.label ?? ""].join(
+      "|",
+    );
+  }, []);
+
   const toast = useCallback(
     ({ id, duration, ...options }: ToastOptions) => {
-      const toastId = id ?? `toast-${Date.now()}-${idRef.current++}`;
+      let effectiveId = id ?? `toast-${Date.now()}-${idRef.current++}`;
       const timeout = Math.max(duration ?? DEFAULT_DURATION, 0);
+      const signature = createSignature(options);
+      const issuedAt = Date.now();
 
       setToasts((previous) => {
-        const filtered = previous.filter((item) => item.id !== toastId);
+        let matching = previous.find((item) => item.id === effectiveId);
+        if (!matching) {
+          matching = previous.find((item) => item.signature === signature);
+          if (matching) {
+            effectiveId = matching.id;
+          }
+        }
+
+        const filtered = previous.filter((item) => item.id !== effectiveId);
         const next: ToastRecord = {
           ...options,
-          id: toastId,
+          id: effectiveId,
           variant: options.variant ?? "default",
+          signature,
+          createdAt: issuedAt,
         };
         const capped = [...filtered, next];
         return capped.slice(-5);
       });
 
-      if (timeout > 0) {
-        clearTimer(toastId);
+      if (timeout > 0 && typeof window !== "undefined") {
+        clearTimer(effectiveId);
         const handle = window.setTimeout(() => {
-          dismiss(toastId);
+          dismiss(effectiveId);
         }, timeout);
-        timeouts.current.set(toastId, handle);
+        timeouts.current.set(effectiveId, handle);
       }
 
-      return toastId;
+      return effectiveId;
     },
-    [clearTimer, dismiss],
+    [clearTimer, createSignature, dismiss],
   );
 
   const clearAll = useCallback(() => {
@@ -171,6 +191,7 @@ function ToastViewport({ controller }: { controller: ToastController }) {
 
 function ToastItem({ toast, dismiss }: { toast: ToastRecord; dismiss: (id: string) => void }) {
   const { id, title, description, variant = "default", action } = toast;
+  const isDestructive = variant === "destructive";
 
   const handleAction = useCallback(() => {
     if (action) {
@@ -183,14 +204,19 @@ function ToastItem({ toast, dismiss }: { toast: ToastRecord; dismiss: (id: strin
 
   return (
     <Alert
-      variant={variant === "destructive" ? "destructive" : "default"}
-      className="pointer-events-auto relative w-full max-w-sm border border-border/70 bg-background/95 shadow-lg shadow-black/10 backdrop-blur"
+      variant={isDestructive ? "destructive" : "default"}
+      className={cn(
+        "pointer-events-auto relative w-full max-w-sm rounded-xl border shadow-lg backdrop-blur",
+        isDestructive
+          ? "border-destructive/50 bg-destructive/10 text-destructive"
+          : "border-border/50 bg-card/95 text-card-foreground",
+      )}
     >
       {title ? <AlertTitle>{title}</AlertTitle> : null}
       {description ? <AlertDescription>{description}</AlertDescription> : null}
       {action ? (
         <div className="col-start-2 mt-2 flex items-center gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={handleAction}>
+          <Button type="button" size="sm" variant={isDestructive ? "destructive" : "secondary"} onClick={handleAction}>
             {action.label}
           </Button>
         </div>

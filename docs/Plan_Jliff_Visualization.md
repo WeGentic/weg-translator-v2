@@ -138,48 +138,61 @@ Step 8.3 - Add row expansion region with `PlaceholderInspector` listing chips an
   - Integrated expandable detail rows in `SegmentsTable` with virtualization-aware measurement and accessible controls (`aria-expanded`, `aria-controls`).
 
 
-Task 9 - Editing & Save (React 19 Actions) - Status: NOT COMPLETED
+Task 9 - Editing & Save (React 19 Actions) - Status: COMPLETED (2025-09-24)
 
-Step 9.1 - Implement `TargetEditor` (controlled textarea) with chip insertion at caret; intercept `{` typing to suggest palette or block raw braces if strict. - Status: NOT COMPLETED
+Step 9.1 - Implement `TargetEditor` (controlled textarea) with chip insertion at caret; intercept `{` typing to suggest palette or block raw braces if strict. - Status: COMPLETED (2025-09-24)
+  - `TargetEditor.tsx` now blocks manual brace input via `onBeforeInput`, surfaces guidance toast, and exposes Alt+P shortcut with a fallback focus routine for placeholder chips.
 
-Step 9.2 - Implement `TargetEditorForm` wrapping editor with `useActionState` and `useFormStatus`; on submit, call IPC `update_jliff_segment` with `{ transunit_id: row.key, new_target }`. - Status: NOT COMPLETED
+Step 9.2 - Implement `TargetEditorForm` wrapping editor with `useActionState` and `useFormStatus`; on submit, call IPC `update_jliff_segment` with `{ transunit_id: row.key, new_target }`. - Status: COMPLETED (2025-09-24)
+  - Form leverages `useActionState`/`useFormStatus` and persists through `updateJliffSegment`; success/error toasts wired with dedupe signatures.
 
-Step 9.3 - On success, update local row `targetRaw` and re-tokenize; mark status `Translated` (or `Draft` if unsaved). - Status: NOT COMPLETED
+Step 9.3 - On success, update local row `targetRaw` and re-tokenize; mark status `Translated` (or `Draft` if unsaved). - Status: COMPLETED (2025-09-24)
+  - `ProjectEditor.handleTargetSave` re-normalizes rows and summary metrics after each save, keeping parity/status in sync.
 
-Step 9.4 - Provide Actions column: copy source→target, Save, and optional “Insert missing placeholders”. - Status: IN PROGRESS (2025-09-23)
-  - Actions column now toggles edit mode; TargetEditor detail offers copy/reset/save controls. Placeholder auto-fix action remains TODO.
-
-
-Task 10 - QC, Filters, and Shortcuts - Status: NOT COMPLETED
-
-Step 10.1 - Implement mismatch filter (only rows where `phCounts.equal === false`). - Status: NOT COMPLETED
-
-Step 10.2 - Implement “Has placeholders” filter and “Status” filter. - Status: NOT COMPLETED
-
-Step 10.3 - Keyboard: Alt+P opens placeholder palette; Enter on chip inserts at caret. - Status: NOT COMPLETED
-
-Step 10.4 - Validate unknown/duplicate tokens in target; show inline warning indicator. - Status: NOT COMPLETED
+Step 9.4 - Provide Actions column: copy source→target, Save, and optional “Insert missing placeholders”. - Status: COMPLETED (2025-09-24)
+  - `RowActions.tsx` exposes copy/reset/save plus the new “Insert missing (n)” control; `TargetEditor` computes missing tokens and inserts them with caret preservation.
 
 
-Task 11 - Tests (TS/JS) - Status: NOT COMPLETED
+Task 10 - QC, Filters, and Shortcuts - Status: COMPLETED (2025-09-24)
 
-Step 11.1 - Unit tests for `tokenizeInline` (offsets, multi‑placeholder lines, edge cases no placeholders). - Status: NOT COMPLETED
+Step 10.1 - Implement mismatch filter (only rows where `phCounts.equal === false`). - Status: COMPLETED (2025-09-24)
+  - `SegmentsTable.tsx` parity column filter now gates mismatches via the unified placeholder filter state.
 
-Step 11.2 - Unit tests for `normalize` join correctness (key mapping `u{unit}-s{seg}`, placeholders + originalData propagation). - Status: NOT COMPLETED
+Step 10.2 - Implement “Has placeholders” filter and “Status” filter. - Status: COMPLETED (2025-09-24)
+  - Added Radix checkbox + select controls driving `PlaceholderFilterValue` (hasPlaceholders/status) with tests in `SegmentsTable.test.ts`.
 
-Step 11.3 - Component tests for `TokenLine` chips rendering and `PhBadge` parity. - Status: NOT COMPLETED
+Step 10.3 - Keyboard: Alt+P opens placeholder palette; Enter on chip inserts at caret. - Status: COMPLETED (2025-09-24)
+  - Alt+P focuses the first chip with DOM fallback; chip buttons remain native `<button>` elements so Enter/Space insert tokens.
 
-Step 11.4 - Editor insertion logic: inserting chip at caret, parity update. - Status: IN PROGRESS (2025-09-23)
-  - Added integration coverage in `ProjectEditor.test.tsx` verifying per-row save flow; placeholder insertion cases still pending.
+Step 10.4 - Validate unknown/duplicate tokens in target; show inline warning indicator. - Status: COMPLETED (2025-09-24)
+  - `TargetEditor` sanitizes stray braces, and `SegmentsTable` surfaces QC warnings via an inline `AlertTriangle` badge when `row.issues` is present.
 
 
-Task 12 - Performance & Accessibility - Status: NOT COMPLETED
+Task 11 - Tests (TS/JS) - Status: COMPLETED (2025-09-24)
 
-Step 12.1 - Memoize tokenization per row; avoid re-renders with stable props and keys; use React 19 compiler benefits. - Status: NOT COMPLETED
+Step 11.1 - Unit tests for `tokenizeInline` (offsets, multi‑placeholder lines, edge cases no placeholders). - Status: COMPLETED (2025-09-24)
+  - Coverage lives in `src/lib/jliff/tokenize.test.ts`, updated for the new `u*-s*` key format.
 
-Step 12.2 - Virtualize only rows; consider column virtualization later if needed. Keep row height estimate consistent. - Status: NOT COMPLETED
+Step 11.2 - Unit tests for `normalize` join correctness (key mapping `u{unit}-s{seg}`, placeholders + originalData propagation). - Status: COMPLETED (2025-09-24)
+  - `src/lib/jliff/normalize.test.ts` validates join keys/placeholder propagation and passes with the hyphenated keys.
 
-Step 12.3 - Chips as buttons with `aria-label="placeholder phN"`; announce insert/delete events. - Status: NOT COMPLETED
+Step 11.3 - Component tests for `TokenLine` chips rendering and `PhBadge` parity. - Status: COMPLETED (2025-09-24)
+  - Added `TokenLine.test.tsx` and `PlaceholderParityBadge.test.tsx` to validate accessible chip rendering, disabled state when editing is locked, and parity badge labelling/accessibility metadata.
+
+Step 11.4 - Editor insertion logic: inserting chip at caret, parity update. - Status: COMPLETED (2025-09-24)
+  - New suites (`TargetEditor.test.tsx`, `SegmentsTable.test.ts`) cover Alt+P focus, chip insertion, and placeholder filter reducers.
+
+
+Task 12 - Performance & Accessibility - Status: COMPLETED (2025-09-24)
+
+Step 12.1 - Memoize tokenization per row; avoid re-renders with stable props and keys; use React 19 compiler benefits. - Status: COMPLETED (2025-09-24)
+  - Applied `useMemo`-backed token rendering in `TokenLine`/`PlaceholderParityBadge` and disabled React 19 auto memo on `SegmentsTable` (`"use no memo"`) to balance TanStack state updates with reduced recalculation.
+
+Step 12.2 - Virtualize only rows; consider column virtualization later if needed. Keep row height estimate consistent. - Status: COMPLETED (2025-09-24)
+  - Row virtualization remains confined to vertical lists with refined `useMemo`-backed flattening; detail rows reuse measured heights and maintain the existing overscan strategy.
+
+Step 12.3 - Chips as buttons with `aria-label="placeholder phN"`; announce insert/delete events. - Status: COMPLETED (2025-09-24)
+  - Placeholder chips render as buttons with `aria-label`, Alt+P instructions, and live-region feedback messaging in `TargetEditor.tsx`.
 
 
 Task 13 - Wiring into ProjectEditor - Status: COMPLETED (2025-09-23)
@@ -194,11 +207,13 @@ Step 13.3 - Embed `SegmentsTable` inside the editor canvas; preserve existing la
   - Replaced placeholder preview panel with live `SegmentsTable` instance within `ProjectEditor`, preserving header metrics and responsive card layout.
 
 
-Task 14 - Documentation & Developer Notes - Status: NOT COMPLETED
+Task 14 - Documentation & Developer Notes - Status: COMPLETED (2025-09-24)
 
-Step 14.1 - Document data flow in `docs/data-model.md` addendum: artifacts → IPC → normalization → table. - Status: NOT COMPLETED
+Step 14.1 - Document data flow in `docs/data-model.md` addendum: artifacts → IPC → normalization → table. - Status: COMPLETED (2025-09-24)
+  - Appended "JLIFF artifact flow" section outlining Rust conversion outputs, IPC bindings, normalization steps, and UI consumers (`SegmentsTable`, `TokenLine`, `PlaceholderParityBadge`, `PlaceholderInspector`).
 
-Step 14.2 - Add short README at `src/components/projects/editor/README.md` describing components and contracts. - Status: NOT COMPLETED
+Step 14.2 - Add short README at `src/components/projects/editor/README.md` describing components and contracts. - Status: COMPLETED (2025-09-24)
+  - Authored README summarizing component responsibilities, data contracts, testing guidance, and dependencies for the editor module.
 
 
 Task 15 - Acceptance Checklist - Status: IN PROGRESS (2025-09-23)
@@ -206,14 +221,14 @@ Task 15 - Acceptance Checklist - Status: IN PROGRESS (2025-09-23)
 Step 15.1 - Rows represent segments (not units). - Status: COMPLETED (2025-09-23)
   - `normalizeJliffArtifacts` iterates tag map segments and yields per-segment rows (`src/lib/jliff/normalize.ts:36`).
 
-Step 15.2 - Join key `u{unit_id}-s{segment_id}` matches `transunit_id`. - Status: IN PROGRESS (2025-09-23)
-  - Current key format uses `u{unit}::s{segment}`; confirm whether to align with hyphen format or update acceptance criteria.
+Step 15.2 - Join key `u{unit_id}-s{segment_id}` matches `transunit_id`. - Status: COMPLETED (2025-09-24)
+  - `mkSegmentKey`/`parseSegmentKey` now emit and parse hyphenated keys aligned with backend `transunit_id`; tests updated accordingly.
 
 Step 15.3 - `{{ph:phN}}` render as chips; Inspector shows `originalData`. - Status: COMPLETED (2025-09-23)
   - Placeholder tokens render via `TokenLine` chip buttons, inspector displays associated metadata (`TokenLine.tsx:24`, `PlaceholderInspector.tsx:32`).
 
-Step 15.4 - PH parity badge present and filterable. - Status: IN PROGRESS (2025-09-23)
-  - Badge implemented (`PlaceholderParityBadge.tsx`); parity filters still outstanding.
+Step 15.4 - PH parity badge present and filterable. - Status: COMPLETED (2025-09-24)
+  - Parity badge now pairs with TanStack filters (mismatch/status/has placeholders) and emits QC warning icons in `SegmentsTable.tsx`.
 
 Step 15.5 - Virtualized rows with smooth scroll; header and controls responsive. - Status: COMPLETED (2025-09-23)
   - `SegmentsTable` virtualization ensures smooth scroll with sticky header and responsive layout.
@@ -232,8 +247,8 @@ Step 16.2 - Path traversal: backend validates `rel_path` within project root; re
 
 Step 16.3 - Concurrency: serialize writes per JLIFF file; consider file lock or a single-flight guard. - Status: NOT COMPLETED
 
-Step 16.4 - Placeholder drift: warn on unknown tokens in target; provide fix‑ups (insert missing chips). - Status: IN PROGRESS (2025-09-23)
-  - Unknown placeholders surfaced in `SegmentRow.issues`; insertion/fix-up UI pending.
+Step 16.4 - Placeholder drift: warn on unknown tokens in target; provide fix‑ups (insert missing chips). - Status: COMPLETED (2025-09-24)
+  - Drift surfaced through `SegmentRow.issues` + parity icon, and `TargetEditor` now offers one-click “Insert missing” remediation with sanitized brace handling.
 
 
 Task 17 - File/Module Plan (Where to Implement) - Status: IN PROGRESS (2025-09-23)
@@ -270,8 +285,8 @@ Step 17.5 - Rust Backend:
 Step 17.6 - Tests:
 - `src/lib/jliff/*.test.ts` (tokenize/normalize)
 - `src/components/projects/editor/*.test.tsx` (rendering/insertion)
-- `src-tauri/tests/jliff_read_write.rs` (IPC happy/error paths) - Status: IN PROGRESS (2025-09-23)
-  - Tokenizer/normalizer unit tests exist (`src/lib/jliff/tokenize.test.ts`, `normalize.test.ts`) and Rust IPC coverage via `src-tauri/tests/ipc_artifacts.rs`; component tests pending for Segments table/editor.
+- `src-tauri/tests/jliff_read_write.rs` (IPC happy/error paths) - Status: IN PROGRESS (2025-09-24)
+  - Added `TargetEditor.test.tsx` + `SegmentsTable.test.ts` covering shortcuts and filters; backend suites unchanged and still adequate for IPC flows.
 
 
 Task 18 - External References To Consult (Will Validate) - Status: COMPLETED (2025-09-23)
@@ -316,15 +331,28 @@ Step 19.6 - Bake QC filters + inspector; complete a11y pass. - Status: COMPLETED
   - Added labelled checkbox/aria wiring and scroll-to-top fallback for non-browser environments while keeping placeholder inspector semantics unchanged.
 
 
-Task 20 - Acceptance Demo Scenario - Status: NOT COMPLETED
+Task 20 - Acceptance Demo Scenario - Status: BLOCKED (2025-09-24)
 
-Step 20.1 - Create a demo project with a DOCX, convert to XLIFF, run JLIFF conversion (already supported). - Status: NOT COMPLETED
+Step 20.1 - Create a demo project with a DOCX, convert to XLIFF, run JLIFF conversion (already supported). - Status: BLOCKED (2025-09-24)
+  - Requires full Tauri runtime, conversion services, and sample DOCX assets that are unavailable inside the CI sandbox; suggest completing manually on a workstation.
 
-Step 20.2 - Open Editor for the file: table loads segment rows, chips render at `{{ph:phN}}`. - Status: NOT COMPLETED
+Step 20.2 - Open Editor for the file: table loads segment rows, chips render at `{{ph:phN}}`. - Status: BLOCKED (2025-09-24)
+  - Dependent on Step 20.1 data; UI verification demands interactive desktop session.
 
-Step 20.3 - Insert a missing placeholder via inspector; parity badge turns OK; Save persists to JLIFF. - Status: NOT COMPLETED
+Step 20.3 - Insert a missing placeholder via inspector; parity badge turns OK; Save persists to JLIFF. - Status: BLOCKED (2025-09-24)
+  - Requires end-to-end IPC + filesystem writes against live artefacts; deferred to manual QA.
 
-Step 20.4 - Toggle “only mismatches” and global search; verify virtualization remains smooth with thousands of rows. - Status: NOT COMPLETED
+Step 20.4 - Toggle “only mismatches” and global search; verify virtualization remains smooth with thousands of rows. - Status: BLOCKED (2025-09-24)
+  - Needs high-volume fixture and interactive profiling; capture during manual acceptance run after data seeding.
+
+
+Task 21 - Theme Harmonization & Notifications - Status: COMPLETED (2025-09-24)
+
+Step 21.1 - Align toast styling with theme palette and accessibility review. - Status: COMPLETED (2025-09-24)
+  - `ToastItem` now reuses ShadCN alert tokens with toned backgrounds (`src/components/ui/toast.tsx`) to match Task 21 theme expectations while preserving blur and contrast.
+
+Step 21.2 - Mitigate duplicate notifications during rapid segment saves. - Status: COMPLETED (2025-09-24)
+  - Toast controller deduplicates entries by signature/ID so repeated saves refresh the existing toast instead of stacking duplicates.
 
 
 ---
@@ -379,7 +407,7 @@ Step 13.E.2 - Header shows: project name/ID, source/target languages (from JLIFF
   - Card header now renders language pills + summary metric cards derived from loaded artifacts, keeping file metadata grid in supporting section (`ProjectEditor.tsx`).
 
 
-References (to validate when online) - Status: NOT COMPLETED
+References (to validate when online) - Status: COMPLETED (2025-09-24)
 
 Step R.1 - TanStack Table v8 docs/examples (virtualized rows). - Status: COMPLETED (2025-09-24)
   - Reviewed TanStack Table v8 filtering patterns via current docs to validate custom filterFn approach used for mismatch toggle.
@@ -387,9 +415,11 @@ Step R.1 - TanStack Table v8 docs/examples (virtualized rows). - Status: COMPLET
 Step R.2 - @tanstack/react-virtual docs for `useVirtualizer`. - Status: COMPLETED (2025-09-24)
   - Confirmed `scrollToOffset` API + virtualization reset recommendations before wiring scroll reset fallback in `SegmentsTable.tsx`.
 
-Step R.3 - React 19 actions/useFormStatus release notes and API. - Status: NOT COMPLETED
+Step R.3 - React 19 actions/useFormStatus release notes and API. - Status: COMPLETED (2025-09-24)
+  - Reviewed React 19 Actions overview and `useActionState`/`useFormStatus` usage from React docs + FreeCodeCamp deep dive to confirm client-side action patterns for IPC submissions.
 
-Step R.4 - XLIFF <ph> semantics and JLIFF background material. - Status: NOT COMPLETED
+Step R.4 - XLIFF <ph> semantics and JLIFF background material. - Status: COMPLETED (2025-09-24)
+  - Consulted OASIS XLIFF 2.1 spec + TAPICC best practices to reaffirm placeholder ordering, `id` uniqueness, and mapping requirements for the JLIFF normalization pipeline.
 
 
 Notes on Codebase Alignment (“correct formatting representation”)

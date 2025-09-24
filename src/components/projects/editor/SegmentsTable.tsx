@@ -1,3 +1,5 @@
+"use no memo";
+
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { rankItem } from "@tanstack/match-sorter-utils";
 import {
@@ -15,15 +17,22 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import type { CheckedState } from "@radix-ui/react-checkbox";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { SegmentRow } from "@/lib/jliff";
+import type { PlaceholderParityStatus, SegmentRow } from "@/lib/jliff";
 import { cn } from "@/lib/utils";
 
 import { PlaceholderInspector } from "./PlaceholderInspector";
@@ -47,12 +56,55 @@ const fuzzyGlobalFilter: FilterFn<SegmentRow> = (row, _columnId, value) => {
   return haystacks.some((candidate) => rankItem(candidate, search).passed);
 };
 
-const statusMismatchFilter: FilterFn<SegmentRow> = (row, _columnId, value) => {
+type PlaceholderFilterValue = {
+  mismatchesOnly?: boolean;
+  hasPlaceholdersOnly?: boolean;
+  status?: PlaceholderParityStatus;
+};
+
+const STATUS_FILTER_OPTIONS: Array<{ value: PlaceholderParityStatus | "all"; label: string }> = [
+  { value: "all", label: "All statuses" },
+  { value: "ok", label: "OK" },
+  { value: "missing", label: "Missing" },
+  { value: "extra", label: "Extra" },
+  { value: "unknown", label: "Unknown" },
+];
+
+const placeholderFilter: FilterFn<SegmentRow> = (row, _columnId, value) => {
   if (!value) {
     return true;
   }
-  return row.original.status !== "ok";
+  const filter = value as PlaceholderFilterValue;
+  if (filter.mismatchesOnly && row.original.status === "ok") {
+    return false;
+  }
+  if (filter.hasPlaceholdersOnly && row.original.placeholders.length === 0) {
+    return false;
+  }
+  if (filter.status && row.original.status !== filter.status) {
+    return false;
+  }
+  return true;
 };
+
+function normalizePlaceholderFilter(
+  value?: PlaceholderFilterValue | null,
+): PlaceholderFilterValue | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const next: PlaceholderFilterValue = {};
+  if (value.mismatchesOnly) {
+    next.mismatchesOnly = true;
+  }
+  if (value.hasPlaceholdersOnly) {
+    next.hasPlaceholdersOnly = true;
+  }
+  if (value.status) {
+    next.status = value.status;
+  }
+  return Object.keys(next).length > 0 ? next : undefined;
+}
 
 type VirtualRowEntry = {
   key: string;
@@ -189,12 +241,24 @@ export function SegmentsTable({
           align: "center" as const,
           label: "Placeholders",
         },
-        filterFn: "statusMismatch",
-        cell: ({ row }) => (
-          <div className="flex justify-center">
-            <PlaceholderParityBadge counts={row.original.placeholderCounts} status={row.original.status} />
-          </div>
-        ),
+        filterFn: "placeholder",
+        cell: ({ row }) => {
+          const hasIssues = Boolean(row.original.issues);
+          return (
+            <div className="flex items-center justify-center gap-2">
+              <PlaceholderParityBadge counts={row.original.placeholderCounts} status={row.original.status} />
+              {hasIssues ? (
+                <span
+                  className="inline-flex items-center text-amber-600"
+                  title="Placeholder quality issues detected"
+                  aria-label="Placeholder quality issues detected"
+                >
+                  <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                </span>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         id: "actions",
@@ -243,7 +307,7 @@ export function SegmentsTable({
     onExpandedChange: setExpanded,
     onColumnFiltersChange: setColumnFilters,
     filterFns: {
-      statusMismatch: statusMismatchFilter,
+      placeholder: placeholderFilter,
     },
     globalFilterFn: fuzzyGlobalFilter,
     getRowCanExpand: (row) => Boolean(row.original.segmentId),
@@ -255,8 +319,30 @@ export function SegmentsTable({
     enableExpanding: true,
   });
 
+  const updatePlaceholderFilter = useCallback(
+    (updater: (prev: PlaceholderFilterValue | undefined) => PlaceholderFilterValue | undefined) => {
+      const column = table.getColumn("parity");
+      if (!column) {
+        return;
+      }
+      column.setFilterValue((previous) => {
+        const prevValue = normalizePlaceholderFilter(previous as PlaceholderFilterValue | undefined);
+        const nextValue = updater(prevValue);
+        return normalizePlaceholderFilter(nextValue);
+      });
+    },
+    [table],
+  );
+
+  const placeholderFilterValue = table.getColumn("parity")?.getFilterValue() as
+    | PlaceholderFilterValue
+    | undefined;
+  const mismatchOnly = Boolean(placeholderFilterValue?.mismatchesOnly);
+  const hasPlaceholdersOnly = Boolean(placeholderFilterValue?.hasPlaceholdersOnly);
+  const statusFilter = placeholderFilterValue?.status ?? "all";
+
   const tableRows = table.getRowModel().rows;
-  const flatRows = buildFlatRows(tableRows);
+  const flatRows = useMemo(() => buildFlatRows(tableRows), [tableRows]);
   const columnCount = table.getAllLeafColumns().length;
 
   const rowVirtualizer = useVirtualizer({
@@ -287,15 +373,34 @@ export function SegmentsTable({
     scrollToTop();
   }, [activeFileId, scrollToTop]);
 
-  const mismatchOnly = columnFilters.some((filter) => filter.id === "parity" && Boolean(filter.value));
-
   const handleMismatchToggle = useCallback(
     (checked: CheckedState) => {
-      const next = checked === true;
-      const parityColumn = table.getColumn("parity");
-      parityColumn?.setFilterValue(next ? true : undefined);
+      updatePlaceholderFilter((prev) => ({
+        ...(prev ?? {}),
+        mismatchesOnly: checked === true ? true : undefined,
+      }));
     },
-    [table],
+    [updatePlaceholderFilter],
+  );
+
+  const handleHasPlaceholdersToggle = useCallback(
+    (checked: CheckedState) => {
+      updatePlaceholderFilter((prev) => ({
+        ...(prev ?? {}),
+        hasPlaceholdersOnly: checked === true ? true : undefined,
+      }));
+    },
+    [updatePlaceholderFilter],
+  );
+
+  const handleStatusChange = useCallback(
+    (nextValue: string) => {
+      updatePlaceholderFilter((prev) => ({
+        ...(prev ?? {}),
+        status: nextValue === "all" ? undefined : (nextValue as PlaceholderParityStatus),
+      }));
+    },
+    [updatePlaceholderFilter],
   );
 
   const virtualRows = rowVirtualizer.getVirtualItems();
@@ -315,6 +420,9 @@ export function SegmentsTable({
   );
 
   const mismatchLabelId = "segments-filter-mismatches-label";
+  const hasPlaceholdersLabelId = "segments-filter-placeholders-label";
+  const statusLabelId = "segments-filter-status-label";
+  const statusSelectId = "segments-filter-status";
 
   return (
     <section className={cn("flex h-full flex-col", className)} aria-label="Segments table" role="region">
@@ -333,20 +441,61 @@ export function SegmentsTable({
             </span>
           ) : null}
         </div>
-        <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-          <Checkbox
-            id="segments-filter-mismatches"
-            checked={mismatchOnly}
-            onCheckedChange={handleMismatchToggle}
-            aria-labelledby={mismatchLabelId}
-          />
-          <Label
-            id={mismatchLabelId}
-            htmlFor="segments-filter-mismatches"
-            className="cursor-pointer text-xs font-medium"
-          >
-            Only mismatches
-          </Label>
+        <div className="ml-auto flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="segments-filter-mismatches"
+              checked={mismatchOnly}
+              onCheckedChange={handleMismatchToggle}
+              aria-labelledby={mismatchLabelId}
+            />
+            <Label
+              id={mismatchLabelId}
+              htmlFor="segments-filter-mismatches"
+              className="cursor-pointer text-xs font-medium"
+            >
+              Only mismatches
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="segments-filter-placeholders"
+              checked={hasPlaceholdersOnly}
+              onCheckedChange={handleHasPlaceholdersToggle}
+              aria-labelledby={hasPlaceholdersLabelId}
+            />
+            <Label
+              id={hasPlaceholdersLabelId}
+              htmlFor="segments-filter-placeholders"
+              className="cursor-pointer text-xs font-medium"
+            >
+              Has placeholders
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label
+              id={statusLabelId}
+              htmlFor={statusSelectId}
+              className="text-xs font-medium"
+            >
+              Status
+            </Label>
+            <Select value={statusFilter} onValueChange={handleStatusChange} aria-labelledby={statusLabelId}>
+              <SelectTrigger
+                id={statusSelectId}
+                className="h-8 w-[150px] rounded-md border-border/70 bg-background/80 text-xs"
+              >
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent className="text-xs">
+                {STATUS_FILTER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value} className="text-xs">
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -544,3 +693,8 @@ export function SegmentsTable({
 }
 
 export default SegmentsTable;
+
+export const __TEST_ONLY__ = {
+  placeholderFilter,
+  normalizePlaceholderFilter,
+};

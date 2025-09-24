@@ -10,14 +10,32 @@ export interface PlaceholderDetails {
 }
 
 export function mkSegmentKey(unitId: string, segmentId: string): string {
-  return `u${unitId}::s${segmentId}`;
+  return `u${unitId}-s${segmentId}`;
 }
 
 export function parseSegmentKey(key: string): {
   unitId: string;
   segmentId: string;
 } {
-  const [, unitId = "", segmentId = ""] = key.match(/^u(.+?)::s(.+)$/) ?? [];
+  if (!key.startsWith("u")) {
+    return {
+      unitId: "",
+      segmentId: "",
+    };
+  }
+
+  const trimmed = key.slice(1);
+  const separatorIndex = trimmed.lastIndexOf("-s");
+  if (separatorIndex === -1) {
+    return {
+      unitId: trimmed,
+      segmentId: "",
+    };
+  }
+
+  const unitId = trimmed.slice(0, separatorIndex);
+  const segmentId = trimmed.slice(separatorIndex + 2);
+
   return {
     unitId,
     segmentId,
@@ -86,6 +104,14 @@ export function tokenizeText(text: string, cacheKey?: string): SegmentToken[] {
   }
 
   tokenCache.set(effectiveKey, tokens);
+  return tokens;
+}
+
+export function extractPlaceholderTokens(text: string): string[] {
+  const tokens: string[] = [];
+  for (const match of text.matchAll(PLACEHOLDER_PATTERN)) {
+    tokens.push(match[0]);
+  }
   return tokens;
 }
 

@@ -60,3 +60,13 @@ Migration `003_seed_demo_data.sql` ships a single sample record to populate the 
 - `DbManager::clear_history` removes rows where `status` is `completed` or `failed`, cascading into `translation_outputs` via the foreign key.
 
 Refer to `src-tauri/src/db/mod.rs` for the authoritative query implementations and helper structs returned over IPC.
+
+## JLIFF artifact flow
+
+1. `convert_xliff_to_jliff` (Rust) writes `project/<id>/jliff/*.jliff` alongside a `tag_map.json`, then stamps `project_file_conversions.jliff_rel_path`/`tag_map_rel_path` so the UI can resolve them relative to `ProjectDetails.root_path`.
+2. The frontend requests the stored artefacts through IPC (`read_project_artifact`, `update_jliff_segment`) exposed in `src-tauri/src/ipc/commands.rs`; `src/ipc/client.ts` wraps these calls for React components.
+3. `ProjectEditor` loads both documents, then pipes them into `normalizeJliffArtifacts` in `src/lib/jliff/normalize.ts`, which produces `SegmentRow` records with token metadata, placeholder chips, and parity counts.
+4. `SegmentsTable` (TanStack v8 + `@tanstack/react-virtual`) renders the rows, while `TokenLine`, `PlaceholderParityBadge`, and `PlaceholderInspector` present inline placeholders, parity status, and original tag metadata respectively.
+5. User edits are submitted via React 19 actions in `TargetEditor`; on success the JLIFF JSON is persisted through IPC and the local row cache is reconciled to keep the table in sync.
+
+This path keeps the backend authoritative for artefact storage while allowing the virtualized table to operate entirely on memoized, type-safe `SegmentRow` data.

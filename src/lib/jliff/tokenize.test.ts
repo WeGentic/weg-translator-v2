@@ -21,7 +21,7 @@ describe("tokenizeText", () => {
   });
 
   it("reuses cached results when the same cache key is provided", () => {
-    const key = composeTokenCacheKey("uunit::sseg", "source", "Hello", 0);
+    const key = composeTokenCacheKey("uunit-sseg", "source", "Hello", 0);
     const first = tokenizeText("Hello", key);
     const second = tokenizeText("Hello", key);
     expect(second).toBe(first);
@@ -36,7 +36,7 @@ describe("placeholder helpers", () => {
 
   it("generates and parses segment keys", () => {
     const key = mkSegmentKey("unit-1", "seg-1");
-    expect(key).toBe("uunit-1::sseg-1");
+    expect(key).toBe("uunit-1-sseg-1");
     expect(parseSegmentKey(key)).toEqual({ unitId: "unit-1", segmentId: "seg-1" });
   });
 });

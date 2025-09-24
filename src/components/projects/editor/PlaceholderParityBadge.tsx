@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import type { PlaceholderCounts, PlaceholderParityStatus } from "@/lib/jliff";
 import { cn } from "@/lib/utils";
 
@@ -14,16 +16,18 @@ export type PlaceholderParityBadgeProps = {
 };
 
 export function PlaceholderParityBadge({ counts, status }: PlaceholderParityBadgeProps) {
-  const statusLabel =
-    status === "ok"
-      ? "Parity OK"
-      : status === "missing"
-        ? `${counts.missing} placeholder${counts.missing === 1 ? " is" : "s are"} missing in target`
-        : status === "extra"
-          ? `${counts.extra} extra placeholder${counts.extra === 1 ? "" : "s"} in target`
-          : "Placeholder parity unknown";
-
-  const details = `Source ${counts.source} / Target ${counts.target} (missing ${counts.missing}, extra ${counts.extra})`;
+  const { statusLabel, details } = useMemo(() => {
+    const label =
+      status === "ok"
+        ? "Parity OK"
+        : status === "missing"
+          ? `${counts.missing} placeholder${counts.missing === 1 ? " is" : "s are"} missing in target`
+          : status === "extra"
+            ? `${counts.extra} extra placeholder${counts.extra === 1 ? "" : "s"} in target`
+            : "Placeholder parity unknown";
+    const descriptor = `Source ${counts.source} / Target ${counts.target} (missing ${counts.missing}, extra ${counts.extra})`;
+    return { statusLabel: label, details: descriptor };
+  }, [counts.extra, counts.missing, counts.source, counts.target, status]);
 
   return (
     <span

@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import type { SegmentToken } from "@/lib/jliff";
 import { cn } from "@/lib/utils";
 
@@ -14,52 +16,60 @@ export type TokenLineProps = {
 };
 
 export function TokenLine({ tokens, className, direction, onPlaceholderClick }: TokenLineProps) {
-  if (!tokens || tokens.length === 0) {
-    return <span className="text-sm italic text-muted-foreground">(empty)</span>;
-  }
+  const renderedTokens = useMemo(() => {
+    if (!tokens || tokens.length === 0) {
+      return [
+        <span key="empty" className="text-sm italic text-muted-foreground">
+          (empty)
+        </span>,
+      ];
+    }
 
-  const keyCounters = new Map<string, number>();
+    const keyCounters = new Map<string, number>();
+
+    return tokens.map((token) => {
+      const keyBase =
+        token.kind === "text"
+          ? `text:${token.value}`
+          : `ph:${token.placeholderId ?? token.value}`;
+      const occurrence = keyCounters.get(keyBase) ?? 0;
+      keyCounters.set(keyBase, occurrence + 1);
+      const elementKey = `${keyBase}:${occurrence}`;
+
+      if (token.kind === "text") {
+        return (
+          <span key={elementKey} className={TEXT_CLASS}>
+            {token.value}
+          </span>
+        );
+      }
+
+      const handleClick = onPlaceholderClick
+        ? () => {
+            onPlaceholderClick(token);
+          }
+        : undefined;
+
+      return (
+        <button
+          key={elementKey}
+          type="button"
+          className={CHIP_BASE_CLASS}
+          data-ph={token.value}
+          data-ph-id={token.placeholderId ?? undefined}
+          aria-label={`Placeholder ${token.value}`}
+          onClick={handleClick}
+          disabled={!onPlaceholderClick}
+        >
+          {token.value}
+        </button>
+      );
+    });
+  }, [onPlaceholderClick, tokens]);
 
   return (
     <div className={cn("flex flex-wrap items-start gap-1", className)} data-direction={direction}>
-      {tokens.map((token) => {
-        const keyBase =
-          token.kind === "text"
-            ? `text:${token.value}`
-            : `ph:${token.placeholderId ?? token.value}`;
-        const occurrence = keyCounters.get(keyBase) ?? 0;
-        keyCounters.set(keyBase, occurrence + 1);
-        const elementKey = `${keyBase}:${occurrence}`;
-
-        if (token.kind === "text") {
-          return (
-            <span key={elementKey} className={TEXT_CLASS}>
-              {token.value}
-            </span>
-          );
-        }
-
-        const handleClick = onPlaceholderClick
-          ? () => {
-              onPlaceholderClick(token);
-            }
-          : undefined;
-
-        return (
-          <button
-            key={elementKey}
-            type="button"
-            className={CHIP_BASE_CLASS}
-            data-ph={token.value}
-            data-ph-id={token.placeholderId ?? undefined}
-            aria-label={`Placeholder ${token.value}`}
-            onClick={handleClick}
-            disabled={!onPlaceholderClick}
-          >
-            {token.value}
-          </button>
-        );
-      })}
+      {renderedTokens}
     </div>
   );
 }

@@ -39,11 +39,15 @@ vi.mock("./RowActions", () => {
     canEdit,
     onCopySource,
     onReset,
+    onInsertMissingPlaceholders,
+    missingPlaceholderCount,
   }: {
     isDirty: boolean;
     canEdit: boolean;
     onCopySource: () => void;
     onReset: () => void;
+    onInsertMissingPlaceholders: () => void;
+    missingPlaceholderCount: number;
   }) => (
     <div data-testid="row-actions-mock">
       <button type="button" onClick={onCopySource} disabled={!canEdit}>
@@ -51,6 +55,13 @@ vi.mock("./RowActions", () => {
       </button>
       <button type="button" onClick={onReset} disabled={!canEdit}>
         Reset
+      </button>
+      <button
+        type="button"
+        onClick={onInsertMissingPlaceholders}
+        disabled={!canEdit || missingPlaceholderCount === 0}
+      >
+        Insert missing
       </button>
       <button type="submit" disabled={!canEdit || !isDirty}>
         Save
@@ -227,16 +238,16 @@ describe("ProjectEditor", () => {
 
     const mismatchToggle = await screen.findByRole("checkbox", { name: /Only mismatches/i });
 
-    expect(screen.getByText("u1::sseg-1")).toBeInTheDocument();
-    expect(screen.getByText("u1::sseg-2")).toBeInTheDocument();
+    expect(screen.getByText("u1-sseg-1")).toBeInTheDocument();
+    expect(screen.getByText("u1-sseg-2")).toBeInTheDocument();
 
     await user.click(mismatchToggle);
 
     await waitFor(() => {
-      expect(screen.queryByText("u1::sseg-2")).not.toBeInTheDocument();
+      expect(screen.queryByText("u1-sseg-2")).not.toBeInTheDocument();
     });
 
-    expect(screen.getByText("u1::sseg-1")).toBeInTheDocument();
+    expect(screen.getByText("u1-sseg-1")).toBeInTheDocument();
     expect(mismatchToggle).toHaveAttribute("aria-checked", "true");
   });
 

@@ -9,6 +9,8 @@ export interface RowActionsProps {
   isPendingExternal?: boolean;
   onCopySource: () => void;
   onReset: () => void;
+  onInsertMissingPlaceholders: () => void;
+  missingPlaceholderCount: number;
 }
 
 export function RowActions({
@@ -17,11 +19,14 @@ export function RowActions({
   isPendingExternal = false,
   onCopySource,
   onReset,
+  onInsertMissingPlaceholders,
+  missingPlaceholderCount,
 }: RowActionsProps) {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
   const pending = Boolean((useFormStatus() as unknown as FormStatus).pending);
   const isBusy = pending || isPendingExternal;
   const disableEditing = !canEdit || isBusy;
+  const disableInsertion = disableEditing || missingPlaceholderCount === 0;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -42,6 +47,16 @@ export function RowActions({
         disabled={!canEdit || isBusy || !isDirty}
       >
         Reset
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onInsertMissingPlaceholders}
+        disabled={disableInsertion}
+      >
+        Insert missing
+        {missingPlaceholderCount > 0 ? ` (${missingPlaceholderCount})` : ""}
       </Button>
       <div className="ml-auto flex items-center gap-2">
         {pending ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden="true" /> : null}
