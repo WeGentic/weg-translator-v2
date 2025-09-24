@@ -5,11 +5,11 @@
 - Remove legacy prop plumbing in favour of shared context/store usage.
 
 ## Key Changes
-- `src/components/layout/header/AppHeader.tsx`
+- `src/app/layout/chrome/header/AppHeader.tsx`
   - Derives sidemenu toggle label/icon without `useMemo`, consuming the store directly.
-- `src/components/layout/sidebar/AppSidebar.tsx`
+- `src/app/layout/chrome/sidebar/AppSidebar.tsx`
   - Reads `SidemenuState` from the store and adapts rendering for compact/hidden modes automatically.
-- `src/components/layout/footer/WorkspaceFooter.tsx`
+- `src/app/layout/chrome/footer/WorkspaceFooter.tsx`
   - Uses store actions to collapse/expand the footer slot.
 
 ## Validation

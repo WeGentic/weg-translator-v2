@@ -297,7 +297,7 @@ function Main({ children, scroll = "auto" }: MainProps) {
   return (
     <section
       role="main"
-      className="flex h-full w-full flex-col overflow-hidden"
+      className="flex h-full w-full flex-col overflow-hidden bg-transparent"
       style={{ gridColumn, gridRow: "2 / 3" }}
     >
       <div className={scroll === "auto" ? "flex-1 overflow-y-auto" : "flex-1 overflow-hidden"}>{children}</div>

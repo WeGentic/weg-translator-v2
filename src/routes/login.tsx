@@ -1,8 +1,7 @@
 import { useEffect } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { MainLayout, useLayoutActions } from "@/app/layout/MainLayout";
-import { AnimatedBackground } from "../components/AnimatedBackground";
+import { BlankBackground, MainLayout, useLayoutActions } from "@/app/layout";
 import { LoginForm } from "../components/LoginForm";
 
 export const Route = createFileRoute("/login")({
@@ -30,7 +29,7 @@ function LoginPage() {
     setHeaderContent(null);
     setFooterContent(null);
     setSidemenuContent(null);
-    setBackground({ mounted: true, visible: true, element: <AnimatedBackground /> });
+    setBackground({ mounted: true, visible: true, element: <BlankBackground tone="default" /> });
     return () => {
       setBackground({ element: null, mounted: false });
     };

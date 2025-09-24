@@ -6,7 +6,7 @@ Context snapshot (grounded in current code):
 - Project overview: `src/components/projects/overview/ProjectOverview.tsx`
 - Overview placeholder: `src/components/projects/overview/ProjectOverviewPlaceholder.tsx`
 - Projects list: `src/components/projects/ProjectsPanel.tsx`
-- Sidebar + main view switching: `src/App.tsx`, `src/components/layout/AppSidebar.tsx`
+- Sidebar + main view switching: `src/App.tsx`, `src/app/layout/chrome/sidebar/AppSidebar.tsx`
 - ShadCN components present under `src/components/ui/*` (Button, Card, Dialog, Table, Separator, etc.)
 
 Assumptions:
@@ -23,7 +23,7 @@ Step 1.1.2 - Introduce a new pseudo-key for Editor area (e.g., `editor:<projectI
 Details: Added `EDITOR_VIEW_PREFIX`, `EditorViewKey`, `toEditorViewKey`, and `parseEditorProjectIdFromKey` in `src/App.tsx`. `MainView` now supports both `project:<id>` and `editor:<id>`.
 
 Sub-task 1.2 - Sidebar sections and sticky Settings - Status: COMPLETED
-Step 1.2.1 - Update `src/components/layout/AppSidebar.tsx` to support two sections: “Project” (Projects + open projects) and “Editor” (project-specific editor views). Add a visually separated sticky footer for Settings - Status: COMPLETED
+Step 1.2.1 - Update `src/app/layout/chrome/sidebar/AppSidebar.tsx` to support two sections: “Project” (Projects + open projects) and “Editor” (project-specific editor views). Add a visually separated sticky footer for Settings - Status: COMPLETED
 Details: Refactored `AppSidebar` to render two `<nav>` groups with `temporaryItems` under Projects and `editorItems` for Editor. Introduced sticky footer region for Settings.
 Step 1.2.2 - Implement a `footer` region using `sticky bottom-0 border-t border-border bg-background` containing a single Settings button (icon + label), separated by a `Separator` or border - Status: COMPLETED
 Details: Added footer container with `sticky bottom-0 border-t border-border bg-background/70 p-2`; moved the Settings item into this footer automatically.

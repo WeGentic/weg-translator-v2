@@ -16,7 +16,7 @@ export function WorkspaceFooter({
   const setFooter = useLayoutActions((state) => state.setFooter);
 
   return (
-    <footer className="sticky bottom-0 z-30 flex h-14 w-full items-center justify-between border-t border-border/60 bg-background/90 px-6 text-xs text-muted-foreground backdrop-blur">
+    <footer className="sticky bottom-0 z-30 flex h-14 w-full items-center justify-between border-t border-border/60 bg-transparent px-6 text-xs text-muted-foreground backdrop-blur">
       <div className="flex items-center gap-6">
         <FooterMetric label="App" value={health?.appVersion ?? "—"} />
         <FooterMetric label="Tauri" value={health?.tauriVersion ?? "—"} />

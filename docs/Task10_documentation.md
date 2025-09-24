@@ -9,7 +9,7 @@
   - Uses the new `ScreenGuard` alias as the sole guard instance.
 - `src/app/layout/MainLayout.tsx`
   - Assigns `role="banner"`, `role="navigation"`, `role="main"`, and `role="contentinfo"` to compound regions.
-- `src/components/layout/sidebar/AppSidebar.tsx`
+- `src/app/layout/chrome/sidebar/AppSidebar.tsx`
   - Continues to expose `aria-current` and label semantics for nav items.
 
 ## Validation

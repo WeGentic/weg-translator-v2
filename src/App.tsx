@@ -4,17 +4,13 @@ import { FileText, FolderKanban, Settings } from "lucide-react";
 import { useAppHealth } from "@/app/hooks/useAppHealth";
 import { useGlobalNavigationEvents } from "@/app/hooks/useGlobalNavigationEvents";
 import { useWorkspaceShell } from "@/app/hooks/useWorkspaceShell";
-import { useFooterVisible, useHeaderVisible, useSidemenuState } from "@/app/layout/layout-store";
+import { useFooterVisible, useHeaderVisible, useSidemenuState } from "@/app/layout";
+import { AppHeader, AppSidebar, CollapsedFooterBar, CollapsedHeaderBar, WorkspaceFooter, type MenuItem } from "@/app/layout/chrome";
 import {
   toEditorViewKey,
   toProjectViewKey,
   type MainView,
 } from "@/app/state/main-view";
-import { AppHeader } from "@/components/layout/header/AppHeader";
-import { CollapsedHeaderBar } from "@/components/layout/header/CollapsedHeaderBar";
-import { CollapsedFooterBar } from "@/components/layout/footer/CollapsedFooterBar";
-import { WorkspaceFooter } from "@/components/layout/footer/WorkspaceFooter";
-import { AppSidebar, type MenuItem } from "@/components/layout/sidebar/AppSidebar";
 import { ProjectsPanel } from "@/components/projects/ProjectsPanel";
 import { ProjectEditor } from "@/components/projects/editor/ProjectEditor";
 import { ProjectEditorPlaceholder } from "@/components/projects/editor/ProjectEditorPlaceholder";

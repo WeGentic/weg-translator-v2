@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import { Outlet, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
-import { MainLayout } from "@/app/layout/MainLayout";
+import { MainLayout } from "@/app/layout";
 
 const BASE_LAYOUT_CONFIG = {
   header: { mounted: true, visible: true, height: 64 },

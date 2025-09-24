@@ -2,9 +2,9 @@
 
 ## Overview
 - Replaced the previous slot-driven shell with a minimal five-region grid (background, header, sidemenu, main, footer).
-- Header/Footer: fixed heights (64px/56px by default), pinned to the top/bottom rows without extra padding.
-- Sidemenu: supports four modes (`unmounted`, `hidden`, `compact`, `expanded`) with configurable widths.
-- Main content: occupies the remaining grid cell and scrolls vertically when content overflows.
+- Header/Footer: fixed heights (64px/56px by default), pinned to the top/bottom rows without extra padding, and render with transparent chrome so the background layer always bleeds through.
+- Sidemenu: supports four modes (`unmounted`, `hidden`, `compact`, `expanded`) with configurable widths and a transparent surface to match the chrome.
+- Main content: occupies the remaining grid cell, scrolls vertically when content overflows, and exposes a transparent background so upstream surfaces can show through when desired.
 - Background: optional layer rendered behind everything via mount/visible flags.
 
 ## Architecture Overview
@@ -26,13 +26,14 @@ Because the shell stores the React node per region, layout components do **not**
 ## Key Files
 - `src/app/layout/layout-store.ts`: Store definition, merge helpers, `cycleSidemenu()`, and content setter actions (`setHeaderContent`, etc.).
 - `src/app/layout/MainLayout.tsx`: Grid shell that reads store state to decide when to reserve space, render content, or collapse regions; `Main` wraps its children in `overflow-y-auto` so only the content scrolls.
+- `src/app/layout/backgrounds/BlankBackground.tsx`: Provides a neutral, customizable canvas for routes that want a blank backdrop without gradients.
 - `src/features/workspace/WorkspacePage.tsx`: Example consumer that injects header/sidemenu/footer/background content and renders only main workspace panes.
 - `src/routes/login.tsx`: Shows how to opt out of chrome while using the same layout helpers.
 
 ## Behaviour Summary
-- Header/Footer: fixed pixel heights (default 64/56). When `visible` is false they still take part in the grid (0px reserved) but no content renders.
+- Header/Footer: fixed pixel heights (default 64/56). When `visible` is false they still take part in the grid (0px reserved) but no content renders. Both regions intentionally stay background-transparent to avoid masking the shared background layer.
 - Sidemenu: modes cycle `expanded → compact → hidden` via header toggle; widths come from store; when hidden/unmounted the first column collapses and the main column spans the full width.
-- Main: fills the remaining cell and scrolls independently; top/bottom chrome stay pinned.
+- Main: fills the remaining cell and scrolls independently; top/bottom chrome stay pinned, and the main surface remains transparent unless a route explicitly opts in to a surface color.
 - Background: attaches to a full-screen absolute layer (`pointer-events-none`), set per route.
 
 ## Working with the System

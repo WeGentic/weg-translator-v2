@@ -57,7 +57,7 @@ export function AppSidebar({
 
   const container = cn(
     floating && "fixed left-3 top-0 z-40",
-    "flex h-full flex-col overflow-hidden rounded-2xl border border-border/50 bg-card/70 shadow-lg backdrop-blur transition-[width] duration-200",
+    "flex h-full flex-col overflow-hidden rounded-2xl border border-border/50 bg-transparent shadow-lg backdrop-blur transition-[width] duration-200",
     className,
   );
 
@@ -196,7 +196,7 @@ export function AppSidebar({
       </div>
 
       {settingsItem ? (
-        <div className="sticky bottom-0 border-t border-border bg-background/70 p-2">
+        <div className="sticky bottom-0 border-t border-border bg-transparent p-2">
           <ul role="list">
             {renderItem(settingsItem)}
           </ul>

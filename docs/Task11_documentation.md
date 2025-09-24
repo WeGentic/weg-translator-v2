@@ -5,7 +5,7 @@
 - Tighten Zustand selector usage to minimise re-renders, adding equality helpers where appropriate.
 
 ## Key Changes
-- `src/components/layout/header/AppHeader.tsx`
+- `src/app/layout/chrome/header/AppHeader.tsx`
   - Drops `useMemo` in favour of straightforward toggle mapping constants.
 - `src/app/layout/layout-store.ts`
   - Annotates selector hooks and applies `useShallow` for object selections; exposes typed selectors.

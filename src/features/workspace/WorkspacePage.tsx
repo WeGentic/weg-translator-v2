@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { FileText, FolderKanban, Settings } from "lucide-react";
 
-import { useLayoutActions, useLayoutSelector } from "@/app/layout/MainLayout";
+import { BlankBackground, useLayoutActions, useLayoutSelector } from "@/app/layout";
+import { AppHeader, AppSidebar, WorkspaceFooter, type MenuItem } from "@/app/layout/chrome";
 import { useAppHealth } from "@/app/hooks/useAppHealth";
 import { useGlobalNavigationEvents } from "@/app/hooks/useGlobalNavigationEvents";
 import { useWorkspaceShell } from "@/app/hooks/useWorkspaceShell";
@@ -10,9 +11,6 @@ import {
   toProjectViewKey,
   type MainView,
 } from "@/app/state/main-view";
-import { AppSidebar, type MenuItem } from "@/components/layout/sidebar/AppSidebar";
-import { WorkspaceFooter } from "@/components/layout/footer/WorkspaceFooter";
-import { AppHeader } from "@/components/layout/header/AppHeader";
 import { ProjectsPanel } from "@/components/projects/ProjectsPanel";
 import { ProjectEditor } from "@/components/projects/editor/ProjectEditor";
 import { ProjectEditorPlaceholder } from "@/components/projects/editor/ProjectEditorPlaceholder";
@@ -120,9 +118,7 @@ export function WorkspacePage() {
   );
 
   useEffect(() => {
-    setBackground({ mounted: true, visible: true, element: (
-      <div className="h-full w-full bg-[radial-gradient(circle_at_top,_#0f172a,_#020617_65%)]" />
-    ) });
+    setBackground({ mounted: true, visible: true, element: <BlankBackground tone="default" /> });
     return () => {
       setBackground({ element: null, mounted: false });
     };

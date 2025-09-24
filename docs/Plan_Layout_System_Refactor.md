@@ -185,7 +185,7 @@ Step 7.1.5 - Define route `staticData.layout` for `/`: `{ header: true, footer: 
 
 Sub-task 7.2 - Login (`/login`) - Status: COMPLETED
 
-Step 7.2.1 - Update `src/routes/login.tsx:1` `staticData.layout` to hide structural regions: `{ header: false, footer: false, sidemenu: 'hidden', background: { kind: 'component', element: <AnimatedBackground /> } }` - Status: COMPLETED
+Step 7.2.1 - Update `src/routes/login.tsx:1` `staticData.layout` to hide structural regions: `{ header: false, footer: false, sidemenu: 'hidden', background: { kind: 'component', element: <BlankBackground tone="default" /> } }` - Status: COMPLETED
   - ✅ Login route static data now hides structural chrome and delegates decorative background to layout background component.
 
 Step 7.2.2 - Ensure `LoginPage` renders only its form; background provided by layout; remove local absolute/overlay wrappers conflicting with layout - Status: COMPLETED
@@ -217,7 +217,7 @@ Task 9 - Backgrounds and theming - Status: COMPLETED
 Step 9.1 - Provide default background using tokens (`bg-background`, gradients if needed) - Status: COMPLETED
   - ✅ `LayoutShell` wraps the grid with `bg-background` and `BackgroundSurface` falls back to an `absolute` panel using the same token (`src/app/layout/MainLayout.tsx:179` and `:228`).
 
-Step 9.2 - Migrate `AnimatedBackground` (login) to layout slot; ensure stacking order (`z-index`) and performance (reduce overdraw) - Status: COMPLETED
+Step 9.2 - Replace the legacy `AnimatedBackground` gradient with the reusable `BlankBackground` slot component; ensure stacking order (`z-index`) and performance (reduce overdraw) - Status: COMPLETED
   - ✅ Login route `staticData` injects the animated background via layout config while `LayoutShell` renders it behind content with `pointer-events-none`/`-z-10` container (`src/routes/login.tsx:12`, `src/app/layout/MainLayout.tsx:186`).
 
 
@@ -230,13 +230,13 @@ Step 10.2 - Ensure `ScreenGuard` fully blocks interactions below threshold and r
   - ✅ `ResolutionGuard` overlay keeps pointer events trapped while the alias `ScreenGuard` stays mounted only at the root (`src/components/ResolutionGuard.tsx:48`, `src/app/layout/screen-guard.ts:1`, `src/main.tsx:46`).
 
 Step 10.3 - Maintain ARIA roles: `banner`, `navigation`, `main`, `contentinfo`; ensure `aria-hidden` and `aria-current` as in current components - Status: COMPLETED
-  - ✅ Layout wrappers assign the appropriate roles (`banner`/`navigation`/`main`/`contentinfo`) while sidebar items preserve `aria-current` states (`src/app/layout/MainLayout.tsx:248`, `:269`, `:294`, `:318`; `src/components/layout/sidebar/AppSidebar.tsx:70`).
+  - ✅ Layout wrappers assign the appropriate roles (`banner`/`navigation`/`main`/`contentinfo`) while sidebar items preserve `aria-current` states (`src/app/layout/MainLayout.tsx:248`, `:269`, `:294`, `:318`; `src/app/layout/chrome/sidebar/AppSidebar.tsx:70`).
 
 
 Task 11 - Performance pass (React 19 friendly) - Status: COMPLETED
 
 Step 11.1 - Remove unnecessary React.memo/useMemo/useCallback from layout components; rely on compiler - Status: COMPLETED
-  - ✅ Header toggle logic now derives labels/icons inline without `useMemo`, matching React Compiler guidance (`src/components/layout/header/AppHeader.tsx:21`).
+  - ✅ Header toggle logic now derives labels/icons inline without `useMemo`, matching React Compiler guidance (`src/app/layout/chrome/header/AppHeader.tsx:21`).
 
 Step 11.2 - Ensure all store consumers use narrow selectors and `shallow` where returning objects - Status: COMPLETED
   - ✅ Store selectors use `useShallow` and a shared `sidemenuEquals` equality helper to avoid redundant renders (`src/app/layout/layout-store.ts:55`, `src/app/layout/sidemenu.ts:33`).
@@ -254,7 +254,7 @@ Step 12.2 - Verify existing features still work: project tabs (temporary items),
   - ✅ `WorkspacePage` wires project/editor slots, navigation events, and explicit header titles using the shared hooks (`src/features/workspace/WorkspacePage.tsx:27-122`).
 
 Step 12.3 - Validate visual parity for header/sidebar/footer padding and sticky behavior; adjust Tailwind classes in `MainLayout` if needed - Status: COMPLETED
-  - ✅ Grid shell preserves spacing while header/footer components keep their sticky/fixed styling (`src/app/layout/MainLayout.tsx:178-193`, `src/components/layout/header/AppHeader.tsx:60`, `src/components/layout/footer/WorkspaceFooter.tsx:19`).
+  - ✅ Grid shell preserves spacing while header/footer components keep their sticky/fixed styling (`src/app/layout/MainLayout.tsx:178-193`, `src/app/layout/chrome/header/AppHeader.tsx:60`, `src/app/layout/chrome/footer/WorkspaceFooter.tsx:19`).
 
 
 Task 13 - Testing and validation - Status: IN PROGRESS
@@ -283,8 +283,8 @@ Appendix — Repo-specific notes (grounded in current codebase)
 - Root wrappers are currently in `src/main.tsx:1` (global `AppErrorBoundary`, `AuthProvider`, `ToastProvider`, `ResolutionGuard`, `RouterProvider`). Keep `ResolutionGuard` as the single global ScreenGuard.
 - `src/routes/__root.tsx:1` wraps `<Outlet />` in `AppErrorBoundary` again; plan removes duplication and scopes boundary to `MainLayout.MainContent`.
 - `src/App.tsx:1` presently implements header/sidebar/footer paddings and offsets; these move into `MainLayout` orchestration; `WorkspacePage` keeps only the main area logic.
-- `src/components/layout/header/AppHeader.tsx:1` and `src/components/layout/sidebar/AppSidebar.tsx:1` remain presentational, but read from the store; keep shadcn/ui primitives.
-- Sidebar state currently uses string union + `getNextSidebarState` in `src/components/layout/sidebar/sidebar-state.ts:1`; replace with discriminated union in the store and expose a compatibility layer during migration.
+- `src/app/layout/chrome/header/AppHeader.tsx:1` and `src/app/layout/chrome/sidebar/AppSidebar.tsx:1` remain presentational, but read from the store; keep shadcn/ui primitives.
+- Sidebar state previously relied on the standalone helper in `src/app/layout/chrome/sidebar/sidebar-state.ts`; we removed that file and consolidated the cycle logic inside the shared layout store to avoid drift.
 - `src/components/ResolutionGuard.tsx:1` remains intact and is aliased to `ScreenGuard`.
 
 Non-goals

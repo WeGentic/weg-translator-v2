@@ -10,7 +10,7 @@ Changes
 
 Files Updated
 - src/App.tsx: adjusted `MainView`, added editor key helpers, pruned fixed items, created `temporaryEditorItems`, and added `<ProjectEditor>` route.
-- src/components/layout/AppSidebar.tsx: rendered two `<nav>` sections (Project and Editor), extracted `settings` to a sticky footer, and kept accessibility attributes.
+- src/app/layout/chrome/sidebar/AppSidebar.tsx: rendered two `<nav>` sections (Project and Editor), extracted `settings` to a sticky footer, and kept accessibility attributes.
 - src/components/projects/editor/ProjectEditor.tsx: added placeholder editor view component.
 
 Notes

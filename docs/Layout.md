@@ -15,7 +15,7 @@ This document describes a complete redesign of the application Header (Top bar) 
 
 ## Component Overview
 
-- New component: `src/components/layout/AppHeader.tsx`
+- New component: `src/app/layout/chrome/header/AppHeader.tsx`
   - Encapsulates the floating header styling and 3-zone layout.
   - Accepts a `title` prop for the dynamic center text.
   - Emits `onToggleSidebar` for the left icon button (wired to existing sidebar cycle where applicable).
@@ -109,7 +109,7 @@ export function useHeaderTitle(opts?: Options): string {
 ## Component Skeleton
 
 ```tsx
-// src/components/layout/AppHeader.tsx
+// src/app/layout/chrome/header/AppHeader.tsx
 import { PanelLeft, CircleUser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -168,7 +168,7 @@ export function AppHeader({ title, onToggleSidebar, className, elevated, hideUse
 
 ## Integration Plan (Step-by-step)
 
-1. Add `AppHeader` component file (above skeleton) to `src/components/layout/AppHeader.tsx`.
+1. Add `AppHeader` component file (above skeleton) to `src/app/layout/chrome/header/AppHeader.tsx`.
 2. Introduce a title source:
    - If the side menu exposes a selection (e.g., project, section), lift it to `App` state and derive a `headerTitle` string.
    - Otherwise, use `useHeaderTitle` (route-based fallback) as shown above.
@@ -187,10 +187,10 @@ export function AppHeader({ title, onToggleSidebar, className, elevated, hideUse
 
 ## File Touchpoints
 
-- Create: `src/components/layout/AppHeader.tsx` (new component).
+- Create: `src/app/layout/chrome/header/AppHeader.tsx` (new component).
 - Optional: `src/hooks/useHeaderTitle.ts` (route/selection → title mapping).
 - Update: `src/App.tsx:1` — to import and use `AppHeader` in place of `WorkspaceHeader` once ready.
-- Review: `src/components/layout/WorkspaceHeader.tsx:1` — deprecate gradually or keep as an alternative layout.
+- Review: `src/app/layout/chrome/WorkspaceHeader.tsx:1` — deprecate gradually or keep as an alternative layout.
 
 ## Tailwind & Theming Notes
 
@@ -217,7 +217,7 @@ export function AppHeader({ title, onToggleSidebar, className, elevated, hideUse
 
 ```tsx
 // src/App.tsx (excerpt)
-import { AppHeader } from "@/components/layout/AppHeader";
+import { AppHeader } from "@/app/layout/chrome";
 import { useHeaderTitle } from "@/hooks/useHeaderTitle";
 
 // ...inside component
@@ -241,7 +241,7 @@ This plan provides a drop-in, modern floating header that meets the requested de
 ## Implementation Progress — 2025-02-14
 
 - [x] Reviewed existing `WorkspaceHeader`/layout structure to identify integration points.
-- [x] Added `src/components/layout/AppHeader.tsx` implementing the floating header zones.
+- [x] Added `src/app/layout/chrome/header/AppHeader.tsx` implementing the floating header zones.
 - [x] Created `src/hooks/useHeaderTitle.ts` to derive dynamic titles from router state.
 - [x] Reworked `src/App.tsx` to adopt `AppHeader`, add a utility bar for legacy controls, and adjust layout spacing.
 - [x] Verified lint (`npm run lint`) to confirm the updated UI compiles cleanly.
@@ -264,7 +264,7 @@ This section defines a rework of the Sidebar to be floating and to display both 
 
 ## Component Overview
 
-- New component: `src/components/layout/AppSidebar.tsx`
+- New component: `src/app/layout/chrome/sidebar/AppSidebar.tsx`
   - Encapsulates floating styling and responsive state: `expanded | compact | hidden`.
   - Accepts fixed and temporary items arrays; renders grouped lists.
   - Emits `onSelect(key)` to update the active view.
@@ -318,7 +318,7 @@ export type MenuItem = {
 ## Example: Component Skeleton
 
 ```tsx
-// src/components/layout/AppSidebar.tsx
+// src/app/layout/chrome/sidebar/AppSidebar.tsx
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { MenuItem } from "@/types/navigation"; // or inline
@@ -430,7 +430,7 @@ const fixedItems: MenuItem[] = [
 ## Integration Plan (Step-by-step)
 
 1. Define `MenuItem` type and initial fixed items config.
-2. Create `src/components/layout/AppSidebar.tsx` based on the skeleton above.
+2. Create `src/app/layout/chrome/sidebar/AppSidebar.tsx` based on the skeleton above.
 3. Decide routing model: router-driven vs state-driven (start with state-driven for minimal disruption).
 4. In `src/App.tsx`, add `mainView` state and wire `AppSidebar.onSelect` to update it; pass explicit header title via `useHeaderTitle({ explicit })` when appropriate.
 5. Map `mainView` to content panes; keep existing `WorkspaceSidebar` temporarily until migration is complete.
@@ -439,10 +439,10 @@ const fixedItems: MenuItem[] = [
 
 ## File Touchpoints
 
-- Create: `src/components/layout/AppSidebar.tsx` (new floating sidebar component).
+- Create: `src/app/layout/chrome/sidebar/AppSidebar.tsx` (new floating sidebar component).
 - Optional: `src/types/navigation.ts` for `MenuItem` type and shared navigation utilities.
 - Update: `src/App.tsx` to manage `mainView` and render `AppSidebar`.
-- Review/Deprecate: `src/components/layout/WorkspaceSidebar.tsx` once feature parity is achieved.
+- Review/Deprecate: `src/app/layout/chrome/WorkspaceSidebar.tsx` once feature parity is achieved.
 
 ## Tauri/Desktop Considerations
 
@@ -461,8 +461,8 @@ const fixedItems: MenuItem[] = [
 
 ## Sidebar Implementation Plan — TODOs
 
-- [x] Add `MenuItem` type and seed fixed items. (src/components/layout/AppSidebar.tsx, src/App.tsx)
-- [x] Implement `AppSidebar` with floating container and grouped lists. (src/components/layout/AppSidebar.tsx)
+- [x] Add `MenuItem` type and seed fixed items. (src/app/layout/chrome/sidebar/AppSidebar.tsx, src/App.tsx)
+- [x] Implement `AppSidebar` with floating container and grouped lists. (src/app/layout/chrome/sidebar/AppSidebar.tsx)
 - [x] Wire `AppSidebar` into `App.tsx` (state-driven main view) and update header title. (src/App.tsx)
 - [x] Reduce sidebar width (expanded `w-64`, compact `w-16`) and adjust content padding (`pl-64`/`pl-16`).
 - [x] Elevate vertical hierarchy: semantic `<nav><ul><li>…</li></ul></nav>`, section labels (“Navigation”, “Quick access”).

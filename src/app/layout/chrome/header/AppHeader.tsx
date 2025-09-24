@@ -88,7 +88,7 @@ export function AppHeader({
   return (
     <div
       className={cn(
-        "flex h-full w-full items-center justify-between gap-3 border-b border-border/50 bg-background px-4",
+        "flex h-full w-full items-center justify-between gap-3 border-b border-border/50 bg-transparent px-4",
         elevated && "shadow-lg shadow-border/20",
         className,
       )}
