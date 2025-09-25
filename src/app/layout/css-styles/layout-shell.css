@@ -1,0 +1,29 @@
+@layer components {
+  .layout-shell {
+    position: relative;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .layout-shell__grid {
+    display: grid;
+    height: 100%;
+    width: 100%;
+    /* Allow overlays (tooltips/menus) to escape column bounds */
+    overflow: visible;
+  }
+
+  .layout-shell__background {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: -10;
+  }
+
+  .layout-shell__background-fallback {
+    height: 100%;
+    width: 100%;
+    background-color: #0f0f0f;
+  }
+}

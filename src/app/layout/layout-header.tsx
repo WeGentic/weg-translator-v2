@@ -1,5 +1,7 @@
 import { useEffect, type PropsWithChildren } from "react";
 
+import "./css-styles/layout-header.css";
+
 import { useLayoutSelector, useLayoutStoreApi } from "./layout-context";
 import { DEFAULT_HEADER_HEIGHT } from "./layout-store";
 
@@ -47,7 +49,7 @@ export function LayoutHeader({ children, visible, height }: LayoutHeaderProps) {
   return (
     <header
       role="banner"
-      className="flex h-full w-full items-center justify-between"
+      className="layout-header"
       style={{
         gridColumn: "1 / span 2",
         gridRow: "1 / 2",

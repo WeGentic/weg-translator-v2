@@ -1,0 +1,10 @@
+@reference "tailwindcss";
+@reference "../../../App.css";
+
+@layer components {
+  .layout-preview {
+    @apply flex h-full w-full items-center justify-center border border-dashed border-neutral-500 bg-neutral-900 text-xs uppercase tracking-wide text-neutral-200;
+    --tw-border-opacity: 0.6;
+    --tw-bg-opacity: 0.6;
+  }
+}

@@ -7,7 +7,7 @@ import { MainLayout } from "@/app/layout";
 const BASE_LAYOUT_CONFIG = {
   header: { mounted: true, visible: true, height: 64 },
   footer: { mounted: true, visible: true, height: 56 },
-  sidemenu: { mounted: true, mode: "expanded" as const, compactWidth: 112, expandedWidth: 264 },
+  sidemenu: { mounted: true, mode: "expanded" as const, compactWidth: 56, expandedWidth: 264 },
   background: { mounted: true, visible: true },
 };
 

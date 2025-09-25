@@ -1,11 +1,12 @@
 import { useCallback, useMemo, type CSSProperties } from "react";
-import { FileText, FolderKanban, Settings } from "lucide-react";
+import { TbFolders } from "react-icons/tb";
+import { FiFileText, FiSettings } from "react-icons/fi";
 
 import { useAppHealth } from "@/app/hooks/useAppHealth";
 import { useGlobalNavigationEvents } from "@/app/hooks/useGlobalNavigationEvents";
 import { useWorkspaceShell } from "@/app/hooks/useWorkspaceShell";
-import { useFooterVisible, useHeaderVisible, useSidemenuState } from "@/app/layout";
-import { AppHeader, AppSidebar, CollapsedFooterBar, CollapsedHeaderBar, WorkspaceFooter, type MenuItem } from "@/app/layout/chrome";
+import { useLayoutSelector } from "@/app/layout";
+import { AppHeader, AppSidebar, CollapsedFooterBar, CollapsedHeaderBar, WorkspaceFooter, type MenuItem } from "@/app/layout/main_elements";
 import {
   toEditorViewKey,
   toProjectViewKey,
@@ -26,8 +27,8 @@ import type { ProjectListItem } from "@/ipc";
 import "./App.css";
 
 const FIXED_MENU_ITEMS: MenuItem[] = [
-  { key: "projects", label: "Projects", icon: FolderKanban },
-  { key: "settings", label: "Settings", icon: Settings },
+  { key: "projects", label: "Projects", icon: TbFolders },
+  { key: "settings", label: "Settings", icon: FiSettings },
 ];
 
 /**
@@ -56,18 +57,29 @@ function App() {
     setSelectedFileId,
   } = useWorkspaceShell();
 
-  const headerVisible = useHeaderVisible();
-  const footerVisible = useFooterVisible();
-  const sidemenu = useSidemenuState();
+  const header = useLayoutSelector((state) => state.header);
+  const footer = useLayoutSelector((state) => state.footer);
+  const sidemenu = useLayoutSelector((state) => state.sidemenu);
 
-  const sidebarState = sidemenu.kind;
+  const headerVisible = header.mounted && header.visible;
+  const footerVisible = footer.mounted && footer.visible;
+
+  const sidebarMode = sidemenu.mode;
+  const sidebarMounted = sidemenu.mounted && sidebarMode !== "unmounted";
+  const sidebarVisible = sidebarMounted && sidebarMode !== "hidden";
+  const sidebarWidthPx = !sidebarVisible
+    ? 0
+    : sidebarMode === "compact"
+      ? sidemenu.compactWidth
+      : sidemenu.expandedWidth;
+  const sidebarWidthRem = sidebarWidthPx / 16;
 
   const temporaryProjectItems: MenuItem[] = useMemo(
     () =>
       openProjectOverviews.map((project) => ({
         key: toProjectViewKey(project.projectId),
         label: project.name,
-        icon: FileText,
+        icon: FiFileText,
         onClose: () => handleCloseOverview(project.projectId),
       })),
     [handleCloseOverview, openProjectOverviews],
@@ -80,7 +92,7 @@ function App() {
       return {
         key: toEditorViewKey(projectId),
         label: project ? `Editor — ${project.name}` : "Editor",
-        icon: FileText,
+        icon: FiFileText,
         onClose: () => handleCloseEditor(projectId),
       } satisfies MenuItem;
     });
@@ -113,13 +125,6 @@ function App() {
 
   const sidebarTopInset = headerVisible ? contentTopInset : `${COLLAPSED_HEADER_HEIGHT_REM}rem`;
   const sidebarBottomInset = footerVisible ? contentBottomInset : `${COLLAPSED_FOOTER_HEIGHT_REM}rem`;
-
-  const sidebarWidthRem =
-    sidebarState === "expanded"
-      ? sidemenu.width / 16
-      : sidebarState === "compact"
-        ? sidemenu.width / 16
-        : 0;
 
   const horizontalOffsetRem = sidebarWidthRem + SIDEBAR_MARGIN_REM;
 

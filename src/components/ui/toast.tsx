@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
@@ -115,9 +115,10 @@ function useToastController(): ToastController {
   }, []);
 
   useEffect(() => {
+    const registeredTimeouts = timeouts.current;
     return () => {
-      timeouts.current.forEach((handle) => window.clearTimeout(handle));
-      timeouts.current.clear();
+      registeredTimeouts.forEach((handle) => window.clearTimeout(handle));
+      registeredTimeouts.clear();
     };
   }, []);
 
@@ -136,15 +137,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const controller = useToastController();
 
   return (
-    <ToastContext.Provider value={controller}>
+    <ToastContext value={controller}>
       {children}
       <ToastViewport controller={controller} />
-    </ToastContext.Provider>
+    </ToastContext>
   );
 }
 
 export function useToast(): Pick<ToastController, "toast" | "dismiss" | "clearAll"> {
-  const context = useContext(ToastContext);
+  const context = use(ToastContext);
   if (!context) {
     throw new Error("useToast must be used within a ToastProvider");
   }

@@ -1,0 +1,118 @@
+@reference "tailwindcss";
+@reference "../../../../App.css";
+
+@layer components {
+  .gradient-background {
+    @apply relative h-full w-full overflow-hidden;
+  }
+
+  .gradient-background--animated {
+    animation: gradient-shift 8s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  .gradient-background--variant-mesh {
+    background-image: linear-gradient(
+      to bottom right,
+      rgba(245, 158, 11, 0.4),
+      rgba(250, 204, 21, 0.3),
+      rgba(249, 115, 22, 0.4)
+    );
+  }
+
+  .gradient-background--variant-aurora {
+    background-image: linear-gradient(
+      to bottom right,
+      rgba(59, 130, 246, 0.4),
+      rgba(168, 85, 247, 0.4),
+      rgba(236, 72, 153, 0.4)
+    );
+  }
+
+  .gradient-background--variant-holographic {
+    background-image: linear-gradient(
+      to bottom right,
+      rgba(34, 211, 238, 0.4),
+      rgba(139, 92, 246, 0.4),
+      rgba(217, 70, 239, 0.4)
+    );
+  }
+
+  .gradient-background--variant-glass {
+    background-image: linear-gradient(
+      to bottom right,
+      rgba(226, 232, 240, 0.3),
+      rgba(241, 245, 249, 0.2),
+      rgba(203, 213, 225, 0.3)
+    );
+  }
+
+  .dark .gradient-background--variant-glass {
+    background-image: linear-gradient(
+      to bottom right,
+      rgba(51, 65, 85, 0.3),
+      rgba(30, 41, 59, 0.2),
+      rgba(71, 85, 105, 0.3)
+    );
+  }
+
+  .gradient-background--variant-waves {
+    background-image: linear-gradient(
+      to right,
+      rgba(45, 212, 191, 0.3),
+      rgba(59, 130, 246, 0.4),
+      rgba(147, 51, 234, 0.3)
+    );
+  }
+
+  .gradient-background--variant-orbs {
+    background-image: radial-gradient(
+      circle,
+      rgba(251, 113, 133, 0.4),
+      rgba(236, 72, 153, 0.3),
+      rgba(99, 102, 241, 0.4)
+    );
+  }
+
+  .gradient-background--intensity-subtle {
+    @apply opacity-30;
+  }
+
+  .gradient-background--intensity-medium {
+    @apply opacity-60;
+  }
+
+  .gradient-background--intensity-strong {
+    @apply opacity-90;
+  }
+
+  .gradient-background__animated-overlay {
+    @apply absolute inset-0;
+    animation: gradient-pulse 6s ease-in-out infinite;
+    will-change: opacity, transform;
+  }
+
+  .gradient-background__overlay-aurora {
+    background-image: linear-gradient(to top left, rgba(52, 211, 153, 0.2), transparent);
+  }
+
+  .gradient-background__overlay-mesh {
+    background-image: linear-gradient(to top right, rgba(248, 113, 113, 0.2), transparent);
+  }
+
+  .gradient-background__overlay-holographic {
+    background-image: linear-gradient(to bottom left, rgba(250, 204, 21, 0.2), transparent);
+  }
+
+  .gradient-background__overlay-default {
+    background-image: linear-gradient(to bottom right, rgba(96, 165, 250, 0.2), transparent);
+  }
+
+  .gradient-background__noise {
+    @apply pointer-events-none absolute inset-0 h-full w-full mix-blend-overlay;
+  }
+
+  .gradient-background__content {
+    @apply relative z-10 h-full w-full;
+  }
+}

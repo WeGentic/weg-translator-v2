@@ -1,5 +1,7 @@
 import { useEffect, type PropsWithChildren } from "react";
 
+import "./css-styles/layout-footer.css";
+
 import { useLayoutSelector, useLayoutStoreApi } from "./layout-context";
 import { DEFAULT_FOOTER_HEIGHT } from "./layout-store";
 
@@ -45,7 +47,7 @@ export function LayoutFooter({ children, visible, height }: LayoutFooterProps) {
   return (
     <footer
       role="contentinfo"
-      className="flex h-full w-full items-center justify-between"
+      className="layout-footer"
       style={{
         gridColumn: "1 / span 2",
         gridRow: "3 / 4",

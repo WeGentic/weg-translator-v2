@@ -1,6 +1,7 @@
 import { type PropsWithChildren } from "react";
 
 import { useLayoutSelector } from "./layout-context";
+import "./css-styles/layout-main.css";
 
 /**
  * Props accepted by {@link LayoutMain}. Consumers can disable the internal
@@ -22,10 +23,18 @@ export function LayoutMain({ children, scroll = "auto" }: LayoutMainProps) {
   return (
     <section
       role="main"
-      className="flex h-full w-full flex-col overflow-hidden bg-transparent"
+      className="layout-main"
       style={{ gridColumn, gridRow: "2 / 3" }}
     >
-      <div className={scroll === "auto" ? "flex-1 overflow-y-auto" : "flex-1 overflow-hidden"}>{children}</div>
+      <div
+        className={
+          scroll === "auto"
+            ? "layout-main__content layout-main__content--scroll-auto"
+            : "layout-main__content layout-main__content--scroll-hidden"
+        }
+      >
+        {children}
+      </div>
     </section>
   );
 }

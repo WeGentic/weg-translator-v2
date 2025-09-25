@@ -1,0 +1,13 @@
+@reference "tailwindcss";
+@reference "../../../../../App.css";
+
+@layer components {
+  .collapsed-header-bar {
+    @apply flex h-10 w-full items-center justify-between gap-3 border-b border-border bg-transparent px-4 backdrop-blur;
+    --tw-border-opacity: 0.6;
+  }
+
+  .collapsed-header-bar__label {
+    @apply text-xs text-muted-foreground;
+  }
+}

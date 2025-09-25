@@ -1,0 +1,234 @@
+.workspace-footer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  border-top: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  background-color: transparent;
+  backdrop-filter: blur(12px);
+  transition: height 200ms ease-in-out;
+  overflow: hidden;
+}
+
+.workspace-footer--elevated {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.10), 0 4px 6px -4px rgba(0, 0, 0, 0.10);
+}
+
+.workspace-footer__content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.workspace-footer__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 56px;
+  padding-inline: 1rem;
+  border-bottom: 1px solid transparent;
+}
+
+.workspace-footer--expanded .workspace-footer__top {
+  border-bottom-color: color-mix(in oklab, var(--color-border) 40%, transparent);
+}
+
+.workspace-footer__metrics {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem; /* gap-6 */
+}
+
+.workspace-footer__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.workspace-footer__metric {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* gap-2 */
+}
+
+.workspace-footer__metric-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+
+.workspace-footer__metric-value {
+  font-weight: 500;
+  color: var(--color-foreground);
+}
+
+.workspace-footer__log-button {
+  transition: all 150ms ease;
+}
+
+.workspace-footer__log-button:hover {
+  background-color: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+
+/* Logger Styles */
+.workspace-footer__logger {
+  flex: 1;
+  padding: 1rem;
+  border-top: 1px solid color-mix(in oklab, var(--color-border) 40%, transparent);
+  background-color: color-mix(in oklab, var(--color-muted) 30%, transparent);
+  backdrop-filter: blur(8px);
+  animation: fade-in 200ms ease-in-out;
+}
+
+.workspace-footer__logger-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.workspace-footer__logger-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border) 30%, transparent);
+}
+
+.workspace-footer__logger-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-foreground);
+  margin: 0;
+}
+
+.workspace-footer__logger-status {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-emerald-600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.workspace-footer__logger-status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background-color: var(--color-emerald-500);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.workspace-footer__logger-entries {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 180px;
+}
+
+.workspace-footer__logger-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.375rem 0.5rem;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  background-color: color-mix(in oklab, var(--color-background) 80%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 20%, transparent);
+}
+
+.workspace-footer__logger-timestamp {
+  color: var(--color-muted-foreground);
+  font-weight: 500;
+  min-width: 4rem;
+}
+
+.workspace-footer__logger-level {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  font-size: 0.625rem;
+  min-width: 2.5rem;
+  text-align: center;
+}
+
+.workspace-footer__logger-level--info {
+  background-color: var(--color-blue-100);
+  color: var(--color-blue-800);
+}
+
+.workspace-footer__logger-level--debug {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-700);
+}
+
+.workspace-footer__logger-level--warn {
+  background-color: var(--color-amber-100);
+  color: var(--color-amber-800);
+}
+
+.workspace-footer__logger-level--error {
+  background-color: var(--color-red-100);
+  color: var(--color-red-800);
+}
+
+.workspace-footer__logger-message {
+  flex: 1;
+  color: var(--color-foreground);
+  line-height: 1.4;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .workspace-footer__logger-level--info {
+    background-color: color-mix(in oklab, var(--color-blue-500) 20%, transparent);
+    color: var(--color-blue-200);
+  }
+
+  .workspace-footer__logger-level--debug {
+    background-color: color-mix(in oklab, var(--color-gray-500) 20%, transparent);
+    color: var(--color-gray-200);
+  }
+
+  .workspace-footer__logger-level--warn {
+    background-color: color-mix(in oklab, var(--color-amber-500) 20%, transparent);
+    color: var(--color-amber-200);
+  }
+
+  .workspace-footer__logger-level--error {
+    background-color: color-mix(in oklab, var(--color-red-500) 20%, transparent);
+    color: var(--color-red-200);
+  }
+}
+
+/* Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

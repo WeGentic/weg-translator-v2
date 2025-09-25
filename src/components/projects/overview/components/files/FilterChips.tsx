@@ -126,6 +126,7 @@ export function FilterChips({ files, filters, onFiltersChange, className }: Prop
           <div className="flex flex-wrap gap-1">
             {visibleFileTypes.map((type) => (
               <button
+                type="button"
                 key={type}
                 onClick={() => toggleFileType(type)}
                 className={cn(
@@ -161,6 +162,7 @@ export function FilterChips({ files, filters, onFiltersChange, className }: Prop
           <div className="flex flex-wrap gap-1">
             {visibleStatuses.map((status) => (
               <button
+                type="button"
                 key={status}
                 onClick={() => toggleStatus(status)}
                 className={cn(
@@ -196,6 +198,7 @@ export function FilterChips({ files, filters, onFiltersChange, className }: Prop
           <div className="flex flex-wrap gap-1">
             {visibleLanguages.map((pair) => (
               <button
+                type="button"
                 key={pair}
                 onClick={() => toggleLanguagePair(pair)}
                 className={cn(

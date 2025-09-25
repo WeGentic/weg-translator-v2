@@ -1,5 +1,18 @@
 import { useMemo, useState, useCallback } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, Search, X, Filter, FilePenLine, RefreshCw, Trash2, FileText, Upload, Plus } from "lucide-react";
+import {
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Search,
+  X,
+  Filter,
+  FilePenLine,
+  RefreshCw,
+  Trash2,
+  FileText,
+  Upload,
+  Plus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,6 +21,8 @@ import { FileStatusIndicator } from "./FileStatusIndicator";
 import { FilterChips, type FileFilters } from "./FilterChips";
 import type { ProjectFileWithConversionsDto, ProjectFileConversionDto } from "@/ipc";
 import { cn } from "@/lib/utils";
+
+const FILE_TABLE_SKELETON_KEYS = ["loader-1", "loader-2", "loader-3"] as const;
 
 type SortField = "name" | "size" | "status" | "type";
 type SortDirection = "asc" | "desc" | null;
@@ -39,17 +54,17 @@ export function FileTable({
   onRemove,
   onRebuild,
   onAddFiles,
-  rebuildingFileId
+  rebuildingFileId,
 }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
-  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  const [filters, setFilters] = useState<FileFilters>({
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(() => new Set());
+  const [filters, setFilters] = useState<FileFilters>(() => ({
     fileTypes: new Set(),
     statuses: new Set(),
-    languagePairs: new Set()
-  });
+    languagePairs: new Set(),
+  }));
   const [showFilters, setShowFilters] = useState(false);
 
   // Transform files to table rows
@@ -159,22 +174,25 @@ export function FileTable({
 
   // Selection handlers
   const handleSelectAll = useCallback(() => {
-    if (selectedFiles.size === filteredAndSortedRows.length) {
-      setSelectedFiles(new Set());
-    } else {
-      setSelectedFiles(new Set(filteredAndSortedRows.map(row => row.id)));
-    }
-  }, [selectedFiles.size, filteredAndSortedRows]);
+    setSelectedFiles((prev) => {
+      if (prev.size === filteredAndSortedRows.length) {
+        return new Set();
+      }
+      return new Set(filteredAndSortedRows.map((row) => row.id));
+    });
+  }, [filteredAndSortedRows]);
 
   const handleSelectFile = useCallback((fileId: string) => {
-    const newSelected = new Set(selectedFiles);
-    if (newSelected.has(fileId)) {
-      newSelected.delete(fileId);
-    } else {
-      newSelected.add(fileId);
-    }
-    setSelectedFiles(newSelected);
-  }, [selectedFiles]);
+    setSelectedFiles((prev) => {
+      const next = new Set(prev);
+      if (next.has(fileId)) {
+        next.delete(fileId);
+      } else {
+        next.add(fileId);
+      }
+      return next;
+    });
+  }, []);
 
   // Clear search
   const clearSearch = useCallback(() => {
@@ -216,8 +234,8 @@ export function FileTable({
           <div className="h-9 w-64 animate-pulse rounded-lg bg-muted" />
         </div>
         <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 p-4">
+          {FILE_TABLE_SKELETON_KEYS.map((key) => (
+            <div key={key} className="flex items-center gap-4 p-4">
               <div className="h-4 w-4 animate-pulse rounded bg-muted" />
               <div className="h-8 w-8 animate-pulse rounded bg-muted" />
               <div className="h-4 flex-1 animate-pulse rounded bg-muted" />
@@ -432,6 +450,7 @@ export function FileTable({
                       {formatExt(row.ext) || <FileText className="h-4 w-4" />}
                     </div>
                     <button
+                      type="button"
                       onClick={() => onOpenEditor(row.id)}
                       className="truncate text-left text-sm font-medium text-foreground hover:text-primary hover:underline focus:text-primary focus:underline focus:outline-none"
                       title={row.name}

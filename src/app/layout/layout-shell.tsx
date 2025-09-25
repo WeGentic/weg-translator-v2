@@ -2,6 +2,7 @@ import type { PropsWithChildren } from "react";
 
 import { useLayoutSelector } from "./layout-context";
 import type { LayoutState } from "./layout-store";
+import "./css-styles/layout-shell.css";
 
 /**
  * Calculates the width that should be reserved for the sidemenu column given
@@ -41,10 +42,10 @@ export function LayoutShell({ children }: PropsWithChildren) {
   const templateColumns = `${sidebarWidth}px minmax(0, 1fr)`;
 
   return (
-    <div className="relative h-screen w-full overflow-hidden">
+    <div className="layout-shell">
       <BackgroundSurface />
       <div
-        className="grid h-full w-full overflow-hidden"
+        className="layout-shell__grid"
         style={{
           gridTemplateRows: templateRows,
           gridTemplateColumns: templateColumns,
@@ -69,8 +70,8 @@ function BackgroundSurface() {
   }
 
   return (
-    <div className="pointer-events-none absolute inset-0 -z-10">
-      {background.element ?? <div className="h-full w-full bg-neutral-950" />}
+    <div className="layout-shell__background">
+      {background.element ?? <div className="layout-shell__background-fallback" />}
     </div>
   );
 }

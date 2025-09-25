@@ -1,0 +1,56 @@
+@reference "tailwindcss";
+@reference "../../../../App.css";
+
+@layer components {
+  .modern-grid-background {
+    @apply relative h-full w-full overflow-hidden;
+  }
+
+  .modern-grid-background--variant-mesh {
+    @apply bg-white dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-800;
+  }
+
+  .modern-grid-background--variant-aurora {
+    @apply bg-white dark:bg-gradient-to-br dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950;
+  }
+
+  .modern-grid-background--variant-jewel {
+    @apply bg-white dark:bg-gradient-to-br dark:from-emerald-950 dark:via-teal-950 dark:to-cyan-950;
+  }
+
+  .modern-grid-background--variant-monochrome {
+    @apply bg-white dark:bg-gradient-to-br dark:from-gray-950 dark:via-slate-950 dark:to-zinc-950;
+  }
+
+  .modern-grid-background--variant-sunset {
+    @apply bg-white dark:bg-gradient-to-br dark:from-orange-950 dark:via-amber-950 dark:to-yellow-950;
+  }
+
+  .modern-grid-background--variant-ocean {
+    @apply bg-white dark:bg-gradient-to-br dark:from-cyan-950 dark:via-blue-950 dark:to-indigo-950;
+  }
+
+  .modern-grid-background__overlay-light {
+    @apply absolute inset-0 h-full w-full dark:hidden;
+  }
+
+  .modern-grid-background__overlay-dark {
+    @apply absolute inset-0 hidden h-full w-full dark:block;
+  }
+
+  .modern-grid-background__layer-mesh {
+    @apply absolute inset-0 opacity-30;
+  }
+
+  .modern-grid-background__layer-aurora {
+    @apply absolute inset-0 opacity-20;
+  }
+
+  .modern-grid-background__layer-jewel {
+    @apply absolute inset-0 opacity-25;
+  }
+
+  .modern-grid-background__content {
+    @apply relative z-10 h-full w-full;
+  }
+}

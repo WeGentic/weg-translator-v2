@@ -1,0 +1,30 @@
+@layer components {
+  .blank-background {
+    height: 100%;
+    width: 100%;
+  }
+
+  .blank-background--tone-default {
+    background-color: var(--color-background);
+    color: inherit;
+  }
+
+  .blank-background--tone-muted {
+    background-color: var(--color-muted);
+    color: inherit;
+  }
+
+  .blank-background--tone-subtle {
+    background-color: color-mix(in oklab, var(--color-muted) 40%, transparent);
+    color: inherit;
+  }
+
+  .blank-background--tone-inverted {
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+  }
+
+  .blank-background--tone-transparent {
+    background-color: transparent;
+  }
+}

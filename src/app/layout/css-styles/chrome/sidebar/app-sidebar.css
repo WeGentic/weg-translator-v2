@@ -1,0 +1,418 @@
+/* Modern Sidebar – clean, minimal, token-driven */
+.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  /* Allow tooltips to escape the container */
+  overflow: visible;
+
+  background: var(--color-sidebar);
+  color: var(--color-sidebar-foreground);
+  border: 1px solid var(--color-sidebar-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease, width .22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-sidebar--floating {
+  position: fixed;
+  left: 16px;
+  /* Keep the sidebar below modal overlays (z-50) */
+  z-index: 30;
+  height: auto;
+}
+
+.app-sidebar__body {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 12px;
+  gap: 16px;
+}
+
+/* Compact adjustments to prevent overflow/scrollbars */
+.app-sidebar--compact .app-sidebar__body { padding: 8px 6px; overflow-x: hidden; }
+.app-sidebar--compact .app-sidebar__list { overflow: visible; }
+
+.app-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.app-sidebar__nav--tight { gap: 12px; }
+.app-sidebar__nav--no-top-padding { padding-top: 0; }
+
+.app-sidebar__section { display: flex; flex-direction: column; gap: 8px; }
+
+/* Section title */
+.app-sidebar__section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--color-sidebar-foreground) 60%, transparent);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 6px;
+  padding: 0 8px;
+}
+
+/* Lists */
+.app-sidebar__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.app-sidebar__temporary-list {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 14px;
+  position: relative;
+}
+
+.app-sidebar__temporary-list::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-sidebar-border);
+}
+
+.app-sidebar__temporary-list--compact { padding-left: 8px; }
+
+.app-sidebar__item { position: relative; list-style: none; contain: layout style; }
+.app-sidebar--compact .app-sidebar__item { display: flex; justify-content: center; }
+.app-sidebar--compact .app-sidebar__list { align-items: center; }
+
+/* Navigation link — rely on tokens, subtle hover/active */
+.app-sidebar__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-sidebar-foreground);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color .14s ease, color .14s ease, border-color .14s ease, transform .14s ease;
+}
+
+.app-sidebar__link--compact {
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  margin: 4px auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-sidebar-border);
+  background: color-mix(in oklab, var(--color-sidebar) 96%, transparent);
+  box-shadow: var(--shadow-xs);
+}
+
+.app-sidebar__link--temporary { padding-left: 18px; }
+.app-sidebar__link--closable { padding-right: 40px; }
+.app-sidebar__link--disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
+
+/* Hover (non-active) */
+.app-sidebar__link:hover:not([data-active="true"]):not(.app-sidebar__link--disabled) {
+  background: var(--color-sidebar-accent);
+  color: var(--color-sidebar-accent-foreground);
+  border-color: var(--color-sidebar-border);
+  transform: translateX(1px);
+}
+
+/* Compact: cleaner icon chip without borders */
+.app-sidebar--compact .app-sidebar__link:hover {
+  transform: none;
+  background: color-mix(in oklab, var(--color-sidebar-accent) 22%, transparent);
+  border-color: color-mix(in oklab, var(--color-sidebar-border) 70%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+.app-sidebar--compact .app-sidebar__link[data-active="true"] {
+  border-color: color-mix(in oklab, var(--color-sidebar-primary) 60%, var(--color-sidebar-border));
+  background: color-mix(in oklab, var(--color-sidebar-primary) 22%, transparent);
+}
+
+/* Active */
+.app-sidebar__link[data-active="true"] { background: var(--color-sidebar-accent); color: var(--color-sidebar-accent-foreground); border-color: var(--color-sidebar-border); font-weight: 600; }
+
+/* Left active indicator */
+/* Left marker removed per design request */
+
+/* Label + meta */
+.app-sidebar__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Icon color tuning */
+.app-sidebar__icon { color: color-mix(in oklab, var(--color-sidebar-foreground) 92%, transparent); }
+.app-sidebar__link:hover .app-sidebar__icon { color: var(--color-sidebar-accent-foreground); }
+.app-sidebar__link[data-active="true"] .app-sidebar__icon { color: var(--color-sidebar-accent-foreground); }
+
+/* Compact chips for project/editor specific views */
+.app-sidebar__link--chip {
+  background: color-mix(in oklab, var(--color-sidebar-primary) 10%, transparent);
+}
+.app-sidebar__link--chip:hover {
+  background: color-mix(in oklab, var(--color-sidebar-primary) 18%, transparent);
+}
+.app-sidebar__link--chip[data-active="true"] {
+  background: color-mix(in oklab, var(--color-sidebar-primary) 28%, transparent);
+  border-color: color-mix(in oklab, var(--color-sidebar-primary) 60%, var(--color-sidebar-border));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-sidebar-primary) 18%, transparent);
+}
+.app-sidebar__link--chip[data-active="true"] .app-sidebar__initial { color: var(--color-sidebar-primary-foreground); }
+.app-sidebar__initial {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: color-mix(in oklab, var(--color-sidebar-foreground) 95%, transparent);
+}
+
+.app-sidebar__shortcut {
+  margin-left: auto;
+  padding: 2px 8px;
+  background: color-mix(in oklab, var(--color-sidebar-foreground) 10%, transparent);
+  border: 1px solid var(--color-sidebar-border);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  color: color-mix(in oklab, var(--color-sidebar-foreground) 85%, transparent);
+}
+
+.app-sidebar__badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-sidebar-primary);
+  color: var(--color-sidebar-primary-foreground);
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Close button */
+.app-sidebar__close-button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--color-sidebar-border);
+  background: var(--color-sidebar);
+  color: color-mix(in oklab, var(--color-sidebar-foreground) 80%, transparent);
+  cursor: pointer;
+  transition: background-color .16s ease, color .16s ease, border-color .16s ease;
+}
+
+.app-sidebar__close-button--compact { right: 8px; width: 20px; height: 20px; }
+
+.app-sidebar__close-button:hover {
+  background: color-mix(in oklab, var(--color-sidebar-accent) 85%, transparent);
+  color: var(--color-sidebar-foreground);
+}
+
+/* Footer */
+.app-sidebar__footer {
+  position: sticky;
+  bottom: 0;
+  border-top: 1px solid var(--color-sidebar-border);
+  background: color-mix(in oklab, var(--color-sidebar) 92%, transparent);
+  padding: 10px;
+  margin-top: auto;
+  border-bottom-left-radius: var(--radius-xl);
+  border-bottom-right-radius: var(--radius-xl);
+}
+
+/* Divider between sections */
+.app-sidebar__divider {
+  height: 1px;
+  background: var(--color-sidebar-border);
+  margin: 2px 8px 0 8px;
+}
+
+/* Toggle button */
+.app-sidebar__toggle-button {
+  position: absolute;
+  right: -18px;
+  top: 16px;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  border: 1px solid var(--color-sidebar-border);
+  background: var(--color-card, var(--color-sidebar));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color .16s ease, border-color .16s ease, transform .16s ease;
+  box-shadow: var(--shadow-xs);
+  z-index: 50;
+}
+
+.app-sidebar__toggle-button:hover {
+  background: var(--color-sidebar-accent);
+  transform: scale(1.04);
+}
+
+/* Tooltip */
+.app-sidebar__tooltip {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: color-mix(in oklab, var(--color-foreground) 92%, var(--color-background));
+  color: var(--color-background);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  /* Above base UI; ensure visibility */
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0;
+  animation: app-sidebar-tooltip-in .18s ease forwards;
+  animation-delay: .12s;
+}
+
+/* Compact Projects popup menu */
+.app-sidebar__menu {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 0;
+  min-width: 220px;
+  max-width: 280px;
+  max-height: 60vh;
+  overflow: auto;
+  background: var(--color-popover);
+  color: var(--color-popover-foreground);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  /* Above base UI; ensure visibility */
+  z-index: 60;
+  padding: 8px;
+}
+
+.app-sidebar__menu::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 14px;
+  width: 0; height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 6px solid var(--color-popover);
+}
+
+.app-sidebar__menu-header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: color-mix(in oklab, var(--color-popover-foreground) 70%, transparent);
+  padding: 4px 6px 6px;
+}
+
+.app-sidebar__menu-item {
+  display: flex;
+  width: 100%;
+  text-align: left;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  border-radius: var(--radius-md);
+  color: var(--color-popover-foreground);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color .14s ease, color .14s ease, border-color .14s ease;
+}
+
+.app-sidebar__menu-item:hover {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-color: var(--color-border);
+}
+
+.app-sidebar__menu-item--active {
+  background: color-mix(in oklab, var(--color-primary) 12%, transparent);
+  border-color: color-mix(in oklab, var(--color-primary) 25%, var(--color-border));
+}
+
+.app-sidebar__tooltip::after {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0; height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 6px solid color-mix(in oklab, var(--color-foreground) 92%, var(--color-background));
+}
+
+@keyframes app-sidebar-tooltip-in {
+  from { opacity: 0; transform: translateY(-50%) translateX(-2px); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
+
+/* Scrollbar */
+.app-sidebar__body::-webkit-scrollbar { width: 6px; }
+.app-sidebar__body::-webkit-scrollbar-track { background: transparent; }
+.app-sidebar__body::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--color-sidebar-foreground) 18%, transparent); border-radius: 999px; }
+.app-sidebar__body::-webkit-scrollbar-thumb:hover { background: color-mix(in oklab, var(--color-sidebar-foreground) 28%, transparent); }
+
+/* Focus */
+.app-sidebar *:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--color-sidebar-ring) 70%, transparent);
+  outline-offset: 2px;
+}
+
+/* Nested items */
+.app-sidebar__nested-item { margin-left: 4px; }
+.app-sidebar__header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-sidebar-border);
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-sidebar-primary) 9%, transparent),
+    transparent 60%
+  );
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+}

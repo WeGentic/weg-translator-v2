@@ -35,10 +35,11 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
 
   useEffect(() => {
     let cancelled = false;
-    setIsDetailsLoading(true);
-    setDetailsError(null);
 
-    void (async () => {
+    const fetchDetails = async () => {
+      setIsDetailsLoading(true);
+      setDetailsError(null);
+
       try {
         const projectDetails = await getProjectDetails(project.projectId);
         if (cancelled) {
@@ -58,7 +59,9 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
           setIsDetailsLoading(false);
         }
       }
-    })();
+    };
+
+    void fetchDetails();
 
     return () => {
       cancelled = true;
@@ -79,45 +82,63 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
   }, [fileId]);
 
   useEffect(() => {
-    if (!fileId) {
-      setArtifactState({ status: "idle" });
-      return;
-    }
-
-    if (isDetailsLoading) {
-      setArtifactState({ status: "loading", fileId });
-      return;
-    }
-
-    if (detailsError) {
-      setArtifactState({ status: "error", message: detailsError });
-      return;
-    }
-
-    if (!details) {
-      setArtifactState({ status: "error", message: "Project details are not available yet." });
-      return;
-    }
-
-    const fileEntry = details.files.find((candidate) => candidate.file.id === fileId);
-    if (!fileEntry) {
-      setArtifactState({ status: "error", message: "Selected file is no longer part of this project." });
-      return;
-    }
-
-    const conversion = selectLatestCompletedConversion(fileEntry.conversions);
-    if (!conversion || !conversion.jliffRelPath || !conversion.tagMapRelPath) {
-      setArtifactState({
-        status: "error",
-        message: "No completed conversion with stored JLIFF artifacts is available for this file yet.",
-      });
-      return;
-    }
-
     let cancelled = false;
-    setArtifactState({ status: "loading", fileId });
 
-    void (async () => {
+    const hydrateArtifacts = async () => {
+      if (!fileId) {
+        if (!cancelled) {
+          setArtifactState({ status: "idle" });
+        }
+        return;
+      }
+
+      if (isDetailsLoading) {
+        if (!cancelled) {
+          setArtifactState({ status: "loading", fileId });
+        }
+        return;
+      }
+
+      if (detailsError) {
+        if (!cancelled) {
+          setArtifactState({ status: "error", message: detailsError });
+        }
+        return;
+      }
+
+      if (!details) {
+        if (!cancelled) {
+          setArtifactState({ status: "error", message: "Project details are not available yet." });
+        }
+        return;
+      }
+
+      const fileEntry = details.files.find((candidate) => candidate.file.id === fileId);
+      if (!fileEntry) {
+        if (!cancelled) {
+          setArtifactState({
+            status: "error",
+            message: "Selected file is no longer part of this project.",
+          });
+        }
+        return;
+      }
+
+      const conversion = selectLatestCompletedConversion(fileEntry.conversions);
+      if (!conversion || !conversion.jliffRelPath || !conversion.tagMapRelPath) {
+        if (!cancelled) {
+          setArtifactState({
+            status: "error",
+            message: "No completed conversion with stored JLIFF artifacts is available for this file yet.",
+          });
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setArtifactState({ status: "loading", fileId });
+      }
+
       try {
         const [jliffRaw, tagMapRaw] = await Promise.all([
           readProjectArtifact(details.id, conversion.jliffRelPath),
@@ -165,7 +186,9 @@ export function ProjectEditor({ project, fileId }: ProjectEditorProps) {
           error instanceof Error ? error.message : "Failed to load translation artifacts for this file.";
         setArtifactState({ status: "error", message });
       }
-    })();
+    };
+
+    void hydrateArtifacts();
 
     return () => {
       cancelled = true;

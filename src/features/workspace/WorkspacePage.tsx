@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo } from "react";
-import { FileText, FolderKanban, Settings } from "lucide-react";
+import { TbFolders } from "react-icons/tb";
+import { FiFileText, FiSettings } from "react-icons/fi";
 
-import { BlankBackground, useLayoutActions, useLayoutSelector } from "@/app/layout";
-import { AppHeader, AppSidebar, WorkspaceFooter, type MenuItem } from "@/app/layout/chrome";
+import { BlankBackground, useLayoutStoreApi } from "@/app/layout";
+import { AppHeader, AppSidebar, WorkspaceFooter, type MenuItem } from "@/app/layout/main_elements";
 import { useAppHealth } from "@/app/hooks/useAppHealth";
 import { useGlobalNavigationEvents } from "@/app/hooks/useGlobalNavigationEvents";
 import { useWorkspaceShell } from "@/app/hooks/useWorkspaceShell";
@@ -20,14 +21,14 @@ import { AppSettingsPanel } from "@/components/settings/AppSettingsPanel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHeaderTitle } from "@/hooks/useHeaderTitle";
-import type { AppHealthReport, ProjectListItem } from "@/ipc";
+import type { ProjectListItem } from "@/ipc";
 
-const SIDEMENU_COMPACT_WIDTH = 112;
+const SIDEMENU_COMPACT_WIDTH = 56;
 const SIDEMENU_EXPANDED_WIDTH = 264;
 
 const FIXED_MENU_ITEMS: MenuItem[] = [
-  { key: "projects", label: "Projects", icon: FolderKanban },
-  { key: "settings", label: "Settings", icon: Settings },
+  { key: "projects", label: "Projects", icon: TbFolders },
+  { key: "settings", label: "Settings", icon: FiSettings },
 ];
 
 export function WorkspacePage() {
@@ -52,13 +53,7 @@ export function WorkspacePage() {
     setSelectedFileId,
   } = useWorkspaceShell();
 
-  const setHeader = useLayoutActions((state) => state.setHeader);
-  const setFooter = useLayoutActions((state) => state.setFooter);
-  const setSidemenu = useLayoutActions((state) => state.setSidemenu);
-  const setBackground = useLayoutActions((state) => state.setBackground);
-  const setHeaderContent = useLayoutActions((state) => state.setHeaderContent);
-  const setFooterContent = useLayoutActions((state) => state.setFooterContent);
-  const setSidemenuContent = useLayoutActions((state) => state.setSidemenuContent);
+  const layoutStore = useLayoutStoreApi();
 
   const headerTitle = useHeaderTitle({
     explicit:
@@ -72,7 +67,7 @@ export function WorkspacePage() {
       openProjectOverviews.map((project) => ({
         key: toProjectViewKey(project.projectId),
         label: project.name,
-        icon: FileText,
+        icon: FiFileText,
         onClose: () => handleCloseOverview(project.projectId),
       })),
     [handleCloseOverview, openProjectOverviews],
@@ -85,7 +80,7 @@ export function WorkspacePage() {
       return {
         key: toEditorViewKey(projectId),
         label: project ? `Editor — ${project.name}` : "Editor",
-        icon: FileText,
+        icon: FiFileText,
         onClose: () => handleCloseEditor(projectId),
       } satisfies MenuItem;
     });
@@ -118,45 +113,67 @@ export function WorkspacePage() {
   );
 
   useEffect(() => {
-    setBackground({ mounted: true, visible: true, element: <BlankBackground tone="default" /> });
-    return () => {
-      setBackground({ element: null, mounted: false });
-    };
-  }, [setBackground]);
-
-  useEffect(() => {
-    setHeader({ mounted: true, visible: true, height: 64 });
-    setHeaderContent(<AppHeader title={headerTitle} hideUser={!user} />);
-    return () => {
-      setHeaderContent(null);
-      setHeader({ mounted: false });
-    };
-  }, [setHeader, setHeaderContent, headerTitle, user]);
-
-  useEffect(() => {
-    setSidemenu({
+    const store = layoutStore;
+    store.getState().setBackground({
       mounted: true,
-      mode: "expanded",
+      visible: true,
+      element: <BlankBackground/>
+    });
+    return () => {
+      store.getState().setBackground({ element: null, mounted: false });
+    };
+  }, [layoutStore]);
+
+  useEffect(() => {
+    const store = layoutStore;
+    store.getState().setHeader({ mounted: true, visible: true, height: 64 });
+    store.getState().setHeaderContent(<AppHeader title={headerTitle} hideUser={!user} />);
+    return () => {
+      store.getState().setHeaderContent(null);
+      store.getState().setHeader({ mounted: false });
+    };
+  }, [layoutStore, headerTitle, user]);
+
+  // Mount the sidemenu once and keep its mode stable across navigation
+  useEffect(() => {
+    const store = layoutStore;
+    const currentMode = store.getState().sidemenu.mode;
+    store.getState().setSidemenu({
+      mounted: true,
+      ...(currentMode === "unmounted" ? { mode: "expanded" as const } : {}),
       compactWidth: SIDEMENU_COMPACT_WIDTH,
       expandedWidth: SIDEMENU_EXPANDED_WIDTH,
     });
-    setSidemenuContent(
+    return () => {
+      store.getState().setSidemenu({ mounted: false, mode: "unmounted" });
+    };
+  }, [layoutStore]);
+
+  // Update sidemenu content when inputs change without resetting its mode
+  useEffect(() => {
+    const store = layoutStore;
+    store.getState().setSidemenuContent(
       <AppSidebar
         fixedItems={FIXED_MENU_ITEMS}
         temporaryItems={temporaryProjectItems}
         editorItems={temporaryEditorItems}
         selectedKey={mainView}
         onSelect={handleSidebarSelect}
-        floating={false}
+        floating={true}
+        showToggleButton={false}
+        header={
+          <div className="flex items-center gap-2">
+            <div className="size-2.5 rounded-[4px] bg-primary" />
+            <span className="text-xs font-semibold text-muted-foreground">Navigation</span>
+          </div>
+        }
       />,
     );
     return () => {
-      setSidemenuContent(null);
-      setSidemenu({ mounted: false, mode: "unmounted" });
+      store.getState().setSidemenuContent(null);
     };
   }, [
-    setSidemenu,
-    setSidemenuContent,
+    layoutStore,
     temporaryProjectItems,
     temporaryEditorItems,
     mainView,
@@ -164,13 +181,14 @@ export function WorkspacePage() {
   ]);
 
   useEffect(() => {
-    setFooter({ mounted: true, visible: true, height: 56 });
-    setFooterContent(<WorkspaceFooter health={health} />);
+    const store = layoutStore;
+    store.getState().setFooter({ mounted: true, visible: true, height: 56 });
+    store.getState().setFooterContent(<WorkspaceFooter health={health} />);
     return () => {
-      setFooterContent(null);
-      setFooter({ mounted: false });
+      store.getState().setFooterContent(null);
+      store.getState().setFooter({ mounted: false });
     };
-  }, [setFooter, setFooterContent, health]);
+  }, [layoutStore, health]);
 
   const renderContent = () => {
     if (mainView === "projects") {

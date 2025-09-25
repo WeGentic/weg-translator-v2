@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { BlankBackground, MainLayout, useLayoutActions } from "@/app/layout";
+import { BlankBackground, MainLayout, useLayoutStoreApi } from "@/app/layout";
 import { LoginForm } from "../components/LoginForm";
 
 export const Route = createFileRoute("/login")({
@@ -14,26 +14,22 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const setHeader = useLayoutActions((state) => state.setHeader);
-  const setFooter = useLayoutActions((state) => state.setFooter);
-  const setSidemenu = useLayoutActions((state) => state.setSidemenu);
-  const setBackground = useLayoutActions((state) => state.setBackground);
-  const setHeaderContent = useLayoutActions((state) => state.setHeaderContent);
-  const setFooterContent = useLayoutActions((state) => state.setFooterContent);
-  const setSidemenuContent = useLayoutActions((state) => state.setSidemenuContent);
+  const layoutStore = useLayoutStoreApi();
 
   useEffect(() => {
-    setHeader({ mounted: false, visible: false });
-    setFooter({ mounted: false, visible: false });
-    setSidemenu({ mounted: false, mode: "hidden" });
-    setHeaderContent(null);
-    setFooterContent(null);
-    setSidemenuContent(null);
-    setBackground({ mounted: true, visible: true, element: <BlankBackground tone="default" /> });
+    const store = layoutStore;
+    const state = store.getState();
+    state.setHeader({ mounted: false, visible: false });
+    state.setFooter({ mounted: false, visible: false });
+    state.setSidemenu({ mounted: false, mode: "hidden" });
+    state.setHeaderContent(null);
+    state.setFooterContent(null);
+    state.setSidemenuContent(null);
+    state.setBackground({ mounted: true, visible: true, element: <BlankBackground tone="default" /> });
     return () => {
-      setBackground({ element: null, mounted: false });
+      store.getState().setBackground({ element: null, mounted: false });
     };
-  }, [setHeader, setFooter, setSidemenu, setBackground, setHeaderContent, setFooterContent, setSidemenuContent]);
+  }, [layoutStore]);
 
   return (
     <>

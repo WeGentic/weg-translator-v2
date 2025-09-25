@@ -2,12 +2,14 @@ import type { ComponentPropsWithRef, CSSProperties } from "react";
 
 import { cn } from "@/lib/utils";
 
+import "../css-styles/backgrounds/blank-background.css";
+
 const TONE_CLASSES = {
-  default: "bg-background",
-  muted: "bg-muted",
-  subtle: "bg-muted/40",
-  inverted: "bg-foreground text-background",
-  transparent: "bg-transparent",
+  default: "blank-background--tone-default",
+  muted: "blank-background--tone-muted",
+  subtle: "blank-background--tone-subtle",
+  inverted: "blank-background--tone-inverted",
+  transparent: "blank-background--tone-transparent",
 } as const;
 
 type Tone = keyof typeof TONE_CLASSES;
@@ -27,7 +29,7 @@ export function BlankBackground({ tone = "default", className, children, style, 
   const toneClass = TONE_CLASSES[tone] ?? TONE_CLASSES.default;
 
   return (
-    <div ref={ref} className={cn("h-full w-full", toneClass, className)} style={style} {...props}>
+    <div ref={ref} className={cn("blank-background", toneClass, className)} style={style} {...props}>
       {children}
     </div>
   );

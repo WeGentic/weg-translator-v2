@@ -1,5 +1,7 @@
 import { useEffect, type PropsWithChildren } from "react";
 
+import "./css-styles/layout-sidemenu.css";
+
 import { useLayoutSelector, useLayoutStoreApi } from "./layout-context";
 import type { SidemenuMode } from "./layout-store";
 
@@ -47,7 +49,7 @@ export function LayoutSidemenu({ children, mode, compactWidth, expandedWidth }: 
   return (
     <aside
       role="navigation"
-      className="flex h-full w-full flex-col"
+      className="layout-sidemenu"
       style={{
         gridColumn: "1 / 2",
         gridRow: "2 / 3",

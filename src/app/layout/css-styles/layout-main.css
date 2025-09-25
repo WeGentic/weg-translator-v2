@@ -1,0 +1,23 @@
+@layer components {
+  .layout-main {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: transparent;
+  }
+
+  .layout-main__content {
+    flex: 1 1 0%;
+    min-height: 0;
+  }
+
+  .layout-main__content--scroll-auto {
+    overflow-y: auto;
+  }
+
+  .layout-main__content--scroll-hidden {
+    overflow: hidden;
+  }
+}
