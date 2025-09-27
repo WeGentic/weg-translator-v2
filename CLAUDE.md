@@ -1,92 +1,164 @@
-# CLAUDE.md
+# Weg Translator Desktop
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Tauri 2.8.5 desktop application with a **React 19.1** frontend and **Rust 1.89** backend that wraps the OpenXLIFF command-line tools as sidecars. The app ships a minimal Java 21 runtime, exposes convert/merge/validate flows in the UI, and showcases secured IPC between React and Tauri.
 
-## Core Instruction
+## Highlights
 
-When in Plan Mode you must pro-actively use <perplexity-ask> to fill knowledge gaps, fetch most up-to-date information, best practices, patterns, and validate your assumptions.
+- Project is based on the Tauri + React + TypeScript + TailwindCSS, with npm workspaces.
+- React UI (ShadCN v3.3.1 + TailwindCSS 4.1.1) with streaming logs, file pickers, and OpenXLIFF controls.
+- Tauri sidecars bundle OpenXLIFF CLI scripts (`convert`, `merge`, `xliffchecker`) plus a slimmed Java runtime for offline operation.
+- Rust IPC layer exposes translation job simulation, path validation, structured logging, and SQLite-backed job persistence via `tauri-plugin-sql`.
+- Capability hardening: shell sidecars limited to an allowlisted flag set; opener/dialog permissions scoped to user actions.
+- CI workflow builds macOS/Windows bundles, caches vendored OpenXLIFF dists, and uploads artifacts.
 
-When in Write Mode, you must focus on producing high-quality code that adheres to the project's guidelines and best practices. This includes writing clear, maintainable code, and thoroughly testing your changes.
+## Repository layout
 
-Your highest priority is accuracy and reliability. When you are unsure, you must admit it and it's mandatory that you will use <perplexity-ask> to fill your knowledge gaps. A careful "I'm unsure" is always better than a confident but wrong answer.
+```
+src/                      React frontend (routes, ShadCN components, OpenXLIFF panel)
+src/lib/openxliff.ts      JS wrappers around @tauri-apps/plugin-shell sidecars
+src/lib/fs.ts             Path existence helper (Rust command `path_exists`)
+src-tauri/                Rust backend, Tauri config, sidecar binaries/resources
+src-tauri/sidecars/       Wrapper scripts invoked as sidecars
+src-tauri/resources/      Vendored OpenXLIFF dist + Java runtime per platform
+scripts/                  Helper scripts (fetch, sync, normalize, build JRE)
+vendor/openxliff/         Source-of-truth OpenXLIFF assets
+.github/workflows/ci.yml  macOS/Windows build workflow
+```
 
-## Reward Structure (Behavioral Guidance)
+## Prerequisites
 
-✅ Highest Value: Correct, precise answers that match the given context.
-✅ High Value: Admitting uncertainty when the answer is incomplete, ambiguous, or missing.
-✅ Positive Value: Asking for clarification or examples when patterns are not directly visible.
-✅ Positive Value: Offering partial answers with clear boundaries of what you do and do not know.
-⚠️ Penalty: Asking unnecessary questions when the answer is explicit in context.
-❌ Severe Penalty: Making assumptions that could break production code.
-❌ Maximum Penalty: Giving a confident answer that is wrong.
+- Node.js 20+
+- Rust toolchain (`rustup`, `cargo`) matching Tauri requirements
+- Tauri CLI dependencies (see [Tauri docs](https://v2.tauri.app/start/prerequisites/))
+- Java 21 + Gradle if you need to rebuild OpenXLIFF (`scripts/fetch-openxliff.sh`)
 
-## Uncertainty Decision Tree
+## Getting started
 
-Do I have strong, context-supported evidence for this answer?
+```bash
+pnpm install
+pnpm tauri dev
+```
 
-- YES → Proceed with the implementation.
-- NO → STOP and do one of the following:
-  1. Check local context:
-     1. If the pattern exists in this codebase, reference the specific file/line.
-     2. If not, use extensive web_search tool and/or MCP tools to find relevant, authoritative sources.
-  2. Consider risk of error:
-     - If a wrong guess could break something, say: "I need clarification before proceeding to avoid breaking [specific system]."
-     - If low risk, still ask for confirmation: minor errors compound over time.
-  3. Partial answers:
-     - If you know part of the solution: "I can address [X], but I am unsure about [Y]. Should I proceed with just [X]?"
-     - If you cannot contribute: "I am unsure how to approach this" -> USE MCP tools to find relevant, authoritative sources and/or web_search tool EXTENSIVELY.
+> Prefer `pnpm` for development to stay aligned with the workspace lockfile. If you must
+> use npm, run `npm install` and adjust the scripts accordingly.
 
-## Enforcement
+During development `tauri dev` launches Vite together with the Tauri backend. Logs are streamed to the in-app console (powered by `tauri-plugin-log`).
 
-**This is a requirement, not a suggestion.**
+## Building
 
-- If you fail to admit uncertainty when appropriate, your answer will be treated as incorrect.
-- Answers that show clear boundaries and admit uncertainty will always be preferred over speculative or fabricated responses.
+Debug build (bundles the macOS `.app` / `.dmg` or Windows `.msi`/`.exe` depending on host):
 
-**Remember**: Uncertainty = Professionalism. Guessing = Incompetence. Questions = Intelligence. Assumptions = Failures.
+```bash
+pnpm tauri build -- --debug
+```
 
-## General instructions
+Artifacts land in `src-tauri/target/debug/bundle/…`. Example macOS output:
 
-You must pro-actively use perplexity-ask to fill knowledge gaps, fetch most up-to-date information, best practices, patterns, and validate your assumptions.
+- `bundle/macos/weg-translator.app`
+- `bundle/dmg/weg-translator_0.1.0_aarch64.dmg`
 
-## Project Scope
+The `Resources/resources/openxliff/<platform>` directory inside the bundle carries the vendored CLI + jlink runtime. Wrapper scripts were validated to resolve this location automatically.
 
-This repository contains a Tauri 2.8.5 application with React 19.1.1 as frontend and Rust 1.89 as backend. The application is a desktop (macOS/Windows11) app that allows users to translate files using LLMs/Agents.
+## Testing
 
-## Coding Standards
+Frontend and IPC surface tests rely on Vitest + Testing Library:
 
-- Any UI components must use ShadCN (v. 3.3.1) and TailwindCSS 4.1.1
-- Frontend must be written in React 19.1.1, using most recent patterns and best practices, and the new Compiler.
+```bash
+pnpm test            # watch mode
+pnpm test:run        # single run (CI friendly)
+pnpm test:coverage   # collect coverage via c8
+```
 
-## Current Architecture
+Rust integration tests exercise the SQLite persistence layer:
 
-### Authentication System
-- Mock authentication context (`/src/contexts/AuthContext.tsx`)
-- Protected routes using TanStack Router guards
-- Login/logout functionality with state management
+```bash
+cargo test --manifest-path src-tauri/Cargo.toml
+```
 
-### Routing Structure
-- **TanStack Router v1.131** for navigation
-- `/login` - Modern login page with email/password authentication
-- `/` - Protected main application (translation interface)
-- Route guards with automatic redirects
+## SQLite persistence
 
-### UI Components
-- Modern login page with glass-morphism design
-- Two-column layout (branding + form)
-- ShadCN components: Button, Input, Card, Label, Checkbox, Alert
-- Responsive design with dark mode support
-- Form validation and loading states
+- Database file lives under the platform-specific app config directory (via
+  `BaseDirectory::AppConfig`) as `weg_translator.db`.
+- Migrations reside in `src-tauri/migrations/*.sql` and are embedded at build time; the
+  `DbManager` helper applies them during setup.
+- The SQLite plugin is registered through `src-tauri/src/lib.rs` and gated by the
+  `src-tauri/capabilities/sqlite.json` manifest to avoid arbitrary URI access from the frontend.
+- In-memory integration tests (`src-tauri/tests/db_integration.rs`) verify migrations, duplicate
+  insert handling, status updates, and the clear-history path.
 
-### Key Files
-- `/src/main.tsx` - App entry point with auth provider
-- `/src/routes/login.tsx` - Login page route
-- `/src/routes/index.tsx` - Protected translator route
-- `/src/components/LoginForm.tsx` - Login form component
-- `/src/contexts/AuthContext.tsx` - Authentication state management
-- `/src/App.tsx` - Main translation application
+## OpenXLIFF integration
 
-### Development Commands
-- `npm run dev` - Start development server (localhost:1420)
-- `npm run build` - TypeScript check and production build
-- `npm run tauri` - Tauri-specific commands
+- Vendored assets live under `vendor/openxliff/` (built via `scripts/fetch-openxliff.sh`).
+- `scripts/sync-openxliff-resources.sh` mirrors the dist into `src-tauri/resources/openxliff/<platform>`.
+- `scripts/normalize-openxliff-resources.sh` replaces JRE symlinks with real files to avoid macOS codesign/EACCES issues.
+- Sidecar wrapper scripts (`src-tauri/sidecars/openxliff/bin/*.sh|*.cmd`) resolve the correct resource path in both dev tree and packaged app; macOS-specific copies are emitted with the host triple suffix.
+- Shell permissions (`src-tauri/capabilities/default.json`) allow only approved flags (e.g. `-file`, `-srcLang`, `-xliff`, `-2.0|2.1|2.2`).
+
+### CLI quick checks
+
+Run scripts from the dev tree:
+
+```bash
+src-tauri/sidecars/openxliff/bin/convert.sh -help
+src-tauri/sidecars/openxliff/bin/merge.sh -help
+src-tauri/sidecars/openxliff/bin/xliffchecker.sh -help
+```
+
+Run from inside the packaged app:
+
+```bash
+APP=src-tauri/target/debug/bundle/macos/weg-translator.app/Contents/MacOS
+"$APP/convert.sh" -help
+```
+
+### Sample conversion
+
+```bash
+APP=src-tauri/target/debug/bundle/macos/weg-translator.app/Contents/MacOS/convert.sh
+"$APP" \
+  -file "$PWD/Test.docx" \
+  -srcLang en-US \
+  -tgtLang it-IT \
+  -xliff "$PWD/Test.en-it.xlf" \
+  -type OFF \
+  -2.1
+
+# Produces Test.en-it.xlf (~540 KB) using the bundled Java runtime
+```
+
+`-type OFF` matches the “Microsoft Office 2007 Document” type reported by `convert.sh -types`.
+
+## Frontend components
+
+- `src/routes/index.tsx`: authenticated translator workspace; surfaces OpenXLIFF tooling and job controls.
+- `src/components/openxliff/OpenXliffPanel.tsx`: full convert/validate/merge UI with path validation, dialogs, and streaming logs.
+- `src/lib/openxliff.ts`: `Command.sidecar` wrappers (execute + streaming variants) returning structured results.
+- `src/lib/fs.ts`: client helper around the Rust `path_exists` command (exists/isFile/isDir).
+
+## IPC / backend
+
+- `src-tauri/src/lib.rs`: Tauri builder wiring (`tauri-plugin-log`, `dialog`, `opener`, `shell`), registers commands including `path_exists`.
+- `src-tauri/src/ipc/commands.rs`: health checks, job simulation, new file-existence command.
+- `src-tauri/src/ipc/state.rs`: in-memory job registry used by the sample translation flow.
+- Logs emitted via JSON formatter for ingestion by the in-app console.
+
+## Continuous Integration
+
+`.github/workflows/ci.yml` runs on macOS + Windows:
+
+1. Checkout, setup Node/Rust/Java.
+2. Install Gradle (brew/choco).
+3. Cache `vendor/openxliff/dist-*` per OS.
+4. `./scripts/fetch-openxliff.sh` then `./scripts/sync-openxliff-resources.sh`.
+5. `npm ci`, `npm run build`, `npm run tauri build -- --debug`.
+6. Upload bundles from `src-tauri/target/**/bundle`. 
+
+Extend the workflow with release notarization/signing as Phase 18/19 of `Plan.md` progresses.
+
+## Troubleshooting
+
+- **Unknown file format** when converting Office docs → include `-type OFF`.
+- **macOS build “Permission denied”** while scanning JRE legal files → ensure `scripts/normalize-openxliff-resources.sh` has been run (replaces symlinks with files).
+- **New sidecar flags** → update `src-tauri/capabilities/default.json` to whitelist them before invoking from the frontend.
+
+

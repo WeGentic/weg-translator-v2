@@ -22,13 +22,13 @@ import "../../css-styles/chrome/header/app-header.css";
 
 const SIDEMENU_TOGGLE_LABELS = {
   expanded: "Compact sidebar",
-  compact: "Hide sidebar",
+  compact: "Expand sidebar",
   hidden: "Show sidebar",
 } as const;
 
 const SIDEMENU_TOGGLE_ICONS = {
-  expanded: PanelLeft,
-  compact: PanelLeftClose,
+  expanded: PanelLeftClose,
+  compact: PanelLeft,
   hidden: PanelLeftOpen,
 } as const;
 

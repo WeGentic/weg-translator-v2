@@ -227,9 +227,9 @@ function nextSidemenuMode(current: SidemenuMode): SidemenuMode {
     case "expanded":
       return "compact";
     case "compact":
-      return "hidden";
+      return "expanded"; // Toggle between expanded/compact when visible
     case "hidden":
-      return "expanded";
+      return "expanded"; // When hidden, show in expanded mode
     case "unmounted":
     default:
       return "expanded";

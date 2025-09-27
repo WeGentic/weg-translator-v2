@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { TbFolders } from "react-icons/tb";
-import { FiFileText, FiSettings } from "react-icons/fi";
+import { FiFileText, FiSettings, FiX } from "react-icons/fi";
 
 import { BlankBackground, useLayoutStoreApi } from "@/app/layout";
 import { AppHeader, AppSidebar, WorkspaceFooter, type MenuItem } from "@/app/layout/main_elements";
@@ -17,7 +17,7 @@ import { ProjectEditor } from "@/components/projects/editor/ProjectEditor";
 import { ProjectEditorPlaceholder } from "@/components/projects/editor/ProjectEditorPlaceholder";
 import { ProjectOverview } from "@/components/projects/overview/ProjectOverview";
 import { ProjectOverviewPlaceholder } from "@/components/projects/overview/ProjectOverviewPlaceholder";
-import { AppSettingsPanel } from "@/components/settings/AppSettingsPanel";
+import { EnhancedAppSettingsPanel } from "@/components/settings/EnhancedAppSettingsPanel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHeaderTitle } from "@/hooks/useHeaderTitle";
@@ -162,9 +162,31 @@ export function WorkspacePage() {
         floating={true}
         showToggleButton={false}
         header={
-          <div className="flex items-center gap-2">
-            <div className="size-2.5 rounded-[4px] bg-primary" />
-            <span className="text-xs font-semibold text-muted-foreground">Navigation</span>
+          <div className="flex items-center gap-3 px-2 w-full">
+            {/* Rounded square logo placeholder */}
+            <div className="w-6 h-6 rounded bg-slate-400 flex-shrink-0"></div>
+
+            {/* Two rows of text */}
+            <div className="flex flex-col flex-1">
+              <div className="text-sm font-bold">Weg Translator</div>
+              <div className="text-xs text-muted-foreground">
+                {mainView === "projects" ? "Projects" :
+                 mainView === "settings" ? "Settings" :
+                 temporaryProjectItems.find(item => item.key === mainView)?.label ||
+                 temporaryEditorItems.find(item => item.key === mainView)?.label?.replace("Editor — ", "") ||
+                 "Navigation"}
+              </div>
+            </div>
+
+            {/* Close button */}
+            <button
+              className="app-sidebar__close-btn"
+              onClick={() => layoutStore.getState().setSidemenu({ mode: "hidden" })}
+              aria-label="Close sidebar"
+              type="button"
+            >
+              <FiX className="size-4" />
+            </button>
           </div>
         }
       />,
@@ -198,7 +220,7 @@ export function WorkspacePage() {
     if (mainView === "settings") {
       return (
         <div className="w-full p-6">
-          <AppSettingsPanel />
+          <EnhancedAppSettingsPanel />
         </div>
       );
     }

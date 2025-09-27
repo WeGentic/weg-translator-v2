@@ -86,6 +86,7 @@ export interface AppHealthReport {
 export type ProjectType = "translation" | "rag";
 
 export type ProjectStatus = "active" | "archived";
+export type ProjectActivityStatus = "pending" | "running" | "completed" | "failed";
 
 export interface CreateProjectRequest {
   name: string;
@@ -108,6 +109,7 @@ export interface ProjectListItem {
   slug: string;
   projectType: ProjectType;
   status: ProjectStatus;
+  activityStatus: ProjectActivityStatus;
   fileCount: number;
   createdAt: string;
   updatedAt: string;
@@ -125,6 +127,14 @@ export interface AppSettings {
   defaultAppFolder: string;
   isUsingDefaultLocation: boolean;
   autoConvertOnOpen: boolean;
+  theme: string;
+  uiLanguage: string;
+  defaultSourceLanguage: string;
+  defaultTargetLanguage: string;
+  defaultXliffVersion: string;
+  showNotifications: boolean;
+  enableSoundNotifications: boolean;
+  maxParallelConversions: number;
 }
 
 // ===== Project Details & Conversions =====

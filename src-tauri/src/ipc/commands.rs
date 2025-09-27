@@ -81,6 +81,14 @@ async fn build_app_settings_dto(
         default_app_folder: default_app_folder.to_string_lossy().into_owned(),
         is_using_default_location: app_folder == default_app_folder,
         auto_convert_on_open: current.auto_convert_on_open,
+        theme: current.theme,
+        ui_language: current.ui_language,
+        default_source_language: current.default_source_language,
+        default_target_language: current.default_target_language,
+        default_xliff_version: current.default_xliff_version,
+        show_notifications: current.show_notifications,
+        enable_sound_notifications: current.enable_sound_notifications,
+        max_parallel_conversions: current.max_parallel_conversions,
     })
 }
 
@@ -1390,6 +1398,98 @@ pub async fn update_auto_convert_on_open(
 }
 
 #[tauri::command]
+pub async fn update_theme(
+    app: AppHandle,
+    settings: State<'_, SettingsManager>,
+    theme: String,
+) -> IpcResult<AppSettingsDto> {
+    if let Err(error) = settings.update_and_save_theme(theme).await {
+        warn!(target: "ipc::settings", "failed to update theme: {error}");
+        return Err(IpcError::Internal("Unable to update theme. Please retry.".into()).into());
+    }
+    build_app_settings_dto(&app, &settings)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub async fn update_ui_language(
+    app: AppHandle,
+    settings: State<'_, SettingsManager>,
+    language: String,
+) -> IpcResult<AppSettingsDto> {
+    if let Err(error) = settings.update_and_save_ui_language(language).await {
+        warn!(target: "ipc::settings", "failed to update UI language: {error}");
+        return Err(IpcError::Internal("Unable to update language. Please retry.".into()).into());
+    }
+    build_app_settings_dto(&app, &settings)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub async fn update_default_languages(
+    app: AppHandle,
+    settings: State<'_, SettingsManager>,
+    source_language: String,
+    target_language: String,
+) -> IpcResult<AppSettingsDto> {
+    if let Err(error) = settings.update_and_save_default_languages(source_language, target_language).await {
+        warn!(target: "ipc::settings", "failed to update default languages: {error}");
+        return Err(IpcError::Internal("Unable to update default languages. Please retry.".into()).into());
+    }
+    build_app_settings_dto(&app, &settings)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub async fn update_xliff_version(
+    app: AppHandle,
+    settings: State<'_, SettingsManager>,
+    version: String,
+) -> IpcResult<AppSettingsDto> {
+    if let Err(error) = settings.update_and_save_xliff_version(version).await {
+        warn!(target: "ipc::settings", "failed to update XLIFF version: {error}");
+        return Err(IpcError::Internal("Unable to update XLIFF version. Please retry.".into()).into());
+    }
+    build_app_settings_dto(&app, &settings)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub async fn update_notifications(
+    app: AppHandle,
+    settings: State<'_, SettingsManager>,
+    show_notifications: bool,
+    enable_sound: bool,
+) -> IpcResult<AppSettingsDto> {
+    if let Err(error) = settings.update_and_save_notifications(show_notifications, enable_sound).await {
+        warn!(target: "ipc::settings", "failed to update notifications: {error}");
+        return Err(IpcError::Internal("Unable to update notifications. Please retry.".into()).into());
+    }
+    build_app_settings_dto(&app, &settings)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command]
+pub async fn update_max_parallel_conversions(
+    app: AppHandle,
+    settings: State<'_, SettingsManager>,
+    max_parallel: u32,
+) -> IpcResult<AppSettingsDto> {
+    if let Err(error) = settings.update_and_save_max_parallel(max_parallel).await {
+        warn!(target: "ipc::settings", "failed to update max parallel conversions: {error}");
+        return Err(IpcError::Internal("Unable to update max parallel conversions. Please retry.".into()).into());
+    }
+    build_app_settings_dto(&app, &settings)
+        .await
+        .map_err(Into::into)
+}
+
+#[tauri::command]
 pub async fn path_exists(path: String) -> Result<(bool, bool, bool), ()> {
     // Returns (exists, is_file, is_dir)
     let p = Path::new(&path);
@@ -1433,6 +1533,7 @@ fn project_list_item_to_dto(project: ProjectListItem) -> ProjectListItemDto {
         slug: project.slug,
         project_type: project.project_type.as_str().to_string(),
         status: project.status.as_str().to_string(),
+        activity_status: project.activity_status,
         file_count: project.file_count,
         created_at: project.created_at,
         updated_at: project.updated_at,

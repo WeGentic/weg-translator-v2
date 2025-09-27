@@ -23,7 +23,9 @@ use ipc::{
     get_app_settings, get_project_details, get_translation_job, health_check, list_active_jobs,
     list_projects, list_translation_history, path_exists, read_project_artifact,
     remove_project_file, start_translation, update_app_folder, update_auto_convert_on_open,
-    update_conversion_status, update_jliff_segment,
+    update_conversion_status, update_jliff_segment, update_theme, update_ui_language,
+    update_default_languages, update_xliff_version, update_notifications,
+    update_max_parallel_conversions,
 };
 use log::LevelFilter;
 use log::kv::VisitSource;
@@ -117,7 +119,13 @@ pub fn run() {
             update_app_folder,
             start_translation,
             fail_translation,
-            update_jliff_segment
+            update_jliff_segment,
+            update_theme,
+            update_ui_language,
+            update_default_languages,
+            update_xliff_version,
+            update_notifications,
+            update_max_parallel_conversions
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

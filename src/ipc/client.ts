@@ -140,6 +140,36 @@ export async function updateAutoConvertOnOpen(enabled: boolean) {
   return safeInvoke<AppSettings>("update_auto_convert_on_open", { enabled });
 }
 
+export async function updateTheme(theme: string) {
+  return safeInvoke<AppSettings>("update_theme", { theme });
+}
+
+export async function updateUiLanguage(language: string) {
+  return safeInvoke<AppSettings>("update_ui_language", { language });
+}
+
+export async function updateDefaultLanguages(sourceLanguage: string, targetLanguage: string) {
+  return safeInvoke<AppSettings>("update_default_languages", {
+    source_language: sourceLanguage,
+    target_language: targetLanguage
+  });
+}
+
+export async function updateXliffVersion(version: string) {
+  return safeInvoke<AppSettings>("update_xliff_version", { version });
+}
+
+export async function updateNotifications(showNotifications: boolean, enableSound: boolean) {
+  return safeInvoke<AppSettings>("update_notifications", {
+    show_notifications: showNotifications,
+    enable_sound: enableSound
+  });
+}
+
+export async function updateMaxParallelConversions(maxParallel: number) {
+  return safeInvoke<AppSettings>("update_max_parallel_conversions", { max_parallel: maxParallel });
+}
+
 // ===== Project: Details & Conversions IPC =====
 
 export async function getProjectDetails(projectId: string) {

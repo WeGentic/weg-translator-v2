@@ -6,7 +6,8 @@
   /* Allow tooltips to escape the container */
   overflow: visible;
 
-  background: var(--color-sidebar);
+  /* Subtle background */
+  background: color-mix(in oklch, var(--color-sidebar) 95%, var(--color-muted) 5%);
   color: var(--color-sidebar-foreground);
   border: 1px solid var(--color-sidebar-border);
   border-radius: var(--radius-xl);
@@ -161,12 +162,30 @@
   white-space: nowrap;
   font-size: 14px;
   font-weight: 500;
+  text-align: left;
 }
 
 /* Icon color tuning */
-.app-sidebar__icon { color: color-mix(in oklab, var(--color-sidebar-foreground) 92%, transparent); }
-.app-sidebar__link:hover .app-sidebar__icon { color: var(--color-sidebar-accent-foreground); }
-.app-sidebar__link[data-active="true"] .app-sidebar__icon { color: var(--color-sidebar-accent-foreground); }
+.app-sidebar__icon {
+  color: color-mix(in oklab, var(--color-sidebar-foreground) 92%, transparent);
+}
+
+/* Colored icons */
+.app-sidebar__item[data-key="projects"] .app-sidebar__icon {
+  color: #3b82f6; /* Blue for Projects */
+}
+
+.app-sidebar__item[data-key="settings"] .app-sidebar__icon {
+  color: #6b7280; /* Gray for Settings */
+}
+
+.app-sidebar__link:hover .app-sidebar__icon {
+  color: var(--color-sidebar-accent-foreground);
+}
+
+.app-sidebar__link[data-active="true"] .app-sidebar__icon {
+  color: var(--color-sidebar-accent-foreground);
+}
 
 /* Compact chips for project/editor specific views */
 .app-sidebar__link--chip {
@@ -237,12 +256,12 @@
   color: var(--color-sidebar-foreground);
 }
 
-/* Footer */
+/* Footer - Settings section with slightly different background */
 .app-sidebar__footer {
   position: sticky;
   bottom: 0;
   border-top: 1px solid var(--color-sidebar-border);
-  background: color-mix(in oklab, var(--color-sidebar) 92%, transparent);
+  background: color-mix(in oklch, var(--color-sidebar) 90%, var(--color-muted) 10%);
   padding: 10px;
   margin-top: auto;
   border-bottom-left-radius: var(--radius-xl);
@@ -254,6 +273,17 @@
   height: 1px;
   background: var(--color-sidebar-border);
   margin: 2px 8px 0 8px;
+}
+
+/* 3D divider above Settings */
+.app-sidebar__divider--3d {
+  height: 6px;
+  margin: 8px 16px;
+  border-radius: 3px;
+  background: linear-gradient(145deg, #f0f0f0, #d0d0d0);
+  box-shadow:
+    inset 0 1px 2px rgba(0,0,0,0.1),
+    0 1px 0 rgba(255,255,255,0.8);
 }
 
 /* Toggle button */
@@ -408,11 +438,32 @@
   height: 44px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--color-sidebar-border);
-  background: linear-gradient(
-    180deg,
-    color-mix(in oklab, var(--color-sidebar-primary) 9%, transparent),
-    transparent 60%
-  );
+  background: var(--color-sidebar);
   border-top-left-radius: var(--radius-xl);
   border-top-right-radius: var(--radius-xl);
+}
+
+/* Close button for sidebar header */
+.app-sidebar__close-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  color: var(--color-sidebar-foreground);
+  flex-shrink: 0;
+}
+
+.app-sidebar__close-btn:hover {
+  background: var(--color-sidebar-accent);
+}
+
+.app-sidebar__close-btn:focus-visible {
+  outline: 2px solid var(--color-sidebar-ring);
+  outline-offset: 2px;
 }

@@ -313,6 +313,7 @@ pub struct ProjectListItem {
     pub created_at: String,
     pub updated_at: String,
     pub file_count: i64,
+    pub activity_status: String,
 }
 
 impl DbManager {
@@ -1075,9 +1076,17 @@ impl DbManager {
                  p.status,
                  p.created_at,
                  p.updated_at,
-                 COALESCE(COUNT(f.id), 0) AS file_count
+                 COALESCE(COUNT(DISTINCT f.id), 0) AS file_count,
+                 CASE
+                   WHEN COALESCE(SUM(CASE WHEN c.status = 'running' THEN 1 ELSE 0 END), 0) > 0 THEN 'running'
+                   WHEN COALESCE(COUNT(c.id), 0) = 0 THEN 'pending'
+                   WHEN COALESCE(SUM(CASE WHEN c.status = 'pending' THEN 1 ELSE 0 END), 0) > 0 THEN 'pending'
+                   WHEN COALESCE(SUM(CASE WHEN c.status = 'completed' THEN 1 ELSE 0 END), 0) = COALESCE(COUNT(c.id), 0) AND COALESCE(COUNT(c.id), 0) > 0 THEN 'completed'
+                   ELSE 'failed'
+                 END AS activity_status
              FROM projects p
              LEFT JOIN project_files f ON f.project_id = p.id
+             LEFT JOIN project_file_conversions c ON c.project_file_id = f.id
              GROUP BY p.id
              ORDER BY p.updated_at DESC
              LIMIT ?1 OFFSET ?2",
@@ -1415,6 +1424,7 @@ fn build_project_list_item(row: sqlx::sqlite::SqliteRow) -> DbResult<ProjectList
     let created_at: String = row.try_get("created_at")?;
     let updated_at: String = row.try_get("updated_at")?;
     let file_count: i64 = row.try_get("file_count")?;
+    let activity_status: String = row.try_get("activity_status")?;
 
     Ok(ProjectListItem {
         id,
@@ -1426,6 +1436,7 @@ fn build_project_list_item(row: sqlx::sqlite::SqliteRow) -> DbResult<ProjectList
         created_at,
         updated_at,
         file_count,
+        activity_status,
     })
 }
 

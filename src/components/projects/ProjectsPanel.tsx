@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -7,23 +7,17 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { deleteProject, listProjects, type ProjectListItem } from "@/ipc";
+import type { SortingState } from "@tanstack/react-table";
+import { useToast } from "@/components/ui/use-toast";
+import type { TableFilters } from "./table";
 
-import { ProjectsTable, type ProjectManagerRow } from "./components/ProjectsTable";
+import { ProjectsDataTable } from "./table";
+import { ProjectsTableSkeleton } from "./table/ProjectsTableSkeleton";
 import { CreateProjectWizard } from "./wizard/CreateProjectWizard";
 
 type ProjectsPanelProps = {
   onOpenProject?: (project: ProjectListItem) => void;
 };
-
-const DATE_TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-
-const DATE_DETAIL_FORMATTER = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "full",
-  timeStyle: "long",
-});
 
 export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
@@ -34,13 +28,12 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState("");
-  const [snack, setSnack] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    if (!snack) return;
-    const id = window.setTimeout(() => setSnack(null), 3000);
-    return () => window.clearTimeout(id);
-  }, [snack]);
+  // Table controlled state (preserved across polling)
+  const [tableSorting, setTableSorting] = useState<SortingState>([{ id: "updated", desc: true }]);
+  const [tableSearch, setTableSearch] = useState("");
+  const [tableFilters, setTableFilters] = useState<TableFilters>({ progress: "all", projectType: "all", updatedWithin: "any" });
 
   const loadProjects = useCallback(async (options: { showSpinner?: boolean } = {}) => {
     if (options.showSpinner) {
@@ -79,7 +72,7 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
     };
   }, [loadProjects]);
 
-  const rows = useMemo(() => projects.map(toRowViewModel), [projects]);
+  // Legacy rows mapping is no longer needed with ProjectsDataTable
 
   const handleOpenProject = useCallback(
     (projectId: string) => {
@@ -111,14 +104,14 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
       const refreshed = await listProjects({ limit: 100 });
       const exists = refreshed.some((p) => p.projectId === target.id);
       if (deleted > 0 && !exists) {
-        setSnack({ kind: "success", message: `Deleted project “${target.name}”.` });
+        toast({ title: "Project deleted", description: `Deleted “${target.name}”.` });
         setProjects(refreshed);
       } else {
-        setSnack({ kind: "error", message: `Failed to delete project “${target.name}”.` });
+        toast({ variant: "destructive", title: "Deletion failed", description: `Could not delete “${target.name}”.` });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Deletion failed";
-      setSnack({ kind: "error", message });
+      toast({ variant: "destructive", title: "Deletion failed", description: message });
     } finally {
       setDeleteTarget(null);
       setDeleteConfirm("");
@@ -126,16 +119,10 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
   }, [deleteTarget]);
 
   return (
-    <section className="flex w-full flex-col gap-4 p-6" aria-labelledby="projects-heading">
+    <section className="flex h-full w-full flex-col gap-4 p-6" aria-labelledby="projects-heading">
       <div className="px-2">
         <div className="flex items-center justify-between">
-          <h2 id="projects-heading" className="text-lg font-semibold text-foreground">
-            Projects
-          </h2>
-          <Button type="button" onClick={() => setWizardOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-            Create new project
-          </Button>
+          <h2 id="projects-heading" className="text-lg font-semibold text-foreground">Projects</h2>
         </div>
       </div>
 
@@ -148,19 +135,24 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
         ) : null}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2">
+      <div className="flex-1 px-2">
         {isLoading ? (
-          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-            Loading projects…
-          </div>
-        ) : rows.length === 0 ? (
-          <div className="flex h-40 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-            <p>No projects yet.</p>
-            <p className="text-xs">Create your first project to get started.</p>
-          </div>
+          <ProjectsTableSkeleton />
+        ) : projects.length === 0 ? (
+          <EmptyProjectsState onCreate={() => setWizardOpen(true)} />
         ) : (
-          <ProjectsTable rows={rows} onOpenProject={handleOpenProject} onRequestDelete={handleRequestDelete} />
+          <ProjectsDataTable
+            items={projects}
+            onOpenProject={handleOpenProject}
+            onRequestDelete={handleRequestDelete}
+            onCreateProject={() => setWizardOpen(true)}
+            sorting={tableSorting}
+            onSortingChange={setTableSorting}
+            search={tableSearch}
+            onSearchChange={setTableSearch}
+            filters={tableFilters}
+            onFiltersChange={setTableFilters}
+          />
         )}
       </div>
 
@@ -209,51 +201,61 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
         </DialogContent>
       </Dialog>
 
-      {/* Snackbar notification */}
-      {snack ? (
-        <div className="fixed bottom-4 right-4 z-50 w-[320px] animate-in fade-in slide-in-from-bottom-2">
-          <div
-            role="status"
-            className={
-              snack.kind === "success"
-                ? "rounded-md border border-border/70 bg-background/95 px-4 py-3 text-sm text-foreground shadow-lg"
-                : "rounded-md border border-destructive/60 bg-destructive/15 px-4 py-3 text-sm text-destructive-foreground shadow-lg"
-            }
-          >
-            {snack.message}
-          </div>
-        </div>
-      ) : null}
+      {/* Notifications handled by ToastProvider */}
     </section>
   );
 }
 
-function toRowViewModel(project: ProjectListItem): ProjectManagerRow {
-  const created = formatDate(project.createdAt);
-  const updated = formatDate(project.updatedAt);
-  return {
-    id: project.projectId,
-    name: project.name,
-    createdLabel: created.label,
-    createdDetail: created.detail,
-    updatedLabel: updated.label,
-    updatedDetail: updated.detail,
-    status: formatStatus(project.status),
-  } satisfies ProjectManagerRow;
-}
+// Retain legacy helpers (removed) — now handled by ProjectsDataTable formatting utilities
 
-function formatDate(isoDate: string) {
-  const parsed = Number.isNaN(Date.parse(isoDate)) ? null : new Date(isoDate);
-  if (!parsed) {
-    return { label: "—", detail: "—" };
-  }
-  return {
-    label: DATE_TIME_FORMATTER.format(parsed),
-    detail: DATE_DETAIL_FORMATTER.format(parsed),
-  } as const;
-}
+function EmptyProjectsState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="flex h-80 flex-col items-center justify-center gap-4 text-center animate-in fade-in-50 slide-in-from-bottom-4 duration-700">
+      <div className="relative group">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/10 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="relative rounded-full border border-border/50 bg-gradient-to-br from-muted/60 to-muted/40 p-6 shadow-lg backdrop-blur-sm transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl">
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="text-muted-foreground transition-colors duration-300 group-hover:text-primary"
+            aria-hidden
+          >
+            <path
+              d="M4 7a2 2 0 0 1 2-2h3l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              className="transition-all duration-300"
+            />
+            <path
+              d="M12 10v6m-3-3h6"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              className="opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            />
+          </svg>
+        </div>
+      </div>
 
-function formatStatus(status: ProjectListItem["status"]) {
-  if (status === "archived") return "Archived";
-  return "Active";
+      <div className="space-y-2 animate-in slide-in-from-bottom-2 duration-700 delay-200">
+        <h3 className="text-lg font-semibold text-foreground">No projects yet</h3>
+        <p className="text-sm text-muted-foreground max-w-md">
+          Create your first project to start translating files and managing your content with AI-powered tools.
+        </p>
+      </div>
+
+      <Button
+        type="button"
+        onClick={onCreate}
+        className="mt-4 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:from-primary/90 hover:to-primary animate-in slide-in-from-bottom-2 duration-700 delay-300"
+        size="lg"
+      >
+        <Plus className="mr-2 h-5 w-5" aria-hidden />
+        Create your first project
+      </Button>
+    </div>
+  );
 }

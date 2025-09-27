@@ -10,8 +10,6 @@ import {
   RefreshCw,
   Trash2,
   FileText,
-  Upload,
-  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +17,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { IconTooltipButton } from "@/components/IconTooltipButton";
 import { FileStatusIndicator } from "./FileStatusIndicator";
 import { FilterChips, type FileFilters } from "./FilterChips";
+import { DropZone } from "@/components/ui/DropZone";
+import { useTauriFileDrop } from "@/hooks/useTauriFileDrop";
 import type { ProjectFileWithConversionsDto, ProjectFileConversionDto } from "@/ipc";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +44,7 @@ interface Props {
   onRemove: (fileId: string) => void;
   onRebuild: (fileId: string) => void;
   onAddFiles?: () => void;
+  onFilesDropped?: (files: string[]) => void;
   rebuildingFileId?: string | null;
 }
 
@@ -54,6 +55,7 @@ export function FileTable({
   onRemove,
   onRebuild,
   onAddFiles,
+  onFilesDropped,
   rebuildingFileId,
 }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -66,6 +68,12 @@ export function FileTable({
     languagePairs: new Set(),
   }));
   const [showFilters, setShowFilters] = useState(false);
+
+  // Global Tauri drag-drop listener - only one per page
+  const { isDragActive, isDragOver } = useTauriFileDrop({
+    onFilesDropped: onFilesDropped || (() => {}),
+    disabled: !onFilesDropped,
+  });
 
   // Transform files to table rows
   const rows = useMemo<FileTableRow[]>(
@@ -250,31 +258,34 @@ export function FileTable({
 
   if (rows.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
-          <Upload className="h-10 w-10 text-primary/60" />
-        </div>
-        <h3 className="mb-2 text-lg font-semibold text-foreground">No files yet</h3>
-        <p className="mb-6 max-w-sm text-sm text-muted-foreground">
-          Get started by adding translation files to your project. Supported formats include XLIFF, TMX, and more.
-        </p>
-        {onAddFiles && (
-          <div className="space-y-3">
-            <Button onClick={onAddFiles} size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Files
-            </Button>
-            <div className="text-xs text-muted-foreground">
-              Or use the add button in the header
-            </div>
-          </div>
-        )}
-      </div>
+      <DropZone
+        onBrowseClick={onAddFiles}
+        variant="empty-state"
+        title="No files yet"
+        description="Get started by adding translation files to your project. Supported formats include XLIFF, TMX, and more."
+        showBrowseButton={!!onAddFiles}
+        disabled={!onFilesDropped && !onAddFiles}
+        isDragActive={isDragActive}
+        isDragOver={isDragOver}
+      />
     );
   }
 
   return (
     <div className="space-y-4">
+      {/* Add files drop zone - persistent when files exist */}
+      {onFilesDropped && (
+        <DropZone
+          onBrowseClick={onAddFiles}
+          variant="compact"
+          title="Add more files"
+          description="Drop additional files here"
+          showBrowseButton={!!onAddFiles}
+          isDragActive={isDragActive}
+          isDragOver={isDragOver}
+        />
+      )}
+
       {/* Search and filters */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">

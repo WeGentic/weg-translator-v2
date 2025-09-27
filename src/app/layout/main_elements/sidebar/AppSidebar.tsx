@@ -165,9 +165,11 @@ export function AppSidebar({
     return (
       <li
         key={item.key}
+        data-key={item.key}
         className={cn(
           "app-sidebar__item",
           closable && "app-sidebar__item--closable",
+          isTemporary && "app-sidebar__item--temporary",
           options?.className
         )}
         ref={item.key === "projects" ? projectsItemRef : undefined}
@@ -381,9 +383,21 @@ export function AppSidebar({
     : undefined;
 
   const defaultHeader = (
-    <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--color-sidebar-foreground)]/90">
-      <span className="inline-flex size-2.5 rounded-[4px] bg-[color:var(--color-sidebar-primary)] shadow-[0_0_0_3px] shadow-[color:var(--color-sidebar-primary)/15%]" />
-      <span>Workspace</span>
+    <div className="flex items-center gap-3 px-2">
+      {/* Rounded square logo placeholder */}
+      <div className="w-6 h-6 rounded bg-slate-400 flex-shrink-0"></div>
+
+      {/* Two rows of text */}
+      <div className="flex flex-col">
+        <div className="text-sm font-bold">Weg Translator</div>
+        <div className="text-xs text-muted-foreground">
+          {selectedKey === "projects" ? "Projects" :
+           selectedKey === "settings" ? "Settings" :
+           temporaryItems.find(item => item.key === selectedKey)?.label ||
+           editorItems.find(item => item.key === selectedKey)?.label?.replace("Editor — ", "") ||
+           "Navigation"}
+        </div>
+      </div>
     </div>
   );
   const renderHeader = showHeader && mode !== "compact";
@@ -470,14 +484,19 @@ export function AppSidebar({
       </div>
 
       {(showFooter || settingsItem) && (
-        <div className="app-sidebar__footer">
-          {footer}
-          {settingsItem && (
-            <ul role="list" className={cn(footer && "mt-2") }>
-              {renderItem(settingsItem, { index: 0 })}
-            </ul>
-          )}
-        </div>
+        <>
+          {/* Enhanced 3D divider above Settings */}
+          <div className="app-sidebar__divider--3d" aria-hidden="true" />
+
+          <div className="app-sidebar__footer">
+            {footer}
+            {settingsItem && (
+              <ul role="list" className={cn(footer && "mt-2") }>
+                {renderItem(settingsItem, { index: 0 })}
+              </ul>
+            )}
+          </div>
+        </>
       )}
 
       {/* Global fixed tooltip for compact mode */}

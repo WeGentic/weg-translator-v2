@@ -47,6 +47,7 @@ pub struct ProjectListItemDto {
     pub slug: String,
     pub project_type: String,
     pub status: String,
+    pub activity_status: String,
     pub file_count: i64,
     pub created_at: String,
     pub updated_at: String,
@@ -182,6 +183,14 @@ pub struct AppSettingsDto {
     pub default_app_folder: String,
     pub is_using_default_location: bool,
     pub auto_convert_on_open: bool,
+    pub theme: String,
+    pub ui_language: String,
+    pub default_source_language: String,
+    pub default_target_language: String,
+    pub default_xliff_version: String,
+    pub show_notifications: bool,
+    pub enable_sound_notifications: bool,
+    pub max_parallel_conversions: u32,
 }
 
 // ===== Projects: Details & Conversions DTOs =====

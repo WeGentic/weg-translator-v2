@@ -71,6 +71,14 @@ describe("ipc/client", () => {
       defaultAppFolder: "/tmp/default",
       isUsingDefaultLocation: false,
       autoConvertOnOpen: true,
+      theme: "auto",
+      uiLanguage: "en",
+      defaultSourceLanguage: "en-US",
+      defaultTargetLanguage: "es-ES",
+      defaultXliffVersion: "2.1",
+      showNotifications: true,
+      enableSoundNotifications: false,
+      maxParallelConversions: 4,
     };
     invokeMock.mockResolvedValueOnce(settings);
 
@@ -103,6 +111,14 @@ describe("ipc/client", () => {
       defaultAppFolder: "/tmp/default",
       isUsingDefaultLocation: false,
       autoConvertOnOpen: false,
+      theme: "auto",
+      uiLanguage: "en",
+      defaultSourceLanguage: "en-US",
+      defaultTargetLanguage: "es-ES",
+      defaultXliffVersion: "2.1",
+      showNotifications: true,
+      enableSoundNotifications: false,
+      maxParallelConversions: 4,
     };
     invokeMock.mockResolvedValueOnce(settings);
 

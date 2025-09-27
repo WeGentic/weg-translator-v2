@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { IconTooltipButton } from "@/components/IconTooltipButton";
-import { Plus } from "lucide-react";
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileTable } from "./components/files/FileTable";
 import { OverviewHeader } from "./components/OverviewHeader";
 import { OverviewAutoConvertBanner } from "./components/OverviewAutoConvertBanner";
@@ -131,6 +129,23 @@ export function ProjectOverview({ projectSummary }: Props) {
       setError(e instanceof Error ? e.message : "Failed to add files.");
     } finally {
       setIsAddOpen(false);
+    }
+  }, [loadDetails, projectId]);
+
+  const handleFilesDropped = useCallback(async (files: string[]) => {
+    try {
+      if (files.length === 0) return;
+      await addFilesToProject(projectId, files);
+      await loadDetails();
+      // re-check conversions after adding
+      const plan = await ensureProjectConversionsPlan(projectId);
+      if (plan.tasks.length > 0) {
+        setEnsurePlan(plan);
+        setEnsureProgress({ current: 0, total: plan.tasks.length });
+      }
+    } catch (e) {
+      // surface UI error via banner
+      setError(e instanceof Error ? e.message : "Failed to add files.");
     }
   }, [loadDetails, projectId]);
 
@@ -401,20 +416,6 @@ export function ProjectOverview({ projectSummary }: Props) {
             <CardTitle className="text-base font-semibold">Files</CardTitle>
             <CardDescription>Imported files and conversion status.</CardDescription>
           </div>
-          <CardAction className="flex items-center gap-1.5">
-            <IconTooltipButton
-              label={!autoConvertOnOpen ? "Add files (Auto-conversion disabled)" : "Add files"}
-              ariaLabel="Add files"
-              onClick={() => setIsAddOpen(true)}
-              className={
-                autoConvertOnOpen
-                  ? undefined
-                  : "border-amber-500/50 bg-amber-500/10 text-amber-700 hover:border-amber-500/60 hover:text-amber-800 dark:text-amber-200"
-              }
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-            </IconTooltipButton>
-          </CardAction>
         </CardHeader>
         <CardContent className="p-6">
           <FileTable
@@ -424,6 +425,7 @@ export function ProjectOverview({ projectSummary }: Props) {
             onOpenEditor={handleOpenEditor}
             onRebuild={handleRequestRebuild}
             onAddFiles={() => setIsAddOpen(true)}
+            onFilesDropped={(files) => void handleFilesDropped(files)}
             rebuildingFileId={rebuildingFileId}
           />
         </CardContent>

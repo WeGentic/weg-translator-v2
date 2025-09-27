@@ -138,6 +138,14 @@ const baseSettings: AppSettings = {
   defaultAppFolder: "/projects/demo",
   isUsingDefaultLocation: true,
   autoConvertOnOpen: true,
+  theme: "auto",
+  uiLanguage: "en",
+  defaultSourceLanguage: "en-US",
+  defaultTargetLanguage: "es-ES",
+  defaultXliffVersion: "2.1",
+  showNotifications: true,
+  enableSoundNotifications: false,
+  maxParallelConversions: 4,
 };
 
 beforeEach(() => {
