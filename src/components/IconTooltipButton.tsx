@@ -40,7 +40,7 @@ export function IconTooltipButton({
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return;
     setPosition({
-      top: rect.top - 10,
+      top: rect.top - 36,
       left: rect.left + rect.width / 2,
     });
   }, []);
@@ -88,7 +88,7 @@ export function IconTooltipButton({
         onFocus={handleOpen}
         onBlur={handleClose}
         className={cn(
-          "h-8 w-8 rounded-full border border-transparent text-foreground transition hover:border-border/70",
+          "h-7 w-7 rounded-full border border-transparent text-foreground transition hover:border-border/70",
           toneClasses,
           disabled ? "opacity-60" : null,
           className,
@@ -103,7 +103,7 @@ export function IconTooltipButton({
               id={tooltipId}
               role="tooltip"
               className="pointer-events-none fixed z-50 -translate-x-1/2 rounded-md border border-border/60 bg-foreground px-2 py-1 text-xs font-medium text-background shadow-md"
-              style={{ top: `${Math.max(position.top, 6)}px`, left: `${position.left}px` }}
+              style={{ top: `${Math.max(position.top, 10)}px`, left: `${position.left}px` }}
             >
               {label}
             </div>,

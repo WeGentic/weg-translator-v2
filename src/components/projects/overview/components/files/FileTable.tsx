@@ -9,7 +9,6 @@ import {
   FilePenLine,
   RefreshCw,
   Trash2,
-  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +23,7 @@ import { cn } from "@/lib/utils";
 
 const FILE_TABLE_SKELETON_KEYS = ["loader-1", "loader-2", "loader-3"] as const;
 
-type SortField = "name" | "size" | "status" | "type";
+type SortField = "name" | "status" | "type";
 type SortDirection = "asc" | "desc" | null;
 
 interface FileTableRow {
@@ -136,17 +135,13 @@ export function FileTable({
             aValue = a.name.toLowerCase();
             bValue = b.name.toLowerCase();
             break;
-          case "size":
-            aValue = a.size || 0;
-            bValue = b.size || 0;
+          case "type":
+            aValue = a.type.toLowerCase();
+            bValue = b.type.toLowerCase();
             break;
           case "status":
             aValue = a.importStatus;
             bValue = b.importStatus;
-            break;
-          case "type":
-            aValue = a.type.toLowerCase();
-            bValue = b.type.toLowerCase();
             break;
         }
 
@@ -207,19 +202,12 @@ export function FileTable({
     setSearchTerm("");
   }, []);
 
-  // Format file size
-  const formatSize = useCallback((size?: number) => {
-    if (!size || size <= 0) return "—";
-    if (size < 1024) return `${size} B`;
-    if (size < 1024 * 1024) return `${Math.round(size / 10.24) / 100} KB`;
-    return `${Math.round(size / 10485.76) / 100} MB`;
-  }, []);
-
   // Format file extension
   const formatExt = useCallback((ext: string) => {
     if (!ext) return "";
     return ext.replace(/^\./, "").slice(0, 4).toUpperCase();
   }, []);
+
 
   // Get sort icon
   const getSortIcon = useCallback((field: SortField) => {
@@ -237,20 +225,35 @@ export function FileTable({
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 px-2">
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
           <div className="h-9 w-64 animate-pulse rounded-lg bg-muted" />
         </div>
-        <div className="space-y-2">
-          {FILE_TABLE_SKELETON_KEYS.map((key) => (
-            <div key={key} className="flex items-center gap-4 p-4">
-              <div className="h-4 w-4 animate-pulse rounded bg-muted" />
-              <div className="h-8 w-8 animate-pulse rounded bg-muted" />
-              <div className="h-4 flex-1 animate-pulse rounded bg-muted" />
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-background/80 shadow-sm">
+          <div className="border-b border-border/60 p-2">
+            <div className="grid grid-cols-5 gap-4">
               <div className="h-4 w-16 animate-pulse rounded bg-muted" />
               <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-12 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-16 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-16 animate-pulse rounded bg-muted ml-auto" />
             </div>
-          ))}
+          </div>
+          <div className="space-y-0">
+            {FILE_TABLE_SKELETON_KEYS.map((key) => (
+              <div key={key} className="flex items-center gap-4 p-3 border-b border-border/30 last:border-b-0">
+                <div className="h-4 w-4 animate-pulse rounded bg-muted" />
+                <div className="h-4 flex-1 animate-pulse rounded bg-muted" />
+                <div className="h-6 w-12 animate-pulse rounded-full bg-muted" />
+                <div className="h-6 w-16 animate-pulse rounded-full bg-muted" />
+                <div className="flex gap-1">
+                  <div className="h-6 w-6 animate-pulse rounded-full bg-muted" />
+                  <div className="h-6 w-6 animate-pulse rounded-full bg-muted" />
+                  <div className="h-6 w-6 animate-pulse rounded-full bg-muted" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -272,7 +275,7 @@ export function FileTable({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Add files drop zone - persistent when files exist */}
       {onFilesDropped && (
         <DropZone
@@ -287,7 +290,7 @@ export function FileTable({
       )}
 
       {/* Search and filters */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div className="flex items-center gap-2">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -387,7 +390,7 @@ export function FileTable({
       {/* Table */}
       {filteredAndSortedRows.length > 0 && (
         <div className="overflow-hidden rounded-xl border border-border/60 bg-background/80 shadow-sm">
-          <Table>
+          <Table className="[&_td]:py-2 [&_th]:py-2">
           <TableHeader>
             <TableRow>
               <TableHead className="w-[50px]">
@@ -403,7 +406,7 @@ export function FileTable({
                 onClick={() => handleSort("name")}
               >
                 <div className="flex items-center">
-                  Name
+                  Filename
                   {getSortIcon("name")}
                 </div>
               </TableHead>
@@ -418,15 +421,6 @@ export function FileTable({
               </TableHead>
               <TableHead
                 className="cursor-pointer select-none hover:bg-muted/50"
-                onClick={() => handleSort("size")}
-              >
-                <div className="flex items-center">
-                  Size
-                  {getSortIcon("size")}
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer select-none hover:bg-muted/50"
                 onClick={() => handleSort("status")}
               >
                 <div className="flex items-center">
@@ -434,7 +428,6 @@ export function FileTable({
                   {getSortIcon("status")}
                 </div>
               </TableHead>
-              <TableHead>Conversions</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -456,19 +449,14 @@ export function FileTable({
                   />
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-md border border-border/70 bg-muted/60 text-xs font-semibold uppercase text-muted-foreground">
-                      {formatExt(row.ext) || <FileText className="h-4 w-4" />}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onOpenEditor(row.id)}
-                      className="truncate text-left text-sm font-medium text-foreground hover:text-primary hover:underline focus:text-primary focus:underline focus:outline-none"
-                      title={row.name}
-                    >
-                      {row.name}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onOpenEditor(row.id)}
+                    className="truncate text-left text-sm font-medium text-foreground hover:text-primary hover:underline focus:text-primary focus:underline focus:outline-none"
+                    title={row.name}
+                  >
+                    {row.name}
+                  </button>
                 </TableCell>
                 <TableCell>
                   <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium uppercase">
@@ -476,49 +464,13 @@ export function FileTable({
                   </span>
                 </TableCell>
                 <TableCell>
-                  <span className="text-sm text-muted-foreground">
-                    {formatSize(row.size)}
-                  </span>
-                </TableCell>
-                <TableCell>
                   <FileStatusIndicator
                     importStatus={row.importStatus}
                     conversions={row.conversions}
-                    showProgress={true}
                   />
                 </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap items-center gap-1">
-                    {row.conversions.length > 0 ? (
-                      row.conversions.slice(0, 2).map((conv) => (
-                        <span
-                          key={conv.id}
-                          className={cn(
-                            "inline-flex rounded px-2 py-0.5 text-xs",
-                            conv.status === "completed"
-                              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-                              : conv.status === "running"
-                              ? "bg-primary/10 text-primary"
-                              : conv.status === "failed"
-                              ? "bg-destructive/10 text-destructive"
-                              : "bg-muted text-muted-foreground"
-                          )}
-                        >
-                          {conv.srcLang}→{conv.tgtLang}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-muted-foreground/70">None</span>
-                    )}
-                    {row.conversions.length > 2 && (
-                      <span className="text-xs text-muted-foreground">
-                        +{row.conversions.length - 2} more
-                      </span>
-                    )}
-                  </div>
-                </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
+                  <div className="flex items-center justify-end gap-0.5">
                     <IconTooltipButton
                       label="Open in editor"
                       ariaLabel={`Open ${row.name} in editor`}

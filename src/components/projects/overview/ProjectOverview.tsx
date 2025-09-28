@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { FileTable } from "./components/files/FileTable";
 import { OverviewHeader } from "./components/OverviewHeader";
 import { OverviewAutoConvertBanner } from "./components/OverviewAutoConvertBanner";
@@ -37,7 +37,7 @@ export function ProjectOverview({ projectSummary }: Props) {
   const [details, setDetails] = useState<ProjectDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isAddFilesOpen, setIsAddFilesOpen] = useState(false);
   const [isRemoveOpen, setIsRemoveOpen] = useState<null | string>(null);
   const [rebuildTarget, setRebuildTarget] = useState<{ fileId: string; name: string } | null>(null);
   const [rebuildingFileId, setRebuildingFileId] = useState<string | null>(null);
@@ -113,7 +113,10 @@ export function ProjectOverview({ projectSummary }: Props) {
 
   const handleAddFiles = useCallback(async () => {
     try {
-      const selected = await openDialog({ multiple: true });
+      const selected = await openDialog({
+        multiple: true,
+        title: "Select files to add to project"
+      });
       const files = Array.isArray(selected) ? selected : selected ? [selected] : [];
       if (files.length === 0) return;
       await addFilesToProject(projectId, files);
@@ -128,9 +131,11 @@ export function ProjectOverview({ projectSummary }: Props) {
       // surface UI error via banner
       setError(e instanceof Error ? e.message : "Failed to add files.");
     } finally {
-      setIsAddOpen(false);
+      setIsAddFilesOpen(false);
     }
   }, [loadDetails, projectId]);
+
+
 
   const handleFilesDropped = useCallback(async (files: string[]) => {
     try {
@@ -396,53 +401,62 @@ export function ProjectOverview({ projectSummary }: Props) {
     [projectId],
   );
 
+  const showAutoConvertBanner = !autoConvertOnOpen;
+
   return (
-    <section className="flex w-full flex-col gap-6 overflow-y-auto p-6">
-      <OverviewHeader project={projectSummary} details={details} autoConvertOnOpen={autoConvertOnOpen} />
+    <section className="flex min-h-0 flex-1 flex-col overflow-y-auto py-4 pl-4">
+      <div className="flex flex-col gap-4">
+        <OverviewHeader project={projectSummary} details={details} autoConvertOnOpen={autoConvertOnOpen} />
 
-      <OverviewAutoConvertBanner autoConvertOnOpen={autoConvertOnOpen} />
+        {showAutoConvertBanner ? (
+          <div className="mx-4">
+            <OverviewAutoConvertBanner autoConvertOnOpen={autoConvertOnOpen} />
+          </div>
+        ) : null}
 
-      {error ? (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      ) : null}
+        {error ? (
+          <div className="mx-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        ) : null}
+      </div>
 
       {/* Languages card removed in favor of compact header */}
 
-      <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
-        <CardHeader className="border-border/60 border-b pb-4">
-          <div className="space-y-1">
-            <CardTitle className="text-base font-semibold">Files</CardTitle>
-            <CardDescription>Imported files and conversion status.</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6">
-          <FileTable
-            files={details?.files ?? []}
-            isLoading={isLoading}
-            onRemove={handleRequestRemove}
-            onOpenEditor={handleOpenEditor}
-            onRebuild={handleRequestRebuild}
-            onAddFiles={() => setIsAddOpen(true)}
-            onFilesDropped={(files) => void handleFilesDropped(files)}
-            rebuildingFileId={rebuildingFileId}
-          />
-        </CardContent>
-      </Card>
-
-      {anyFailures ? (
-        <div className="flex items-center justify-between gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
-          <div>Some conversions failed. You can retry after fixing the source content.</div>
-          <Button variant="outline" size="sm" onClick={() => void retryFailed()}>
-            Retry failed
-          </Button>
+      <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4">
+        <div className="mx-4 flex min-h-0 flex-1 justify-center">
+          <Card className="flex h-full w-full flex-1 flex-col overflow-hidden rounded-xl border border-border/60 bg-background/80 py-0 shadow-sm">
+            <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 py-6">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                
+                <FileTable
+                  files={details?.files ?? []}
+                  isLoading={isLoading}
+                  onRemove={handleRequestRemove}
+                  onOpenEditor={handleOpenEditor}
+                  onRebuild={handleRequestRebuild}
+                  onAddFiles={() => void handleAddFiles()}
+                  onFilesDropped={(files) => void handleFilesDropped(files)}
+                  rebuildingFileId={rebuildingFileId}
+                />
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      ) : null}
+
+        {anyFailures ? (
+          <div className="mx-4 flex items-center justify-between gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+            <div>Some conversions failed. You can retry after fixing the source content.</div>
+            <Button variant="outline" size="sm" onClick={() => void retryFailed()}>
+              Retry failed
+            </Button>
+          </div>
+        ) : null}
+      </div>
 
       <AddFilesDialog
-        open={isAddOpen}
-        onOpenChange={setIsAddOpen}
+        open={isAddFilesOpen}
+        onOpenChange={setIsAddFilesOpen}
         onConfirm={() => void handleAddFiles()}
       />
 

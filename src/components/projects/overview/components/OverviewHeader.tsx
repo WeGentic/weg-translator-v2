@@ -26,7 +26,7 @@ export function OverviewHeader({ project, details, autoConvertOnOpen }: Overview
   const updated = safeFormatDate(project.updatedAt);
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-background/90 via-background/70 to-background/90 p-6 shadow-sm">
+    <div className="mx-4 rounded-2xl border border-border/60 bg-gradient-to-br from-background/90 via-background/70 to-background/90 p-6 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0 flex-1 space-y-1">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Project overview</p>
@@ -39,7 +39,7 @@ export function OverviewHeader({ project, details, autoConvertOnOpen }: Overview
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <div className="m-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <MetaChip icon={FileText} label={`${fileCount} file${fileCount === 1 ? "" : "s"}`} />
         {src && tgt ? <MetaChip icon={Languages} label={`${src} → ${tgt}`} /> : null}
         <MetaChip icon={CalendarClock} label={`Created ${created.label}`} title={`Created ${created.detail}`} />

@@ -6,10 +6,9 @@ import { cn } from "@/lib/utils";
 interface Props {
   importStatus: string;
   conversions: ProjectFileConversionDto[];
-  showProgress?: boolean;
 }
 
-export function FileStatusIndicator({ importStatus, conversions, showProgress = false }: Props) {
+export function FileStatusIndicator({ importStatus, conversions }: Props) {
   const { icon, className, label } = useMemo(() => {
     // First check import status
     if (importStatus === "failed") {
@@ -33,7 +32,7 @@ export function FileStatusIndicator({ importStatus, conversions, showProgress = 
       return {
         icon: <Clock className="h-3 w-3" />,
         className: "border-border/60 bg-muted text-muted-foreground",
-        label: "No Conversions"
+        label: "Pending"
       };
     }
 
@@ -81,41 +80,17 @@ export function FileStatusIndicator({ importStatus, conversions, showProgress = 
     };
   }, [importStatus, conversions]);
 
-  const progressInfo = useMemo(() => {
-    if (conversions.length === 0) return null;
-
-    const completed = conversions.filter(c => c.status === "completed").length;
-    const failed = conversions.filter(c => c.status === "failed").length;
-    const running = conversions.filter(c => c.status === "running").length;
-    const total = conversions.length;
-
-    return { completed, failed, running, total };
-  }, [conversions]);
-
   return (
-    <div className="flex items-center gap-2">
-      <span
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-          className
-        )}
-        title={label}
-      >
-        {icon}
-        {label}
-      </span>
-
-      {showProgress && progressInfo && progressInfo.total > 0 && (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <span>
-            {progressInfo.completed}/{progressInfo.total}
-          </span>
-          {progressInfo.failed > 0 && (
-            <span className="text-destructive">({progressInfo.failed} failed)</span>
-          )}
-        </div>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
+        className
       )}
-    </div>
+      title={label}
+    >
+      {icon}
+      {label}
+    </span>
   );
 }
 
