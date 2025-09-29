@@ -119,12 +119,8 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
   }, [deleteTarget]);
 
   return (
-    <section className="flex h-full w-full flex-col gap-4 p-6" aria-labelledby="projects-heading">
-      <div className="px-2">
-        <div className="flex items-center justify-between">
-          <h2 id="projects-heading" className="text-lg font-semibold text-foreground">Projects</h2>
-        </div>
-      </div>
+    <section className="flex h-full w-full flex-col" aria-labelledby="projects-heading">
+      
 
       <div className="flex flex-col gap-3 px-2">
         {error ? (

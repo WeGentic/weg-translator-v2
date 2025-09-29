@@ -45,6 +45,7 @@ interface Props {
   onAddFiles?: () => void;
   onFilesDropped?: (files: string[]) => void;
   rebuildingFileId?: string | null;
+  isProcessing?: boolean;
 }
 
 export function FileTable({
@@ -56,6 +57,7 @@ export function FileTable({
   onAddFiles,
   onFilesDropped,
   rebuildingFileId,
+  isProcessing = false,
 }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField | null>(null);
@@ -64,14 +66,14 @@ export function FileTable({
   const [filters, setFilters] = useState<FileFilters>(() => ({
     fileTypes: new Set(),
     statuses: new Set(),
-    languagePairs: new Set(),
   }));
   const [showFilters, setShowFilters] = useState(false);
+  const activeFilterCount = filters.fileTypes.size + filters.statuses.size;
 
   // Global Tauri drag-drop listener - only one per page
   const { isDragActive, isDragOver } = useTauriFileDrop({
     onFilesDropped: onFilesDropped || (() => {}),
-    disabled: !onFilesDropped,
+    disabled: !onFilesDropped || isProcessing,
   });
 
   // Transform files to table rows
@@ -114,14 +116,6 @@ export function FileTable({
         // Check conversion statuses
         return row.conversions.some(conv => filters.statuses.has(conv.status));
       });
-    }
-
-    if (filters.languagePairs.size > 0) {
-      filtered = filtered.filter((row) =>
-        row.conversions.some(conv =>
-          filters.languagePairs.has(`${conv.srcLang}→${conv.tgtLang}`)
-        )
-      );
     }
 
     // Apply sorting
@@ -267,7 +261,7 @@ export function FileTable({
         title="No files yet"
         description="Get started by adding translation files to your project. Supported formats include XLIFF, TMX, and more."
         showBrowseButton={!!onAddFiles}
-        disabled={!onFilesDropped && !onAddFiles}
+        disabled={isProcessing || (!onFilesDropped && !onAddFiles)}
         isDragActive={isDragActive}
         isDragOver={isDragOver}
       />
@@ -275,7 +269,7 @@ export function FileTable({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" aria-busy={isProcessing} aria-live="polite">
       {/* Add files drop zone - persistent when files exist */}
       {onFilesDropped && (
         <DropZone
@@ -286,6 +280,7 @@ export function FileTable({
           showBrowseButton={!!onAddFiles}
           isDragActive={isDragActive}
           isDragOver={isDragOver}
+          disabled={isProcessing}
         />
       )}
 
@@ -317,13 +312,18 @@ export function FileTable({
             onClick={() => setShowFilters(!showFilters)}
             className={cn(
               "gap-2",
-              showFilters && "bg-muted/50"
+              (showFilters || activeFilterCount > 0) && "border-primary/50 bg-primary/5 text-foreground"
             )}
           >
             <Filter className="h-4 w-4" />
             Filters
+            {activeFilterCount > 0 && (
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                {activeFilterCount}
+              </span>
+            )}
           </Button>
-          {(searchTerm || filters.fileTypes.size > 0 || filters.statuses.size > 0 || filters.languagePairs.size > 0) && (
+          {(searchTerm || activeFilterCount > 0) && (
             <div className="text-sm text-muted-foreground">
               {filteredAndSortedRows.length} of {rows.length} files
             </div>
@@ -336,6 +336,7 @@ export function FileTable({
             files={files}
             filters={filters}
             onFiltersChange={setFilters}
+            className="mt-2"
           />
         )}
       </div>
@@ -378,7 +379,6 @@ export function FileTable({
               setFilters({
                 fileTypes: new Set(),
                 statuses: new Set(),
-                languagePairs: new Set()
               });
             }}
           >
@@ -399,6 +399,7 @@ export function FileTable({
                   checked={selectedFiles.size === filteredAndSortedRows.length && filteredAndSortedRows.length > 0}
                   onChange={handleSelectAll}
                   className="rounded"
+                  disabled={isProcessing || filteredAndSortedRows.length === 0}
                 />
               </TableHead>
               <TableHead
@@ -446,14 +447,20 @@ export function FileTable({
                     checked={selectedFiles.has(row.id)}
                     onChange={() => handleSelectFile(row.id)}
                     className="rounded"
+                    disabled={isProcessing}
                   />
                 </TableCell>
                 <TableCell>
                   <button
                     type="button"
                     onClick={() => onOpenEditor(row.id)}
-                    className="truncate text-left text-sm font-medium text-foreground hover:text-primary hover:underline focus:text-primary focus:underline focus:outline-none"
+                    className={cn(
+                      "truncate text-left text-sm font-medium text-foreground transition",
+                      "hover:text-primary hover:underline focus:text-primary focus:underline focus:outline-none",
+                      isProcessing && "cursor-not-allowed text-muted-foreground"
+                    )}
                     title={row.name}
+                    disabled={isProcessing}
                   >
                     {row.name}
                   </button>
@@ -475,6 +482,7 @@ export function FileTable({
                       label="Open in editor"
                       ariaLabel={`Open ${row.name} in editor`}
                       onClick={() => onOpenEditor(row.id)}
+                      disabled={isProcessing}
                     >
                       <FilePenLine className="h-4 w-4" />
                     </IconTooltipButton>
@@ -483,7 +491,9 @@ export function FileTable({
                       ariaLabel={`Rebuild conversions for ${row.name}`}
                       onClick={() => onRebuild(row.id)}
                       tone="muted"
-                      disabled={row.conversions.length === 0 || rebuildingFileId === row.id}
+                      disabled={
+                        isProcessing || row.conversions.length === 0 || rebuildingFileId === row.id
+                      }
                     >
                       <RefreshCw className={cn("h-4 w-4", rebuildingFileId === row.id && "animate-spin")} />
                     </IconTooltipButton>
@@ -492,6 +502,7 @@ export function FileTable({
                       ariaLabel={`Remove file ${row.name}`}
                       onClick={() => onRemove(row.id)}
                       tone="destructive"
+                      disabled={isProcessing}
                     >
                       <Trash2 className="h-4 w-4" />
                     </IconTooltipButton>

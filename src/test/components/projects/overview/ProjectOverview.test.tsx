@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import { useMemo } from "react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import { useMemo, type ReactNode } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -21,6 +21,26 @@ vi.mock("@/lib/openxliff", () => ({
 vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
 }));
+
+vi.mock("@tauri-apps/api/webview", () => ({
+  getCurrentWebview: () => ({
+    onDragDropEvent: vi.fn().mockResolvedValue(() => {}),
+  }),
+}));
+
+vi.mock("@/components/projects/overview/components/dialogs/RemoveFileDialog", () => {
+  const React = require("react");
+  const RemoveFileDialog = ({ open, onOpenChange, onConfirm }: { open: boolean; onOpenChange: (open: boolean) => void; onConfirm: () => void }) => {
+    React.useEffect(() => {
+      if (open) {
+        onConfirm();
+        onOpenChange(false);
+      }
+    }, [open, onConfirm, onOpenChange]);
+    return null;
+  };
+  return { RemoveFileDialog };
+});
 
 vi.mock("@/contexts/AuthContext", () => {
   const useAuth = () =>
@@ -56,6 +76,11 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { convertStream, validateStream } from "@/lib/openxliff";
 
 import { ProjectOverview } from "@/components/projects/overview/ProjectOverview";
+import { ToastProvider } from "@/components/ui/toast";
+
+function renderWithProviders(ui: ReactNode) {
+  return render(<ToastProvider>{ui}</ToastProvider>);
+}
 
 const projectSummary: ProjectListItem = {
   projectId: "11111111-1111-1111-1111-111111111111",
@@ -186,9 +211,9 @@ describe("ProjectOverview", () => {
     vi.mocked(getProjectDetails).mockResolvedValue(details);
     vi.mocked(getAppSettings).mockResolvedValue({ ...baseSettings });
 
-    render(<ProjectOverview projectSummary={projectSummary} />);
+    renderWithProviders(<ProjectOverview projectSummary={projectSummary} />);
 
-    const title = await screen.findByRole("heading", { level: 2, name: projectSummary.name });
+    const title = await screen.findByRole("heading", { name: projectSummary.name });
     expect(title).toBeInTheDocument();
     // file grid renders as a data table in the new UI
     expect(screen.getByRole("table")).toBeInTheDocument();
@@ -197,7 +222,51 @@ describe("ProjectOverview", () => {
     expect(screen.getByText("b.xliff")).toBeInTheDocument();
 
     // Badge shows conversion completion state
-    expect(screen.getByText(/complete/i)).toBeInTheDocument();
+    expect(screen.getByText(/^ready$/i)).toBeInTheDocument();
+    expect(screen.getByText(/en-US\s*→\s*it-IT/i)).toBeInTheDocument();
+  });
+
+  it("shows error details when a conversion fails", async () => {
+    const failingDetails: ProjectDetails = {
+      ...details,
+      files: [
+        {
+          file: {
+            id: "f9",
+            originalName: "broken.docx",
+            storedRelPath: "broken.docx",
+            ext: "docx",
+            sizeBytes: 1024,
+            importStatus: "imported",
+            createdAt: "",
+            updatedAt: "",
+          },
+          conversions: [
+            {
+              id: "c-broken",
+              projectFileId: "f9",
+              srcLang: "en-US",
+              tgtLang: "es-ES",
+              version: "2.1",
+              paragraph: true,
+              embed: true,
+              status: "failed",
+              errorMessage: "Machine translation engine refused the document.",
+              createdAt: "",
+              updatedAt: "",
+            },
+          ],
+        },
+      ],
+    };
+
+    vi.mocked(getProjectDetails).mockResolvedValue(failingDetails);
+    vi.mocked(getAppSettings).mockResolvedValue({ ...baseSettings });
+
+    renderWithProviders(<ProjectOverview projectSummary={projectSummary} />);
+
+    expect(await screen.findByText(/error/i)).toBeInTheDocument();
+    expect(screen.getByText(/machine translation engine refused the document/i)).toBeInTheDocument();
   });
 
   it("invokes IPC on add/remove actions", async () => {
@@ -205,23 +274,24 @@ describe("ProjectOverview", () => {
     vi.mocked(getAppSettings).mockResolvedValue({ ...baseSettings });
     vi.mocked(openDialog).mockResolvedValueOnce(["/abs/new.pptx"]);
 
-    render(<ProjectOverview projectSummary={projectSummary} />);
+    renderWithProviders(<ProjectOverview projectSummary={projectSummary} />);
 
     await screen.findByRole("table");
 
     // Add files flow
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /add files/i }));
+    const browse = await screen.findByRole("button", { name: /browse files/i });
+    await user.click(browse);
     const choose = await screen.findByRole("button", { name: /choose files…/i });
     await user.click(choose);
+
+    expect(await screen.findByText(/preparing your files/i)).toBeInTheDocument();
 
     await waitFor(() => expect(addFilesToProject).toHaveBeenCalled());
 
     // Remove file flow
     const remove = (await screen.findAllByRole("button", { name: /remove file/i }))[0];
     await user.click(remove);
-    const confirm = await screen.findByRole("button", { name: /^remove$/i });
-    await user.click(confirm);
     await waitFor(() => expect(removeProjectFile).toHaveBeenCalled());
   });
 
@@ -229,16 +299,9 @@ describe("ProjectOverview", () => {
     vi.mocked(getProjectDetails).mockResolvedValue(details);
     vi.mocked(getAppSettings).mockResolvedValue({ ...baseSettings, autoConvertOnOpen: false });
 
-    render(<ProjectOverview projectSummary={projectSummary} />);
+    renderWithProviders(<ProjectOverview projectSummary={projectSummary} />);
 
-    const addButton = await screen.findByRole("button", { name: /add files/i });
-    expect(addButton).toHaveAttribute("aria-label", "Add files");
-
-    const user = userEvent.setup();
-    await user.hover(addButton);
-    expect(
-      await screen.findByRole("tooltip", { name: /add files \(auto-conversion disabled\)/i }),
-    ).toBeInTheDocument();
+    await screen.findByText(/Auto-convert on open is disabled/i);
   });
 
   it("rebuilds conversions after confirmation", async () => {
@@ -265,7 +328,7 @@ describe("ProjectOverview", () => {
       .mockResolvedValueOnce({ ...basePlan, tasks: [] })
       .mockResolvedValueOnce(planWithTask);
 
-    render(<ProjectOverview projectSummary={projectSummary} />);
+    renderWithProviders(<ProjectOverview projectSummary={projectSummary} />);
 
     await screen.findByRole("table");
 

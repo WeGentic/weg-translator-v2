@@ -3,11 +3,13 @@ pub mod model;
 mod options;
 mod tag_map;
 
+use std::cmp::Reverse;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, anyhow};
 use jsonschema::Validator;
+use log::debug;
 use serde_json::Value;
 
 pub use model::JliffDocument;
@@ -34,44 +36,97 @@ pub fn convert_xliff(opts: &ConversionOptions) -> Result<Vec<GeneratedArtifact>>
     let validator = compile_validator(opts.schema_path.as_deref())?;
     let conversions = converter::convert(opts)?;
 
-    let mut outputs = Vec::with_capacity(conversions.len());
+    let mut filtered: Vec<(converter::FileConversion, (usize, usize))> =
+        Vec::with_capacity(conversions.len());
     for conversion in conversions {
-        let (jliff_path, tag_map_path) =
-            build_output_paths(&opts.output_dir, &prefix, &conversion.file_id);
-
-        let jliff_value = serde_json::to_value(&conversion.jliff)
-            .context("Failed to serialize JLIFF document")?;
-
-        if let Some(validator) = validator.as_ref() {
-            let errors = collect_validation_errors(validator, &jliff_value);
-            if !errors.is_empty() {
-                let summary = errors
-                    .iter()
-                    .map(|(msg, ptr)| format!("{ptr}: {msg}"))
-                    .collect::<Vec<_>>()
-                    .join("; ");
-                anyhow::bail!(
-                    "JLIFF schema validation failed for {}: {}",
-                    jliff_path.display(),
-                    summary
-                );
-            }
+        let non_empty_segments = conversion
+            .jliff
+            .transunits
+            .iter()
+            .filter(|unit| {
+                !unit.source.trim().is_empty() || !unit.target_translation.trim().is_empty()
+            })
+            .count();
+        if conversion.jliff.transunits.is_empty() || non_empty_segments == 0 {
+            debug!(
+                target: "jliff::convert",
+                "Skipping XLIFF <file> id='{}' because it contains no translatable segments",
+                conversion.file_id
+            );
+            continue;
         }
-
-        write_json(&jliff_path, &jliff_value, opts.pretty)?;
-
-        let tag_map_value = serde_json::to_value(&conversion.tag_map)
-            .context("Failed to serialize tag-map document")?;
-        write_json(&tag_map_path, &tag_map_value, opts.pretty)?;
-
-        outputs.push(GeneratedArtifact {
-            file_id: conversion.file_id,
-            jliff_path,
-            tag_map_path,
-        });
+        let total_source_chars: usize = conversion
+            .jliff
+            .transunits
+            .iter()
+            .map(|unit| unit.source.trim().chars().count())
+            .sum();
+        filtered.push((conversion, (non_empty_segments, total_source_chars)));
     }
 
-    Ok(outputs)
+    if filtered.is_empty() {
+        anyhow::bail!("No translatable <file> elements found in XLIFF document.");
+    }
+
+    filtered.sort_by_key(|(_, score)| Reverse(*score));
+
+    cleanup_existing_artifacts(&opts.output_dir, &prefix)?;
+
+    let mut filtered_iter = filtered.into_iter();
+    let (primary, primary_score) = filtered_iter
+        .next()
+        .expect("filtered should contain at least one element");
+
+    debug!(
+        target: "jliff::convert",
+        "Selected XLIFF <file> id='{}' (segments={}, chars={})",
+        primary.file_id,
+        primary_score.0,
+        primary_score.1
+    );
+
+    for (conversion, score) in filtered_iter {
+        debug!(
+            target: "jliff::convert",
+            "Discarding secondary XLIFF <file> id='{}' (segments={}, chars={})",
+            conversion.file_id,
+            score.0,
+            score.1
+        );
+    }
+
+    let (jliff_path, tag_map_path) = build_output_paths(&opts.output_dir, &prefix);
+
+    let jliff_value =
+        serde_json::to_value(&primary.jliff).context("Failed to serialize JLIFF document")?;
+
+    if let Some(validator) = validator.as_ref() {
+        let errors = collect_validation_errors(validator, &jliff_value);
+        if !errors.is_empty() {
+            let summary = errors
+                .iter()
+                .map(|(msg, ptr)| format!("{ptr}: {msg}"))
+                .collect::<Vec<_>>()
+                .join("; ");
+            anyhow::bail!(
+                "JLIFF schema validation failed for {}: {}",
+                jliff_path.display(),
+                summary
+            );
+        }
+    }
+
+    write_json(&jliff_path, &jliff_value, opts.pretty)?;
+
+    let tag_map_value =
+        serde_json::to_value(&primary.tag_map).context("Failed to serialize tag-map document")?;
+    write_json(&tag_map_path, &tag_map_value, opts.pretty)?;
+
+    Ok(vec![GeneratedArtifact {
+        file_id: primary.file_id,
+        jliff_path,
+        tag_map_path,
+    }])
 }
 
 fn compute_prefix(opts: &ConversionOptions) -> Result<String> {
@@ -148,10 +203,45 @@ fn write_json(path: &Path, value: &Value, pretty: bool) -> Result<()> {
     fs::write(path, payload).with_context(|| format!("Failed to write {}", path.display()))
 }
 
-fn build_output_paths(out_dir: &Path, prefix: &str, file_id: &str) -> (PathBuf, PathBuf) {
-    let jliff_name = format!("{}-file{}.jliff.json", prefix, file_id);
-    let tag_map_name = format!("{}-file{}.tags.json", prefix, file_id);
+fn build_output_paths(out_dir: &Path, prefix: &str) -> (PathBuf, PathBuf) {
+    let jliff_name = format!("{}.jliff.json", prefix);
+    let tag_map_name = format!("{}.tags.json", prefix);
     (out_dir.join(jliff_name), out_dir.join(tag_map_name))
+}
+
+fn cleanup_existing_artifacts(dir: &Path, prefix: &str) -> Result<()> {
+    if !dir.exists() {
+        return Ok(());
+    }
+
+    for entry in
+        fs::read_dir(dir).with_context(|| format!("Failed to read directory {}", dir.display()))?
+    {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        if !ty.is_file() {
+            continue;
+        }
+
+        let name = match entry.file_name().into_string() {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+
+        let legacy_prefix = format!("{}-file", prefix);
+        let is_legacy = name.starts_with(&legacy_prefix)
+            && (name.ends_with(".jliff.json") || name.ends_with(".tags.json"));
+        let is_current =
+            name == format!("{}.jliff.json", prefix) || name == format!("{}.tags.json", prefix);
+
+        if is_legacy || is_current {
+            fs::remove_file(entry.path()).with_context(|| {
+                format!("Failed to remove stale artifact {}", entry.path().display())
+            })?;
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -209,6 +299,79 @@ mod tests {
                 .len(),
             1
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn skips_files_without_transunits_and_removes_stale_artifacts() -> Result<()> {
+        let tmp_dir = tempdir()?;
+        let xliff_path = tmp_dir.path().join("example.xlf");
+        let output_dir = tmp_dir.path().join("out");
+
+        let xliff_payload = r#"<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:2.0" version="2.0" srcLang="en-US" trgLang="es-ES">
+  <file original="example.skl" id="skeleton">
+    <skeleton href="example.skl"/>
+  </file>
+  <file original="example.docx" id="content">
+    <unit id="u1">
+      <segment id="s1">
+        <source>Hello</source>
+        <target>Hola</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>
+"#;
+        fs::write(&xliff_path, xliff_payload)?;
+
+        fs::create_dir_all(&output_dir)?;
+        fs::write(output_dir.join("example-filecontent.jliff.json"), "{}")?;
+        fs::write(output_dir.join("example-fileskeleton.jliff.json"), "{}")?;
+        fs::write(output_dir.join("example-fileskeleton.tags.json"), "{}")?;
+        fs::write(output_dir.join("example.jliff.json"), "{}")?;
+        fs::write(output_dir.join("example.tags.json"), "{}")?;
+
+        let mut opts = ConversionOptions::new(
+            xliff_path.clone(),
+            output_dir.clone(),
+            "Demo".to_string(),
+            "proj-1".to_string(),
+            "tester".to_string(),
+        );
+        opts.file_prefix = Some("example".to_string());
+
+        let artifacts = convert_xliff(&opts)?;
+        assert_eq!(artifacts.len(), 1);
+        let artifact_name = artifacts[0]
+            .jliff_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap()
+            .to_string();
+        assert_eq!(artifact_name, "example.jliff.json");
+
+        let jliff_json: Value =
+            serde_json::from_str(&fs::read_to_string(&artifacts[0].jliff_path)?)?;
+        assert_eq!(
+            jliff_json["Transunits"].as_array().map(|arr| arr.len()),
+            Some(1)
+        );
+
+        let mut entries: Vec<String> = fs::read_dir(&output_dir)?
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| {
+                entry
+                    .file_type()
+                    .map(|kind| kind.is_file())
+                    .unwrap_or(false)
+            })
+            .map(|entry| entry.file_name().into_string().unwrap_or_default())
+            .collect();
+
+        entries.sort();
+        assert_eq!(entries, vec!["example.jliff.json", "example.tags.json"]);
 
         Ok(())
     }

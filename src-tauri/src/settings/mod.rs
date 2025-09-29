@@ -198,7 +198,10 @@ impl SettingsManager {
         Ok(())
     }
 
-    pub async fn update_and_save_xliff_version(&self, version: String) -> Result<(), SettingsError> {
+    pub async fn update_and_save_xliff_version(
+        &self,
+        version: String,
+    ) -> Result<(), SettingsError> {
         {
             let mut guard = self.inner.settings.write().await;
             let original = guard.default_xliff_version.clone();

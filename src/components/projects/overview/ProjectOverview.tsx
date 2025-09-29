@@ -7,7 +7,8 @@ import { OverviewAutoConvertBanner } from "./components/OverviewAutoConvertBanne
 import { AddFilesDialog } from "./components/dialogs/AddFilesDialog";
 import { RemoveFileDialog } from "./components/dialogs/RemoveFileDialog";
 import { RebuildFileDialog } from "./components/dialogs/RebuildFileDialog";
-import { EnsureQueueModal } from "./components/EnsureQueueModal";
+import { FileProcessingOverlay } from "./components/FileProcessingOverlay";
+import { useToast } from "@/components/ui/use-toast";
 
 import {
   addFilesToProject,
@@ -31,9 +32,24 @@ type Props = {
   projectSummary: ProjectListItem;
 };
 
+const DEFAULT_PROCESS_MESSAGES = [
+  "Importing files…",
+  "Scanning translation segments…",
+  "Preparing conversion plan…",
+  "Validating bilingual assets…",
+  "Handing off to converter…",
+] as const;
+
+type ProcessingState = {
+  active: boolean;
+  step: number;
+  fileCount: number;
+};
+
 export function ProjectOverview({ projectSummary }: Props) {
   const projectId = projectSummary.projectId;
   const { user } = useAuth();
+  const { toast } = useToast();
   const [details, setDetails] = useState<ProjectDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,16 +57,11 @@ export function ProjectOverview({ projectSummary }: Props) {
   const [isRemoveOpen, setIsRemoveOpen] = useState<null | string>(null);
   const [rebuildTarget, setRebuildTarget] = useState<{ fileId: string; name: string } | null>(null);
   const [rebuildingFileId, setRebuildingFileId] = useState<string | null>(null);
-
-  // Conversion queue modal state
-  const [ensurePlan, setEnsurePlan] = useState<EnsureConversionsPlan | null>(null);
-  const [isEnsuring, setIsEnsuring] = useState(false);
-  const [ensureProgress, setEnsureProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
-  const [logs, setLogs] = useState<string[]>([]);
-  const cancelRequested = useRef(false);
+  const [processingMessages, setProcessingMessages] = useState<readonly string[]>(DEFAULT_PROCESS_MESSAGES);
   const [autoConvertOnOpen, setAutoConvertOnOpen] = useState<boolean>(true);
   const initialEnsureDone = useRef(false);
-  const [queueSummary, setQueueSummary] = useState<{ completed: number; failed: number } | null>(null);
+  const [processingState, setProcessingState] = useState<ProcessingState>({ active: false, step: 0, fileCount: 0 });
+  const finishProcessingTimer = useRef<number | null>(null);
 
   const loadDetails = useCallback(async () => {
     setIsLoading(true);
@@ -83,24 +94,6 @@ export function ProjectOverview({ projectSummary }: Props) {
   }, [loadDetails]);
 
   // Auto-ensure conversions on first load
-  useEffect(() => {
-    if (!details || !autoConvertOnOpen || initialEnsureDone.current) return;
-    initialEnsureDone.current = true;
-    void (async () => {
-      try {
-        const plan = await ensureProjectConversionsPlan(details.id);
-        if (plan.tasks.length > 0) {
-          setEnsurePlan(plan);
-          setEnsureProgress({ current: 0, total: plan.tasks.length });
-        }
-      } catch {
-        // non-blocking
-      }
-    })();
-  }, [details, autoConvertOnOpen]);
-
-  // (moved below to avoid TS use-before-assign)
-
   const relativeToProject = useCallback(
     (absPath: string) => {
       const root = details?.rootPath ?? "";
@@ -111,72 +104,60 @@ export function ProjectOverview({ projectSummary }: Props) {
     [details?.rootPath],
   );
 
-  const handleAddFiles = useCallback(async () => {
-    try {
-      const selected = await openDialog({
-        multiple: true,
-        title: "Select files to add to project"
-      });
-      const files = Array.isArray(selected) ? selected : selected ? [selected] : [];
-      if (files.length === 0) return;
-      await addFilesToProject(projectId, files);
-      await loadDetails();
-      // re-check conversions after adding
-      const plan = await ensureProjectConversionsPlan(projectId);
-      if (plan.tasks.length > 0) {
-        setEnsurePlan(plan);
-        setEnsureProgress({ current: 0, total: plan.tasks.length });
-      }
-    } catch (e) {
-      // surface UI error via banner
-      setError(e instanceof Error ? e.message : "Failed to add files.");
-    } finally {
-      setIsAddFilesOpen(false);
+  const beginProcessing = useCallback((fileCount: number) => {
+    if (fileCount <= 0) {
+      return false;
     }
-  }, [loadDetails, projectId]);
-
-
-
-  const handleFilesDropped = useCallback(async (files: string[]) => {
-    try {
-      if (files.length === 0) return;
-      await addFilesToProject(projectId, files);
-      await loadDetails();
-      // re-check conversions after adding
-      const plan = await ensureProjectConversionsPlan(projectId);
-      if (plan.tasks.length > 0) {
-        setEnsurePlan(plan);
-        setEnsureProgress({ current: 0, total: plan.tasks.length });
-      }
-    } catch (e) {
-      // surface UI error via banner
-      setError(e instanceof Error ? e.message : "Failed to add files.");
+    if (finishProcessingTimer.current) {
+      window.clearTimeout(finishProcessingTimer.current);
+      finishProcessingTimer.current = null;
     }
-  }, [loadDetails, projectId]);
+    setProcessingMessages(DEFAULT_PROCESS_MESSAGES);
+    setProcessingState({ active: true, step: 0, fileCount });
+    return true;
+  }, []);
 
-  const handleRemoveFile = useCallback(async () => {
-    const id = isRemoveOpen;
-    if (!id) return;
-    try {
-      await removeProjectFile(projectId, id);
-      await loadDetails();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to remove file.");
-    } finally {
-      setIsRemoveOpen(null);
+  const advanceProcessing = useCallback((targetStep: number) => {
+    setProcessingState((prev) => {
+      if (!prev.active) return prev;
+      const maxStep = processingMessages.length - 1;
+      const nextStep = Math.min(Math.max(prev.step, targetStep), maxStep);
+      if (nextStep === prev.step) return prev;
+      return { ...prev, step: nextStep };
+    });
+  }, [processingMessages.length]);
+
+  const finishProcessing = useCallback(() => {
+    setProcessingState((prev) => {
+      if (!prev.active) return prev;
+      const maxStep = processingMessages.length - 1;
+      return { ...prev, step: maxStep };
+    });
+    if (finishProcessingTimer.current) {
+      window.clearTimeout(finishProcessingTimer.current);
     }
-  }, [isRemoveOpen, loadDetails, projectId]);
+    finishProcessingTimer.current = window.setTimeout(() => {
+      setProcessingState({ active: false, step: 0, fileCount: 0 });
+      setProcessingMessages(DEFAULT_PROCESS_MESSAGES);
+      finishProcessingTimer.current = null;
+    }, 600);
+  }, [processingMessages.length]);
 
   const processTask = useCallback(async (task: EnsureConversionsTask) => {
-    const onStdout = (line: string) => setLogs((cur) => [...cur, line]);
-    const onStderr = (line: string) => setLogs((cur) => [...cur, line]);
+    const onStdout = (line: string) => {
+      if (line.trim().length > 0) {
+        console.debug("[convert stdout]", line);
+      }
+    };
+    const onStderr = (line: string) => {
+      if (line.trim().length > 0) {
+        console.warn("[convert stderr]", line);
+      }
+    };
+
     try {
       await updateConversionStatus(task.conversionId, "running");
-      const showVersion = /^2\./.test(task.version) ? ` -${task.version}` : '';
-      setLogs((cur) => [
-        ...cur,
-        `> convert -file ${task.inputAbsPath} -srcLang ${task.srcLang} -tgtLang ${task.tgtLang} -xliff ${task.outputAbsPath}${showVersion}`,
-      ]);
+
       const res = await convertStream({
         file: task.inputAbsPath,
         srcLang: task.srcLang,
@@ -189,53 +170,16 @@ export function ProjectOverview({ projectSummary }: Props) {
 
       if (!res.ok) {
         const detail = res.knownError?.detail || res.message || `Conversion failed (code ${res.code ?? "?"}).`;
-        setLogs((cur) => {
-          const lines: string[] = [];
-          lines.push(`Exit code: ${res.code ?? "?"}`);
-          const stderrLines = (res.stderr || "").split(/\r?\n/).filter(Boolean);
-          const stdoutLines = (res.stdout || "").split(/\r?\n/).filter(Boolean);
-          if (stderrLines.length) {
-            lines.push("--- stderr (tail) ---");
-            lines.push(...stderrLines.slice(-10));
-          }
-          if (stdoutLines.length) {
-            lines.push("--- stdout (tail) ---");
-            lines.push(...stdoutLines.slice(-10));
-          }
-          lines.push(`ERROR: ${detail}`);
-          return [...cur, ...lines];
-        });
         await updateConversionStatus(task.conversionId, "failed", { errorMessage: detail });
-        return false;
+        return { ok: false as const, error: detail };
       }
 
       const val = await validateStream({ xliff: task.outputAbsPath }, { onStdout, onStderr });
       if (!val.ok) {
         const detail = val.knownError?.detail || val.message || `Validation failed (code ${val.code ?? "?"}).`;
-        setLogs((cur) => {
-          const lines: string[] = [];
-          lines.push(`Exit code: ${val.code ?? "?"}`);
-          const stderrLines = (val.stderr || "").split(/\r?\n/).filter(Boolean);
-          const stdoutLines = (val.stdout || "").split(/\r?\n/).filter(Boolean);
-          if (stderrLines.length) {
-            lines.push("--- stderr (tail) ---");
-            lines.push(...stderrLines.slice(-10));
-          }
-          if (stdoutLines.length) {
-            lines.push("--- stdout (tail) ---");
-            lines.push(...stdoutLines.slice(-10));
-          }
-          lines.push(`ERROR: ${detail}`);
-          return [...cur, ...lines];
-        });
         await updateConversionStatus(task.conversionId, "failed", { errorMessage: detail });
-        return false;
+        return { ok: false as const, error: detail };
       }
-
-      setLogs((cur) => [
-        ...cur,
-        `> convert_xliff_to_jliff --project ${projectId} --conversion ${task.conversionId}`,
-      ]);
 
       let jliffResult: JliffConversionResult;
       try {
@@ -246,18 +190,10 @@ export function ProjectOverview({ projectSummary }: Props) {
           operator: user?.name || user?.email || undefined,
         });
       } catch (jliffError) {
-        const message =
-          jliffError instanceof Error ? jliffError.message : "JLIFF conversion failed";
-        setLogs((cur) => [...cur, `ERROR: ${message}`]);
+        const message = jliffError instanceof Error ? jliffError.message : "JLIFF conversion failed";
         await updateConversionStatus(task.conversionId, "failed", { errorMessage: message });
-        return false;
+        return { ok: false as const, error: message };
       }
-
-      setLogs((cur) => [
-        ...cur,
-        `Generated ${jliffResult.jliffRelPath}`,
-        `Generated ${jliffResult.tagMapRelPath}`,
-      ]);
 
       const rel = relativeToProject(task.outputAbsPath);
       await updateConversionStatus(task.conversionId, "completed", {
@@ -265,55 +201,244 @@ export function ProjectOverview({ projectSummary }: Props) {
         jliffRelPath: jliffResult.jliffRelPath,
         tagMapRelPath: jliffResult.tagMapRelPath,
       });
-      return true;
+      return { ok: true as const };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Conversion error";
-      setLogs((cur) => [...cur, `ERROR: ${msg}`]);
       await updateConversionStatus(task.conversionId, "failed", { errorMessage: msg });
-      return false;
+      return { ok: false as const, error: msg };
     }
   }, [projectId, relativeToProject, user]);
 
-  const startEnsureQueue = useCallback(async () => {
-    if (!ensurePlan || ensurePlan.tasks.length === 0) return;
-    setIsEnsuring(true);
-    cancelRequested.current = false;
-    setLogs([]);
-    setEnsureProgress({ current: 0, total: ensurePlan.tasks.length });
-    setQueueSummary(null);
+  const runConversionPlan = useCallback(async (
+    plan: EnsureConversionsPlan,
+    options: { silent?: boolean } = {},
+  ) => {
+    const { silent = false } = options;
+    if (plan.tasks.length === 0) {
+      return { completed: 0, failed: 0, errors: [] as string[] };
+    }
 
-    // No preflight: call convert directly and surface its stderr/stdout.
-    let failed = 0;
+    const total = plan.tasks.length;
+    const errors: string[] = [];
+    let messagesForRun: string[] | null = null;
+    let conversionStartIndex = 0;
+
+    if (!silent) {
+      messagesForRun = [
+        ...DEFAULT_PROCESS_MESSAGES.slice(0, 4),
+        ...plan.tasks.map((_, index) => `Converting file ${index + 1} of ${total}…`),
+        "Finalizing conversion artifacts…",
+      ];
+      conversionStartIndex = messagesForRun.length - (total + 1);
+      const startStep = Math.max(0, conversionStartIndex - 1);
+      setProcessingMessages(messagesForRun);
+      setProcessingState((prev) => {
+        if (!prev.active) {
+          return { active: true, step: startStep, fileCount: total };
+        }
+        const nextStep = Math.max(prev.step, startStep);
+        if (prev.step === nextStep && prev.fileCount === total) {
+          return prev;
+        }
+        return { ...prev, step: nextStep, fileCount: total };
+      });
+    }
+
     let completed = 0;
-    for (let i = 0; i < ensurePlan.tasks.length; i++) {
-      if (cancelRequested.current) break;
-      const task = ensurePlan.tasks[i];
-      setEnsureProgress({ current: i, total: ensurePlan.tasks.length });
-      const ok = await processTask(task);
-      if (ok) completed += 1;
-      else failed += 1;
+    let failed = 0;
+
+    try {
+      for (let index = 0; index < plan.tasks.length; index++) {
+        if (!silent && messagesForRun) {
+          const targetStep = conversionStartIndex + index;
+          setProcessingState((prev) => {
+            if (!prev.active) {
+              return { active: true, step: targetStep, fileCount: total };
+            }
+            if (prev.step >= targetStep && prev.fileCount === total) {
+              return prev;
+            }
+            return { ...prev, step: Math.max(prev.step, targetStep), fileCount: total };
+          });
+        }
+
+        const result = await processTask(plan.tasks[index]);
+        if (result.ok) {
+          completed += 1;
+        } else {
+          failed += 1;
+          if (result.error) {
+            errors.push(result.error);
+          }
+        }
+      }
+    } finally {
+      if (!silent) {
+        setProcessingState((prev) => (prev.active ? { ...prev, fileCount: total } : prev));
+        finishProcessing();
+      }
     }
 
-    setIsEnsuring(false);
-    setEnsureProgress({ current: 0, total: 0 });
-    setQueueSummary({ completed, failed });
-    await loadDetails();
-    if (failed === 0) {
-      // Auto-close only on full success
-      setEnsurePlan(null);
-    }
-  }, [ensurePlan, loadDetails, processTask]);
+    return { completed, failed, errors };
+  }, [finishProcessing, processTask]);
 
-  const cancelEnsureQueue = useCallback(() => {
-    cancelRequested.current = true;
+  const importAndQueueFiles = useCallback(async (filePaths: string[]) => {
+    if (filePaths.length === 0) {
+      return;
+    }
+
+    setError(null);
+    const started = beginProcessing(filePaths.length);
+    if (!started) {
+      return;
+    }
+
+    let conversionsTriggered = false;
+    try {
+      await addFilesToProject(projectId, filePaths);
+      advanceProcessing(1);
+
+      await loadDetails();
+      advanceProcessing(2);
+
+      const plan = await ensureProjectConversionsPlan(projectId);
+      advanceProcessing(3);
+
+      if (plan.tasks.length > 0) {
+        conversionsTriggered = true;
+        const summary = await runConversionPlan(plan);
+        await loadDetails();
+        if (summary.failed > 0) {
+          setError("Some conversions failed. Check the file list for details.");
+          toast({
+            variant: "destructive",
+            title: "Conversion issues",
+            description: `${summary.failed} file${summary.failed === 1 ? "" : "s"} failed to convert.`,
+          });
+        } else {
+          toast({
+            title: "Files converted",
+            description: `${summary.completed} file${summary.completed === 1 ? "" : "s"} ready for editing.`,
+          });
+        }
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to add files.";
+      setError(message);
+      toast({
+        variant: "destructive",
+        title: "Add files failed",
+        description: message,
+      });
+    } finally {
+      if (!conversionsTriggered) {
+        finishProcessing();
+      }
+    }
+  }, [advanceProcessing, beginProcessing, finishProcessing, loadDetails, projectId, runConversionPlan, toast]);
+
+  const handleFilesDropped = useCallback((files: string[]) => {
+    if (processingState.active) return;
+    void importAndQueueFiles(files);
+  }, [importAndQueueFiles, processingState.active]);
+
+  const handleConfirmAddFiles = useCallback(async () => {
+    if (processingState.active) return;
+    try {
+      const selected = await openDialog({
+        multiple: true,
+        title: "Select files to add to project",
+      });
+      const files = Array.isArray(selected) ? selected : selected ? [selected] : [];
+      if (files.length > 0) {
+        setIsAddFilesOpen(false);
+        await importAndQueueFiles(files);
+        return;
+      }
+    } catch (e) {
+      if (!(e instanceof Error && /cancel/i.test(e.message))) {
+        setError(e instanceof Error ? e.message : "Failed to add files.");
+      }
+    } finally {
+      setIsAddFilesOpen(false);
+    }
+  }, [importAndQueueFiles, processingState.active]);
+
+  const openAddFilesDialog = useCallback(() => {
+    if (processingState.active) return;
+    setIsAddFilesOpen(true);
+  }, [processingState.active]);
+
+  useEffect(() => {
+    if (!processingState.active) return;
+    const maxStep = processingMessages.length - 1;
+    if (processingState.step >= maxStep) return;
+
+    const timer = window.setTimeout(() => {
+      setProcessingState((prev) => {
+        if (!prev.active) return prev;
+        const localMax = processingMessages.length - 1;
+        const nextStep = Math.min(prev.step + 1, localMax);
+        if (nextStep === prev.step) return prev;
+        return { ...prev, step: nextStep };
+      });
+    }, 1400);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [processingMessages.length, processingState.active, processingState.step]);
+
+  useEffect(() => () => {
+    if (finishProcessingTimer.current) {
+      window.clearTimeout(finishProcessingTimer.current);
+    }
   }, []);
 
-  // Auto-start queue once plan is ready (after callbacks are defined)
+  const handleRemoveFile = useCallback(async () => {
+    const id = isRemoveOpen;
+    if (!id) return;
+    try {
+      await removeProjectFile(projectId, id);
+      await loadDetails();
+      toast({
+        title: "File removed",
+        description: "The file and its related artifacts were deleted.",
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to remove file.";
+      setError(message);
+      toast({
+        variant: "destructive",
+        title: "Remove failed",
+        description: message,
+      });
+    } finally {
+      setIsRemoveOpen(null);
+    }
+  }, [isRemoveOpen, loadDetails, projectId, toast]);
+
+
+  // Auto-ensure conversions on first load
   useEffect(() => {
-    // Auto-start only when a new plan arrives and no summary exists yet
-    if (!ensurePlan || isEnsuring || queueSummary) return;
-    void startEnsureQueue();
-  }, [ensurePlan, isEnsuring, queueSummary, startEnsureQueue]);
+    if (!details || !autoConvertOnOpen || initialEnsureDone.current) return;
+    initialEnsureDone.current = true;
+    void (async () => {
+      try {
+        const plan = await ensureProjectConversionsPlan(details.id);
+        if (plan.tasks.length === 0) {
+          return;
+        }
+        const summary = await runConversionPlan(plan, { silent: true });
+        if (summary.failed > 0) {
+          setError("Some files failed to convert automatically. Check the file list for more details.");
+        }
+        await loadDetails();
+      } catch {
+        // non-blocking
+      }
+    })();
+  }, [autoConvertOnOpen, details, loadDetails, runConversionPlan]);
 
   const anyFailures = useMemo(() => {
     if (!details) return false;
@@ -321,9 +446,12 @@ export function ProjectOverview({ projectSummary }: Props) {
   }, [details]);
 
   const retryFailed = useCallback(async () => {
-    if (!details) return;
+    if (!details || processingState.active) return;
+
+    let started = false;
+    let conversionsTriggered = false;
+
     try {
-      // Mark all failed conversions as pending
       for (const entry of details.files) {
         for (const conv of entry.conversions) {
           if (conv.status === "failed") {
@@ -331,17 +459,53 @@ export function ProjectOverview({ projectSummary }: Props) {
           }
         }
       }
-      // Refresh and ensure plan again
+
       await loadDetails();
       const plan = await ensureProjectConversionsPlan(details.id);
-      if (plan.tasks.length > 0) {
-        setEnsurePlan(plan);
-        setEnsureProgress({ current: 0, total: plan.tasks.length });
+      if (plan.tasks.length === 0) {
+        toast({
+          title: "All clear",
+          description: "No failed conversions were found.",
+        });
+        return;
+      }
+
+      started = beginProcessing(plan.tasks.length);
+      if (!started) {
+        return;
+      }
+      advanceProcessing(3);
+      conversionsTriggered = true;
+
+      const summary = await runConversionPlan(plan);
+      await loadDetails();
+      if (summary.failed > 0) {
+        setError("Some files still failed during retry. Please review the file list.");
+        toast({
+          variant: "destructive",
+          title: "Retry completed with issues",
+          description: `${summary.failed} file${summary.failed === 1 ? "" : "s"} still failing.`,
+        });
+      } else {
+        toast({
+          title: "Retry successful",
+          description: `${summary.completed} file${summary.completed === 1 ? "" : "s"} converted successfully.`,
+        });
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to retry conversions.");
+      const message = e instanceof Error ? e.message : "Failed to retry conversions.";
+      setError(message);
+      toast({
+        variant: "destructive",
+        title: "Retry failed",
+        description: message,
+      });
+    } finally {
+      if (started && !conversionsTriggered) {
+        finishProcessing();
+      }
     }
-  }, [details, loadDetails]);
+  }, [advanceProcessing, beginProcessing, details, finishProcessing, loadDetails, processingState.active, runConversionPlan, toast]);
 
   const handleRequestRemove = useCallback((fileId: string) => {
     setIsRemoveOpen(fileId);
@@ -358,17 +522,25 @@ export function ProjectOverview({ projectSummary }: Props) {
   );
 
   const handleConfirmRebuild = useCallback(async () => {
-    if (!details || !rebuildTarget) return;
+    if (!details || !rebuildTarget || processingState.active) return;
     const target = rebuildTarget;
     const entry = details.files.find((file) => file.file.id === target.fileId);
     const conversions = entry?.conversions ?? [];
     setRebuildTarget(null);
     if (conversions.length === 0) {
+      toast({
+        title: "Nothing to rebuild",
+        description: "This file has no conversions yet.",
+      });
       return;
     }
 
     setRebuildingFileId(target.fileId);
     setError(null);
+
+    let started = false;
+    let conversionsTriggered = false;
+
     try {
       for (const conversion of conversions) {
         await updateConversionStatus(conversion.id, "pending");
@@ -376,19 +548,53 @@ export function ProjectOverview({ projectSummary }: Props) {
 
       const plan = await ensureProjectConversionsPlan(details.id);
       const fileTasks = plan.tasks.filter((task) => task.projectFileId === target.fileId);
-      if (fileTasks.length > 0) {
-        setQueueSummary(null);
-        setLogs([]);
-        setEnsurePlan({ ...plan, tasks: fileTasks });
-        setEnsureProgress({ current: 0, total: fileTasks.length });
+      if (fileTasks.length === 0) {
+        toast({
+          title: "Already up to date",
+          description: "All conversions for this file are current.",
+        });
+        return;
+      }
+
+      started = beginProcessing(fileTasks.length);
+      if (!started) {
+        return;
+      }
+      advanceProcessing(3);
+      conversionsTriggered = true;
+
+      const summary = await runConversionPlan({ ...plan, tasks: fileTasks });
+      await loadDetails();
+
+      if (summary.failed > 0) {
+        setError(`Rebuild completed with ${summary.failed} failure${summary.failed === 1 ? "" : "s"}.`);
+        toast({
+          variant: "destructive",
+          title: "Rebuild issues",
+          description: `${summary.failed} conversion${summary.failed === 1 ? "" : "s"} failed.`,
+        });
+      } else {
+        toast({
+          title: "Rebuild successful",
+          description: `${summary.completed} conversion${summary.completed === 1 ? "" : "s"} refreshed.`,
+        });
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to rebuild file.");
+      const message = e instanceof Error ? e.message : "Failed to rebuild file.";
+      setError(message);
+      await loadDetails();
+      toast({
+        variant: "destructive",
+        title: "Rebuild failed",
+        description: message,
+      });
     } finally {
+      if (started && !conversionsTriggered) {
+        finishProcessing();
+      }
       setRebuildingFileId(null);
-      void loadDetails();
     }
-  }, [details, rebuildTarget, loadDetails]);
+  }, [advanceProcessing, beginProcessing, details, finishProcessing, loadDetails, processingState.active, rebuildTarget, runConversionPlan, toast]);
 
   const handleOpenEditor = useCallback(
     (fileId: string) => {
@@ -404,9 +610,13 @@ export function ProjectOverview({ projectSummary }: Props) {
   const showAutoConvertBanner = !autoConvertOnOpen;
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col overflow-y-auto py-4 pl-4">
+    <section className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <div className="flex flex-col gap-4">
-        <OverviewHeader project={projectSummary} details={details} autoConvertOnOpen={autoConvertOnOpen} />
+        <OverviewHeader
+          project={projectSummary}
+          details={details}
+          autoConvertOnOpen={autoConvertOnOpen}
+        />
 
         {showAutoConvertBanner ? (
           <div className="mx-4">
@@ -427,17 +637,23 @@ export function ProjectOverview({ projectSummary }: Props) {
         <div className="mx-4 flex min-h-0 flex-1 justify-center">
           <Card className="flex h-full w-full flex-1 flex-col overflow-hidden rounded-xl border border-border/60 bg-background/80 py-0 shadow-sm">
             <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 py-6">
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                
+              <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
                 <FileTable
                   files={details?.files ?? []}
                   isLoading={isLoading}
                   onRemove={handleRequestRemove}
                   onOpenEditor={handleOpenEditor}
                   onRebuild={handleRequestRebuild}
-                  onAddFiles={() => void handleAddFiles()}
-                  onFilesDropped={(files) => void handleFilesDropped(files)}
+                  onAddFiles={openAddFilesDialog}
+                  onFilesDropped={handleFilesDropped}
                   rebuildingFileId={rebuildingFileId}
+                  isProcessing={processingState.active}
+                />
+                <FileProcessingOverlay
+                  visible={processingState.active}
+                  messages={processingMessages}
+                  currentStep={processingState.step}
+                  fileCount={processingState.fileCount}
                 />
               </div>
             </CardContent>
@@ -457,7 +673,8 @@ export function ProjectOverview({ projectSummary }: Props) {
       <AddFilesDialog
         open={isAddFilesOpen}
         onOpenChange={setIsAddFilesOpen}
-        onConfirm={() => void handleAddFiles()}
+        onConfirm={() => void handleConfirmAddFiles()}
+        isBusy={processingState.active}
       />
 
       <RemoveFileDialog
@@ -470,20 +687,10 @@ export function ProjectOverview({ projectSummary }: Props) {
         open={rebuildTarget !== null}
         onOpenChange={(open) => setRebuildTarget((prev) => (open ? prev : null))}
         onConfirm={() => void handleConfirmRebuild()}
-        isBusy={isEnsuring || (rebuildTarget ? rebuildingFileId === rebuildTarget.fileId : false)}
+        isBusy={processingState.active || (rebuildTarget ? rebuildingFileId === rebuildTarget.fileId : false)}
         fileName={rebuildTarget?.name}
       />
 
-      <EnsureQueueModal
-        plan={ensurePlan}
-        isEnsuring={isEnsuring}
-        progress={ensureProgress}
-        logs={logs}
-        summary={queueSummary}
-        onClose={() => setEnsurePlan(null)}
-        onStart={startEnsureQueue}
-        onCancel={cancelEnsureQueue}
-      />
     </section>
   );
 }

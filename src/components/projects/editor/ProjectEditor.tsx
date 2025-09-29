@@ -508,6 +508,11 @@ function parseJliff(raw: string): JliffRoot {
   if (!jliff || !Array.isArray(jliff.Transunits)) {
     throw new Error("JLIFF artifact is missing required Transunits array.");
   }
+  if (jliff.Transunits.length === 0) {
+    throw new Error(
+      "JLIFF artifact does not contain any translatable segments. Rebuild the conversion to regenerate content."
+    );
+  }
   return jliff;
 }
 

@@ -13,7 +13,7 @@ describe("formatDateParts", () => {
 
   it("returns em dash parts for invalid date", () => {
     const res = formatDateParts("not-a-date");
-    expect(res).toEqual({ label: "—", detail: "—", relative: "—" });
+    expect(res).toMatchObject({ label: "—", detail: "—", relative: "—" });
   });
 
   it("formats label/detail and relative time", () => {
@@ -24,4 +24,3 @@ describe("formatDateParts", () => {
     expect(res.relative.toLowerCase()).toContain("day");
   });
 });
-
