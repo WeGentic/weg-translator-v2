@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FileTable } from "./components/files/FileTable";
 import { OverviewHeader } from "./components/OverviewHeader";
 import { OverviewAutoConvertBanner } from "./components/OverviewAutoConvertBanner";
-import { AddFilesDialog } from "./components/dialogs/AddFilesDialog";
 import { RemoveFileDialog } from "./components/dialogs/RemoveFileDialog";
 import { RebuildFileDialog } from "./components/dialogs/RebuildFileDialog";
 import { FileProcessingOverlay } from "./components/FileProcessingOverlay";
@@ -24,6 +23,7 @@ import {
   type ProjectListItem,
 } from "@/ipc";
 import { convertStream, validateStream } from "@/lib/openxliff";
+import { PROJECT_FILE_DIALOG_FILTERS } from "@/lib/file-formats";
 import { getAppSettings } from "@/ipc";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,7 +53,6 @@ export function ProjectOverview({ projectSummary }: Props) {
   const [details, setDetails] = useState<ProjectDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAddFilesOpen, setIsAddFilesOpen] = useState(false);
   const [isRemoveOpen, setIsRemoveOpen] = useState<null | string>(null);
   const [rebuildTarget, setRebuildTarget] = useState<{ fileId: string; name: string } | null>(null);
   const [rebuildingFileId, setRebuildingFileId] = useState<string | null>(null);
@@ -344,30 +343,28 @@ export function ProjectOverview({ projectSummary }: Props) {
 
   const handleConfirmAddFiles = useCallback(async () => {
     if (processingState.active) return;
+
     try {
-      const selected = await openDialog({
+      const selection = await openDialog({
         multiple: true,
         title: "Select files to add to project",
+        filters: PROJECT_FILE_DIALOG_FILTERS.map((filter) => ({
+          name: filter.name,
+          extensions: [...filter.extensions],
+        })),
       });
-      const files = Array.isArray(selected) ? selected : selected ? [selected] : [];
+      const files = Array.isArray(selection) ? selection : selection ? [selection] : [];
       if (files.length > 0) {
-        setIsAddFilesOpen(false);
         await importAndQueueFiles(files);
-        return;
       }
     } catch (e) {
       if (!(e instanceof Error && /cancel/i.test(e.message))) {
         setError(e instanceof Error ? e.message : "Failed to add files.");
       }
-    } finally {
-      setIsAddFilesOpen(false);
     }
-  }, [importAndQueueFiles, processingState.active]);
+  }, [importAndQueueFiles, processingState.active, setError]);
 
-  const openAddFilesDialog = useCallback(() => {
-    if (processingState.active) return;
-    setIsAddFilesOpen(true);
-  }, [processingState.active]);
+  const handleAddFilesRequest = useCallback(() => handleConfirmAddFiles(), [handleConfirmAddFiles]);
 
   useEffect(() => {
     if (!processingState.active) return;
@@ -644,7 +641,7 @@ export function ProjectOverview({ projectSummary }: Props) {
                   onRemove={handleRequestRemove}
                   onOpenEditor={handleOpenEditor}
                   onRebuild={handleRequestRebuild}
-                  onAddFiles={openAddFilesDialog}
+                  onAddFiles={handleAddFilesRequest}
                   onFilesDropped={handleFilesDropped}
                   rebuildingFileId={rebuildingFileId}
                   isProcessing={processingState.active}
@@ -669,13 +666,6 @@ export function ProjectOverview({ projectSummary }: Props) {
           </div>
         ) : null}
       </div>
-
-      <AddFilesDialog
-        open={isAddFilesOpen}
-        onOpenChange={setIsAddFilesOpen}
-        onConfirm={() => void handleConfirmAddFiles()}
-        isBusy={processingState.active}
-      />
 
       <RemoveFileDialog
         open={isRemoveOpen !== null}

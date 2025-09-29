@@ -197,6 +197,29 @@ impl DbManager {
         }
     }
 
+    /// Fetches the configured default source/target languages for a project.
+    pub async fn project_language_defaults(
+        &self,
+        project_id: Uuid,
+    ) -> DbResult<(Option<String>, Option<String>)> {
+        let pool = self.pool().await;
+        let row = sqlx::query(
+            "SELECT default_src_lang, default_tgt_lang FROM projects WHERE id = ?1",
+        )
+        .bind(&project_id.to_string())
+        .fetch_optional(&pool)
+        .await?;
+
+        match row {
+            Some(record) => {
+                let src_lang: Option<String> = record.try_get("default_src_lang")?;
+                let tgt_lang: Option<String> = record.try_get("default_tgt_lang")?;
+                Ok((src_lang, tgt_lang))
+            }
+            None => Err(DbError::ProjectNotFound(project_id)),
+        }
+    }
+
     /// Deletes a project row and returns the number of affected records.
     pub async fn delete_project(&self, project_id: Uuid) -> DbResult<u64> {
         let _guard = self.write_lock.lock().await;

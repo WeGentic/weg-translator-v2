@@ -259,7 +259,6 @@ export function FileTable({
         onBrowseClick={onAddFiles}
         variant="empty-state"
         title="No files yet"
-        description="Get started by adding translation files to your project. Supported formats include XLIFF, TMX, and more."
         showBrowseButton={!!onAddFiles}
         disabled={isProcessing || (!onFilesDropped && !onAddFiles)}
         isDragActive={isDragActive}
@@ -276,7 +275,6 @@ export function FileTable({
           onBrowseClick={onAddFiles}
           variant="compact"
           title="Add more files"
-          description="Drop additional files here"
           showBrowseButton={!!onAddFiles}
           isDragActive={isDragActive}
           isDragOver={isDragOver}

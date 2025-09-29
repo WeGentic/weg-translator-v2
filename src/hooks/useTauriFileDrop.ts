@@ -1,6 +1,8 @@
 import { useCallback, useState, useEffect } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 
+import { PROJECT_FILE_EXTENSIONS_WITH_DOT } from "@/lib/file-formats";
+
 export interface UseTauriFileDropOptions {
   onFilesDropped: (files: string[]) => void;
   acceptedFileTypes?: string[];
@@ -13,9 +15,7 @@ export interface UseTauriFileDropReturn {
   isDragOver: boolean;
 }
 
-const SUPPORTED_FILE_EXTENSIONS = [
-  '.xlf', '.xliff', '.tmx', '.docx', '.doc', '.txt', '.csv', '.json', '.xml'
-];
+const SUPPORTED_FILE_EXTENSIONS = PROJECT_FILE_EXTENSIONS_WITH_DOT;
 
 /**
  * Hook for handling Tauri's global drag-drop events.

@@ -1,4 +1,5 @@
 import type { ProjectType } from "@/ipc";
+import { PROJECT_FILE_EXTENSIONS } from "@/lib/file-formats";
 
 export type WizardStep = 0 | 1 | 2;
 
@@ -31,12 +32,7 @@ export const INITIAL_PROJECT_FORM: NewProjectForm = {
   files: [],
 };
 
-export const ALLOWED_EXTENSIONS = [
-  // Convertible document formats
-  "doc", "docx", "ppt", "pptx", "xls", "xlsx", "odt", "odp", "ods", "html", "xml", "dita", "md",
-  // XLIFF-like formats
-  "xlf", "xliff", "mqxliff", "sdlxliff",
-] as const;
+export const ALLOWED_EXTENSIONS = PROJECT_FILE_EXTENSIONS;
 
 export const CREATE_PROJECT_STEP_LABELS = [
   "Project details",

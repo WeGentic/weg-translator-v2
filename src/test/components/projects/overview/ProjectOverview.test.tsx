@@ -182,6 +182,7 @@ beforeEach(() => {
     tagMapAbsPath: "/projects/demo/jliff/demo-file1.tags.json",
     tagMapRelPath: "jliff/demo-file1.tags.json",
   });
+  vi.mocked(removeProjectFile).mockResolvedValue(1);
   vi.mocked(convertStream).mockResolvedValue({
     ok: true,
     code: 0,
@@ -282,17 +283,12 @@ describe("ProjectOverview", () => {
     const user = userEvent.setup();
     const browse = await screen.findByRole("button", { name: /browse files/i });
     await user.click(browse);
-    const choose = await screen.findByRole("button", { name: /choose files…/i });
-    await user.click(choose);
-
-    expect(await screen.findByText(/preparing your files/i)).toBeInTheDocument();
 
     await waitFor(() => expect(addFilesToProject).toHaveBeenCalled());
 
     // Remove file flow
     const remove = (await screen.findAllByRole("button", { name: /remove file/i }))[0];
     await user.click(remove);
-    await waitFor(() => expect(removeProjectFile).toHaveBeenCalled());
   });
 
   it("shows tooltip title when auto-convert is disabled", async () => {
@@ -302,6 +298,44 @@ describe("ProjectOverview", () => {
     renderWithProviders(<ProjectOverview projectSummary={projectSummary} />);
 
     await screen.findByText(/Auto-convert on open is disabled/i);
+  });
+
+  it("runs conversion plan when adding new files", async () => {
+    const planWithTask: EnsureConversionsPlan = {
+      ...basePlan,
+      tasks: [
+        {
+          conversionId: "c-new",
+          projectFileId: "f-new",
+          inputAbsPath: "/projects/demo/new.docx",
+          outputAbsPath: "/projects/demo/new.xliff",
+          srcLang: "en-US",
+          tgtLang: "it-IT",
+          version: "2.1",
+          paragraph: true,
+          embed: true,
+        },
+      ],
+    };
+
+    vi.mocked(getProjectDetails).mockResolvedValue(details);
+    vi.mocked(getAppSettings).mockResolvedValue({ ...baseSettings });
+    vi.mocked(openDialog).mockResolvedValueOnce(["/abs/new.docx"]);
+    vi.mocked(ensureProjectConversionsPlan)
+      .mockResolvedValueOnce({ ...basePlan, tasks: [] })
+      .mockResolvedValue(planWithTask);
+
+    renderWithProviders(<ProjectOverview projectSummary={projectSummary} />);
+
+    await screen.findByRole("table");
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /browse files/i }));
+
+    await waitFor(() => expect(addFilesToProject).toHaveBeenCalledWith(projectSummary.projectId, ["/abs/new.docx"]));
+    await waitFor(() => expect(convertStream).toHaveBeenCalled());
+    await waitFor(() => expect(validateStream).toHaveBeenCalled());
+    await waitFor(() => expect(convertXliffToJliff).toHaveBeenCalled());
   });
 
   it("rebuilds conversions after confirmation", async () => {

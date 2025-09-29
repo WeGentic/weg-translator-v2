@@ -74,7 +74,7 @@ export function FileProcessingOverlay({ visible, messages, currentStep, fileCoun
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground/70">Auto conversion</p>
                   <h3 className="mt-2 text-lg font-semibold text-foreground">Preparing your files</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{filesLabel} queued for XLIFF -> JLIFF conversion.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{filesLabel} queued for XLIFF to JLIFF conversion.</p>
                 </div>
 
                 <motion.div

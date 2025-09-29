@@ -2,16 +2,17 @@ import { ReactNode } from "react";
 import { Upload, FileText, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFileDrop, type UseFileDropOptions } from "@/hooks/useFileDrop";
+import { PROJECT_FILE_FORMAT_ACCESSIBILITY_TEXT, PROJECT_FILE_FORMAT_GROUPS } from "@/lib/file-formats";
 import { Button } from "./button";
 
 interface DropZoneProps extends UseFileDropOptions {
-  onBrowseClick?: () => void;
+  onBrowseClick?: () => void | Promise<void>;
   className?: string;
   children?: ReactNode;
   variant?: "default" | "compact" | "empty-state";
   showBrowseButton?: boolean;
   title?: string;
-  description?: string;
+  description?: ReactNode;
 }
 
 export function DropZone({
@@ -50,10 +51,64 @@ export function DropZone({
 
     const iconSize = variant === "empty-state" ? "h-12 w-12" : variant === "compact" ? "h-4 w-4" : "h-8 w-8";
     const titleSize = variant === "empty-state" ? "text-lg" : variant === "compact" ? "text-sm" : "text-base";
-    const descSize = variant === "empty-state" ? "text-base" : variant === "compact" ? "text-xs" : "text-sm";
+    const descriptionMaxWidth = variant === "empty-state" ? "max-w-2xl" : "max-w-xl";
+    const descriptionTextSize = variant === "empty-state" ? "text-sm" : "text-xs";
+
+    const defaultDescription = (
+      <div
+        className={cn(
+          "mx-auto flex flex-col items-center text-center text-muted-foreground",
+          descriptionMaxWidth,
+          variant === "compact" ? "gap-1.5" : "gap-2",
+        )}
+      >
+        <p className={cn("leading-snug", descriptionTextSize)}>
+          Drop translation files or click Browse. Supported formats:
+        </p>
+        <div className="flex flex-wrap justify-center gap-1.5 text-[11px] leading-tight">
+          {PROJECT_FILE_FORMAT_GROUPS.map((group) => (
+            <span
+              key={group.label}
+              className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/60 px-2.5 py-1"
+            >
+              <span className="font-medium text-foreground">{group.label}:</span>
+              <span className="text-muted-foreground">{group.extensions.join(", ")}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+
+    const descriptionContent = (() => {
+      if (description === null || description === false) {
+        return null;
+      }
+
+      if (description === undefined) {
+        return defaultDescription;
+      }
+
+      if (typeof description === "string") {
+        return (
+          <p
+            className={cn(
+              "mx-auto text-center text-muted-foreground leading-snug",
+              descriptionTextSize,
+              descriptionMaxWidth,
+            )}
+          >
+            {description}
+          </p>
+        );
+      }
+
+      return description;
+    })();
+
+    const contentSpacing = variant === "compact" ? "space-y-2" : "space-y-3";
 
     return (
-      <div className="flex flex-col items-center justify-center text-center space-y-3">
+      <div className={cn("flex flex-col items-center justify-center text-center", contentSpacing)}>
         <div className={cn(
           "flex items-center justify-center rounded-full",
           variant === "empty-state"
@@ -69,22 +124,22 @@ export function DropZone({
           )}
         </div>
 
-        <div className={cn("space-y-1", variant === "compact" && "space-y-0")}>
+        <div className={cn(variant === "compact" ? "space-y-1" : "space-y-2")}>
           <h3 className={cn("font-semibold text-foreground", titleSize)}>
             {title || (isDragActive ? "Drop files here" : "Add more files")}
           </h3>
-          {variant !== "compact" && (
-            <p className={cn("text-muted-foreground max-w-sm", descSize)}>
-              {description || "Supported formats include XLIFF, TMX, DOCX, and more"}
-            </p>
-          )}
+          {descriptionContent}
         </div>
 
         {showBrowseButton && onBrowseClick && (
           <Button
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation();
-              onBrowseClick();
+              try {
+                await onBrowseClick();
+              } catch {
+                // handled upstream; drop zone stays presentational
+              }
             }}
             size={variant === "compact" ? "sm" : "default"}
             className="gap-2"
@@ -94,11 +149,6 @@ export function DropZone({
           </Button>
         )}
 
-        {variant === "empty-state" && showBrowseButton && onBrowseClick && (
-          <div className="text-xs text-muted-foreground">
-            Or use the file browser to select files
-          </div>
-        )}
       </div>
     );
   };
@@ -122,12 +172,22 @@ export function DropZone({
       aria-label={
         disabled
           ? "File drop zone (disabled)"
-          : "Add files by dropping them here or clicking to browse"
+          : `Add files by dropping them here or clicking to browse. ${
+              typeof description === "string" && description.trim().length > 0
+                ? description
+                : PROJECT_FILE_FORMAT_ACCESSIBILITY_TEXT
+            }`
       }
       onKeyDown={(e) => {
         if ((e.key === 'Enter' || e.key === ' ') && onBrowseClick && !disabled) {
           e.preventDefault();
-          onBrowseClick();
+          void (async () => {
+            try {
+              await onBrowseClick();
+            } catch {
+              // handled upstream
+            }
+          })();
         }
       }}
     >
