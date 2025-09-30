@@ -12,9 +12,8 @@ import {
   toProjectViewKey,
   type MainView,
 } from "@/app/state/main-view";
+import { EditorPlaceholder } from "@/components/editor";
 import { ProjectsPanel } from "@/components/projects/ProjectsPanel";
-import { ProjectEditor } from "@/components/projects/editor/ProjectEditor";
-import { ProjectEditorPlaceholder } from "@/components/projects/editor/ProjectEditorPlaceholder";
 import { ProjectOverview } from "@/components/projects/overview/ProjectOverview";
 import { ProjectOverviewPlaceholder } from "@/components/projects/overview/ProjectOverviewPlaceholder";
 import { EnhancedAppSettingsPanel } from "@/components/settings/EnhancedAppSettingsPanel";
@@ -49,8 +48,6 @@ export function WorkspacePage() {
     currentEditorProjectId,
     activeProject,
     activeEditorProject,
-    selectedFileId,
-    setSelectedFileId,
   } = useWorkspaceShell();
 
   const layoutStore = useLayoutStoreApi();
@@ -91,13 +88,12 @@ export function WorkspacePage() {
   }, [handleOpenProject]);
 
   const focusEditor = useCallback(
-    (projectId: string, fileId: string | null) => {
+    (projectId: string, _fileId: string | null) => {
       if (projectId) {
         openEditorView(projectId);
       }
-      setSelectedFileId(fileId);
     },
-    [openEditorView, setSelectedFileId],
+    [openEditorView],
   );
 
   useGlobalNavigationEvents({
@@ -226,10 +222,7 @@ export function WorkspacePage() {
     }
 
     if (currentEditorProjectId) {
-      if (activeEditorProject) {
-        return <ProjectEditor project={activeEditorProject} fileId={selectedFileId} />;
-      }
-      return <ProjectEditorPlaceholder projectId={currentEditorProjectId} />;
+      return <EditorPlaceholder projectName={activeEditorProject?.name} />;
     }
 
     if (currentProjectId) {
