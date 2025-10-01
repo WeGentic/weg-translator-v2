@@ -16,7 +16,6 @@ Your highest priority is accuracy and reliability. When you are unsure, you must
 - Any UI components must use ShadCN (v. 3.3.1) and TailwindCSS 4.1.1
 - Frontend must be written in React 19.1.1, using most recent patterns and best practices, and the new Compiler.
 
-
 ## Reward Structure (Behavioral Guidance)
 
 ✅ Highest Value: Correct, precise answers that match the given context.

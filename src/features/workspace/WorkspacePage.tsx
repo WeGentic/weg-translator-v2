@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { TbFolders } from "react-icons/tb";
 import { FiFileText, FiSettings, FiX } from "react-icons/fi";
 
-import { BlankBackground, useLayoutStoreApi } from "@/app/layout";
+import { BlankBackground, useLayoutStoreApi, type SidemenuMode } from "@/app/layout";
 import { AppHeader, AppSidebar, WorkspaceFooter, type MenuItem } from "@/app/layout/main_elements";
 import { useAppHealth } from "@/app/hooks/useAppHealth";
 import { useGlobalNavigationEvents } from "@/app/hooks/useGlobalNavigationEvents";
@@ -12,7 +12,12 @@ import {
   toProjectViewKey,
   type MainView,
 } from "@/app/state/main-view";
-import { EditorPlaceholder } from "@/components/editor";
+import {
+  EditorFooterPlaceholder,
+  EditorHeader,
+  EditorPlaceholder,
+  EditorSidebarPlaceholder,
+} from "@/components/editor";
 import { ProjectsPanel } from "@/components/projects/ProjectsPanel";
 import { ProjectOverview } from "@/components/projects/overview/ProjectOverview";
 import { ProjectOverviewPlaceholder } from "@/components/projects/overview/ProjectOverviewPlaceholder";
@@ -51,6 +56,13 @@ export function WorkspacePage() {
   } = useWorkspaceShell();
 
   const layoutStore = useLayoutStoreApi();
+  const editorSidemenuSnapshot = useRef<{
+    mode: SidemenuMode;
+    compactWidth: number;
+    expandedWidth: number;
+  } | null>(null);
+
+  const isEditorView = Boolean(currentEditorProjectId);
 
   const headerTitle = useHeaderTitle({
     explicit:
@@ -89,6 +101,7 @@ export function WorkspacePage() {
 
   const focusEditor = useCallback(
     (projectId: string, _fileId: string | null) => {
+      void _fileId;
       if (projectId) {
         openEditorView(projectId);
       }
@@ -123,12 +136,32 @@ export function WorkspacePage() {
   useEffect(() => {
     const store = layoutStore;
     store.getState().setHeader({ mounted: true, visible: true, height: 64 });
-    store.getState().setHeaderContent(<AppHeader title={headerTitle} hideUser={!user} />);
     return () => {
       store.getState().setHeaderContent(null);
       store.getState().setHeader({ mounted: false });
     };
-  }, [layoutStore, headerTitle, user]);
+  }, [layoutStore]);
+
+  const closeActiveEditor = useCallback(() => {
+    if (!currentEditorProjectId) {
+      return;
+    }
+    handleCloseEditor(currentEditorProjectId);
+  }, [currentEditorProjectId, handleCloseEditor]);
+
+  useEffect(() => {
+    const store = layoutStore;
+    if (isEditorView) {
+      store.getState().setHeaderContent(
+        <EditorHeader
+          title={headerTitle}
+          onCloseEditor={closeActiveEditor}
+        />,
+      );
+    } else {
+      store.getState().setHeaderContent(<AppHeader title={headerTitle} hideUser={!user} />);
+    }
+  }, [layoutStore, isEditorView, headerTitle, closeActiveEditor, user]);
 
   // Mount the sidemenu once and keep its mode stable across navigation
   useEffect(() => {
@@ -145,53 +178,87 @@ export function WorkspacePage() {
     };
   }, [layoutStore]);
 
+  useEffect(() => {
+    const state = layoutStore.getState();
+    if (isEditorView) {
+      if (!editorSidemenuSnapshot.current) {
+        editorSidemenuSnapshot.current = {
+          mode: state.sidemenu.mode,
+          compactWidth: state.sidemenu.compactWidth,
+          expandedWidth: state.sidemenu.expandedWidth,
+        };
+      }
+      const nextMode = state.sidemenu.mode === "hidden" ? "hidden" : "compact";
+      layoutStore.getState().setSidemenu({
+        mode: nextMode,
+        compactWidth: SIDEMENU_COMPACT_WIDTH,
+        expandedWidth: SIDEMENU_COMPACT_WIDTH,
+      });
+    } else if (editorSidemenuSnapshot.current) {
+      const snapshot = editorSidemenuSnapshot.current;
+      layoutStore.getState().setSidemenu({
+        mode: snapshot.mode === "unmounted" ? "expanded" : snapshot.mode,
+        compactWidth: snapshot.compactWidth,
+        expandedWidth: snapshot.expandedWidth,
+      });
+      editorSidemenuSnapshot.current = null;
+    }
+  }, [isEditorView, layoutStore]);
+
   // Update sidemenu content when inputs change without resetting its mode
   useEffect(() => {
     const store = layoutStore;
-    store.getState().setSidemenuContent(
-      <AppSidebar
-        fixedItems={FIXED_MENU_ITEMS}
-        temporaryItems={temporaryProjectItems}
-        editorItems={temporaryEditorItems}
-        selectedKey={mainView}
-        onSelect={handleSidebarSelect}
-        floating={true}
-        showToggleButton={false}
-        header={
-          <div className="flex items-center gap-3 px-2 w-full">
-            {/* Rounded square logo placeholder */}
-            <div className="w-6 h-6 rounded bg-slate-400 flex-shrink-0"></div>
-
-            {/* Two rows of text */}
-            <div className="flex flex-col flex-1">
-              <div className="text-sm font-bold">Weg Translator</div>
-              <div className="text-xs text-muted-foreground">
-                {mainView === "projects" ? "Projects" :
-                 mainView === "settings" ? "Settings" :
-                 temporaryProjectItems.find(item => item.key === mainView)?.label ||
-                 temporaryEditorItems.find(item => item.key === mainView)?.label?.replace("Editor — ", "") ||
-                 "Navigation"}
+    if (isEditorView) {
+      store.getState().setSidemenuContent(<EditorSidebarPlaceholder />);
+    } else {
+      store.getState().setSidemenuContent(
+        <AppSidebar
+          fixedItems={FIXED_MENU_ITEMS}
+          temporaryItems={temporaryProjectItems}
+          editorItems={temporaryEditorItems}
+          selectedKey={mainView}
+          onSelect={handleSidebarSelect}
+          floating={true}
+          showToggleButton={false}
+          header={
+            <div className="flex w-full items-center gap-3 px-2">
+              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded bg-slate-400 text-[10px] font-semibold text-white">
+                WT
               </div>
+              <div className="flex flex-1 flex-col">
+                <div className="text-sm font-bold">Weg Translator</div>
+                <div className="text-xs text-muted-foreground">
+                  {mainView === "projects"
+                    ? "Projects"
+                    : mainView === "settings"
+                    ? "Settings"
+                    : temporaryProjectItems.find((item) => item.key === mainView)?.label ??
+                      temporaryEditorItems
+                        .find((item) => item.key === mainView)
+                        ?.label?.replace("Editor — ", "") ??
+                      "Navigation"}
+                </div>
+              </div>
+              <button
+                className="app-sidebar__close-btn"
+                onClick={() => layoutStore.getState().setSidemenu({ mode: "hidden" })}
+                aria-label="Close sidebar"
+                type="button"
+              >
+                <FiX className="size-4" />
+              </button>
             </div>
+          }
+        />,
+      );
+    }
 
-            {/* Close button */}
-            <button
-              className="app-sidebar__close-btn"
-              onClick={() => layoutStore.getState().setSidemenu({ mode: "hidden" })}
-              aria-label="Close sidebar"
-              type="button"
-            >
-              <FiX className="size-4" />
-            </button>
-          </div>
-        }
-      />,
-    );
     return () => {
       store.getState().setSidemenuContent(null);
     };
   }, [
     layoutStore,
+    isEditorView,
     temporaryProjectItems,
     temporaryEditorItems,
     mainView,
@@ -201,12 +268,20 @@ export function WorkspacePage() {
   useEffect(() => {
     const store = layoutStore;
     store.getState().setFooter({ mounted: true, visible: true, height: 56 });
-    store.getState().setFooterContent(<WorkspaceFooter health={health} />);
     return () => {
       store.getState().setFooterContent(null);
       store.getState().setFooter({ mounted: false });
     };
-  }, [layoutStore, health]);
+  }, [layoutStore]);
+
+  useEffect(() => {
+    const store = layoutStore;
+    if (isEditorView) {
+      store.getState().setFooterContent(<EditorFooterPlaceholder />);
+    } else {
+      store.getState().setFooterContent(<WorkspaceFooter health={health} />);
+    }
+  }, [layoutStore, isEditorView, health]);
 
   const renderContent = () => {
     if (mainView === "projects") {
