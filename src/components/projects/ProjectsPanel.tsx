@@ -131,7 +131,7 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
         ) : null}
       </div>
 
-      <div className="flex-1 px-2">
+      <div className="flex-1">
         {isLoading ? (
           <ProjectsTableSkeleton />
         ) : projects.length === 0 ? (

@@ -51,7 +51,7 @@ export function LayoutSidemenu({ children, mode, compactWidth, expandedWidth }: 
       role="navigation"
       className="layout-sidemenu"
       style={{
-        gridColumn: "1 / 2",
+        gridColumn: "3 / 4",
         gridRow: "2 / 3",
         visibility: isHidden ? "hidden" : "visible",
       }}

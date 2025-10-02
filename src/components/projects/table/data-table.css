@@ -1,0 +1,43 @@
+/* ProjectsDataTable Layout Variables and Styles */
+
+@import "./dropdowns.css";
+
+:root {
+  /* Table Layout Dimensions */
+  --projects-table-header-height: 48px;
+  --projects-table-toolbar-height: 56px;
+
+  /* Spacing and Padding */
+  --projects-table-header-padding: 0.75rem;
+  --projects-table-cell-padding: 0.75rem;
+
+  /* Typography */
+  --projects-table-header-font-size: 0.75rem;
+  --projects-table-cell-font-size: 0.875rem;
+  --projects-table-line-height: 1.5rem;
+}
+
+/* Layout Zones */
+
+.projects-table-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.projects-table-header-zone {
+  height: var(--projects-table-header-height);
+  flex-shrink: 0;
+}
+
+.projects-table-toolbar-zone {
+  height: var(--projects-table-toolbar-height);
+  flex-shrink: 0;
+}
+
+.projects-table-main-zone {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}

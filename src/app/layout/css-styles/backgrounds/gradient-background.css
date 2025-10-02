@@ -3,116 +3,219 @@
 
 @layer components {
   .gradient-background {
-    @apply relative h-full w-full overflow-hidden;
+    @apply relative isolate h-full w-full overflow-hidden;
+    border-radius: calc(var(--radius-xl, 1rem) * 1.05);
+    background-color: color-mix(in oklch, var(--background) 85%, var(--card) 15%);
+
+    --tr-gradient-surface-base: color-mix(in oklch, var(--background) 70%, var(--card) 30%);
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-secondary) 24%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-accent) 22%, transparent);
+    --tr-gradient-emphasis-3: color-mix(in oklch, var(--color-tr-primary-blue) 18%, transparent);
+    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-tr-success) 16%, transparent);
+
+    --tr-glass-bg: color-mix(in oklch, var(--background) 55%, transparent);
+    --tr-glass-border: color-mix(in oklch, var(--border) 65%, transparent);
+    --tr-glass-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 55%, transparent);
+    --tr-glass-shadow: color-mix(in oklch, var(--color-tr-ring) 42%, transparent);
+    --tr-glass-glow: color-mix(in oklch, var(--color-tr-accent) 28%, transparent);
   }
 
-  .gradient-background--animated {
-    animation: gradient-shift 8s ease-in-out infinite;
+  .gradient-background::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      radial-gradient(120% 90% at 12% 18%, var(--tr-gradient-emphasis-1) 0%, transparent 60%),
+      radial-gradient(110% 110% at 88% 12%, var(--tr-gradient-emphasis-2) 0%, transparent 65%),
+      radial-gradient(140% 120% at 65% 80%, var(--tr-gradient-emphasis-4) 0%, transparent 70%),
+      linear-gradient(
+        135deg,
+        color-mix(in oklch, var(--tr-gradient-surface-base) 82%, var(--tr-gradient-emphasis-3) 18%) 0%,
+        var(--tr-gradient-surface-base) 60%,
+        color-mix(in oklch, var(--background) 92%, transparent) 100%
+      );
+    filter: saturate(1.05);
+  }
+
+  .gradient-background::after {
+    content: "";
+    position: absolute;
+    inset: 0.25rem;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 1;
+    background: linear-gradient(
+      140deg,
+      color-mix(in oklch, var(--tr-glass-bg) 80%, transparent) 0%,
+      color-mix(in oklch, var(--tr-glass-highlight) 45%, transparent) 100%
+    );
+    border: 1px solid color-mix(in oklch, var(--tr-glass-border) 70%, transparent);
+    backdrop-filter: blur(32px) saturate(1.35);
+    box-shadow:
+      -18px -18px 35px color-mix(in oklch, var(--tr-glass-highlight) 40%, transparent),
+      16px 16px 40px color-mix(in oklch, var(--tr-glass-shadow) 38%, transparent),
+      inset 1px 1px 0 color-mix(in oklch, var(--tr-glass-highlight) 65%, transparent),
+      inset -1px -1px 0 color-mix(in oklch, var(--tr-glass-shadow) 55%, transparent),
+      0 0 0.65rem color-mix(in oklch, var(--tr-glass-glow) 35%, transparent);
+    opacity: 0.92;
+  }
+
+  .gradient-background--animated::before {
+    animation: gradient-shift 24s ease-in-out infinite alternate;
     will-change: transform;
   }
 
+  .gradient-background--animated::after {
+    animation: gradient-pulse 18s ease-in-out infinite alternate;
+    will-change: opacity;
+  }
+
   .gradient-background--variant-mesh {
-    background-image: linear-gradient(
-      to bottom right,
-      rgba(245, 158, 11, 0.4),
-      rgba(250, 204, 21, 0.3),
-      rgba(249, 115, 22, 0.4)
-    );
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-secondary) 30%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-accent) 24%, transparent);
+    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-tr-success) 18%, transparent);
   }
 
   .gradient-background--variant-aurora {
-    background-image: linear-gradient(
-      to bottom right,
-      rgba(59, 130, 246, 0.4),
-      rgba(168, 85, 247, 0.4),
-      rgba(236, 72, 153, 0.4)
-    );
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-ring) 28%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-secondary) 22%, transparent);
+    --tr-gradient-emphasis-3: color-mix(in oklch, var(--color-tr-accent) 18%, transparent);
   }
 
   .gradient-background--variant-holographic {
-    background-image: linear-gradient(
-      to bottom right,
-      rgba(34, 211, 238, 0.4),
-      rgba(139, 92, 246, 0.4),
-      rgba(217, 70, 239, 0.4)
-    );
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-accent) 28%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-anti-primary) 24%, transparent);
+    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-tr-success) 18%, transparent);
+    --tr-glass-glow: color-mix(in oklch, var(--color-tr-accent) 42%, transparent);
   }
 
   .gradient-background--variant-glass {
-    background-image: linear-gradient(
-      to bottom right,
-      rgba(226, 232, 240, 0.3),
-      rgba(241, 245, 249, 0.2),
-      rgba(203, 213, 225, 0.3)
-    );
-  }
-
-  .dark .gradient-background--variant-glass {
-    background-image: linear-gradient(
-      to bottom right,
-      rgba(51, 65, 85, 0.3),
-      rgba(30, 41, 59, 0.2),
-      rgba(71, 85, 105, 0.3)
-    );
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-anti-primary) 24%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-ring) 18%, transparent);
+    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-tr-muted) 16%, transparent);
+    --tr-glass-bg: color-mix(in oklch, var(--background) 65%, transparent);
+    --tr-glass-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 60%, transparent);
+    --tr-glass-shadow: color-mix(in oklch, var(--color-tr-border) 35%, transparent);
   }
 
   .gradient-background--variant-waves {
-    background-image: linear-gradient(
-      to right,
-      rgba(45, 212, 191, 0.3),
-      rgba(59, 130, 246, 0.4),
-      rgba(147, 51, 234, 0.3)
-    );
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-success) 26%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-primary-blue) 26%, transparent);
+    --tr-gradient-emphasis-3: color-mix(in oklch, var(--color-tr-accent) 20%, transparent);
   }
 
   .gradient-background--variant-orbs {
-    background-image: radial-gradient(
-      circle,
-      rgba(251, 113, 133, 0.4),
-      rgba(236, 72, 153, 0.3),
-      rgba(99, 102, 241, 0.4)
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-accent) 30%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-secondary) 25%, transparent);
+    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-tr-primary-blue) 22%, transparent);
+  }
+
+  .dark .gradient-background {
+    background-color: color-mix(in oklch, var(--background) 88%, var(--card) 12%);
+
+    --tr-gradient-surface-base: color-mix(in oklch, var(--background) 82%, var(--card) 18%);
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-secondary) 18%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-accent) 16%, transparent);
+    --tr-gradient-emphasis-3: color-mix(in oklch, var(--color-tr-anti-primary) 24%, transparent);
+    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-tr-success) 20%, transparent);
+
+    --tr-glass-bg: color-mix(in oklch, var(--color-tr-primary-blue) 32%, transparent);
+    --tr-glass-border: color-mix(in oklch, var(--border) 45%, transparent);
+    --tr-glass-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 48%, transparent);
+    --tr-glass-shadow: color-mix(in oklch, var(--color-tr-primary-blue) 48%, transparent);
+    --tr-glass-glow: color-mix(in oklch, var(--color-tr-accent) 24%, transparent);
+  }
+
+  .dark .gradient-background::after {
+    background: linear-gradient(
+      150deg,
+      color-mix(in oklch, var(--tr-glass-bg) 70%, transparent) 0%,
+      color-mix(in oklch, var(--tr-glass-highlight) 40%, transparent) 100%
     );
-  }
-
-  .gradient-background--intensity-subtle {
-    @apply opacity-30;
-  }
-
-  .gradient-background--intensity-medium {
-    @apply opacity-60;
-  }
-
-  .gradient-background--intensity-strong {
-    @apply opacity-90;
+    box-shadow:
+      -14px -14px 28px color-mix(in oklch, var(--tr-glass-highlight) 30%, transparent),
+      18px 18px 36px color-mix(in oklch, var(--tr-glass-shadow) 45%, transparent),
+      inset 1px 1px 0 color-mix(in oklch, var(--tr-glass-highlight) 60%, transparent),
+      inset -1px -1px 0 color-mix(in oklch, var(--tr-glass-shadow) 55%, transparent),
+      0 0 0.75rem color-mix(in oklch, var(--tr-glass-glow) 35%, transparent);
   }
 
   .gradient-background__animated-overlay {
     @apply absolute inset-0;
-    animation: gradient-pulse 6s ease-in-out infinite;
-    will-change: opacity, transform;
+    pointer-events: none;
+    z-index: 2;
+    animation: gradient-pulse 9s ease-in-out infinite alternate;
+    background-image:
+      radial-gradient(180% 130% at 10% 10%, color-mix(in oklch, var(--tr-glass-glow) 45%, transparent) 0%, transparent 70%),
+      linear-gradient(115deg, color-mix(in oklch, var(--tr-gradient-emphasis-3) 18%, transparent) 0%, transparent 70%);
+    mix-blend-mode: soft-light;
+    opacity: 0.55;
+  }
+
+  .gradient-background__overlay-aurora,
+  .gradient-background__overlay-mesh,
+  .gradient-background__overlay-holographic,
+  .gradient-background__overlay-default {
+    mix-blend-mode: soft-light;
+    opacity: 0.6;
   }
 
   .gradient-background__overlay-aurora {
-    background-image: linear-gradient(to top left, rgba(52, 211, 153, 0.2), transparent);
+    background-image: linear-gradient(
+      130deg,
+      color-mix(in oklch, var(--color-tr-ring) 32%, transparent) 0%,
+      transparent 75%
+    );
   }
 
   .gradient-background__overlay-mesh {
-    background-image: linear-gradient(to top right, rgba(248, 113, 113, 0.2), transparent);
+    background-image: linear-gradient(
+      120deg,
+      color-mix(in oklch, var(--color-tr-secondary) 28%, transparent) 0%,
+      transparent 70%
+    );
   }
 
   .gradient-background__overlay-holographic {
-    background-image: linear-gradient(to bottom left, rgba(250, 204, 21, 0.2), transparent);
+    background-image: linear-gradient(
+      160deg,
+      color-mix(in oklch, var(--color-tr-accent) 30%, transparent) 0%,
+      transparent 80%
+    );
   }
 
   .gradient-background__overlay-default {
-    background-image: linear-gradient(to bottom right, rgba(96, 165, 250, 0.2), transparent);
+    background-image: linear-gradient(
+      145deg,
+      color-mix(in oklch, var(--color-tr-primary-blue) 26%, transparent) 0%,
+      transparent 75%
+    );
   }
 
   .gradient-background__noise {
-    @apply pointer-events-none absolute inset-0 h-full w-full mix-blend-overlay;
+    @apply pointer-events-none absolute inset-0 h-full w-full;
+    background-image: radial-gradient(circle at 1px 1px, color-mix(in oklch, var(--border) 30%, transparent) 0, transparent 1px);
+    background-size: 3px 3px;
+    mix-blend-mode: overlay;
+    opacity: 0.28;
   }
 
   .gradient-background__content {
-    @apply relative z-10 h-full w-full;
+    @apply relative z-30 h-full w-full;
+  }
+
+  .gradient-background--intensity-subtle {
+    @apply opacity-40;
+  }
+
+  .gradient-background--intensity-medium {
+    @apply opacity-70;
+  }
+
+  .gradient-background--intensity-strong {
+    @apply opacity-95;
   }
 }

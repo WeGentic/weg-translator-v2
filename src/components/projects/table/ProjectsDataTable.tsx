@@ -10,6 +10,9 @@ import {
 import { rankItem } from "@tanstack/match-sorter-utils";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Plus } from "lucide-react";
 import { formatDateParts } from "@/lib/datetime";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useBreakpoint } from "@/hooks/useMediaQuery";
@@ -18,8 +21,9 @@ import { ProjectsTableToolbar } from "./ProjectsTableToolbar";
 import type { ProjectsDataTableProps, ProjectRow, TableFilters } from "./types";
 import { cn } from "@/lib/utils";
 
-// Import table animations
+// Import table animations and data table styles
 import "@/styles/table-animations.css";
+import "./data-table.css";
 // SortingState already imported above via type from react-table
 
 type ColumnMetaShape = {
@@ -147,16 +151,47 @@ export function ProjectsDataTable({
   });
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br from-background/95 to-background/80 shadow-lg backdrop-blur-sm">
-      <ProjectsTableToolbar
-        search={search}
-        onSearchChange={setSearch}
-        filters={filters}
-        onFiltersChange={setFilters}
-        onCreateProject={onCreateProject}
-      />
+    //* Container to hold the entire table with three zones: header, toolbar, and main content area
 
-      <div className="flex-1 overflow-auto">
+    <div className="flex h-full flex-col overflow-hidden rounded-tl-xl rounded-bl-xl border-t border-l border-b border-border bg-popover shadow-sm">
+      {/* Header Zone - 54px fixed height */}
+      <div className="projects-table-header-zone flex items-center justify-between px-4">
+        <h2 className="text-base font-semibold text-foreground">Project Manager</h2>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                onClick={onCreateProject}
+                size="sm"
+                className="h-10 px-4 gap-2 bg-gradient-to-r from-secondary to-secondary/90 text-secondary-foreground border-2 border-primary shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:from-secondary/90 hover:to-secondary hover:border-primary/80 focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2"
+                aria-label="Create new project"
+              >
+                <Plus className="h-5 w-5" />
+                <span className="font-medium">New Project</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Create new project</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
+      <div className="sidebar-one__logo-divider" aria-hidden="true" />
+
+      {/* Toolbar Zone - Contains search, filters, and actions */}
+      <div className="projects-table-toolbar-zone">
+        <ProjectsTableToolbar
+          search={search}
+          onSearchChange={setSearch}
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
+      </div>
+
+      {/* Main Content Zone - Scrollable table area */}
+      <div className="projects-table-main-zone">
         <Table aria-label="Projects table" className="text-[14px] leading-6 text-foreground">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

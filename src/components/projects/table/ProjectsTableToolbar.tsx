@@ -14,7 +14,6 @@ export interface ProjectsTableToolbarProps {
   onSearchChange: (value: string) => void;
   filters: TableFilters;
   onFiltersChange: (next: TableFilters) => void;
-  onCreateProject?: () => void;
 }
 
 export function ProjectsTableToolbar({
@@ -22,7 +21,6 @@ export function ProjectsTableToolbar({
   onSearchChange,
   filters,
   onFiltersChange,
-  onCreateProject,
 }: ProjectsTableToolbarProps) {
   const setProgress = (value: ProgressFilter) => onFiltersChange({ ...filters, progress: value });
   const setType = (value: TypeFilter) => onFiltersChange({ ...filters, projectType: value });
@@ -44,9 +42,8 @@ export function ProjectsTableToolbar({
 
   return (
     <TooltipProvider>
-      <div className="sticky top-0 z-10 border-b border-border/40 bg-gradient-to-r from-background/98 to-background/95 px-3 py-3 backdrop-blur-md shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 flex-1">
+      <div className="sticky top-0 z-10 border-b border-border/40 bg-gradient-to-r from-background/98 to-background/95 backdrop-blur-md shadow-sm h-full">
+        <div className="flex items-center gap-3 h-full px-3">
             {/* Search - Primary Action */}
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200" />
@@ -209,27 +206,6 @@ export function ProjectsTableToolbar({
               </PopoverContent>
             </Popover>
             </div>
-          </div>
-
-          {/* Actions - Rightmost */}
-          <div className="flex items-center">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  onClick={onCreateProject}
-                  size="sm"
-                  className="h-9 w-9 p-0 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-md transition-all duration-200 hover:shadow-lg hover:scale-105 hover:from-primary/90 hover:to-primary"
-                  aria-label="Create new project"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Create new project</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
         </div>
       </div>
     </TooltipProvider>

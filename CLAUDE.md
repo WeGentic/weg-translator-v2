@@ -51,6 +51,17 @@ Do I have strong, context-supported evidence for this answer?
 
 **Remember**: Uncertainty = Professionalism. Guessing = Incompetence. Questions = Intelligence. Assumptions = Failures.
 
+## Coding guidelines
+
+- Do your best to provide small, single-scoped files (under 300-500 lines of code), aiming for high cohesion and low coupling, and for the best maintainability.
+- Follow all currect best practices for coding, including but not limited to:
+  - Proper naming conventions
+  - YAGNI (You Aren't Gonna Need It)
+  - KISS (Keep It Simple, Stupid)
+  - DRY (Don't Repeat Yourself)
+  - SOLID principles
+  - Proper error handling
+
 ## Development commands
 
 ```bash

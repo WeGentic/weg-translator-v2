@@ -8,6 +8,8 @@ import { LayoutHeader } from "./layout-header";
 import { LayoutMain } from "./layout-main";
 import { LayoutShell } from "./layout-shell";
 import { LayoutSidemenu } from "./layout-sidemenu";
+import { LayoutSidebarOne } from "./layout-sidebar-one";
+import { LayoutSidebarTwo } from "./layout-sidebar-two";
 import type { LayoutConfig } from "./layout-store";
 
 /**
@@ -42,6 +44,8 @@ export const MainLayout = {
   Header: LayoutHeader,
   Footer: LayoutFooter,
   Sidemenu: LayoutSidemenu,
+  SidebarOne: LayoutSidebarOne,
+  SidebarTwo: LayoutSidebarTwo,
   Background: LayoutBackground,
   Main: LayoutMain,
   Controller: LayoutController,

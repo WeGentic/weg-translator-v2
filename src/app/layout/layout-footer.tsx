@@ -49,8 +49,6 @@ export function LayoutFooter({ children, visible, height }: LayoutFooterProps) {
       role="contentinfo"
       className="layout-footer"
       style={{
-        gridColumn: "1 / span 2",
-        gridRow: "3 / 4",
         visibility: footer.visible ? "visible" : "hidden",
       }}
     >

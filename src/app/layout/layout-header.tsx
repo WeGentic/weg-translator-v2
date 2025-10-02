@@ -51,7 +51,7 @@ export function LayoutHeader({ children, visible, height }: LayoutHeaderProps) {
       role="banner"
       className="layout-header"
       style={{
-        gridColumn: "1 / span 2",
+        gridColumn: "1 / -1",
         gridRow: "1 / 2",
         visibility: header.visible ? "visible" : "hidden",
       }}

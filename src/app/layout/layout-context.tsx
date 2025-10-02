@@ -46,7 +46,7 @@ function useLayoutStoreContext(): LayoutStore {
  * updates via {@link LayoutConfig}.
  */
 export function LayoutProvider({ children, config }: LayoutProviderProps) {
-  const storeRef = useRef<LayoutStore>();
+  const storeRef = useRef<LayoutStore | undefined>(undefined);
 
   if (!storeRef.current) {
     // Lazily create the store so server components and Suspense-ready trees
