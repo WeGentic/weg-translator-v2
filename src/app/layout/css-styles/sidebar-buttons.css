@@ -1,0 +1,452 @@
+@reference "tailwindcss";
+@reference "../../../App.css";
+
+/**
+ * Sidebar Navigation Buttons
+ *
+ * Modern, visually appealing button system for sidebar navigation.
+ * Supports 5 distinct states with clear visual feedback.
+ *
+ * States:
+ * 1. Normal (default) - Resting state
+ * 2. Hover - User hovers over inactive button
+ * 3. Active (selected) - Currently selected/active page
+ * 4. Hover + Active - User hovers over currently active button
+ * 5. Disabled - Button is not interactive
+ *
+ * Design System:
+ * - Uses project color variables for consistency
+ * - Glassmorphic effect with subtle backdrop blur
+ * - Double border technique for depth
+ * - Smooth transitions between states
+ * - Clear visual hierarchy
+ */
+
+/* ============================================
+   CSS Custom Properties (Theming)
+   ============================================ */
+
+.sidebar-one__button {
+  /* Light mode color palette */
+  --btn-surface: color-mix(in oklch, var(--background) 92%, transparent);
+  --btn-border-outer: color-mix(in oklch, var(--border) 70%, transparent);
+  --btn-border-inner: color-mix(in oklch, var(--border) 40%, transparent);
+  --btn-shadow: color-mix(in oklch, var(--color-tr-ring) 12%, transparent);
+  --btn-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 25%, transparent);
+  --btn-icon: var(--color-tr-anti-primary);
+
+  /* Active state colors */
+  --btn-active-surface: color-mix(in oklch, var(--color-tr-accent) 18%, var(--background) 82%);
+  --btn-active-border: color-mix(in oklch, var(--color-tr-accent) 55%, transparent);
+  --btn-active-glow: color-mix(in oklch, var(--color-tr-accent) 25%, transparent);
+  --btn-active-icon: color-mix(in oklch, var(--color-tr-accent) 85%, var(--foreground) 15%);
+
+  /* Hover enhancement multipliers (applied via color-mix percentages) */
+  --btn-hover-lift: -2px;
+  --btn-hover-scale: 1.02;
+}
+
+.dark .sidebar-one__button {
+  /* Dark mode color adjustments */
+  --btn-surface: color-mix(in oklch, var(--color-tr-primary-blue) 35%, transparent);
+  --btn-border-outer: color-mix(in oklch, var(--border) 45%, transparent);
+  --btn-border-inner: color-mix(in oklch, var(--border) 25%, transparent);
+  --btn-shadow: color-mix(in oklch, var(--color-tr-primary-blue) 30%, transparent);
+  --btn-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 18%, transparent);
+  --btn-icon: var(--color-tr-anti-primary);
+
+  --btn-active-surface: color-mix(in oklch, var(--color-tr-accent) 22%, var(--color-tr-primary-blue) 15%);
+  --btn-active-border: color-mix(in oklch, var(--color-tr-accent) 65%, transparent);
+  --btn-active-glow: color-mix(in oklch, var(--color-tr-accent) 32%, transparent);
+  --btn-active-icon: color-mix(in oklch, var(--color-tr-accent) 90%, var(--color-tr-anti-primary) 10%);
+}
+
+/* ============================================
+   Button Wrapper (removes default styling)
+   ============================================ */
+
+.sidebar-one__button {
+  width: 2rem;     /* 40px - slightly reduced size */
+  height: 2rem;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+}
+
+/* Remove shadcn default hover background */
+.sidebar-one__button:hover {
+  background: transparent;
+}
+
+/* ============================================
+   Button Inner Container (visual styling)
+   ============================================ */
+
+/**
+ * STATE 1: NORMAL (Default Resting State)
+ *
+ * Visual characteristics:
+ * - NO background (transparent)
+ * - NO borders
+ * - NO shadows
+ * - NO container effects
+ * - ONLY naked icon visible with --color-tr-anti-primary color
+ */
+.sidebar-one__button-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-radius: 0.5rem;
+
+  /* No background - transparent */
+  background: transparent;
+
+  /* No backdrop filter */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+
+  /* No shadows or borders */
+  box-shadow: none;
+
+  /* Icon color - only thing visible */
+  color: var(--btn-icon);
+
+  /* Smooth transitions for all state changes */
+  transition:
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease,
+    background 0.25s ease,
+    color 0.25s ease;
+
+  /* Hardware acceleration */
+  transform: translateZ(0);
+  will-change: transform, box-shadow;
+}
+
+/* ============================================
+   STATE 2: HOVER (Inactive Button Hover)
+   ============================================ */
+
+/**
+ * Applied when user hovers over a NON-ACTIVE button
+ *
+ * Visual changes:
+ * - Subtle container appears on hover (glassmorphic background)
+ * - Gentle lift animation
+ * - Subtle borders and shadows
+ * - Brighter icon color
+ * - Slight scale increase
+ */
+.sidebar-one__button:not(.sidebar-one__button--active):hover .sidebar-one__button-container {
+  /* Lift effect */
+  transform: translateY(var(--btn-hover-lift)) scale(var(--btn-hover-scale)) translateZ(0);
+
+  /* Subtle glassmorphic background appears on hover */
+  background: linear-gradient(
+    135deg,
+    var(--btn-surface) 0%,
+    color-mix(in oklch, var(--btn-surface) 80%, transparent) 100%
+  );
+  backdrop-filter: blur(8px) saturate(1.1);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+
+  /* Subtle shadows and borders on hover */
+  box-shadow:
+    0 0 0 0.5px color-mix(in oklch, var(--btn-border-outer) 120%, transparent),
+    inset 0 0 0 1px color-mix(in oklch, var(--btn-border-inner) 130%, transparent),
+    0 5px 10px color-mix(in oklch, var(--btn-shadow) 140%, transparent),
+    inset 0 1px 3px color-mix(in oklch, var(--btn-highlight) 130%, transparent),
+    /* Subtle outer glow */
+    0 0 12px color-mix(in oklch, var(--btn-border-outer) 30%, transparent);
+
+  /* Brighter icon */
+  color: color-mix(in oklch, var(--btn-icon) 130%, var(--foreground) 20%);
+}
+
+/* ============================================
+   STATE 3: ACTIVE (Selected/Current Page)
+   ============================================ */
+
+/**
+ * Applied to the button representing the current page/view
+ *
+ * Visual characteristics:
+ * - Distinct accent-colored background
+ * - Thin border + separate outline with gap (using border + outline properties)
+ * - Subtle neumorphic effect (pressed/inset appearance)
+ * - Glowing effect around button
+ * - Accent-colored icon
+ */
+.sidebar-one__button--active .sidebar-one__button-container {
+  /* Active background with accent color */
+  background: linear-gradient(
+    135deg,
+    var(--color-tr-secondary) 0%,
+    color-mix(in oklch, var(--btn-active-surface) 85%, transparent) 100%
+  );
+
+  /* Thin border on the button itself */
+  border: 0.5px solid var(--btn-active-border);
+
+  /* Outline with gap (offset creates the gap) */
+  outline: 0.5px solid var(--btn-active-border);
+  outline-offset: 2px;
+
+  /* Active state with neumorphic inset and glow */
+  box-shadow:
+    /* Neumorphic inset shadows (pressed effect) */
+    inset 2px 2px 4px color-mix(in oklch, var(--btn-shadow) 80%, transparent),
+    inset -1px -1px 3px color-mix(in oklch, var(--btn-highlight) 60%, transparent),
+    /* Subtle outer glow */
+    0 0 12px color-mix(in oklch, var(--btn-active-glow) 60%, transparent);
+
+  /* Accent colored icon */
+  color: var(--color-tr-ring);
+
+  /* No scale, using inset shadow for active appearance */
+  transform: translateZ(0);
+}
+
+/* ============================================
+   STATE 4: HOVER + ACTIVE (Active Button Hover)
+   ============================================ */
+
+/**
+ * Applied when user hovers over the ACTIVE button
+ *
+ * Visual changes:
+ * - Enhanced glow effect
+ * - Brighter border and outline
+ * - Slightly reduced neumorphic inset
+ * - Stronger visual feedback
+ */
+.sidebar-one__button--active:hover .sidebar-one__button-container {
+  /* Subtle lift */
+  transform: translateY(-1px) translateZ(0);
+
+  /* Brighter border */
+  border-color: color-mix(in oklch, var(--btn-active-border) 130%, transparent);
+
+  /* Brighter outline */
+  outline-color: color-mix(in oklch, var(--btn-active-border) 130%, transparent);
+
+  /* Enhanced active state with stronger glow */
+  box-shadow:
+    /* Slightly reduced neumorphic inset on hover */
+    inset 1.5px 1.5px 3px color-mix(in oklch, var(--btn-shadow) 70%, transparent),
+    inset -1px -1px 3px color-mix(in oklch, var(--btn-highlight) 70%, transparent),
+    /* Stronger outer glow */
+    0 0 18px color-mix(in oklch, var(--btn-active-glow) 90%, transparent);
+
+  /* Brighter icon */
+  color: color-mix(in oklch, var(--btn-active-icon) 115%, var(--color-tr-anti-primary) 5%);
+}
+
+/* ============================================
+   STATE 5: DISABLED (Non-Interactive)
+   ============================================ */
+
+/**
+ * Applied to disabled buttons that cannot be interacted with
+ *
+ * Visual characteristics:
+ * - Faded appearance
+ * - Reduced opacity
+ * - No pointer cursor
+ * - No hover effects
+ */
+.sidebar-one__button:disabled,
+.sidebar-one__button--disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.sidebar-one__button:disabled .sidebar-one__button-container,
+.sidebar-one__button--disabled .sidebar-one__button-container {
+  /* Muted appearance */
+  background: color-mix(in oklch, var(--btn-surface) 60%, transparent);
+  box-shadow:
+    0 0 0 0.5px color-mix(in oklch, var(--btn-border-outer) 50%, transparent),
+    inset 0 0 0 1px color-mix(in oklch, var(--btn-border-inner) 40%, transparent);
+
+  /* Very muted icon */
+  color: color-mix(in oklch, var(--btn-icon) 50%, transparent);
+
+  /* No transforms */
+  transform: none;
+}
+
+/* Prevent hover effects on disabled buttons */
+.sidebar-one__button:disabled:hover .sidebar-one__button-container,
+.sidebar-one__button--disabled:hover .sidebar-one__button-container {
+  transform: none;
+  box-shadow:
+    0 0 0 0.5px color-mix(in oklch, var(--btn-border-outer) 50%, transparent),
+    inset 0 0 0 1px color-mix(in oklch, var(--btn-border-inner) 40%, transparent);
+}
+
+/* ============================================
+   Icon Styling
+   ============================================ */
+
+/**
+ * Ensures icons inherit color and transitions from parent
+ */
+.sidebar-one__button-container svg {
+  transition: inherit;
+  color: inherit;
+  width: 1.125rem;   /* 18px - slightly smaller */
+  height: 1.125rem;
+}
+
+/* ============================================
+   Accessibility - Focus State
+   ============================================ */
+
+/**
+ * Visible focus indicator for keyboard navigation
+ * Follows WCAG 2.1 guidelines for focus visibility
+ */
+.sidebar-one__button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+/* Remove focus outline when clicking with mouse */
+.sidebar-one__button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ============================================
+   Active/Press State (Click Feedback)
+   ============================================ */
+
+/**
+ * Momentary pressed state when button is clicked
+ * Provides tactile feedback
+ */
+.sidebar-one__button:active:not(:disabled) .sidebar-one__button-container {
+  transform: scale(0.97) translateZ(0);
+  transition-duration: 0.1s;
+}
+
+/* Active buttons get subtle press effect */
+.sidebar-one__button--active:active .sidebar-one__button-container {
+  transform: scale(1.0) translateZ(0);
+}
+
+/* ============================================
+   REOPEN SIDEBAR_TWO BUTTON
+   ============================================ */
+
+/**
+ * Special button that appears in Sidebar_one when Sidebar_two is closed
+ * Allows users to reopen Sidebar_two
+ *
+ * Features:
+ * - Smooth entrance/exit animations
+ * - Consistent styling with other sidebar buttons
+ * - Enhanced hover effects to draw attention
+ */
+
+/* Entrance animation when button appears */
+@keyframes reopenButtonEnter {
+  from {
+    opacity: 0;
+    transform: translateX(-10px) translateZ(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateZ(0);
+  }
+}
+
+/* Exit animation when button disappears */
+@keyframes reopenButtonExit {
+  from {
+    opacity: 1;
+    transform: translateX(0) translateZ(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-10px) translateZ(0);
+  }
+}
+
+/* Base styling for reopen button */
+.sidebar-one__button--reopen {
+  /* Entrance animation */
+  animation: reopenButtonEnter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Enhanced hover state for reopen button - more attention-grabbing */
+.sidebar-one__button--reopen:hover .sidebar-one__button-container {
+  /* Extra lift compared to regular buttons */
+  transform: translateY(calc(var(--btn-hover-lift) * 1.2)) scale(calc(var(--btn-hover-scale) * 1.02)) translateZ(0);
+
+  /* More pronounced glassmorphic effect */
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--btn-surface) 110%, transparent) 0%,
+    color-mix(in oklch, var(--btn-surface) 90%, transparent) 100%
+  );
+
+  /* Enhanced glow to draw attention */
+  box-shadow:
+    0 0 0 0.5px color-mix(in oklch, var(--btn-border-outer) 140%, transparent),
+    inset 0 0 0 1px color-mix(in oklch, var(--btn-border-inner) 150%, transparent),
+    0 6px 14px color-mix(in oklch, var(--btn-shadow) 160%, transparent),
+    inset 0 1px 3px color-mix(in oklch, var(--btn-highlight) 150%, transparent),
+    /* Enhanced outer glow */
+    0 0 18px color-mix(in oklch, var(--color-tr-accent) 40%, transparent),
+    /* Subtle pulsing glow */
+    0 0 24px color-mix(in oklch, var(--color-tr-accent) 25%, transparent);
+
+  /* Brighter icon with accent color hint */
+  color: color-mix(in oklch, var(--btn-icon) 140%, var(--color-tr-accent) 10%);
+}
+
+/* Subtle pulse animation to draw attention (optional - can be enabled) */
+@keyframes reopenButtonPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0.5px color-mix(in oklch, var(--btn-border-outer) 120%, transparent),
+      inset 0 0 0 1px color-mix(in oklch, var(--btn-border-inner) 130%, transparent),
+      0 5px 10px color-mix(in oklch, var(--btn-shadow) 140%, transparent),
+      inset 0 1px 3px color-mix(in oklch, var(--btn-highlight) 130%, transparent),
+      0 0 12px color-mix(in oklch, var(--btn-border-outer) 30%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 0.5px color-mix(in oklch, var(--btn-border-outer) 140%, transparent),
+      inset 0 0 0 1px color-mix(in oklch, var(--btn-border-inner) 150%, transparent),
+      0 6px 12px color-mix(in oklch, var(--btn-shadow) 160%, transparent),
+      inset 0 1px 3px color-mix(in oklch, var(--btn-highlight) 150%, transparent),
+      0 0 16px color-mix(in oklch, var(--color-tr-accent) 35%, transparent);
+  }
+}
+
+/* Divider below reopen button */
+.sidebar-one__reopen-divider {
+  /* Entrance animation synchronized with button */
+  animation: reopenButtonEnter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  margin: 0.5rem 0;
+  opacity: 0.6;
+}
+
+/* Icon rotation on hover for extra polish */
+.sidebar-one__button--reopen:hover .sidebar-one__button-container svg {
+  transform: translateX(2px);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}

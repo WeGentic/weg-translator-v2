@@ -326,8 +326,8 @@ export function WorkspacePage() {
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="m-4 flex min-h-0 flex-1 flex-col overflow-y-auto">{renderContent()}</div>
+      <div className="flex min-h-0 flex-1 overflow-hidden mb-12">
+        <div className="my-2 flex min-h-0 flex-1 flex-col overflow-y-auto">{renderContent()}</div>
       </div>
     </div>
   );

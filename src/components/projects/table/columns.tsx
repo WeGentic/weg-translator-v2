@@ -61,7 +61,18 @@ export function buildColumns(
   breakpoint: ResponsiveBreakpoint = { isMobile: false, isTablet: false, isDesktop: true, isWide: true },
 ): ColumnDef<ProjectRow, unknown>[] {
   const columns: ColumnDef<ProjectRow, unknown>[] = [
-    // Checkbox Selection - Always visible
+    /**
+     * Checkbox Selection Column
+     *
+     * Fixed-width column for row selection with the following features:
+     * - Header: "Select All" checkbox with indeterminate state support
+     * - Cell: Individual row checkbox
+     * - Width: Fixed at 48px (w-12) for consistent alignment
+     * - Styling: Centered content with vertical separator
+     * - Theme: Uses --color-tr-ring for border (defined in checkbox component)
+     *
+     * Always visible regardless of breakpoint.
+     */
     columnHelper.display({
       id: "select",
       header: ({ table }) => {
@@ -73,9 +84,11 @@ export function buildColumns(
               checked={isAllSelected || (isSomeSelected ? "indeterminate" : false)}
               onCheckedChange={(checked) => {
                 if (checked) {
+                  // Select all visible rows
                   const allIds = new Set(table.getRowModel().rows.map(row => row.original.id));
                   handlers.onRowSelectionChange?.(allIds);
                 } else {
+                  // Clear all selections
                   handlers.onRowSelectionChange?.(new Set());
                 }
               }}
@@ -106,8 +119,10 @@ export function buildColumns(
       },
       meta: {
         priority: COLUMN_PRIORITIES.ALWAYS,
-        headerClassName: "w-10 text-center relative vertical-separator-partial",
-        cellClassName: "w-10 text-center relative vertical-separator-partial",
+        // Fixed width for checkbox column: 48px (w-12)
+        // Centered alignment with vertical separator for visual clarity
+        headerClassName: "w-12 text-center relative vertical-separator-partial",
+        cellClassName: "w-12 text-center relative vertical-separator-partial",
       } satisfies ProjectsColumnMeta,
     }),
 

@@ -1,0 +1,112 @@
+@reference "tailwindcss";
+@reference "../../../App.css";
+
+/*
+ * Modern Logo Container with Neumorphic/Glassmorphic Styling
+ * Following 2025 best practices for depth, blur, and color mixing
+ */
+
+.logo-container {
+  position: relative;
+  border-radius: 1.5rem;
+  /* Even whiter in light mode */
+  background-color: rgba(255, 255, 255, 0.5);
+  /* Stronger backdrop effect */
+  backdrop-filter: blur(30px) saturate(200%) contrast(100%) brightness(130%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%) contrast(100%) brightness(130%);
+  /* Thin external border with outline effect */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    /* Minimal light extension from top-left */
+    -0.5px -0.5px 1px rgba(255, 255, 255, 0.1),
+    /* Minimal shadow extension to bottom-right */
+    0.5px 0.5px 1px rgba(0, 0, 0, 0.02);
+  /* Smooth transitions for height changes and other properties */
+  transition: all 0.3s ease, height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  position: relative;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  border-radius: 8px;
+  isolation: isolate;
+
+  
+}
+
+
+.logo-container::before {
+
+}
+
+/* Hover state - enhanced depth and glow */
+.logo-container:hover {
+  /* Barely enhanced shadow on hover */
+  box-shadow: 
+    -0.75px -0.75px 1.5px rgba(255, 255, 255, 0.15),
+    0.75px 0.75px 1.5px rgba(0, 0, 0, 0.03);
+  /* Slightly stronger border on hover */
+  border-color: rgba(255, 255, 255, 0.4);
+  outline-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.logo-container:hover::before {
+  opacity: 0.08;
+}
+
+/* Active/pressed state - neumorphic inset effect */
+.logo-container:active {
+  transform: translateY(0px) scale(0.98) translateZ(0);
+
+  box-shadow:
+    /* Outer border - thin crisp edge */
+    0 0 0 0.5px var(--logo-border-outer),
+    /* Gap between borders */
+    0 0 0 1.5px color-mix(in oklch, var(--background) 95%, transparent),
+    /* Inner border - thin crisp edge */
+    0 0 0 2px var(--logo-border-inner),
+    /* Inverted shadows for pressed effect */
+    inset 0 3px 6px var(--logo-shadow-soft),
+    inset 0 1px 2px color-mix(in oklch, var(--logo-highlight) 60%, transparent);
+}
+
+/* Dark mode adjustments */
+.dark .logo-container {
+  
+}
+
+.dark .logo-container::before {
+  opacity: 0.4;
+}
+
+.dark .logo-container:hover {
+  
+}
+
+.dark .logo-container:hover::before {
+  
+}
+
+/* Ensure image is properly contained */
+.logo-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+  transition: filter 0.35s ease;
+}
+
+.logo-container:hover img {
+  filter: drop-shadow(0 2px 4px color-mix(in oklch, var(--logo-shadow-soft) 40%, transparent));
+}
+
+/* Accessibility - focus state */
+.logo-container:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}

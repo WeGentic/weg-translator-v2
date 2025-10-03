@@ -33,4 +33,6 @@ export interface ProjectsDataTableProps {
   // Row selection
   selectedRows?: Set<string>;
   onRowSelectionChange?: (selectedRows: Set<string>) => void;
+  // Batch operations
+  onBatchDelete?: (projectIds: string[]) => Promise<void>;
 }

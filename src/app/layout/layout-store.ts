@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { createStore } from "zustand/vanilla";
 
 export const DEFAULT_HEADER_HEIGHT = 64;
-export const DEFAULT_FOOTER_HEIGHT = 56;
+export const DEFAULT_FOOTER_HEIGHT = 50;
 export const DEFAULT_SIDEMENU_COMPACT_WIDTH = 88;
 export const DEFAULT_SIDEMENU_EXPANDED_WIDTH = 280;
 
@@ -33,6 +33,17 @@ export interface SidemenuState {
   expandedWidth: number;
 }
 
+export interface SidebarOneState {
+  mounted: boolean;
+  width: number;
+}
+
+export interface SidebarTwoState {
+  mounted: boolean;
+  visible: boolean;
+  width: number;
+}
+
 export interface MainState {
   scrollable: boolean;
 }
@@ -42,6 +53,8 @@ export interface LayoutConfig {
   footer?: Partial<FooterState>;
   background?: Partial<BackgroundState>;
   sidemenu?: Partial<SidemenuState>;
+  sidebarOne?: Partial<SidebarOneState>;
+  sidebarTwo?: Partial<SidebarTwoState>;
   main?: Partial<MainState>;
 }
 
@@ -50,18 +63,26 @@ export interface LayoutState {
   footer: FooterState;
   background: BackgroundState;
   sidemenu: SidemenuState;
+  sidebarOne: SidebarOneState;
+  sidebarTwo: SidebarTwoState;
   main: MainState;
   headerContent: ReactNode | null;
   footerContent: ReactNode | null;
   sidemenuContent: ReactNode | null;
+  sidebarOneContent: ReactNode | null;
+  sidebarTwoContent: ReactNode | null;
   setHeader(partial: Partial<HeaderState>): void;
   setFooter(partial: Partial<FooterState>): void;
   setBackground(partial: Partial<BackgroundState>): void;
   setSidemenu(partial: Partial<SidemenuState>): void;
+  setSidebarOne(partial: Partial<SidebarOneState>): void;
+  setSidebarTwo(partial: Partial<SidebarTwoState>): void;
   setMain(partial: Partial<MainState>): void;
   setHeaderContent(content: ReactNode | null): void;
   setFooterContent(content: ReactNode | null): void;
   setSidemenuContent(content: ReactNode | null): void;
+  setSidebarOneContent(content: ReactNode | null): void;
+  setSidebarTwoContent(content: ReactNode | null): void;
   cycleSidemenu(): void;
   applyConfig(config: LayoutConfig): void;
   reset(): void;
@@ -69,7 +90,25 @@ export interface LayoutState {
 
 export type LayoutStore = ReturnType<typeof createLayoutStore>;
 
-function createSnapshot(): Pick<LayoutState, "header" | "footer" | "background" | "sidemenu" | "main"> {
+export type LayoutActions = {
+  setHeader: LayoutState["setHeader"];
+  setFooter: LayoutState["setFooter"];
+  setBackground: LayoutState["setBackground"];
+  setSidemenu: LayoutState["setSidemenu"];
+  setSidebarOne: LayoutState["setSidebarOne"];
+  setSidebarTwo: LayoutState["setSidebarTwo"];
+  setMain: LayoutState["setMain"];
+  setHeaderContent: LayoutState["setHeaderContent"];
+  setFooterContent: LayoutState["setFooterContent"];
+  setSidemenuContent: LayoutState["setSidemenuContent"];
+  setSidebarOneContent: LayoutState["setSidebarOneContent"];
+  setSidebarTwoContent: LayoutState["setSidebarTwoContent"];
+  cycleSidemenu: LayoutState["cycleSidemenu"];
+  applyConfig: LayoutState["applyConfig"];
+  reset: LayoutState["reset"];
+};
+
+function createSnapshot(): Omit<LayoutState, keyof LayoutActions> {
   return {
     header: {
       mounted: false,
@@ -92,12 +131,23 @@ function createSnapshot(): Pick<LayoutState, "header" | "footer" | "background" 
       compactWidth: DEFAULT_SIDEMENU_COMPACT_WIDTH,
       expandedWidth: DEFAULT_SIDEMENU_EXPANDED_WIDTH,
     },
+    sidebarOne: {
+      mounted: false,
+      width: 64,
+    },
+    sidebarTwo: {
+      mounted: false,
+      visible: true,
+      width: 192,
+    },
     main: {
       scrollable: true,
     },
     headerContent: null,
     footerContent: null,
     sidemenuContent: null,
+    sidebarOneContent: null,
+    sidebarTwoContent: null,
   };
 }
 
@@ -140,6 +190,21 @@ function mergeMain(current: MainState, patch: Partial<MainState>): MainState {
   };
 }
 
+function mergeSidebarOne(current: SidebarOneState, patch: Partial<SidebarOneState>): SidebarOneState {
+  return {
+    mounted: patch.mounted ?? current.mounted,
+    width: patch.width ?? current.width,
+  };
+}
+
+function mergeSidebarTwo(current: SidebarTwoState, patch: Partial<SidebarTwoState>): SidebarTwoState {
+  return {
+    mounted: patch.mounted ?? current.mounted,
+    visible: patch.visible ?? current.visible,
+    width: patch.width ?? current.width,
+  };
+}
+
 export function createLayoutStore(initialConfig?: LayoutConfig) {
   const store = createStore<LayoutState>((set) => ({
     ...createSnapshot(),
@@ -159,6 +224,14 @@ export function createLayoutStore(initialConfig?: LayoutConfig) {
       set((state) => ({
         sidemenu: mergeSidemenu(state.sidemenu, partial),
       })),
+    setSidebarOne: (partial) =>
+      set((state) => ({
+        sidebarOne: mergeSidebarOne(state.sidebarOne, partial),
+      })),
+    setSidebarTwo: (partial) =>
+      set((state) => ({
+        sidebarTwo: mergeSidebarTwo(state.sidebarTwo, partial),
+      })),
     setMain: (partial) =>
       set((state) => ({
         main: mergeMain(state.main, partial),
@@ -166,6 +239,8 @@ export function createLayoutStore(initialConfig?: LayoutConfig) {
     setHeaderContent: (content) => set({ headerContent: content }),
     setFooterContent: (content) => set({ footerContent: content }),
     setSidemenuContent: (content) => set({ sidemenuContent: content }),
+    setSidebarOneContent: (content) => set({ sidebarOneContent: content }),
+    setSidebarTwoContent: (content) => set({ sidebarTwoContent: content }),
     cycleSidemenu: () =>
       set((state) => ({
         sidemenu: {
@@ -187,6 +262,12 @@ export function createLayoutStore(initialConfig?: LayoutConfig) {
       if (config.sidemenu) {
         set((state) => ({ sidemenu: mergeSidemenu(state.sidemenu, config.sidemenu!) }));
       }
+      if (config.sidebarOne) {
+        set((state) => ({ sidebarOne: mergeSidebarOne(state.sidebarOne, config.sidebarOne!) }));
+      }
+      if (config.sidebarTwo) {
+        set((state) => ({ sidebarTwo: mergeSidebarTwo(state.sidebarTwo, config.sidebarTwo!) }));
+      }
       if (config.main) {
         set((state) => ({ main: mergeMain(state.main, config.main!) }));
       }
@@ -207,20 +288,6 @@ export const DEFAULT_LAYOUT_SIDEMENU_WIDTHS = {
   compact: DEFAULT_SIDEMENU_COMPACT_WIDTH,
   expanded: DEFAULT_SIDEMENU_EXPANDED_WIDTH,
 } as const;
-
-export type LayoutActions = {
-  setHeader: LayoutState["setHeader"];
-  setFooter: LayoutState["setFooter"];
-  setBackground: LayoutState["setBackground"];
-  setSidemenu: LayoutState["setSidemenu"];
-  setMain: LayoutState["setMain"];
-  setHeaderContent: LayoutState["setHeaderContent"];
-  setFooterContent: LayoutState["setFooterContent"];
-  setSidemenuContent: LayoutState["setSidemenuContent"];
-  cycleSidemenu: LayoutState["cycleSidemenu"];
-  applyConfig: LayoutState["applyConfig"];
-  reset: LayoutState["reset"];
-};
 
 function nextSidemenuMode(current: SidemenuMode): SidemenuMode {
   switch (current) {

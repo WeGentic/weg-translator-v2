@@ -1,0 +1,147 @@
+@reference "tailwindcss";
+
+/* Ultra-modern liquid glass tooltip - Apple-inspired seamless design */
+.tooltip-glass-content {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+
+  /* Light mode: Rich semi-transparent dark background */
+  background: color-mix(in oklch, var(--color-tr-navy) 85%, transparent 15%);
+
+  /* Enhanced liquid glass blur effect */
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+
+  /* Liquid glass depth with inner glow */
+  box-shadow:
+    0 8px 32px color-mix(in oklch, var(--color-tr-navy) 28%, transparent),
+    0 2px 8px color-mix(in oklch, var(--color-tr-navy) 16%, transparent),
+    inset 0 4px 20px color-mix(in oklch, var(--color-tr-white) 25%, transparent);
+
+  /* Crisp white text on dark background */
+  color: var(--color-tr-white);
+
+  /* Very subtle rounding - seamless look */
+  border-radius: 4px;
+
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Liquid glass highlight layer */
+.tooltip-glass-content::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+
+  /* Subtle liquid glass overlay */
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--color-tr-white) 12%, transparent) 0%,
+    transparent 50%,
+    color-mix(in oklch, var(--color-tr-white) 8%, transparent) 100%
+  );
+
+  /* Liquid glass specular highlights */
+  box-shadow:
+    inset -6px -4px 0px -7px color-mix(in oklch, var(--color-tr-white) 85%, transparent),
+    inset 0px -5px 0px -4px color-mix(in oklch, var(--color-tr-white) 75%, transparent);
+
+  opacity: 0.5;
+  z-index: -1;
+
+  /* Liquid distortion effect */
+  filter: blur(0.5px) brightness(115%);
+
+  pointer-events: none;
+}
+
+.tooltip-glass-content:hover {
+  backdrop-filter: blur(22px) saturate(190%);
+  -webkit-backdrop-filter: blur(22px) saturate(190%);
+
+  box-shadow:
+    0 10px 36px color-mix(in oklch, var(--color-tr-navy) 32%, transparent),
+    0 3px 10px color-mix(in oklch, var(--color-tr-navy) 20%, transparent),
+    inset 0 4px 22px color-mix(in oklch, var(--color-tr-white) 28%, transparent);
+}
+
+.tooltip-glass-content:hover::after {
+  opacity: 0.6;
+  filter: blur(0.5px) brightness(118%);
+}
+
+/* Dark mode: Lighter liquid glass tooltip */
+.dark .tooltip-glass-content {
+  background: color-mix(in oklch, var(--color-tr-anti-primary) 88%, transparent 12%);
+
+  box-shadow:
+    0 8px 32px color-mix(in oklch, var(--color-tr-anti-primary) 32%, transparent),
+    0 2px 8px color-mix(in oklch, var(--color-tr-anti-primary) 18%, transparent),
+    inset 0 4px 20px color-mix(in oklch, var(--color-tr-white) 28%, transparent);
+
+  /* Dark text on light background */
+  color: var(--color-tr-navy);
+}
+
+.dark .tooltip-glass-content::after {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--color-tr-white) 18%, transparent) 0%,
+    transparent 50%,
+    color-mix(in oklch, var(--color-tr-white) 12%, transparent) 100%
+  );
+
+  box-shadow:
+    inset -6px -4px 0px -7px color-mix(in oklch, var(--color-tr-white) 90%, transparent),
+    inset 0px -5px 0px -4px color-mix(in oklch, var(--color-tr-white) 82%, transparent);
+
+  opacity: 0.55;
+}
+
+.dark .tooltip-glass-content:hover {
+  box-shadow:
+    0 10px 36px color-mix(in oklch, var(--color-tr-anti-primary) 36%, transparent),
+    0 3px 10px color-mix(in oklch, var(--color-tr-anti-primary) 22%, transparent),
+    inset 0 4px 22px color-mix(in oklch, var(--color-tr-white) 32%, transparent);
+}
+
+.dark .tooltip-glass-content:hover::after {
+  opacity: 0.65;
+}
+
+/* Fallback for browsers without backdrop-filter support */
+@supports not (backdrop-filter: blur(20px)) {
+  .tooltip-glass-content {
+    background: color-mix(in oklch, var(--color-tr-navy) 92%, transparent 8%);
+  }
+
+  .dark .tooltip-glass-content {
+    background: color-mix(in oklch, var(--color-tr-anti-primary) 92%, transparent 8%);
+  }
+
+  .tooltip-glass-content::after {
+    display: none;
+  }
+}
+
+/* Performance optimization for reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .tooltip-glass-content {
+    backdrop-filter: none;
+    background: color-mix(in oklch, var(--color-tr-navy) 92%, transparent 8%);
+    transition: none;
+  }
+
+  .dark .tooltip-glass-content {
+    background: color-mix(in oklch, var(--color-tr-anti-primary) 92%, transparent 8%);
+  }
+
+  .tooltip-glass-content::after {
+    filter: none;
+  }
+}

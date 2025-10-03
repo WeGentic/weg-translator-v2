@@ -1,9 +1,61 @@
+@reference "tailwindcss";
+@reference "../../../App.css";
+
 @layer components {
   .layout-footer {
+    /* Glassmorphic footer with actual transparency over content */
+    --footer-glass-base: color-mix(in oklch, var(--color-tr-primary-blue) 15%, transparent);
+    --footer-glass-tint: color-mix(in oklch, var(--color-tr-white) 8%, transparent);
+    --footer-border: color-mix(in oklch, var(--color-tr-anti-primary) 25%, transparent);
+    --footer-shadow: color-mix(in oklch, var(--color-tr-primary-blue) 18%, transparent);
+    --footer-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 35%, transparent);
+
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    height: 50px;
+
     display: flex;
-    height: 100%;
-    width: 100%;
     align-items: center;
     justify-content: space-between;
+    padding: 0 1.5rem;
+    margin: 0;
+
+    /* Glassmorphic background - using rgba to avoid oklch rendering artifacts */
+    background: rgba(23, 23, 58, 0.15);
+
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+
+    border: none !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+
+    transition:
+      background 0.3s ease;
+  }
+
+  .layout-footer::before,
+  .layout-footer::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  .layout-footer * {
+    border: none !important;
+    outline: none !important;
+  }
+
+  .dark .layout-footer {
+    background: rgba(23, 23, 58, 0.25);
+
+    backdrop-filter: blur(28px) saturate(1.5);
+    -webkit-backdrop-filter: blur(28px) saturate(1.5);
   }
 }

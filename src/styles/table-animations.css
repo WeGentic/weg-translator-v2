@@ -101,14 +101,40 @@
   color: var(--primary);
 }
 
-/* Partial height vertical separator */
+/**
+ * Vertical Separator - Partial Height
+ *
+ * Creates a subtle vertical divider line between table columns.
+ * The separator:
+ * - Spans 50% of the cell height (centered vertically)
+ * - Uses theme border color from CSS variables
+ * - Has reduced opacity for subtle appearance
+ * - Positioned absolutely on the right edge of cells
+ *
+ * Applied to header and cell columns via meta.headerClassName/cellClassName
+ */
 .vertical-separator-partial::after {
   content: '';
   position: absolute;
   right: 0;
+  /* Centered vertical positioning: starts at 25% from top, ends at 25% from bottom */
   top: 25%;
   bottom: 25%;
+  /* Thin 1px divider line */
   width: 1px;
-  background: hsl(var(--border));
-  opacity: 0.4;
+  /* Use theme's border color variable for consistency */
+  background: var(--color-tr-border);
+  /* Subtle opacity for non-intrusive visual separation */
+  opacity: 0.3;
+  /* Smooth transition when opacity changes */
+  transition: opacity 0.2s ease-in-out;
+}
+
+/**
+ * Vertical Separator - Hover Enhancement
+ *
+ * On row hover, slightly increase divider opacity for better visual feedback
+ */
+tr:hover .vertical-separator-partial::after {
+  opacity: 0.5;
 }
