@@ -177,6 +177,7 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
           selectedProjectIds={selectedProjectIds}
           onBatchDelete={handleBatchDelete}
           onClearSelection={() => setSelectedRows(new Set())}
+          onOpenProject={handleOpenProject}
         />
       );
     } else {

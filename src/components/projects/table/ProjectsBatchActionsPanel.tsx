@@ -42,6 +42,8 @@ export interface ProjectsBatchActionsPanelProps {
   onBatchDelete: (projectIds: string[]) => Promise<void>;
   /** Callback to clear all selections */
   onClearSelection: () => void;
+  /** Callback to open a specific project */
+  onOpenProject?: (projectId: string) => void;
 }
 
 export function ProjectsBatchActionsPanel({
@@ -50,6 +52,7 @@ export function ProjectsBatchActionsPanel({
   selectedProjectIds,
   onBatchDelete,
   onClearSelection,
+  onOpenProject,
 }: ProjectsBatchActionsPanelProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -176,25 +179,30 @@ export function ProjectsBatchActionsPanel({
         </h3>
         <div className="flex-1 overflow-y-auto">
           <ul className="space-y-1.5 pr-2">
-            {selectedProjectNames.map((name, index) => (
-              <li
-                key={index}
-                className={cn(
-                  "flex items-start gap-2 px-2 py-1.5 rounded-md text-sm",
-                  "bg-secondary/5 hover:bg-secondary/10 transition-colors",
-                  "border border-secondary/20"
-                )}
-              >
-                {/* Index number */}
-                <span className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-secondary/20 text-[10px] font-bold text-secondary-foreground">
-                  {index + 1}
-                </span>
-                {/* Project name */}
-                <span className="flex-1 font-medium text-foreground leading-5 break-words">
-                  {name}
-                </span>
-              </li>
-            ))}
+            {selectedProjectNames.map((name, index) => {
+              const projectId = selectedProjectIds[index];
+              return (
+                <li
+                  key={index}
+                  onClick={() => onOpenProject?.(projectId)}
+                  className={cn(
+                    "flex items-start gap-2 px-2 py-1.5 rounded-md text-sm",
+                    "bg-secondary/5 hover:bg-secondary/10 transition-colors",
+                    "border border-secondary/20",
+                    onOpenProject && "cursor-pointer hover:shadow-sm"
+                  )}
+                >
+                  {/* Index number */}
+                  <span className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-secondary/20 text-[10px] font-bold text-secondary-foreground">
+                    {index + 1}
+                  </span>
+                  {/* Project name */}
+                  <span className="flex-1 font-medium text-foreground leading-5 break-words">
+                    {name}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>
