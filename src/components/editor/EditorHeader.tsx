@@ -56,7 +56,7 @@ export function EditorHeader({ title, onCloseEditor }: EditorHeaderProps) {
                 <ToggleIcon className="size-5" aria-hidden="true" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom" align="start" className="bg-primary-foreground text-primary">
+            <TooltipContent side="bottom" align="start">
               {isSidebarHidden ? "Show tools" : "Hide tools"}
             </TooltipContent>
           </Tooltip>
@@ -85,7 +85,7 @@ export function EditorHeader({ title, onCloseEditor }: EditorHeaderProps) {
                 <X className="size-5" aria-hidden="true" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom" align="end" className="bg-primary-foreground text-primary">
+            <TooltipContent side="bottom" align="end">
               Close editor
             </TooltipContent>
           </Tooltip>

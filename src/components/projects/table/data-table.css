@@ -2,6 +2,12 @@
 
 @import "./dropdowns.css";
 
+/**
+ * CSS Custom Properties for ProjectsDataTable
+ *
+ * Defines layout dimensions, spacing, and typography for the table component.
+ * All values align with the design system defined in App.css.
+ */
 :root {
   /* Table Layout Dimensions */
   --projects-table-header-height: 48px;
@@ -17,7 +23,14 @@
   --projects-table-line-height: 1.5rem;
 }
 
-/* Layout Zones */
+/**
+ * Layout Zones
+ *
+ * Three-zone layout system for the table:
+ * 1. Header Zone - Fixed height for title and actions
+ * 2. Toolbar Zone - Fixed height for search/filters
+ * 3. Main Zone - Flexible, scrollable content area
+ */
 
 .projects-table-container {
   display: flex;
@@ -40,4 +53,58 @@
   flex: 1;
   overflow: auto;
   min-height: 0;
+  /* Add smooth scrolling for better UX */
+  scroll-behavior: smooth;
 }
+
+/**
+ * Enhanced Row Interactions
+ *
+ * Additional styles for modern row hover/selection effects.
+ * Works in conjunction with inline styles in ProjectsTableGrid.tsx
+ */
+
+/* Smooth scroll for table body */
+.projects-table-main-zone::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.projects-table-main-zone::-webkit-scrollbar-track {
+  background: var(--color-tr-muted);
+  border-radius: 4px;
+}
+
+.projects-table-main-zone::-webkit-scrollbar-thumb {
+  background: var(--color-tr-primary-blue);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.projects-table-main-zone::-webkit-scrollbar-thumb:hover {
+  background: var(--color-tr-accent);
+}
+
+/**
+ * Table Footer Positioning
+ *
+ * The footer is now positioned at the bottom of the table inside the scrollable area.
+ * It uses sticky positioning to remain visible when scrolling through table rows.
+ */
+
+/* Ensure table footer sticks to bottom of scrollable container */
+.projects-table-main-zone tfoot {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+}
+
+/**
+ * Batch Actions Bar Styling
+ *
+ * The batch actions bar appears outside and below the scrollable table area.
+ * It's positioned at the bottom of the main container and appears with animation
+ * when items are selected.
+ */
+
+/* Additional spacing and styling handled in ProjectsTableBatchActions.tsx */

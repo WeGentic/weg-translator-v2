@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Plus, Filter, X, Search } from "lucide-react";
+import { Filter, X, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +51,7 @@ export function ProjectsTableToolbar({
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Search projects…"
-                className="h-9 pl-10 pr-4 text-sm border-border/50 bg-background/60 backdrop-blur-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:border-border hover:bg-background/80 hover:border-border/70"
+                className="h-9 pl-10 pr-4 text-[11px] bg-[var(--color-tr-anti-primary)] border border-transparent transition-all duration-200 hover:border-[var(--color-tr-ring)] focus:border-[var(--color-tr-ring)] focus:outline-none focus:ring-0"
                 aria-label="Search projects"
               />
               {search && (
@@ -74,11 +74,11 @@ export function ProjectsTableToolbar({
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent className="backdrop-blur-md">
-                    <SelectItem value="all" className="hover:bg-muted/80">All Status</SelectItem>
-                    <SelectItem value="pending" className="hover:bg-muted/80">Pending</SelectItem>
-                    <SelectItem value="running" className="hover:bg-muted/80">Running</SelectItem>
-                    <SelectItem value="completed" className="hover:bg-muted/80">Completed</SelectItem>
-                    <SelectItem value="failed" className="hover:bg-muted/80">Failed</SelectItem>
+                    <SelectItem value="all" className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold">All Status</SelectItem>
+                    <SelectItem value="pending" className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold">Pending</SelectItem>
+                    <SelectItem value="running" className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold">Running</SelectItem>
+                    <SelectItem value="completed" className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold">Completed</SelectItem>
+                    <SelectItem value="failed" className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold">Failed</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -87,9 +87,9 @@ export function ProjectsTableToolbar({
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent className="backdrop-blur-md">
-                    <SelectItem value="all" className="hover:bg-muted/80">All Types</SelectItem>
-                    <SelectItem value="translation" className="hover:bg-muted/80">Translation</SelectItem>
-                    <SelectItem value="rag" className="hover:bg-muted/80">RAG</SelectItem>
+                    <SelectItem value="all" className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold">All Types</SelectItem>
+                    <SelectItem value="translation" className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold">Translation</SelectItem>
+                    <SelectItem value="rag" className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold">RAG</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -98,10 +98,10 @@ export function ProjectsTableToolbar({
                     <SelectValue placeholder="Date" />
                   </SelectTrigger>
                   <SelectContent className="backdrop-blur-md">
-                    <SelectItem value="any" className="hover:bg-muted/80">Any time</SelectItem>
-                    <SelectItem value="24h" className="hover:bg-muted/80">Last 24h</SelectItem>
-                    <SelectItem value="7d" className="hover:bg-muted/80">Last 7d</SelectItem>
-                    <SelectItem value="30d" className="hover:bg-muted/80">Last 30d</SelectItem>
+                    <SelectItem value="any" className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold">Any time</SelectItem>
+                    <SelectItem value="24h" className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold">Last 24h</SelectItem>
+                    <SelectItem value="7d" className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold">Last 7d</SelectItem>
+                    <SelectItem value="30d" className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold">Last 30d</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -1,15 +1,7 @@
-import { createPortal } from "react-dom";
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type ButtonHTMLAttributes,
-  type ReactNode,
-} from "react";
+import { type ButtonHTMLAttributes, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type Tone = "default" | "destructive" | "muted";
@@ -31,41 +23,6 @@ export function IconTooltipButton({
   type = "button",
   ...props
 }: IconTooltipButtonProps) {
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const tooltipId = useId();
-
-  const updatePosition = useCallback(() => {
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    setPosition({
-      top: rect.top - 36,
-      left: rect.left + rect.width / 2,
-    });
-  }, []);
-
-  const handleOpen = useCallback(() => {
-    if (disabled) return;
-    updatePosition();
-    setIsOpen(true);
-  }, [disabled, updatePosition]);
-
-  const handleClose = useCallback(() => {
-    setIsOpen(false);
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen) return undefined;
-
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("resize", updatePosition);
-    return () => {
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [isOpen, updatePosition]);
-
   const toneClasses =
     tone === "destructive"
       ? "text-destructive hover:text-destructive focus-visible:text-destructive"
@@ -73,44 +30,50 @@ export function IconTooltipButton({
       ? "text-muted-foreground hover:text-foreground"
       : "";
 
-  return (
-    <>
+  if (disabled) {
+    return (
       <Button
-        ref={buttonRef}
         type={type}
         size="icon"
         variant="ghost"
         aria-label={ariaLabel}
-        aria-describedby={isOpen ? tooltipId : undefined}
-        disabled={disabled}
-        onMouseEnter={handleOpen}
-        onMouseLeave={handleClose}
-        onFocus={handleOpen}
-        onBlur={handleClose}
+        disabled
         className={cn(
-          "h-7 w-7 rounded-full border border-transparent text-foreground transition hover:border-border/70",
+          "h-7 w-7 rounded-full border border-transparent text-foreground opacity-60",
           toneClasses,
-          disabled ? "opacity-60" : null,
           className,
         )}
         {...props}
       >
         {children}
       </Button>
-      {isOpen && !disabled
-        ? createPortal(
-            <div
-              id={tooltipId}
-              role="tooltip"
-              className="pointer-events-none fixed z-50 -translate-x-1/2 rounded-md border border-border/60 bg-foreground px-2 py-1 text-xs font-medium text-background shadow-md"
-              style={{ top: `${Math.max(position.top, 10)}px`, left: `${position.left}px` }}
-            >
-              {label}
-            </div>,
-            document.body,
-          )
-        : null}
-    </>
+    );
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type={type}
+          size="icon"
+          variant="ghost"
+          aria-label={ariaLabel}
+          className={cn(
+            "h-7 w-7 rounded-full border border-transparent text-foreground transition hover:border-border/70 focus-visible:border-border/70",
+            toneClasses,
+            className,
+          )}
+          {...props}
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top" align="center">
+        <span className="text-[12px] leading-[1.3] font-semibold tracking-[0.02em]">
+          {label}
+        </span>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

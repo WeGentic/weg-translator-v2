@@ -5,12 +5,14 @@ import { cn } from "@/lib/utils"
 
 import "./tooltip.css"
 
+const TooltipPrimitiveProvider = TooltipPrimitive.Provider
+
 function TooltipProvider({
   delayDuration = 0,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
   return (
-    <TooltipPrimitive.Provider
+    <TooltipPrimitiveProvider
       data-slot="tooltip-provider"
       delayDuration={delayDuration}
       {...props}
@@ -36,7 +38,7 @@ function TooltipTrigger({
 
 function TooltipContent({
   className,
-  sideOffset = 0,
+  sideOffset = 10,
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
@@ -46,13 +48,12 @@ function TooltipContent({
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          "tooltip-glass-content animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-lg px-4 py-2 text-sm font-medium text-balance",
+          "tooltip-glass-content animate-in fade-in-0 zoom-in-98 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 max-w-[320px] origin-(--radix-tooltip-content-transform-origin) rounded-[4px] px-3.5 py-2 text-[13px] font-medium leading-tight text-balance shadow-none",
           className
         )}
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow className="tooltip-glass-arrow z-50 size-3 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]" />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   )

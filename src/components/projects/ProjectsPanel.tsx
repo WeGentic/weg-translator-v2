@@ -10,8 +10,9 @@ import { deleteProject, listProjects, type ProjectListItem } from "@/ipc";
 import type { SortingState } from "@tanstack/react-table";
 import { useToast } from "@/components/ui/use-toast";
 import type { TableFilters } from "./table";
+import { useLayoutStoreApi } from "@/app/layout/layout-context";
 
-import { ProjectsDataTable } from "./table";
+import { ProjectsDataTable, ProjectsBatchActionsPanel } from "./table";
 import { ProjectsTableSkeleton } from "./table/ProjectsTableSkeleton";
 import { CreateProjectWizard } from "./wizard/CreateProjectWizard";
 
@@ -29,11 +30,15 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const { toast } = useToast();
+  const layoutStore = useLayoutStoreApi();
 
   // Table controlled state (preserved across polling)
   const [tableSorting, setTableSorting] = useState<SortingState>([{ id: "updated", desc: true }]);
   const [tableSearch, setTableSearch] = useState("");
   const [tableFilters, setTableFilters] = useState<TableFilters>({ progress: "all", projectType: "all", updatedWithin: "any" });
+
+  // Row selection state
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
   const loadProjects = useCallback(async (options: { showSpinner?: boolean } = {}) => {
     if (options.showSpinner) {
@@ -104,10 +109,10 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
       const refreshed = await listProjects({ limit: 100 });
       const exists = refreshed.some((p) => p.projectId === target.id);
       if (deleted > 0 && !exists) {
-        toast({ title: "Project deleted", description: `Deleted “${target.name}”.` });
+        toast({ title: "Project deleted", description: `Deleted "${target.name}".` });
         setProjects(refreshed);
       } else {
-        toast({ variant: "destructive", title: "Deletion failed", description: `Could not delete “${target.name}”.` });
+        toast({ variant: "destructive", title: "Deletion failed", description: `Could not delete "${target.name}".` });
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Deletion failed";
@@ -116,7 +121,70 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
       setDeleteTarget(null);
       setDeleteConfirm("");
     }
-  }, [deleteTarget]);
+  }, [deleteTarget, toast]);
+
+  const handleBatchDelete = useCallback(async (projectIds: string[]) => {
+    try {
+      // Delete all selected projects
+      const deletePromises = projectIds.map(id => deleteProject(id));
+      const results = await Promise.all(deletePromises);
+
+      const successCount = results.filter(count => count > 0).length;
+
+      // Refresh project list
+      const refreshed = await listProjects({ limit: 100 });
+      setProjects(refreshed);
+
+      // Clear selections
+      setSelectedRows(new Set());
+
+      // Show success toast
+      toast({
+        title: "Projects deleted",
+        description: `Successfully deleted ${successCount} project${successCount > 1 ? "s" : ""}.`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Batch deletion failed";
+      toast({ variant: "destructive", title: "Deletion failed", description: message });
+    }
+  }, [toast]);
+
+  // Update Sidebar Two content based on selection
+  // Automatically opens Sidebar Two if hidden when user makes a selection
+  useEffect(() => {
+    const store = layoutStore.getState();
+    const sidebarTwo = store.sidebarTwo;
+
+    if (selectedRows.size > 0) {
+      // Auto-open Sidebar Two if it's hidden when user selects projects
+      // This ensures the batch actions panel is immediately visible
+      if (!sidebarTwo.visible) {
+        store.setSidebarTwo({ visible: true });
+      }
+
+      // Derive selected project data
+      const selectedProjectNames = Array.from(selectedRows)
+        .map(id => projects.find(p => p.projectId === id)?.name)
+        .filter((name): name is string => name !== undefined);
+
+      const selectedProjectIds = Array.from(selectedRows);
+
+      // Show batch actions panel in Sidebar Two
+      store.setSidebarTwoContent(
+        <ProjectsBatchActionsPanel
+          selectedCount={selectedRows.size}
+          selectedProjectNames={selectedProjectNames}
+          selectedProjectIds={selectedProjectIds}
+          onBatchDelete={handleBatchDelete}
+          onClearSelection={() => setSelectedRows(new Set())}
+        />
+      );
+    } else {
+      // Clear Sidebar Two content when no selections
+      // Note: We don't auto-close the sidebar - let user control visibility
+      store.setSidebarTwoContent(null);
+    }
+  }, [selectedRows, projects, layoutStore, handleBatchDelete]);
 
   return (
     <section className="flex h-full w-full flex-col" aria-labelledby="projects-heading">
@@ -142,6 +210,9 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
             onOpenProject={handleOpenProject}
             onRequestDelete={handleRequestDelete}
             onCreateProject={() => setWizardOpen(true)}
+            onBatchDelete={handleBatchDelete}
+            selectedRows={selectedRows}
+            onRowSelectionChange={setSelectedRows}
             sorting={tableSorting}
             onSortingChange={setTableSorting}
             search={tableSearch}

@@ -1,105 +1,82 @@
 @reference "tailwindcss";
 
-/* Glassmorphic Tooltip Styles */
+/* Ultra-modern glassmorphic tooltip - completely seamless, no arrow */
 .tooltip-glass-content {
-  /* Glassmorphic background with gradient */
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklch, var(--color-tr-primary-blue) 88%, var(--color-tr-anti-primary) 12%) 0%,
-    color-mix(in oklch, var(--color-tr-primary-blue) 92%, transparent) 100%
-  );
+  position: relative;
+  isolation: isolate;
 
-  /* Backdrop blur for glassmorphism effect */
-  backdrop-filter: blur(16px) saturate(1.3);
-  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  /* Light mode: Rich semi-transparent dark background */
+  background: color-mix(in oklch, var(--color-tr-navy) 85%, transparent 15%);
 
-  /* Enhanced text styling for readability */
-  color: var(--color-tr-anti-primary);
-  text-shadow: 0 1px 2px color-mix(in oklch, var(--color-tr-primary-blue) 30%, transparent);
-  letter-spacing: 0.01em;
+  /* Refined glassmorphic blur */
+  backdrop-filter: blur(16px) saturate(1.18);
+  -webkit-backdrop-filter: blur(16px) saturate(1.18);
 
-  /* Border with semi-transparent color */
-  border: 0.5px solid color-mix(in oklch, var(--color-tr-anti-primary) 25%, transparent);
-
-  /* Multi-layered shadow for depth */
+  /* Elegant depth with subtle glow - NO borders, NO arrow */
   box-shadow:
-    0 0 0 0.5px color-mix(in oklch, var(--color-tr-anti-primary) 20%, transparent),
-    inset 0 0 0 0.5px color-mix(in oklch, var(--color-tr-anti-primary) 15%, transparent),
-    0 8px 24px color-mix(in oklch, var(--color-tr-primary-blue) 35%, transparent),
-    0 4px 12px color-mix(in oklch, var(--color-tr-primary-blue) 25%, transparent),
-    inset 0 1px 0 color-mix(in oklch, var(--color-tr-anti-primary) 12%, transparent),
-    0 0 32px color-mix(in oklch, var(--color-tr-accent) 15%, transparent);
+    0 8px 28px color-mix(in oklch, var(--color-tr-navy) 25%, transparent),
+    0 2px 8px color-mix(in oklch, var(--color-tr-navy) 15%, transparent),
+    inset 0 0.5px 0 color-mix(in oklch, var(--color-tr-white) 15%, transparent);
 
-  /* Smooth transitions */
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Crisp white text on dark background */
+  color: var(--color-tr-white);
+
+  /* Very subtle rounding - seamless look */
+  border-radius: 4px;
+
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark mode variant */
-.dark .tooltip-glass-content {
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklch, var(--color-tr-primary-blue) 90%, var(--color-tr-secondary) 10%) 0%,
-    color-mix(in oklch, var(--color-tr-primary-blue) 85%, transparent) 100%
-  );
-
-  color: var(--color-tr-anti-primary);
-
-  border: 0.5px solid color-mix(in oklch, var(--color-tr-anti-primary) 30%, transparent);
-
-  box-shadow:
-    0 0 0 0.5px color-mix(in oklch, var(--color-tr-anti-primary) 25%, transparent),
-    inset 0 0 0 0.5px color-mix(in oklch, var(--color-tr-anti-primary) 18%, transparent),
-    0 10px 28px color-mix(in oklch, var(--color-tr-primary-blue) 45%, transparent),
-    0 5px 14px color-mix(in oklch, var(--color-tr-primary-blue) 30%, transparent),
-    inset 0 1px 0 color-mix(in oklch, var(--color-tr-anti-primary) 15%, transparent),
-    0 0 36px color-mix(in oklch, var(--color-tr-accent) 20%, transparent);
-}
-
-/* Arrow styling to match glassmorphic design */
-.tooltip-glass-arrow {
-  /* Match the tooltip background gradient */
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklch, var(--color-tr-primary-blue) 88%, var(--color-tr-anti-primary) 12%) 0%,
-    color-mix(in oklch, var(--color-tr-primary-blue) 92%, transparent) 100%
-  );
-  fill: color-mix(in oklch, var(--color-tr-primary-blue) 90%, transparent);
-
-  /* Subtle border matching tooltip */
-  border: 0.5px solid color-mix(in oklch, var(--color-tr-anti-primary) 25%, transparent);
-  border-right: none;
-  border-bottom: none;
-
-  /* Small shadow for depth */
-  box-shadow:
-    0 0 0 0.5px color-mix(in oklch, var(--color-tr-anti-primary) 15%, transparent),
-    -2px -2px 6px color-mix(in oklch, var(--color-tr-primary-blue) 20%, transparent);
-}
-
-.dark .tooltip-glass-arrow {
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklch, var(--color-tr-primary-blue) 90%, var(--color-tr-secondary) 10%) 0%,
-    color-mix(in oklch, var(--color-tr-primary-blue) 85%, transparent) 100%
-  );
-  fill: color-mix(in oklch, var(--color-tr-primary-blue) 88%, transparent);
-
-  border: 0.5px solid color-mix(in oklch, var(--color-tr-anti-primary) 30%, transparent);
-  border-right: none;
-  border-bottom: none;
-
-  box-shadow:
-    0 0 0 0.5px color-mix(in oklch, var(--color-tr-anti-primary) 20%, transparent),
-    -2px -2px 8px color-mix(in oklch, var(--color-tr-primary-blue) 25%, transparent);
-}
-
-/* Hover state enhancement (optional - for interactive tooltips) */
 .tooltip-glass-content:hover {
+  backdrop-filter: blur(18px) saturate(1.22);
+  -webkit-backdrop-filter: blur(18px) saturate(1.22);
+
   box-shadow:
-    0 0 0 0.5px color-mix(in oklch, var(--color-tr-anti-primary) 28%, transparent),
-    inset 0 0 0 0.5px color-mix(in oklch, var(--color-tr-anti-primary) 20%, transparent),
-    0 10px 28px color-mix(in oklch, var(--color-tr-primary-blue) 40%, transparent),
-    0 5px 14px color-mix(in oklch, var(--color-tr-primary-blue) 30%, transparent),
-    inset 0 1px 0 color-mix(in oklch, var(--color-tr-anti-primary) 15%, transparent),
-    0 0 36px color-mix(in oklch, var(--color-tr-accent) 20%, transparent);
+    0 10px 32px color-mix(in oklch, var(--color-tr-navy) 28%, transparent),
+    0 3px 10px color-mix(in oklch, var(--color-tr-navy) 18%, transparent),
+    inset 0 0.5px 0 color-mix(in oklch, var(--color-tr-white) 18%, transparent);
+}
+
+/* Dark mode: Lighter tooltip on dark background */
+.dark .tooltip-glass-content {
+  background: color-mix(in oklch, var(--color-tr-anti-primary) 88%, transparent 12%);
+
+  box-shadow:
+    0 8px 28px color-mix(in oklch, var(--color-tr-anti-primary) 28%, transparent),
+    0 2px 8px color-mix(in oklch, var(--color-tr-anti-primary) 16%, transparent),
+    inset 0 0.5px 0 color-mix(in oklch, var(--color-tr-white) 18%, transparent);
+
+  /* Dark text on light background */
+  color: var(--color-tr-navy);
+}
+
+.dark .tooltip-glass-content:hover {
+  box-shadow:
+    0 10px 32px color-mix(in oklch, var(--color-tr-anti-primary) 32%, transparent),
+    0 3px 10px color-mix(in oklch, var(--color-tr-anti-primary) 20%, transparent),
+    inset 0 0.5px 0 color-mix(in oklch, var(--color-tr-white) 22%, transparent);
+}
+
+/* Fallback for browsers without backdrop-filter support */
+@supports not (backdrop-filter: blur(16px)) {
+  .tooltip-glass-content {
+    background: color-mix(in oklch, var(--color-tr-navy) 92%, transparent 8%);
+  }
+
+  .dark .tooltip-glass-content {
+    background: color-mix(in oklch, var(--color-tr-anti-primary) 92%, transparent 8%);
+  }
+}
+
+/* Performance optimization for reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .tooltip-glass-content {
+    backdrop-filter: none;
+    background: color-mix(in oklch, var(--color-tr-navy) 92%, transparent 8%);
+    transition: none;
+  }
+
+  .dark .tooltip-glass-content {
+    background: color-mix(in oklch, var(--color-tr-anti-primary) 92%, transparent 8%);
+  }
 }
