@@ -1,17 +1,10 @@
-import { cn } from "@/lib/utils";
-
 /**
  * Placeholder footer surfaced when the editor is active. The real footer will
  * eventually display editor-specific status and collaboration cues.
  */
 export function EditorFooterPlaceholder() {
   return (
-    <div
-      className={cn(
-        "flex h-full w-full items-center justify-between gap-4 border-t border-border/50 px-4",
-        "bg-primary/10 text-xs text-muted-foreground",
-      )}
-    >
+    <div className="flex w-full items-center justify-between gap-4 text-xs text-muted-foreground">
       <div className="flex flex-col">
         <span className="font-medium text-foreground/80">Editor workspace preview</span>
         <span className="text-[11px]">Real-time translation tools will appear here.</span>

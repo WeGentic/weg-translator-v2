@@ -7,7 +7,6 @@ import { LayoutFooter } from "./layout-footer";
 import { LayoutHeader } from "./layout-header";
 import { LayoutMain } from "./layout-main";
 import { LayoutShell } from "./layout-shell";
-import { LayoutSidemenu } from "./layout-sidemenu";
 import { LayoutSidebarOne } from "./layout-sidebar-one";
 import { LayoutSidebarTwo } from "./layout-sidebar-two";
 import type { LayoutConfig } from "./layout-store";
@@ -43,7 +42,6 @@ export const MainLayout = {
   Root: LayoutRoot,
   Header: LayoutHeader,
   Footer: LayoutFooter,
-  Sidemenu: LayoutSidemenu,
   SidebarOne: LayoutSidebarOne,
   SidebarTwo: LayoutSidebarTwo,
   Background: LayoutBackground,
@@ -53,4 +51,4 @@ export const MainLayout = {
 
 export { useLayoutActions, useLayoutSelector, useLayoutStoreApi } from "./layout-context";
 export type { LayoutProviderProps } from "./layout-context";
-export type { LayoutConfig, LayoutState, SidemenuMode } from "./layout-store";
+export type { LayoutConfig, LayoutState } from "./layout-store";

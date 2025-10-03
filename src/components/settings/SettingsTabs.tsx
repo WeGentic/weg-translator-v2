@@ -12,13 +12,15 @@ export interface SettingsTab {
 interface SettingsTabsProps {
   tabs: SettingsTab[];
   defaultTab?: string;
+  value?: string;
   onTabChange?: (tabId: string) => void;
 }
 
-export function SettingsTabs({ tabs, defaultTab, onTabChange }: SettingsTabsProps) {
+export function SettingsTabs({ tabs, defaultTab, value, onTabChange }: SettingsTabsProps) {
   return (
     <Tabs
-      defaultValue={defaultTab ?? tabs[0]?.id}
+      value={value}
+      defaultValue={value ?? defaultTab ?? tabs[0]?.id}
       onValueChange={onTabChange}
       className="w-full"
     >

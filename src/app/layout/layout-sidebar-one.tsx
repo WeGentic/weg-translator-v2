@@ -66,16 +66,14 @@ export function LayoutSidebarOne({
 
       if (view === "dashboard") {
         setActiveView("dashboard");
-      } else if (view === "projects") {
+      } else if (view === "projects" || view?.startsWith("project:")) {
         setActiveView("projects");
-      } else if (view === "editor") {
+      } else if (view === "editor" || view?.startsWith("editor:")) {
         setActiveView("editor");
       } else if (view === "resource") {
         setActiveView("resource");
       } else if (view === "settings") {
         setActiveView("settings");
-      } else if (view?.startsWith("project:") || view?.startsWith("editor:")) {
-        setActiveView("other");
       }
     };
 

@@ -1,0 +1,93 @@
+@layer components {
+  :root {
+    --three-zone-panel-header-height: 56px;
+    --three-zone-panel-toolbar-min-height: 52px;
+  }
+
+  .three-zone-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border-top: 1px solid var(--border);
+    border-left: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    border-top-left-radius: 0.75rem;
+    border-bottom-left-radius: 0.75rem;
+    background-color: var(--popover);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: saturate(1.05);
+  }
+
+  .three-zone-panel__header,
+  .three-zone-panel__toolbar,
+  .three-zone-panel__footer {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .three-zone-panel__header {
+    min-height: var(--three-zone-panel-header-height);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+    background: linear-gradient(180deg, color-mix(in oklch, var(--popover) 96%, white 4%) 0%, var(--popover) 100%);
+  }
+
+  .three-zone-panel__toolbar {
+    min-height: var(--three-zone-panel-toolbar-min-height);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    background: linear-gradient(180deg, color-mix(in oklch, var(--muted) 65%, transparent 35%) 0%, transparent 100%);
+    backdrop-filter: blur(6px) saturate(1.1);
+  }
+
+  .three-zone-panel__content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0%;
+    min-height: 0;
+    background-color: transparent;
+  }
+
+  .three-zone-panel__content--auto {
+    overflow: auto;
+    scroll-behavior: smooth;
+  }
+
+  .three-zone-panel__content--hidden {
+    overflow: hidden;
+  }
+
+  .three-zone-panel__content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .three-zone-panel__content::-webkit-scrollbar-track {
+    background: var(--muted);
+    border-radius: 4px;
+  }
+
+  .three-zone-panel__content::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--primary) 82%, var(--accent) 18%);
+    border-radius: 4px;
+  }
+
+  .three-zone-panel__content::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--primary) 65%, var(--accent) 35%);
+  }
+
+  .three-zone-panel__footer {
+    border-top: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+    background: linear-gradient(90deg, color-mix(in oklch, var(--muted) 45%, transparent 55%) 0%, transparent 100%);
+    color: var(--muted-foreground);
+  }
+
+  .three-zone-panel[data-variant="quiet"] {
+    box-shadow: none;
+    border-color: color-mix(in srgb, var(--border) 65%, transparent);
+  }
+}

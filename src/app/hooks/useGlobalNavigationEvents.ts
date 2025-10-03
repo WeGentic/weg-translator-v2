@@ -37,7 +37,8 @@ export function useGlobalNavigationEvents({
           onFocusEditor(projectId, fileId);
           onChangeView(toEditorViewKey(projectId));
         } else {
-          onChangeView("projects");
+          void logger.debug?.("Navigate: editor placeholder view");
+          onChangeView("editor");
         }
       }
     };

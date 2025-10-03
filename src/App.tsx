@@ -1,157 +1,67 @@
-import { useCallback, useMemo, type CSSProperties } from "react";
-import { TbFolders } from "react-icons/tb";
-import { FiFileText, FiSettings } from "react-icons/fi";
+import { useEffect } from "react";
 
 import { useAppHealth } from "@/app/hooks/useAppHealth";
 import { useGlobalNavigationEvents } from "@/app/hooks/useGlobalNavigationEvents";
 import { useWorkspaceShell } from "@/app/hooks/useWorkspaceShell";
-import { useLayoutSelector } from "@/app/layout";
-import { AppHeader, AppSidebar, CollapsedFooterBar, CollapsedHeaderBar, WorkspaceFooter, type MenuItem } from "@/app/layout/main_elements";
-import {
-  toEditorViewKey,
-  toProjectViewKey,
-  type MainView,
-} from "@/app/state/main-view";
-import { EditorPlaceholder } from "@/components/editor";
+import { AppHeader, CollapsedFooterBar, CollapsedHeaderBar, WorkspaceFooter } from "@/app/layout/main_elements";
 import { ProjectsPanel } from "@/components/projects/ProjectsPanel";
-import { ProjectOverview } from "@/components/projects/overview/ProjectOverview";
-import { ProjectOverviewPlaceholder } from "@/components/projects/overview/ProjectOverviewPlaceholder";
-import { AppSettingsPanel } from "@/components/settings/AppSettingsPanel";
+import { EnhancedAppSettingsPanel } from "@/components/settings/EnhancedAppSettingsPanel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHeaderTitle } from "@/hooks/useHeaderTitle";
-import { cn } from "@/lib/utils";
 import type { ProjectListItem } from "@/ipc";
 
 import "./App.css";
 
-const FIXED_MENU_ITEMS: MenuItem[] = [
-  { key: "projects", label: "Projects", icon: TbFolders },
-  { key: "settings", label: "Settings", icon: FiSettings },
-];
-
 /**
- * Desktop application shell that wires together the workspace layout, navigation, and data entry.
- * The component composes small hooks so the React 19 compiler can optimise without manual memoisation.
+ * Legacy shell retained for storybook-style previews. The main application now
+ * relies on TanStack Router + workspace routes under `src/routes/`.
  */
 function App() {
   const { user } = useAuth();
   const { health, systemError } = useAppHealth();
-
   const {
     mainView,
     setMainView,
-    openEditorIds,
     openProjectOverviews,
     openProjectEditors,
     handleOpenProject,
     handleCloseOverview,
     handleCloseEditor,
-    openEditorView,
     currentProjectId,
     currentEditorProjectId,
     activeProject,
     activeEditorProject,
   } = useWorkspaceShell();
 
-  const header = useLayoutSelector((state) => state.header);
-  const footer = useLayoutSelector((state) => state.footer);
-  const sidemenu = useLayoutSelector((state) => state.sidemenu);
-
-  const headerVisible = header.mounted && header.visible;
-  const footerVisible = footer.mounted && footer.visible;
-
-  const sidebarMode = sidemenu.mode;
-  const sidebarMounted = sidemenu.mounted && sidebarMode !== "unmounted";
-  const sidebarVisible = sidebarMounted && sidebarMode !== "hidden";
-  const sidebarWidthPx = !sidebarVisible
-    ? 0
-    : sidebarMode === "compact"
-      ? sidemenu.compactWidth
-      : sidemenu.expandedWidth;
-  const sidebarWidthRem = sidebarWidthPx / 16;
-
-  const temporaryProjectItems: MenuItem[] = useMemo(
-    () =>
-      openProjectOverviews.map((project) => ({
-        key: toProjectViewKey(project.projectId),
-        label: project.name,
-        icon: FiFileText,
-        onClose: () => handleCloseOverview(project.projectId),
-      })),
-    [handleCloseOverview, openProjectOverviews],
-  );
-
-  const temporaryEditorItems: MenuItem[] = useMemo(() => {
-    const lookup = new Map(openProjectEditors.map((project) => [project.projectId, project]));
-    return openEditorIds.map((projectId) => {
-      const project = lookup.get(projectId);
-      return {
-        key: toEditorViewKey(projectId),
-        label: project ? `Editor — ${project.name}` : "Editor",
-        icon: FiFileText,
-        onClose: () => handleCloseEditor(projectId),
-      } satisfies MenuItem;
-    });
-  }, [handleCloseEditor, openEditorIds, openProjectEditors]);
-
   const headerTitle = useHeaderTitle({
     explicit:
       activeEditorProject
         ? `Editor — ${activeEditorProject.name}`
-        : activeProject?.name ?? FIXED_MENU_ITEMS.find((item) => item.key === mainView)?.label ?? undefined,
+        : activeProject?.name ?? undefined,
   });
-
-  const FLOAT_HEADER_HEIGHT_REM = 3.5;
-  const FLOAT_HEADER_OFFSET_REM = 0.75;
-  const COLLAPSED_HEADER_HEIGHT_REM = 2.5;
-  const FOOTER_HEIGHT_REM = 3.5;
-  const COLLAPSED_FOOTER_HEIGHT_REM = 2.5;
-  const SIDEBAR_MARGIN_REM = 0.75;
-  const headerInsetRem = headerVisible ? FLOAT_HEADER_HEIGHT_REM + FLOAT_HEADER_OFFSET_REM : 0;
-  const footerInsetRem = footerVisible ? FOOTER_HEIGHT_REM : COLLAPSED_FOOTER_HEIGHT_REM;
-
-  const contentTopInset = `${headerInsetRem}rem`;
-  const contentBottomInset = `${footerInsetRem}rem`;
-
-  const contentViewportStyle: CSSProperties = {
-    paddingTop: contentTopInset,
-    paddingBottom: `${SIDEBAR_MARGIN_REM}rem`,
-    height: `calc(100dvh - ${contentBottomInset})`,
-  };
-
-  const sidebarTopInset = headerVisible ? contentTopInset : `${COLLAPSED_HEADER_HEIGHT_REM}rem`;
-  const sidebarBottomInset = footerVisible ? contentBottomInset : `${COLLAPSED_FOOTER_HEIGHT_REM}rem`;
-
-  const horizontalOffsetRem = sidebarWidthRem + SIDEBAR_MARGIN_REM;
-
-  const contentFrameStyle: CSSProperties = {
-    paddingLeft: `${horizontalOffsetRem}rem`,
-    paddingRight: `${SIDEBAR_MARGIN_REM}rem`,
-  };
-
-  const handleProjectOpen = useCallback((project: ProjectListItem) => {
-    handleOpenProject(project);
-  }, [handleOpenProject]);
-
-  const focusEditor = useCallback(
-    (projectId: string, _fileId: string | null) => {
-      if (projectId) {
-        openEditorView(projectId);
-      }
-    },
-    [openEditorView],
-  );
 
   useGlobalNavigationEvents({
     onChangeView: setMainView,
-    onFocusEditor: focusEditor,
+    onFocusEditor: (projectId: string) => {
+      if (projectId) {
+        // Keep focus wiring for compatibility, even though legacy shell is hidden.
+        handleCloseEditor(projectId);
+      }
+    },
   });
 
-  /**
-   * Resolves the main workspace content component for the currently selected view.
-   */
-  const renderMainContent = () => {
+  useEffect(() => {
+    void openProjectOverviews;
+    void openProjectEditors;
+    void handleCloseOverview;
+  }, [openProjectOverviews, openProjectEditors, handleCloseOverview]);
+
+  const handleProjectOpen = (project: ProjectListItem) => {
+    handleOpenProject(project);
+  };
+
+  const renderContent = () => {
     if (mainView === "projects") {
       return <ProjectsPanel onOpenProject={handleProjectOpen} />;
     }
@@ -159,78 +69,54 @@ function App() {
     if (mainView === "settings") {
       return (
         <div className="w-full p-6">
-          <AppSettingsPanel />
+          <EnhancedAppSettingsPanel />
         </div>
       );
     }
 
     if (currentEditorProjectId) {
-      return <EditorPlaceholder projectName={activeEditorProject?.name} />;
+      return (
+        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+          Editor placeholder for {activeEditorProject?.name ?? "project"}
+        </div>
+      );
     }
 
-    if (currentProjectId) {
-      if (activeProject) {
-        return <ProjectOverview projectSummary={activeProject} />;
-      }
-      return <ProjectOverviewPlaceholder project={activeProject} />;
+    if (currentProjectId && activeProject) {
+      return <ProjectsPanel onOpenProject={handleProjectOpen} />;
     }
 
     return (
-      <div className="flex w-full items-center justify-center p-6">
-        <div className="rounded-xl border border-border/60 bg-background/70 p-8 text-center text-sm text-muted-foreground shadow-sm">
-          {FIXED_MENU_ITEMS.find((item) => item.key === mainView)?.label} coming soon
-        </div>
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        Legacy dashboard placeholder
       </div>
     );
   };
 
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-background/60">
-      <a
-        href="#main-content"
-        className="sr-only focus-visible:not-sr-only fixed left-3 top-3 z-[60] rounded-md border border-border/60 bg-background px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-      >
-        Skip to content
-      </a>
+      {systemError ? (
+        <div className="px-6 pb-4">
+          <Alert variant="destructive">
+            <AlertDescription>{systemError}</AlertDescription>
+          </Alert>
+        </div>
+      ) : null}
 
-      {headerVisible ? (
+      <div className="flex items-center justify-between border-b border-border/60 bg-background/80 px-4 py-3 shadow-sm">
         <AppHeader title={headerTitle} hideUser={!user} />
-      ) : (
-        <CollapsedHeaderBar />
-      )}
-
-      <div className={cn("relative flex flex-1 min-h-0 flex-col overflow-hidden")} style={contentViewportStyle}>
-        <AppSidebar
-          fixedItems={FIXED_MENU_ITEMS}
-          temporaryItems={temporaryProjectItems}
-          editorItems={temporaryEditorItems}
-          selectedKey={mainView}
-          onSelect={(key) => setMainView(key as MainView)}
-          style={{
-            top: sidebarTopInset,
-            bottom: sidebarBottomInset,
-          }}
-        />
-
-        <main id="main-content" role="main" className="relative flex flex-1 min-h-0 flex-col overflow-hidden">
-          <div className="flex flex-1 min-h-0 flex-col" style={contentFrameStyle}>
-            {systemError ? (
-              <div className="flex-shrink-0 px-6 pb-4">
-                <Alert variant="destructive">
-                  <AlertDescription>{systemError}</AlertDescription>
-                </Alert>
-              </div>
-            ) : null}
-            <div className="flex min-h-0 flex-1 overflow-hidden">
-              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-                {renderMainContent()}
-              </div>
-            </div>
-          </div>
-        </main>
       </div>
 
-      {footerVisible ? <WorkspaceFooter health={health} /> : <CollapsedFooterBar />}
+      <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
+        <main className="flex-1 min-h-0 overflow-auto p-4">{renderContent()}</main>
+      </div>
+
+      <div className="border-t border-border/60 bg-background/80 shadow-sm">
+        <WorkspaceFooter health={health} />
+      </div>
+
+      <CollapsedHeaderBar />
+      <CollapsedFooterBar />
     </div>
   );
 }

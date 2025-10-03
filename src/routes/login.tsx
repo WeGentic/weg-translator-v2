@@ -21,10 +21,8 @@ function LoginPage() {
     const state = store.getState();
     state.setHeader({ mounted: false, visible: false });
     state.setFooter({ mounted: false, visible: false });
-    state.setSidemenu({ mounted: false, mode: "hidden" });
     state.setHeaderContent(null);
     state.setFooterContent(null);
-    state.setSidemenuContent(null);
     state.setBackground({ mounted: true, visible: true, element: <BlankBackground tone="default" /> });
     return () => {
       store.getState().setBackground({ element: null, mounted: false });
@@ -37,7 +35,6 @@ function LoginPage() {
         config={{
           header: { visible: false, mounted: false },
           footer: { visible: false, mounted: false },
-          sidemenu: { mode: "hidden", mounted: false },
           background: { visible: true },
         }}
       />

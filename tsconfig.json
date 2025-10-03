@@ -25,6 +25,11 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": [
+    "src",
+    "packages/layout-three-zone/src"
+  ],
+  "references": [
+    { "path": "./tsconfig.node.json" }
+  ]
 }

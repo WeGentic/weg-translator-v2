@@ -15,6 +15,7 @@ import { useLayoutStoreApi } from "@/app/layout/layout-context";
 import { ProjectsDataTable, ProjectsBatchActionsPanel } from "./table";
 import { ProjectsTableSkeleton } from "./table/ProjectsTableSkeleton";
 import { CreateProjectWizard } from "./wizard/CreateProjectWizard";
+import { ProjectsOverviewCard } from "./overview/ProjectsOverviewCard";
 
 type ProjectsPanelProps = {
   onOpenProject?: (project: ProjectListItem) => void;
@@ -169,6 +170,9 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
 
       const selectedProjectIds = Array.from(selectedRows);
 
+      // Dispatch event to update sidebar title
+      window.dispatchEvent(new CustomEvent("sidebar-two:title", { detail: { title: "Projects" } }));
+
       // Show batch actions panel in Sidebar Two
       store.setSidebarTwoContent(
         <ProjectsBatchActionsPanel
@@ -181,11 +185,30 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
         />
       );
     } else {
-      // Clear Sidebar Two content when no selections
-      // Note: We don't auto-close the sidebar - let user control visibility
-      store.setSidebarTwoContent(null);
+      // Show overview card when no selections
+      // Calculate statistics from current projects
+      const activeProjects = projects.filter(p => p.status === "active").length;
+      const totalFiles = projects.reduce((sum, p) => sum + p.fileCount, 0);
+      const now = Date.now();
+      const oneDayAgo = now - 24 * 60 * 60 * 1000;
+      const recentlyUpdated = projects.filter(p => {
+        const updatedTime = Date.parse(p.updatedAt);
+        return !Number.isNaN(updatedTime) && updatedTime >= oneDayAgo;
+      }).length;
+
+      // Dispatch event to update sidebar title
+      window.dispatchEvent(new CustomEvent("sidebar-two:title", { detail: { title: "Overview" } }));
+
+      store.setSidebarTwoContent(
+        <ProjectsOverviewCard
+          totalProjects={projects.length}
+          activeProjects={activeProjects}
+          totalFiles={totalFiles}
+          recentlyUpdated={recentlyUpdated}
+        />
+      );
     }
-  }, [selectedRows, projects, layoutStore, handleBatchDelete]);
+  }, [selectedRows, projects, layoutStore, handleBatchDelete, handleOpenProject]);
 
   return (
     <section className="flex h-full w-full flex-col" aria-labelledby="projects-heading">

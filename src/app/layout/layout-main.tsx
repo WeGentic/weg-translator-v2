@@ -14,28 +14,20 @@ export interface LayoutMainProps extends PropsWithChildren {
 
 /**
  * Main content slot that spans either the entire grid width or the space to the
- * right of the sidemenu depending on its mount state.
+ * right of the mounted sidebar rails.
  */
 export function LayoutMain({ children, scroll = "auto" }: LayoutMainProps) {
-  const sidemenu = useLayoutSelector((state) => state.sidemenu);
   const sidebarOne = useLayoutSelector((state) => state.sidebarOne);
   const sidebarTwo = useLayoutSelector((state) => state.sidebarTwo);
 
-  // Calculate grid column based on which sidebars are mounted and visible
-  // Grid columns: 1 = sidebarOne, 2 = sidebarTwo, 3 = sidemenu, 4 = main
-  let gridColumn = "1 / -1"; // default: span all columns
-
   const sidebarOneVisible = sidebarOne.mounted;
   const sidebarTwoVisible = sidebarTwo.mounted && sidebarTwo.visible;
-  const sidemenuVisible = sidemenu.mounted && sidemenu.mode !== "unmounted" && sidemenu.mode !== "hidden";
 
-  // Start from the first empty column
   let startColumn = 1;
   if (sidebarOneVisible) startColumn = 2;
   if (sidebarTwoVisible) startColumn = 3;
-  if (sidemenuVisible) startColumn = 4;
 
-  gridColumn = `${startColumn} / -1`;
+  const gridColumn = `${startColumn} / -1`;
 
   return (
     <section

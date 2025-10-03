@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 export type LayoutVisibility = {
   header?: boolean;
   footer?: boolean;
-  sidemenu?: "expanded" | "compact" | "hidden";
 };
 
 export type BackgroundConfig =
@@ -12,12 +11,11 @@ export type BackgroundConfig =
   | { kind: "image"; src: string; blur?: number }
   | { kind: "component"; element: ReactNode };
 
-export type LayoutSlotKey = "header" | "footer" | "sidemenu" | "background";
+export type LayoutSlotKey = "header" | "footer" | "background";
 
 export interface LayoutSlots {
   header?: ReactNode;
   footer?: ReactNode;
-  sidemenu?: ReactNode;
   background?: ReactNode;
 }
 

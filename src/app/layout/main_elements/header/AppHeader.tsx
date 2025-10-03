@@ -1,4 +1,4 @@
-import { CircleUser, PanelLeft, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { CircleUser } from "lucide-react";
 import { useActionState, useState } from "react";
 import type { MouseEvent } from "react";
 import { useRouter } from "@tanstack/react-router";
@@ -13,24 +13,11 @@ import {
   Title as AlertDialogTitle,
 } from "@radix-ui/react-alert-dialog";
 
-import { useLayoutSelector, useLayoutStoreApi } from "@/app/layout/MainLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { logger } from "@/logging";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import "../../css-styles/chrome/header/app-header.css";
-
-const SIDEMENU_TOGGLE_LABELS = {
-  expanded: "Compact sidebar",
-  compact: "Expand sidebar",
-  hidden: "Show sidebar",
-} as const;
-
-const SIDEMENU_TOGGLE_ICONS = {
-  expanded: PanelLeftClose,
-  compact: PanelLeft,
-  hidden: PanelLeftOpen,
-} as const;
 
 /**
  * Presentation contract for {@link AppHeader}. Optional knobs allow the root App component to
@@ -56,8 +43,6 @@ export function AppHeader({
 }: AppHeaderProps) {
   const { user, logout: signOut } = useAuth();
   const router = useRouter();
-  const layoutStore = useLayoutStoreApi();
-  const sidemenu = useLayoutSelector((state) => state.sidemenu);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
@@ -79,36 +64,12 @@ export function AppHeader({
     { error: null },
   );
 
-  const toggleMode = sidemenu.mode;
-  const normalizedMode: "expanded" | "compact" | "hidden" =
-    toggleMode === "compact" ? "compact" : toggleMode === "hidden" ? "hidden" : "expanded";
-  const Icon = SIDEMENU_TOGGLE_ICONS[normalizedMode];
-  const ariaLabel = SIDEMENU_TOGGLE_LABELS[normalizedMode];
-  const sidemenuInteractive = sidemenu.mounted || toggleMode !== "unmounted";
-  // Cycling the sidemenu via the store ensures we don't leak unbound methods while keeping
-  // the selector subscriptions scoped to the stateful parts of the header.
-  const handleCycleSidemenu = () => {
-    layoutStore.getState().cycleSidemenu();
-  };
-
   return (
     <div
       className={cn("app-header", elevated && "app-header--elevated", className)}
       role="banner"
     >
-      <div className="app-header__controls">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={ariaLabel}
-          onClick={handleCycleSidemenu}
-          disabled={!sidemenuInteractive}
-          type="button"
-        >
-          <Icon className="size-5" aria-hidden="true" />
-          <span className="sr-only">Toggle sidebar</span>
-        </Button>
-      </div>
+      <div className="app-header__controls" />
 
       <div className="app-header__title-container">
         <h1

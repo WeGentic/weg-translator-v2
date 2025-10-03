@@ -1,5 +1,5 @@
 import { useEffect, useState, type PropsWithChildren } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -50,6 +50,10 @@ export function LayoutSidebarTwo({
 
       if (view === "projects") {
         setCurrentPage("Projects");
+      } else if (view === "dashboard") {
+        setCurrentPage("Dashboard");
+      } else if (view === "resource") {
+        setCurrentPage("Resources");
       } else if (view === "settings") {
         setCurrentPage("Settings");
       } else if (view === "editor" || view?.startsWith("editor:")) {
@@ -66,6 +70,20 @@ export function LayoutSidebarTwo({
 
     window.addEventListener("app:navigate", handler);
     return () => window.removeEventListener("app:navigate", handler);
+  }, []);
+
+  // Listen for custom sidebar title updates (for dynamic content like Overview vs Projects)
+  useEffect(() => {
+    const handler: EventListener = (event) => {
+      const custom = event as CustomEvent<{ title?: string } | undefined>;
+      const title = custom.detail?.title;
+      if (title) {
+        setCurrentPage(title);
+      }
+    };
+
+    window.addEventListener("sidebar-two:title", handler);
+    return () => window.removeEventListener("sidebar-two:title", handler);
   }, []);
 
   const handleToggleVisibility = () => {
