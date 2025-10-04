@@ -1,5 +1,5 @@
 // features/projects/components/DeleteProjectDialog.tsx
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,22 +19,45 @@ type DeleteProjectDialogProps = {
 };
 
 export function DeleteProjectDialog({ open, onOpenChange, target, onAfterDelete }: DeleteProjectDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent aria-describedby="delete-project-desc">
+        <DialogHeader>
+          <DialogTitle>Delete project</DialogTitle>
+          <DialogDescription id="delete-project-desc">
+            This action permanently deletes the project and its files from disk. This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+
+        <DeleteProjectForm
+          key={`${target?.id ?? "no-target"}-${open ? "open" : "closed"}`}
+          target={target}
+          onOpenChange={onOpenChange}
+          onAfterDelete={onAfterDelete}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+type DeleteProjectFormProps = {
+  target: Target;
+  onOpenChange: (open: boolean) => void;
+  onAfterDelete?: () => void;
+};
+
+function DeleteProjectForm({ target, onOpenChange, onAfterDelete }: DeleteProjectFormProps) {
   const [confirmName, setConfirmName] = useState("");
   const { toast } = useToast();
 
-  // Reset confirm input whenever dialog opens/closes or target changes
-  useEffect(() => {
-    if (!open) setConfirmName("");
-  }, [open, target?.id]);
-
-  // Declarative form Action (React 19)
-  const [errorMessage, submitAction, pending] = useActionState<
+  const [errorMessage, submitAction] = useActionState<
     string | null,
     FormData
   >(async (_prev, formData) => {
     if (!target) return "No project selected.";
 
-    const typedName = String(formData.get("confirm") ?? "").trim();
+    const confirmField = formData.get("confirm");
+    const typedName = typeof confirmField === "string" ? confirmField.trim() : "";
     if (typedName !== target.name) {
       return "Project name doesn't match.";
     }
@@ -68,52 +91,41 @@ export function DeleteProjectDialog({ open, onOpenChange, target, onAfterDelete 
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-describedby="delete-project-desc">
-        <DialogHeader>
-          <DialogTitle>Delete project</DialogTitle>
-          <DialogDescription id="delete-project-desc">
-            This action permanently deletes the project and its files from disk. This cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
+    <form action={submitAction}>
+      <div className="space-y-3 py-2">
+        <div>
+          <p className="text-sm text-muted-foreground">To confirm, type the project name exactly as shown:</p>
+          <p className="mt-1 rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-sm font-medium text-foreground">
+            {target?.name ?? "—"}
+          </p>
+        </div>
 
-        <form action={submitAction}>
-          <div className="space-y-3 py-2">
-            <div>
-              <p className="text-sm text-muted-foreground">To confirm, type the project name exactly as shown:</p>
-              <p className="mt-1 rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-sm font-medium text-foreground">
-                {target?.name ?? "—"}
-              </p>
-            </div>
+        <div className="grid gap-2">
+          <Label htmlFor="confirm-name">Project name</Label>
+          <Input
+            id="confirm-name"
+            name="confirm"
+            autoFocus
+            placeholder="Enter project name to confirm"
+            value={confirmName}
+            onChange={(e) => setConfirmName(e.target.value)}
+          />
+        </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="confirm-name">Project name</Label>
-              <Input
-                id="confirm-name"
-                name="confirm"
-                autoFocus
-                placeholder="Enter project name to confirm"
-                value={confirmName}
-                onChange={(e) => setConfirmName(e.target.value)}
-              />
-            </div>
+        {errorMessage ? (
+          <p role="alert" className="text-sm text-destructive">
+            {errorMessage}
+          </p>
+        ) : null}
+      </div>
 
-            {errorMessage ? (
-              <p role="alert" className="text-sm text-destructive">
-                {errorMessage}
-              </p>
-            ) : null}
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <SubmitDeleteButton disabledByName={disabledByName} />
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <SubmitDeleteButton disabledByName={disabledByName} />
+      </DialogFooter>
+    </form>
   );
 }
 

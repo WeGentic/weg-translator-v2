@@ -4,8 +4,8 @@ import { FileText, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { BatchDeleteConfirmDialog } from "./BatchDeleteConfirmDialog";
 import { cn } from "@/lib/utils";
+import { BatchDeleteConfirmDialog } from "./BatchDeleteConfirmDialog";
 
 /**
  * ProjectsBatchActionsPanel Component

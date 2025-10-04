@@ -44,7 +44,7 @@ export function EmptyProjectsState({ onCreate }: { onCreate: () => void }) {
       <Button
         type="button"
         onClick={onCreate}
-        className="mt-4 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:from-primary/90 hover:to-primary animate-in slide-in-from-bottom-2 duration-700 delay-300"
+        className="mt-4 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg transition-all hover:shadow-xl hover:scale-105 hover:from-primary/90 hover:to-primary animate-in slide-in-from-bottom-2 duration-700 delay-300"
         size="lg"
       >
         <Plus className="mr-2 h-5 w-5" aria-hidden />
