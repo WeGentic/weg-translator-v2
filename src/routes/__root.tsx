@@ -3,9 +3,10 @@ import { Outlet, createRootRoute, useNavigate } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import { MainLayout } from "@/app/layout";
+import { WorkspaceFooter } from "@/app/layout/main_elements";
+import { useAppHealth } from "@/app/hooks/useAppHealth";
 
 const BASE_LAYOUT_CONFIG = {
-  header: { mounted: true, visible: false, height: 64 },
   footer: { mounted: true, visible: true, height: 56 },
   sidebarOne: { mounted: true, width: 64 },
   sidebarTwo: { mounted: true, visible: true, width: 192 },
@@ -26,6 +27,7 @@ function dispatchNavigationEvent(view: "dashboard" | "projects" | "resource" | "
 
 function RootComponent() {
   const navigate = useNavigate();
+  const { health } = useAppHealth();
 
   const handleDashboardClick = useCallback(() => {
     navigate({ to: "/dashboard" }).catch(() => undefined);
@@ -56,7 +58,6 @@ function RootComponent() {
     <Fragment>
       <MainLayout.Root config={BASE_LAYOUT_CONFIG}>
         <MainLayout.Background />
-        <MainLayout.Header />
         <MainLayout.SidebarOne
           onDashboardClick={handleDashboardClick}
           onProjectsClick={handleProjectsClick}
@@ -68,7 +69,9 @@ function RootComponent() {
         <MainLayout.Main>
           <Outlet />
         </MainLayout.Main>
-        <MainLayout.Footer />
+        <MainLayout.Footer height={56}>
+          <WorkspaceFooter health={health} />
+        </MainLayout.Footer>
       </MainLayout.Root>
       {import.meta.env.DEV ? <TanStackRouterDevtools position="bottom-right" /> : null}
     </Fragment>

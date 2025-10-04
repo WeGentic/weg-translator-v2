@@ -1,4 +1,4 @@
-import { type PropsWithChildren } from "react";
+import { type CSSProperties, type PropsWithChildren } from "react";
 
 import { useLayoutSelector } from "./layout-context";
 import "./css-styles/layout-main.css";
@@ -19,6 +19,7 @@ export interface LayoutMainProps extends PropsWithChildren {
 export function LayoutMain({ children, scroll = "auto" }: LayoutMainProps) {
   const sidebarOne = useLayoutSelector((state) => state.sidebarOne);
   const sidebarTwo = useLayoutSelector((state) => state.sidebarTwo);
+  const footer = useLayoutSelector((state) => state.footer);
 
   const sidebarOneVisible = sidebarOne.mounted;
   const sidebarTwoVisible = sidebarTwo.mounted && sidebarTwo.visible;
@@ -28,12 +29,20 @@ export function LayoutMain({ children, scroll = "auto" }: LayoutMainProps) {
   if (sidebarTwoVisible) startColumn = 3;
 
   const gridColumn = `${startColumn} / -1`;
+  const footerOffset = footer.mounted && footer.visible ? footer.height : 0;
+  const baseSpacing = 8;
+  const contentStyle: CSSProperties = {
+    paddingInline: `${baseSpacing}px`,
+    paddingTop: `${baseSpacing}px`,
+    paddingBottom: `${footerOffset + baseSpacing}px`,
+    boxSizing: "border-box",
+  };
 
   return (
     <section
       role="main"
       className="layout-main"
-      style={{ gridColumn, gridRow: "2 / 3" }}
+      style={{ gridColumn, gridRow: "1 / 2" }}
     >
       <div
         className={
@@ -41,6 +50,7 @@ export function LayoutMain({ children, scroll = "auto" }: LayoutMainProps) {
             ? "layout-main__content layout-main__content--scroll-auto"
             : "layout-main__content layout-main__content--scroll-hidden"
         }
+        style={contentStyle}
       >
         {children}
       </div>

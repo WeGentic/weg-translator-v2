@@ -27,7 +27,8 @@
   },
   "include": [
     "src",
-    "packages/layout-three-zone/src"
+    "packages/layout-three-zone/src",
+    "packages/layout-projects-host/src"
   ],
   "references": [
     { "path": "./tsconfig.node.json" }

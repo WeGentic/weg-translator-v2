@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { PanelContent, ThreeZonePanel } from "@wegentic/layout-three-zone";
+import { ProjectsHostShell } from "@wegentic/layout-projects-host"; // Rollback: swap to ThreeZonePanel if verification finds regressions.
 import {
   ArrowDownWideNarrow,
   CheckCheck,
@@ -44,25 +44,28 @@ export function EditorPanel({
   const subtitle = projectName ? `${projectName}${documentName ? ` · ${documentName}` : ""}` : documentName;
 
   return (
-    <ThreeZonePanel
-      contentOverflow="auto"
-      header={
-        <EditorHeader
-          title={documentName ?? projectName ?? "Editor"}
-          subtitle={subtitle && subtitle !== (documentName ?? projectName ?? "Editor") ? subtitle : undefined}
-          onNavigateBack={onBackToOverview}
-          onCloseEditor={onCloseEditor}
-        />
-      }
-      toolbar={<EditorToolbar statusLabel={statusLabel} />}
-      footer={<EditorFooterPlaceholder />}
+    <section
+      className="flex h-full w-full flex-col"
+      aria-label={documentName ?? projectName ?? "Editor"}
     >
-      <PanelContent>
-        <div className="flex min-h-0 flex-1 flex-col">
+      <ProjectsHostShell
+        contentOverflow="auto"
+        header={
+          <EditorHeader
+            title={documentName ?? projectName ?? "Editor"}
+            subtitle={subtitle && subtitle !== (documentName ?? projectName ?? "Editor") ? subtitle : undefined}
+            onNavigateBack={onBackToOverview}
+            onCloseEditor={onCloseEditor}
+          />
+        }
+        toolbar={<EditorToolbar statusLabel={statusLabel} />}
+        footer={<EditorFooterPlaceholder />}
+      >
+        <div className="flex min-h-0 flex-1 flex-col pb-20">
           {children ?? <EditorPlaceholder projectName={projectName} />}
         </div>
-      </PanelContent>
-    </ThreeZonePanel>
+      </ProjectsHostShell>
+    </section>
   );
 }
 

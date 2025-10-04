@@ -3,12 +3,10 @@ import { useEffect } from "react";
 import { useAppHealth } from "@/app/hooks/useAppHealth";
 import { useGlobalNavigationEvents } from "@/app/hooks/useGlobalNavigationEvents";
 import { useWorkspaceShell } from "@/app/hooks/useWorkspaceShell";
-import { AppHeader, CollapsedFooterBar, CollapsedHeaderBar, WorkspaceFooter } from "@/app/layout/main_elements";
+import { CollapsedFooterBar, WorkspaceFooter } from "@/app/layout/main_elements";
 import { ProjectsPanel } from "@/components/projects/ProjectsPanel";
 import { EnhancedAppSettingsPanel } from "@/components/settings/EnhancedAppSettingsPanel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@/contexts/AuthContext";
-import { useHeaderTitle } from "@/hooks/useHeaderTitle";
 import type { ProjectListItem } from "@/ipc";
 
 import "./App.css";
@@ -18,7 +16,6 @@ import "./App.css";
  * relies on TanStack Router + workspace routes under `src/routes/`.
  */
 function App() {
-  const { user } = useAuth();
   const { health, systemError } = useAppHealth();
   const {
     mainView,
@@ -33,13 +30,6 @@ function App() {
     activeProject,
     activeEditorProject,
   } = useWorkspaceShell();
-
-  const headerTitle = useHeaderTitle({
-    explicit:
-      activeEditorProject
-        ? `Editor — ${activeEditorProject.name}`
-        : activeProject?.name ?? undefined,
-  });
 
   useGlobalNavigationEvents({
     onChangeView: setMainView,
@@ -103,10 +93,6 @@ function App() {
         </div>
       ) : null}
 
-      <div className="flex items-center justify-between border-b border-border/60 bg-background/80 px-4 py-3 shadow-sm">
-        <AppHeader title={headerTitle} hideUser={!user} />
-      </div>
-
       <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
         <main className="flex-1 min-h-0 overflow-auto p-4">{renderContent()}</main>
       </div>
@@ -115,7 +101,6 @@ function App() {
         <WorkspaceFooter health={health} />
       </div>
 
-      <CollapsedHeaderBar />
       <CollapsedFooterBar />
     </div>
   );

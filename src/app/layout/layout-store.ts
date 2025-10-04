@@ -1,14 +1,7 @@
 import type { ReactNode } from "react";
 import { createStore } from "zustand/vanilla";
 
-export const DEFAULT_HEADER_HEIGHT = 64;
 export const DEFAULT_FOOTER_HEIGHT = 50;
-
-export interface HeaderState {
-  mounted: boolean;
-  visible: boolean;
-  height: number;
-}
 
 export interface FooterState {
   mounted: boolean;
@@ -38,7 +31,6 @@ export interface MainState {
 }
 
 export interface LayoutConfig {
-  header?: Partial<HeaderState>;
   footer?: Partial<FooterState>;
   background?: Partial<BackgroundState>;
   sidebarOne?: Partial<SidebarOneState>;
@@ -47,23 +39,19 @@ export interface LayoutConfig {
 }
 
 export interface LayoutState {
-  header: HeaderState;
   footer: FooterState;
   background: BackgroundState;
   sidebarOne: SidebarOneState;
   sidebarTwo: SidebarTwoState;
   main: MainState;
-  headerContent: ReactNode | null;
   footerContent: ReactNode | null;
   sidebarOneContent: ReactNode | null;
   sidebarTwoContent: ReactNode | null;
-  setHeader(partial: Partial<HeaderState>): void;
   setFooter(partial: Partial<FooterState>): void;
   setBackground(partial: Partial<BackgroundState>): void;
   setSidebarOne(partial: Partial<SidebarOneState>): void;
   setSidebarTwo(partial: Partial<SidebarTwoState>): void;
   setMain(partial: Partial<MainState>): void;
-  setHeaderContent(content: ReactNode | null): void;
   setFooterContent(content: ReactNode | null): void;
   setSidebarOneContent(content: ReactNode | null): void;
   setSidebarTwoContent(content: ReactNode | null): void;
@@ -73,13 +61,11 @@ export interface LayoutState {
 
 export type LayoutStore = ReturnType<typeof createLayoutStore>;
 export type LayoutActions = {
-  setHeader: LayoutState["setHeader"];
   setFooter: LayoutState["setFooter"];
   setBackground: LayoutState["setBackground"];
   setSidebarOne: LayoutState["setSidebarOne"];
   setSidebarTwo: LayoutState["setSidebarTwo"];
   setMain: LayoutState["setMain"];
-  setHeaderContent: LayoutState["setHeaderContent"];
   setFooterContent: LayoutState["setFooterContent"];
   setSidebarOneContent: LayoutState["setSidebarOneContent"];
   setSidebarTwoContent: LayoutState["setSidebarTwoContent"];
@@ -89,11 +75,6 @@ export type LayoutActions = {
 
 function createSnapshot(): Omit<LayoutState, keyof LayoutActions> {
   return {
-    header: {
-      mounted: false,
-      visible: true,
-      height: DEFAULT_HEADER_HEIGHT,
-    },
     footer: {
       mounted: false,
       visible: true,
@@ -116,18 +97,9 @@ function createSnapshot(): Omit<LayoutState, keyof LayoutActions> {
     main: {
       scrollable: true,
     },
-    headerContent: null,
     footerContent: null,
     sidebarOneContent: null,
     sidebarTwoContent: null,
-  };
-}
-
-function mergeHeader(current: HeaderState, patch: Partial<HeaderState>): HeaderState {
-  return {
-    mounted: patch.mounted ?? current.mounted,
-    visible: patch.visible ?? current.visible,
-    height: patch.height ?? current.height,
   };
 }
 
@@ -171,10 +143,6 @@ function mergeMain(current: MainState, patch: Partial<MainState>): MainState {
 export function createLayoutStore(initialConfig?: LayoutConfig) {
   const store = createStore<LayoutState>((set) => ({
     ...createSnapshot(),
-    setHeader: (partial) =>
-      set((state) => ({
-        header: mergeHeader(state.header, partial),
-      })),
     setFooter: (partial) =>
       set((state) => ({
         footer: mergeFooter(state.footer, partial),
@@ -195,14 +163,10 @@ export function createLayoutStore(initialConfig?: LayoutConfig) {
       set((state) => ({
         main: mergeMain(state.main, partial),
       })),
-    setHeaderContent: (content) => set({ headerContent: content }),
     setFooterContent: (content) => set({ footerContent: content }),
     setSidebarOneContent: (content) => set({ sidebarOneContent: content }),
     setSidebarTwoContent: (content) => set({ sidebarTwoContent: content }),
     applyConfig: (config) => {
-      if (config.header) {
-        set((state) => ({ header: mergeHeader(state.header, config.header!) }));
-      }
       if (config.footer) {
         set((state) => ({ footer: mergeFooter(state.footer, config.footer!) }));
       }

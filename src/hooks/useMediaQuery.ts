@@ -17,10 +17,11 @@ export type Breakpoint = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
  */
 export function useMediaQuery(query: Breakpoint): boolean {
   const getMatches = (query: string): boolean => {
-    if (typeof window !== 'undefined') {
-      return window.matchMedia(query).matches;
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false;
     }
-    return false;
+    const list = window.matchMedia(query);
+    return typeof list?.matches === 'boolean' ? list.matches : false;
   };
 
   const mediaQuery = `(min-width: ${BREAKPOINTS[query]}px)`;
@@ -28,10 +29,17 @@ export function useMediaQuery(query: Breakpoint): boolean {
   const [matches, setMatches] = useState<boolean>(() => getMatches(mediaQuery));
 
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return () => undefined;
+    }
+
     const matchMedia = window.matchMedia(mediaQuery);
+    if (matchMedia == null) {
+      return () => undefined;
+    }
 
     function handleChange() {
-      setMatches(matchMedia.matches);
+      setMatches(typeof matchMedia.matches === 'boolean' ? matchMedia.matches : false);
     }
 
     // Listen for changes

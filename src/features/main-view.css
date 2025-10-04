@@ -1,0 +1,122 @@
+:root {
+  /* View Layout Dimensions */
+    --projects-table-header-height: 48px;
+    --projects-table-toolbar-height: 56px;
+    --dashboard-header-height: 48px;
+    --dashboard-toolbar-height: 56px;
+    --editor-header-height: 48px;
+    --editor-toolbar-height: 56px;
+    --resources-header-height: 48px;
+    --resources-toolbar-height: 56px;
+    --settings-header-height: 48px;
+    --settings-toolbar-height: 56px;
+    --projectmanager-header-height: 48px;
+    --projectmanager-toolbar-height: 56px;
+
+
+
+  /* Spacing and Padding */
+  --projects-table-header-padding: 0.75rem;
+  --projects-table-cell-padding: 0.75rem;
+
+  /* Typography */
+  --projects-table-header-font-size: 0.75rem;
+  --projects-table-cell-font-size: 0.875rem;
+  --projects-table-line-height: 1.5rem;
+}
+
+.mainview-container {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border-top-left-radius: var(--radius-xl);
+  border-bottom-left-radius: var(--radius-xl);
+  border-top-width: 1px;
+  border-left-width: 1px;
+  border-bottom-width: 1px;
+  border-color: var(--border);
+  background-color: var(--popover);
+  box-shadow: var(--shadow-sm);
+}
+
+.dashboard-header-zone {
+  height: var(--dashboard-header-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.dashboard-toolbar-zone {
+  height: var(--dashboard-toolbar-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(to right, var(--background)/98%, var(--background)/95%);
+  backdrop-blur: blur(10px);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.resources-header-zone {
+  height: var(--resources-header-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.resources-toolbar-zone {
+  height: var(--resources-toolbar-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(to right, var(--background)/98%, var(--background)/95%);
+  backdrop-blur: blur(10px);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.projectmanager-header-zone {
+  height: var(--projectmanager-header-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.projectmanager-toolbar-zone {
+  height: var(--projectmanager-toolbar-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(to right, var(--background)/98%, var(--background)/95%);
+  backdrop-blur: blur(10px);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}

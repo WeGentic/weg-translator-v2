@@ -19,9 +19,7 @@ function LoginPage() {
   useEffect(() => {
     const store = layoutStore;
     const state = store.getState();
-    state.setHeader({ mounted: false, visible: false });
-    state.setFooter({ mounted: false, visible: false });
-    state.setHeaderContent(null);
+    state.setFooter({ mounted: true, visible: true });
     state.setFooterContent(null);
     state.setBackground({ mounted: true, visible: true, element: <BlankBackground tone="default" /> });
     return () => {
@@ -31,14 +29,6 @@ function LoginPage() {
 
   return (
     <>
-      <MainLayout.Controller
-        config={{
-          header: { visible: false, mounted: false },
-          footer: { visible: false, mounted: false },
-          background: { visible: true },
-        }}
-      />
-
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="w-full max-w-6xl rounded-3xl border border-border/40 bg-background/85 p-6 shadow-xl backdrop-blur">
           <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2">

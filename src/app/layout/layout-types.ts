@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 
 export type LayoutVisibility = {
-  header?: boolean;
   footer?: boolean;
 };
 
@@ -11,10 +10,9 @@ export type BackgroundConfig =
   | { kind: "image"; src: string; blur?: number }
   | { kind: "component"; element: ReactNode };
 
-export type LayoutSlotKey = "header" | "footer" | "background";
+export type LayoutSlotKey = "footer" | "background";
 
 export interface LayoutSlots {
-  header?: ReactNode;
   footer?: ReactNode;
   background?: ReactNode;
 }

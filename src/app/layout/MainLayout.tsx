@@ -4,7 +4,6 @@ import { LayoutProvider } from "./layout-context";
 import { LayoutBackground } from "./layout-background";
 import { LayoutController } from "./layout-controller";
 import { LayoutFooter } from "./layout-footer";
-import { LayoutHeader } from "./layout-header";
 import { LayoutMain } from "./layout-main";
 import { LayoutShell } from "./layout-shell";
 import { LayoutSidebarOne } from "./layout-sidebar-one";
@@ -40,7 +39,6 @@ export function LayoutRoot({ children, config }: LayoutRootProps) {
  */
 export const MainLayout = {
   Root: LayoutRoot,
-  Header: LayoutHeader,
   Footer: LayoutFooter,
   SidebarOne: LayoutSidebarOne,
   SidebarTwo: LayoutSidebarTwo,

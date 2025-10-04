@@ -5,16 +5,11 @@ import { WorkspacePage } from "@/features/workspace/WorkspacePage";
 import { MainLayout } from "@/app/layout";
 
 const TEST_LAYOUT_CONFIG = {
-  header: { mounted: true, visible: true, height: 64 },
   footer: { mounted: true, visible: true, height: 56 },
   sidebarOne: { mounted: true, width: 64 },
   sidebarTwo: { mounted: true, visible: true, width: 192 },
   background: { mounted: true, visible: true },
 } as const;
-
-vi.mock("@/contexts/AuthContext", () => ({
-  useAuth: () => ({ user: null }),
-}));
 
 vi.mock("@/logging", () => ({
   logger: {
@@ -27,18 +22,7 @@ vi.mock("@/logging", () => ({
 }));
 
 vi.mock("@/app/hooks/useAppHealth", () => ({
-  useAppHealth: () => ({ health: null, systemError: null, setSystemError: vi.fn() }),
-}));
-
-vi.mock("@/hooks/useHeaderTitle", () => ({
-  useHeaderTitle: ({ explicit }: { explicit?: string }) => explicit ?? "Projects",
-}));
-
-vi.mock("@/app/layout/main_elements", () => ({
-  AppHeader: ({ title }: { title?: string; hideUser?: boolean }) => (
-    <header data-testid="app-header">{title ?? "App Header"}</header>
-  ),
-  WorkspaceFooter: () => <footer data-testid="workspace-footer" />,
+  useAppHealth: () => ({ systemError: null }),
 }));
 
 vi.mock("@/components/projects/ProjectsPanel", () => ({

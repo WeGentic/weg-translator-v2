@@ -11,7 +11,14 @@ export type EditorViewKey = `${typeof EDITOR_VIEW_PREFIX}${string}`;
 /**
  * Union of all supported content panes for the main workspace area.
  */
-export type MainView = "projects" | "settings" | "editor" | ProjectViewKey | EditorViewKey;
+export type MainView =
+  | "dashboard"
+  | "projects"
+  | "resource"
+  | "settings"
+  | "editor"
+  | ProjectViewKey
+  | EditorViewKey;
 
 /**
  * Creates a stable sidebar key for a project overview tab.

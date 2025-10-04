@@ -170,9 +170,6 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
 
       const selectedProjectIds = Array.from(selectedRows);
 
-      // Dispatch event to update sidebar title
-      window.dispatchEvent(new CustomEvent("sidebar-two:title", { detail: { title: "Projects" } }));
-
       // Show batch actions panel in Sidebar Two
       store.setSidebarTwoContent(
         <ProjectsBatchActionsPanel
@@ -195,9 +192,6 @@ export function ProjectsPanel({ onOpenProject }: ProjectsPanelProps = {}) {
         const updatedTime = Date.parse(p.updatedAt);
         return !Number.isNaN(updatedTime) && updatedTime >= oneDayAgo;
       }).length;
-
-      // Dispatch event to update sidebar title
-      window.dispatchEvent(new CustomEvent("sidebar-two:title", { detail: { title: "Overview" } }));
 
       store.setSidebarTwoContent(
         <ProjectsOverviewCard

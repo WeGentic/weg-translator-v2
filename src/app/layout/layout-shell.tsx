@@ -25,25 +25,23 @@ function calculateSidebarTwoWidth(state: SidebarTwoState): number {
 }
 
 /**
- * High-level frame that arranges the background surface and the grid used for
- * header, sidebar rails, and main content. Every slot component mounts
- * inside this shell so we can update layout metrics centrally.
+ * High-level frame that arranges the background surface, sidebar rails, and
+ * main content. Every slot component mounts inside this shell so layout metrics
+ * stay coordinated.
  */
 export function LayoutShell({ children }: PropsWithChildren) {
-  const header = useLayoutSelector((state) => state.header);
   const sidebarOne = useLayoutSelector((state) => state.sidebarOne);
   const sidebarTwo = useLayoutSelector((state) => state.sidebarTwo);
 
-  const headerHeight = header.mounted && header.visible ? header.height : 0;
   // Footer is now position:fixed, so it should not reserve grid space (set to 0)
   const footerHeight = 0;
   const sidebarOneWidth = calculateSidebarOneWidth(sidebarOne);
   const sidebarTwoWidth = calculateSidebarTwoWidth(sidebarTwo);
 
-  // The grid template arranges three rows (header, main, footer) and three
-  // columns (sidebarOne + sidebarTwo + main content). We translate runtime state into CSS so
-  // transitions and conditional mounting stay in sync automatically.
-  const templateRows = `${headerHeight}px 1fr ${footerHeight}px`;
+  // The grid template arranges two rows (main content and a spacer for the fixed footer)
+  // and three columns (sidebarOne + sidebarTwo + main content). We translate runtime
+  // state into CSS so transitions and conditional mounting stay in sync automatically.
+  const templateRows = `1fr ${footerHeight}px`;
   const templateColumns = `${sidebarOneWidth}px ${sidebarTwoWidth}px minmax(0, 1fr)`;
 
   return (

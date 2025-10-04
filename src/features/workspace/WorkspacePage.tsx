@@ -1,32 +1,39 @@
 import { useCallback, useEffect } from "react";
 import { TbFolders } from "react-icons/tb";
 import { FiSettings, FiEdit3 } from "react-icons/fi";
+import { LayoutDashboard, Database } from "lucide-react";
 
 import { BlankBackground, useLayoutStoreApi } from "@/app/layout";
-import { AppHeader, WorkspaceFooter, type MenuItem } from "@/app/layout/main_elements";
+import { type MenuItem } from "@/app/layout/main_elements";
 import { useAppHealth } from "@/app/hooks/useAppHealth";
 import { useGlobalNavigationEvents } from "@/app/hooks/useGlobalNavigationEvents";
 import { useWorkspaceShell } from "@/app/hooks/useWorkspaceShell";
-import { toProjectViewKey } from "@/app/state/main-view";
+import { toProjectViewKey, type MainView } from "@/app/state/main-view";
 import { EditorPanel, EditorPlaceholder } from "@/components/editor";
 import { ProjectsPanel } from "@/components/projects/ProjectsPanel";
 import { ProjectOverview } from "@/components/projects/overview/ProjectOverview";
 import { ProjectOverviewPlaceholder } from "@/components/projects/overview/ProjectOverviewPlaceholder";
 import { EnhancedAppSettingsPanel } from "@/components/settings/EnhancedAppSettingsPanel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@/contexts/AuthContext";
-import { useHeaderTitle } from "@/hooks/useHeaderTitle";
 import type { ProjectListItem } from "@/ipc";
+import { DashboardView } from "@/features/dashboard/DashboardView";
+import { ResourcesView } from "@/features/resources/ResourcesView";
+import ProjectManagerView from "../project-manager/ProjectManagerView";
 
 const FIXED_MENU_ITEMS: MenuItem[] = [
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "projects", label: "Projects", icon: TbFolders },
+  { key: "resource", label: "Resources", icon: Database },
   { key: "editor", label: "Editor", icon: FiEdit3 },
   { key: "settings", label: "Settings", icon: FiSettings },
 ];
 
-export function WorkspacePage() {
-  const { user } = useAuth();
-  const { health, systemError } = useAppHealth();
+export interface WorkspacePageProps {
+  initialView?: MainView;
+}
+
+export function WorkspacePage({ initialView = "projects" }: WorkspacePageProps) {
+  const { systemError } = useAppHealth();
 
   const {
     mainView,
@@ -38,16 +45,9 @@ export function WorkspacePage() {
     currentEditorProjectId,
     activeProject,
     activeEditorProject,
-  } = useWorkspaceShell();
+  } = useWorkspaceShell(initialView);
 
   const layoutStore = useLayoutStoreApi();
-
-  const headerTitle = useHeaderTitle({
-    explicit:
-      activeEditorProject
-        ? `Editor — ${activeEditorProject.name}`
-        : activeProject?.name ?? FIXED_MENU_ITEMS.find((item) => item.key === mainView)?.label ?? undefined,
-  });
 
   const handleProjectOpen = useCallback((project: ProjectListItem) => {
     handleOpenProject(project);
@@ -77,44 +77,29 @@ export function WorkspacePage() {
     store.getState().setBackground({
       mounted: true,
       visible: true,
-      element: <BlankBackground/>
+      element: <BlankBackground />,
     });
     return () => {
       store.getState().setBackground({ element: null, mounted: false });
     };
   }, [layoutStore]);
 
-  useEffect(() => {
-    const store = layoutStore;
-    store.getState().setHeader({ mounted: true, visible: true, height: 64 });
-    return () => {
-      store.getState().setHeaderContent(null);
-      store.getState().setHeader({ mounted: false });
-    };
-  }, [layoutStore]);
-
-  useEffect(() => {
-    const store = layoutStore;
-    store.getState().setHeaderContent(<AppHeader title={headerTitle} hideUser={!user} />);
-  }, [layoutStore, headerTitle, user]);
-
-  useEffect(() => {
-    const store = layoutStore;
-    store.getState().setFooter({ mounted: true, visible: true, height: 56 });
-    return () => {
-      store.getState().setFooterContent(null);
-      store.getState().setFooter({ mounted: false });
-    };
-  }, [layoutStore]);
-
-  useEffect(() => {
-    const store = layoutStore;
-    store.getState().setFooterContent(<WorkspaceFooter health={health} />);
-  }, [layoutStore, health]);
-
   const renderContent = () => {
+    if (mainView === "dashboard") {
+      return <DashboardView />;
+    }
+    {/* Old code /> 
     if (mainView === "projects") {
       return <ProjectsPanel onOpenProject={handleProjectOpen} />;
+    }
+      */}
+    
+      if (mainView === "projects") {
+      return <ProjectManagerView/>;
+    }
+
+    if (mainView === "resource") {
+      return <ResourcesView />;
     }
 
     if (mainView === "settings") {
@@ -172,9 +157,8 @@ export function WorkspacePage() {
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 overflow-hidden mb-12">
-        <div className="my-2 flex min-h-0 flex-1 flex-col overflow-y-auto">{renderContent()}</div>
+      <div className="flex min-h-0 flex-1 overflow-hidden ">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{renderContent()}</div>
       </div>
     </div>
-  );
-}
+  );}

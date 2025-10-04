@@ -1,0 +1,49 @@
+@import "../../../../src/components/projects/table/dropdowns.css";
+
+:root {
+  --projects-table-header-height: 48px;
+  --projects-table-toolbar-height: 56px;
+}
+
+.projects-table-header-zone {
+  height: var(--projects-table-header-height);
+  flex-shrink: 0;
+}
+
+.projects-table-toolbar-zone {
+  height: var(--projects-table-toolbar-height);
+  flex-shrink: 0;
+}
+
+.projects-table-main-zone {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scroll-behavior: smooth;
+}
+
+.projects-table-main-zone::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.projects-table-main-zone::-webkit-scrollbar-track {
+  background: var(--color-tr-muted);
+  border-radius: 4px;
+}
+
+.projects-table-main-zone::-webkit-scrollbar-thumb {
+  background: var(--color-tr-primary-blue);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.projects-table-main-zone::-webkit-scrollbar-thumb:hover {
+  background: var(--color-tr-accent);
+}
+
+.projects-table-main-zone tfoot {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+}

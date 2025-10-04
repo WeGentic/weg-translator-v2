@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PanelContent, ThreeZonePanel } from "@wegentic/layout-three-zone";
+import { ProjectsHostShell } from "@wegentic/layout-projects-host"; // Rollback: swap to ThreeZonePanel if verification finds regressions.
 import { cn } from "@/lib/utils";
 import {
   getAppSettings,
@@ -593,17 +593,18 @@ export function EnhancedAppSettingsPanel() {
   }
 
   return (
-    <ThreeZonePanel
-      className="h-full"
-      header={
-        <div className="flex w-full items-start justify-between">
-          <div className="space-y-1">
-            <h1 className="text-lg font-semibold text-foreground">Settings</h1>
-            <p className="text-xs text-muted-foreground">
-              Configure application preferences and translation defaults.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+    <section className="flex h-full w-full flex-col" aria-labelledby="settings-heading">
+      <ProjectsHostShell
+        className="h-full"
+        header={
+          <div className="flex w-full items-start justify-between">
+            <div className="space-y-1">
+              <h1 id="settings-heading" className="text-lg font-semibold text-foreground">Settings</h1>
+              <p className="text-xs text-muted-foreground">
+                Configure application preferences and translation defaults.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -674,19 +675,19 @@ export function EnhancedAppSettingsPanel() {
           </div>
         </div>
       }
-      footer={
-        <div className="flex w-full items-center justify-between text-xs text-muted-foreground">
-          <span>Changes save automatically.</span>
-          <span>{isUpdating ? "Applying changes…" : "All settings up to date."}</span>
-        </div>
-      }
-    >
-      <PanelContent>
-        <div className="flex min-h-0 flex-1 flex-col gap-6 p-4 md:p-6">
+        contentOverflow="auto"
+        footer={
+          <div className="flex w-full items-center justify-between text-xs text-muted-foreground">
+            <span>Changes save automatically.</span>
+            <span>{isUpdating ? "Applying changes…" : "All settings up to date."}</span>
+          </div>
+        }
+      >
+        <div className="flex min-h-0 flex-1 flex-col gap-6 p-4 pb-20 md:p-6">
           {panelBody}
         </div>
-      </PanelContent>
-    </ThreeZonePanel>
+      </ProjectsHostShell>
+    </section>
   );
 }
 
