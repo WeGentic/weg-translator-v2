@@ -1,23 +1,21 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-import { cn } from '@/lib/utils';
-import { ProjectsTableGrid } from './components/datagrid/ProjectsTableGrid';
-import { ProjectManagerViewProps, ProjectRow, TableFilters } from './types/types';
-import { formatDateParts } from '@/lib/datetime';
-import { useMemo, useState } from 'react';
+import { useMemo, useState } from "react";
 import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
   type SortingState,
-} from '@tanstack/react-table';
-import { rankItem } from '@tanstack/match-sorter-utils';
-import { buildColumns } from './components/datagrid/columns';
-import { useBreakpoint } from '@/hooks/useMediaQuery';
-import { useDebouncedValue } from './hooks/useDebouncedValue';
+} from "@tanstack/react-table";
+import { rankItem } from "@tanstack/match-sorter-utils";
+
+import { useBreakpoint } from "@/hooks/useMediaQuery";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { formatDateParts } from "@/lib/datetime";
+import { cn } from "@/lib/utils";
+
+import { ProjectsTableGrid } from "./components/datagrid/ProjectsTableGrid";
+import { buildColumns } from "./components/datagrid/columns";
+import type { ProjectManagerContentProps, ProjectRow, TableFilters } from "./types/types";
 
 function fuzzyFilter(
   row: { getValue: (columnId: string) => unknown },
@@ -30,14 +28,14 @@ function fuzzyFilter(
       ? ''
       : typeof cellValue === 'string'
         ? cellValue
-        : typeof cellValue === 'number' || typeof cellValue === 'boolean'
+        : typeof cellValue === "number" || typeof cellValue === "boolean"
           ? String(cellValue)
-          : '';
+          : "";
   const itemRank = rankItem(stringValue, value);
   return itemRank.passed;
 }
 
-function toProjectRow(item: ProjectManagerViewProps['items'][number]): ProjectRow & {
+function toProjectRow(item: ProjectManagerContentProps["items"][number]): ProjectRow & {
   updatedRaw: number;
   createdRaw: number;
 } {
@@ -58,66 +56,86 @@ function toProjectRow(item: ProjectManagerViewProps['items'][number]): ProjectRo
   };
 }
 
-export function ProjectManagerContent({
-  items,
-  onOpenProject,
-  onRequestDelete,
-  // Row selection
-  selectedRows: controlledSelectedRows,
-  onRowSelectionChange: setControlledSelectedRows,
-  // Optional controlled state
-  sorting: controlledSorting,
-  onSortingChange: setControlledSorting,
-  search: controlledSearch,
-  onSearchChange: setControlledSearch,
-  filters: controlledFilters,
-  onFiltersChange: setControlledFilters,
-}: ProjectManagerViewProps & {
+const DEFAULT_FILTERS: TableFilters = {
+  progress: "all",
+  projectType: "all",
+  updatedWithin: "any",
+};
+
+type ExtendedProps = ProjectManagerContentProps & {
   sorting?: SortingState;
   onSortingChange?: (next: SortingState) => void;
   search?: string;
   onSearchChange?: (next: string) => void;
   filters?: TableFilters;
   onFiltersChange?: (next: TableFilters) => void;
-}) {
-  const [localSorting, setLocalSorting] = useState<SortingState>([{ id: 'updated', desc: true }]);
-  const [localFilters,  ] = useState<TableFilters>({
-    progress: 'all',
-    projectType: 'all',
-    updatedWithin: 'any',
-  });
-  const [localSelectedRows, setLocalSelectedRows] = useState<Set<string>>(new Set());
-  const [localSearch, setLocalSearch] = useState('');
+};
+
+export function ProjectManagerContent({
+  items,
+  onOpenProject,
+  onRequestDelete,
+  selectedRows: controlledSelectedRows,
+  onRowSelectionChange: setControlledSelectedRows,
+  sorting: controlledSorting,
+  onSortingChange: setControlledSorting,
+  search: controlledSearch,
+  filters: controlledFilters,
+}: ExtendedProps) {
+  const [localSorting, setLocalSorting] = useState<SortingState>([{ id: "updated", desc: true }]);
+  const [localSelectedRows, setLocalSelectedRows] = useState<Set<string>>(() => new Set());
 
   const selectedRows = controlledSelectedRows ?? localSelectedRows;
   const setSelectedRows = setControlledSelectedRows ?? setLocalSelectedRows;
-  const setSorting = setControlledSorting ?? setLocalSorting;
-  const filters = controlledFilters ?? localFilters;
-  const data = useMemo(() => items.map(toProjectRow), [items]);
   const sorting = controlledSorting ?? localSorting;
-  const search = controlledSearch ?? localSearch;
+  const setSorting = setControlledSorting ?? setLocalSorting;
+  const filters = controlledFilters ?? DEFAULT_FILTERS;
+  const search = controlledSearch ?? "";
+
+  const data = useMemo(() => items.map(toProjectRow), [items]);
   const breakpoint = useBreakpoint();
   const debouncedSearch = useDebouncedValue(search, 250);
 
   const filteredData = useMemo(() => {
     const now = Date.now();
     const thresholdMs =
-      filters.updatedWithin === '24h'
+      filters.updatedWithin === "24h"
         ? 24 * 60 * 60 * 1000
-        : filters.updatedWithin === '7d'
+        : filters.updatedWithin === "7d"
           ? 7 * 24 * 60 * 60 * 1000
-          : filters.updatedWithin === '30d'
+          : filters.updatedWithin === "30d"
             ? 30 * 24 * 60 * 60 * 1000
             : null;
     return data.filter((row) => {
-      if (filters.progress !== 'all' && row.activityStatus !== filters.progress) return false;
-      if (filters.projectType !== 'all' && row.projectType !== filters.projectType) return false;
+      if (filters.progress !== "all" && row.activityStatus !== filters.progress) return false;
+      if (filters.projectType !== "all" && row.projectType !== filters.projectType) return false;
       if (thresholdMs != null) {
         if (now - row.updatedRaw > thresholdMs) return false;
       }
       return true;
     });
   }, [data, filters]);
+
+  const searchFilteredData = useMemo(() => {
+    const query = debouncedSearch.trim();
+    if (query.length === 0) return filteredData;
+
+    return filteredData.filter((row) => {
+      const fields: Array<string | number | undefined> = [
+        row.name,
+        row.slug,
+        row.projectType,
+        row.status,
+        row.activityStatus,
+      ];
+
+      return fields.some((value) => {
+        if (value == null) return false;
+        const stringValue = typeof value === "string" ? value : String(value);
+        return rankItem(stringValue, query).passed;
+      });
+    });
+  }, [filteredData, debouncedSearch]);
 
   const columns = useMemo(
     () =>
@@ -135,7 +153,7 @@ export function ProjectManagerContent({
   );
 
   const table = useReactTable({
-    data: filteredData,
+    data: searchFilteredData,
     columns,
     state: {
       sorting,
@@ -145,7 +163,7 @@ export function ProjectManagerContent({
     globalFilterFn: fuzzyFilter,
     onSortingChange: (updaterOrValue) => {
       const nextState =
-        typeof updaterOrValue === 'function' ? updaterOrValue(sorting) : updaterOrValue;
+        typeof updaterOrValue === "function" ? updaterOrValue(sorting) : updaterOrValue;
       setSorting(nextState);
     },
     getCoreRowModel: getCoreRowModel(),
@@ -154,45 +172,38 @@ export function ProjectManagerContent({
   });
 
   return (
-    <main
-      className='flex-1 overflow-auto bg-tr-white p-6'
-      aria-label='Project Manager main content'
-    >
-      {/* Main Content Zone - Scrollable table area with footer */}
-      <div className='flex-1 flex flex-col min-h-0'>
+    <div className="flex min-h-0 flex-1 flex-col" aria-label="Project Manager main content">
+      <div className="flex-1 overflow-auto">
         <ProjectsTableGrid table={table} selectedRows={selectedRows} search={search} />
+      </div>
 
-        {/* Footer Zone - Positioned at bottom of container (outside scrollable area) */}
-        <div
-          className={cn(
-            'flex-shrink-0',
-            'border-t-2 border-border',
-            'bg-gradient-to-r from-muted/15 via-muted/8 to-transparent',
-            'backdrop-blur-sm shadow-sm',
-          )}
-        >
-          <div className='px-4 py-3 text-[11px] font-medium text-primary'>
-            <div className='flex items-center gap-4'>
-              {/* Total projects count */}
-              <span className='flex items-center gap-1.5'>
-                <span className='text-muted-foreground'>Total Projects:</span>
-                <span className='inline-flex items-center justify-center min-w-[24px] h-5 px-1.5 text-[11px] font-semibold bg-primary/15 text-primary rounded border border-primary/30'>
-                  {filteredData.length}
+      <div
+        className={cn(
+          "flex-shrink-0",
+          "border-t-2 border-border",
+          "bg-gradient-to-r from-muted/15 via-muted/8 to-transparent",
+          "backdrop-blur-sm shadow-sm",
+        )}
+      >
+        <div className="px-4 py-3 text-[11px] font-medium text-primary">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">Total Projects:</span>
+              <span className="inline-flex h-5 min-w-[24px] items-center justify-center rounded border border-primary/30 bg-primary/15 px-1.5 text-[11px] font-semibold text-primary">
+                {searchFilteredData.length}
+              </span>
+            </span>
+            {selectedRows.size > 0 ? (
+              <span className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Selected:</span>
+                <span className="inline-flex h-5 min-w-[24px] items-center justify-center rounded border border-secondary/40 bg-secondary/20 px-1.5 text-[11px] font-semibold text-secondary-foreground">
+                  {selectedRows.size}
                 </span>
               </span>
-              {/* Selected count - only shown when items are selected */}
-              {selectedRows.size > 0 && (
-                <span className='flex items-center gap-1.5'>
-                  <span className='text-muted-foreground'>Selected:</span>
-                  <span className='inline-flex items-center justify-center min-w-[24px] h-5 px-1.5 text-[11px] font-semibold bg-secondary/20 text-secondary-foreground rounded border border-secondary/40'>
-                    {selectedRows.size}
-                  </span>
-                </span>
-              )}
-            </div>
+            ) : null}
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -10,7 +10,6 @@ import { useGlobalNavigationEvents } from "@/app/hooks/useGlobalNavigationEvents
 import { useWorkspaceShell } from "@/app/hooks/useWorkspaceShell";
 import { toProjectViewKey, type MainView } from "@/app/state/main-view";
 import { EditorPanel, EditorPlaceholder } from "@/components/editor";
-import { ProjectsPanel } from "@/components/projects/ProjectsPanel";
 import { ProjectOverview } from "@/components/projects/overview/ProjectOverview";
 import { ProjectOverviewPlaceholder } from "@/components/projects/overview/ProjectOverviewPlaceholder";
 import { EnhancedAppSettingsPanel } from "@/components/settings/EnhancedAppSettingsPanel";
@@ -88,14 +87,8 @@ export function WorkspacePage({ initialView = "projects" }: WorkspacePageProps) 
     if (mainView === "dashboard") {
       return <DashboardView />;
     }
-    {/* Old code /> 
     if (mainView === "projects") {
-      return <ProjectsPanel onOpenProject={handleProjectOpen} />;
-    }
-      */}
-    
-      if (mainView === "projects") {
-      return <ProjectManagerView/>;
+      return <ProjectManagerView onOpenProject={handleProjectOpen} />;
     }
 
     if (mainView === "resource") {

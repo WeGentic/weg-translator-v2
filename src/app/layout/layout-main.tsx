@@ -32,7 +32,6 @@ export function LayoutMain({ children, scroll = "auto" }: LayoutMainProps) {
   const footerOffset = footer.mounted && footer.visible ? footer.height : 0;
   const baseSpacing = 8;
   const contentStyle: CSSProperties = {
-    paddingInline: `${baseSpacing}px`,
     paddingTop: `${baseSpacing}px`,
     paddingBottom: `${footerOffset + baseSpacing}px`,
     boxSizing: "border-box",

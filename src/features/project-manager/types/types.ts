@@ -25,14 +25,10 @@ export interface TableFilters {
   updatedWithin: DatePreset;
 }
 
-export interface ProjectManagerViewProps {
+export interface ProjectManagerContentProps {
   items: ProjectListItem[];
   onOpenProject?: (projectId: string) => void;
   onRequestDelete?: (projectId: string, projectName: string) => void;
-  onCreateProject?: () => void;
-  // Row selection
   selectedRows?: Set<string>;
   onRowSelectionChange?: (selectedRows: Set<string>) => void;
-  // Batch operations
-  onBatchDelete?: (projectIds: string[]) => Promise<void>;
 }

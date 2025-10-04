@@ -3,9 +3,8 @@ import { ChevronDown, ChevronUp, Trash2, FolderOpen } from "lucide-react";
 
 import { IconTooltipButton } from "@/components/IconTooltipButton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { StatusBadge, TYPE_PRESENTATION, PROGRESS_PRESENTATION } from "./presentation";
-import type { ProjectRow, ProjectType } from "./types";
-import type { ProgressStatus } from "./presentation";
+import type { ProjectRow, ProjectType } from "../../types/types";
+import { PROGRESS_PRESENTATION, StatusBadge, TYPE_PRESENTATION, type ProgressStatus } from "./presentation";
 
 // Custom compact date formatter for MM/DD/YY HH:mm
 function formatCompactDate(dateString: string): string {
@@ -392,5 +391,16 @@ export function buildColumns(
     }),
   ] as ColumnDef<ProjectRow, unknown>[];
 
-  return columns;
+  const maxPriority =
+    breakpoint.isMobile || (!breakpoint.isDesktop && !breakpoint.isWide)
+      ? COLUMN_PRIORITIES.ALWAYS
+      : COLUMN_PRIORITIES.HIDE_FIRST;
+
+  return columns.filter((column) => {
+    const priority = (column.meta as ProjectsColumnMeta | undefined)?.priority ?? COLUMN_PRIORITIES.ALWAYS;
+    if (priority === COLUMN_PRIORITIES.HIDE_FIRST && maxPriority === COLUMN_PRIORITIES.ALWAYS) {
+      return false;
+    }
+    return true;
+  });
 }

@@ -8,7 +8,7 @@ import { ProjectsOverviewCard } from "../components/ProjectsOverviewCard";
 type Args = {
   selectedRows: Set<string>;
   projects: ProjectListItem[];
-  onBatchDelete: (ids: string[]) => void;
+  onBatchDelete: (ids: string[]) => Promise<void>;
   onOpenProject: (projectId: string) => void;
   clearSelection: () => void;
 };
