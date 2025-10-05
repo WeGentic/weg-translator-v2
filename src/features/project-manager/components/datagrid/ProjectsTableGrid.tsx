@@ -1,4 +1,4 @@
-import type { Table as TableInstance } from "@tanstack/react-table";
+import type { Row, Table as TableInstance } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,11 +26,12 @@ type ColumnMetaShape = {
  */
 export interface ProjectsTableGridProps {
   table: TableInstance<ProjectRow>;
+  rows: Row<ProjectRow>[];
   selectedRows: Set<string>;
   search: string;
 }
 
-export function ProjectsTableGrid({ table, selectedRows, search }: ProjectsTableGridProps) {
+export function ProjectsTableGrid({ table, rows, selectedRows, search }: ProjectsTableGridProps) {
   const columns = table.getAllColumns();
 
   return (
@@ -70,7 +71,7 @@ export function ProjectsTableGrid({ table, selectedRows, search }: ProjectsTable
         </TableHeader>
         {/* Table Body with Enhanced Row Effects */}
         <TableBody>
-          {table.getRowModel().rows.length === 0 ? (
+          {rows.length === 0 ? (
             // Empty state row
             <TableRow>
               <TableCell colSpan={columns.length} className="h-32 px-3 py-8 text-center text-muted-foreground">
@@ -89,7 +90,7 @@ export function ProjectsTableGrid({ table, selectedRows, search }: ProjectsTable
             </TableRow>
           ) : (
             // Data rows with modern hover/selection/odd-even effects
-            table.getRowModel().rows.map((row, index) => {
+            rows.map((row, index) => {
               const isSelected = selectedRows.has(row.original.id);
               return (
               <TableRow

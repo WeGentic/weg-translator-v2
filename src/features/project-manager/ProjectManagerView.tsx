@@ -1,12 +1,13 @@
 import "../main-view.css";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SortingState } from "@tanstack/react-table";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
 import { ProjectsTableSkeleton } from "@/components/projects/table/ProjectsTableSkeleton";
 import { deleteProject, listProjects, type ProjectListItem } from "@/ipc";
+import { filterProjects } from "./utils/filterProjects";
 
 import { ProjectsManagerHeader } from "./ProjectManagerHeader";
 import { ProjectsManagerToolbar } from "./ProjectManagerToolbar";
@@ -151,6 +152,28 @@ export function ProjectManagerView({ onOpenProject, onCreateProject }: ProjectMa
     [handleBatchDelete],
   );
 
+  const visibleProjects = useMemo(
+    () => filterProjects(projects, filters, search),
+    [projects, filters.progress, filters.projectType, filters.updatedWithin, search],
+  );
+
+  useEffect(() => {
+    setSelectedRows((current) => {
+      if (current.size === 0) return current;
+      const allowed = new Set(visibleProjects.map((project) => project.projectId));
+      let changed = false;
+      const next = new Set<string>();
+      current.forEach((id) => {
+        if (allowed.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      });
+      return changed ? next : current;
+    });
+  }, [visibleProjects]);
+
   useSidebarTwoContentSync({
     selectedRows,
     projects,
@@ -163,12 +186,12 @@ export function ProjectManagerView({ onOpenProject, onCreateProject }: ProjectMa
 
   return (
     <section
-      className="mainview-container "
+      className="mainview-container flex flex-1 min-h-0 flex-col"
       aria-labelledby="ProjectManager-heading"
       id="ProjectManager-view"
       role="region"
     >
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 min-h-0 flex-col">
         
           <ProjectsManagerHeader onCreateProject={handleCreateProjectClick} />
 
@@ -190,14 +213,14 @@ export function ProjectManagerView({ onOpenProject, onCreateProject }: ProjectMa
             </div>
           ) : null}
 
-          <div className="flex-1 min-h-0">
+          <div className="flex flex-1 min-h-0">
             {isLoading ? (
               <ProjectsTableSkeleton />
             ) : showEmptyState ? (
               <EmptyProjectsState onCreate={handleCreateProjectClick} />
             ) : (
               <ProjectManagerContent
-                items={projects}
+                items={visibleProjects}
                 onOpenProject={handleOpenProjectById}
                 onRequestDelete={handleRequestDelete}
                 selectedRows={selectedRows}

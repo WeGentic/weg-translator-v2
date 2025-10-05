@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type Dispatch, type SetStateAction } from 'react';
 import { Filter, X, Search } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ export interface ProjectsManagerToolbarProps {
   search: string;
   onSearchChange: (value: string) => void;
   filters: TableFilters;
-  onFiltersChange: (next: TableFilters) => void;
+  onFiltersChange: Dispatch<SetStateAction<TableFilters>>;
 }
 
 export function ProjectsManagerToolbar({
@@ -28,9 +28,12 @@ export function ProjectsManagerToolbar({
   filters,
   onFiltersChange,
 }: ProjectsManagerToolbarProps) {
-  const setProgress = (value: ProgressFilter) => onFiltersChange({ ...filters, progress: value });
-  const setType = (value: TypeFilter) => onFiltersChange({ ...filters, projectType: value });
-  const setDate = (value: DatePreset) => onFiltersChange({ ...filters, updatedWithin: value });
+  const setProgress = (value: ProgressFilter) =>
+    onFiltersChange((previous) => ({ ...previous, progress: value }));
+  const setType = (value: TypeFilter) =>
+    onFiltersChange((previous) => ({ ...previous, projectType: value }));
+  const setDate = (value: DatePreset) =>
+    onFiltersChange((previous) => ({ ...previous, updatedWithin: value }));
 
   const hasActiveFilters = useMemo(() => {
     return (
@@ -46,7 +49,7 @@ export function ProjectsManagerToolbar({
   }, [filters]);
 
   const resetFilters = () =>
-    onFiltersChange({ progress: 'all', projectType: 'all', updatedWithin: 'any' });
+    onFiltersChange(() => ({ progress: 'all', projectType: 'all', updatedWithin: 'any' }));
 
   return (
     <TooltipProvider>
