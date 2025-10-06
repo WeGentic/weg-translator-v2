@@ -111,6 +111,23 @@ pub struct TranslationFailedPayload {
     pub reason: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ProjectsChangedKind {
+    Created,
+    Updated,
+    Deleted,
+    FilesChanged,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectsChangedPayload {
+    pub kind: ProjectsChangedKind,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppHealthReport {

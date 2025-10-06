@@ -11,9 +11,7 @@ use std::path::PathBuf;
 use log::warn;
 use tokio::fs;
 
-use super::constants::{
-    ALLOWED_PROJECT_EXTENSIONS, PROJECT_NAME_MAX_LEN, PROJECT_NAME_MIN_LEN,
-};
+use super::constants::{ALLOWED_PROJECT_EXTENSIONS, PROJECT_NAME_MAX_LEN, PROJECT_NAME_MIN_LEN};
 use crate::db::ProjectType;
 use crate::ipc::error::IpcError;
 
@@ -112,9 +110,13 @@ pub fn validate_project_type(project_type: &str) -> Result<ProjectType, IpcError
 /// ];
 /// let validated = validate_project_files(paths).await?;
 /// ```
-pub async fn validate_project_files(file_paths: Vec<String>) -> Result<Vec<ValidatedFile>, IpcError> {
+pub async fn validate_project_files(
+    file_paths: Vec<String>,
+) -> Result<Vec<ValidatedFile>, IpcError> {
     if file_paths.is_empty() {
-        return Err(IpcError::Validation("Select at least one file to create a project.".into()));
+        return Err(IpcError::Validation(
+            "Select at least one file to create a project.".into(),
+        ));
     }
 
     let mut unique_paths = HashSet::new();
@@ -135,7 +137,9 @@ pub async fn validate_project_files(file_paths: Vec<String>) -> Result<Vec<Valid
                     target: "ipc::projects::validation",
                     "failed to canonicalize file '{trimmed}': {error}"
                 );
-                return Err(IpcError::Validation(format!("File '{trimmed}' is not accessible.")));
+                return Err(IpcError::Validation(format!(
+                    "File '{trimmed}' is not accessible."
+                )));
             }
         };
 
@@ -153,13 +157,17 @@ pub async fn validate_project_files(file_paths: Vec<String>) -> Result<Vec<Valid
                     "failed to read metadata for '{:?}': {error}",
                     canonical_path
                 );
-                return Err(IpcError::Validation(format!("File '{trimmed}' is not accessible.")));
+                return Err(IpcError::Validation(format!(
+                    "File '{trimmed}' is not accessible."
+                )));
             }
         };
 
         // Ensure it's a regular file
         if !metadata.is_file() {
-            return Err(IpcError::Validation(format!("'{trimmed}' is not a regular file.")));
+            return Err(IpcError::Validation(format!(
+                "'{trimmed}' is not a regular file."
+            )));
         }
 
         // Extract and validate file extension
@@ -202,7 +210,9 @@ pub async fn validate_project_files(file_paths: Vec<String>) -> Result<Vec<Valid
     }
 
     if validated_files.is_empty() {
-        return Err(IpcError::Validation("No unique files were selected.".into()));
+        return Err(IpcError::Validation(
+            "No unique files were selected.".into(),
+        ));
     }
 
     Ok(validated_files)
@@ -264,7 +274,9 @@ pub fn validate_conversion_status(status: &str) -> Result<&str, IpcError> {
 pub fn validate_transunit_id(transunit_id: &str) -> Result<&str, IpcError> {
     let trimmed = transunit_id.trim();
     if trimmed.is_empty() {
-        return Err(IpcError::Validation("Transaction unit ID cannot be empty.".into()));
+        return Err(IpcError::Validation(
+            "Transaction unit ID cannot be empty.".into(),
+        ));
     }
 
     // Additional validation could be added here for specific ID format requirements
@@ -294,7 +306,10 @@ mod tests {
 
     #[test]
     fn test_validate_project_name_valid() {
-        assert_eq!(validate_project_name("  My Project  ").unwrap(), "My Project");
+        assert_eq!(
+            validate_project_name("  My Project  ").unwrap(),
+            "My Project"
+        );
         assert_eq!(validate_project_name("Test123").unwrap(), "Test123");
     }
 
@@ -348,7 +363,10 @@ mod tests {
     fn test_validate_conversion_status() {
         assert_eq!(validate_conversion_status("pending").unwrap(), "pending");
         assert_eq!(validate_conversion_status("running").unwrap(), "running");
-        assert_eq!(validate_conversion_status("completed").unwrap(), "completed");
+        assert_eq!(
+            validate_conversion_status("completed").unwrap(),
+            "completed"
+        );
         assert_eq!(validate_conversion_status("failed").unwrap(), "failed");
         assert!(validate_conversion_status("invalid").is_err());
     }

@@ -27,12 +27,12 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::name::ResolveResult;
 use quick_xml::reader::NsReader;
 
-use super::xml_reader::{
-    decode_local_name, decode_end_name, decode_start_name, decode_text, decode_cdata, decode_qname,
-    skip_current_element
-};
 use super::inline_tags::is_inline_code;
 use super::segment_builder::SegmentBuilder;
+use super::xml_reader::{
+    decode_cdata, decode_end_name, decode_local_name, decode_qname, decode_start_name, decode_text,
+    skip_current_element,
+};
 
 /// Parses a text container element (source or target) with inline code processing.
 ///

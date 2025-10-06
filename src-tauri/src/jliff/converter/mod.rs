@@ -36,12 +36,12 @@
 //! let conversions = convert(&options)?;
 //! ```
 
-mod xml_reader;
-mod xliff_parser;
-mod segment_builder;
 mod inline_tags;
 mod original_data;
+mod segment_builder;
 mod text_container;
+mod xliff_parser;
+mod xml_reader;
 
 use anyhow::Result;
 

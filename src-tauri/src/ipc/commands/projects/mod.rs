@@ -100,7 +100,8 @@ pub use artifacts::{
 pub const MODULE_VERSION: &str = "2.0.0";
 
 /// Module description for documentation and tooling
-pub const MODULE_DESCRIPTION: &str = "Refactored project management with improved separation of concerns";
+pub const MODULE_DESCRIPTION: &str =
+    "Refactored project management with improved separation of concerns";
 
 #[cfg(test)]
 mod tests {

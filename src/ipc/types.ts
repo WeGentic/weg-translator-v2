@@ -37,6 +37,13 @@ export interface TranslationFailedPayload {
   reason: string;
 }
 
+export type ProjectsChangedKind = "created" | "updated" | "deleted" | "filesChanged";
+
+export interface ProjectsChangedPayload {
+  kind: ProjectsChangedKind;
+  projectId?: string;
+}
+
 export interface JobRecord {
   jobId: string;
   request: TranslationRequest;
@@ -230,4 +237,5 @@ export const IPC_EVENT = {
   translationProgress: "translation://progress",
   translationCompleted: "translation://completed",
   translationFailed: "translation://failed",
+  projectsUpdated: "projects://updated",
 } as const;

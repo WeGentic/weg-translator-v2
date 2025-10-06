@@ -33,15 +33,16 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::name::ResolveResult;
 use quick_xml::reader::NsReader;
 
-use super::xml_reader::{
-    open_reader, locate_root, skip_current_element, decode_local_name, decode_end_name, decode_qname
-};
-use super::segment_builder::SegmentBuilder;
 use super::original_data::parse_original_data;
+use super::segment_builder::SegmentBuilder;
 use super::text_container::parse_text_container;
+use super::xml_reader::{
+    decode_end_name, decode_local_name, decode_qname, locate_root, open_reader,
+    skip_current_element,
+};
 use crate::jliff::model::{JliffDocument, TransUnit};
 use crate::jliff::options::ConversionOptions;
-use crate::jliff::tag_map::{TagMapDoc, TagMapUnit, TagMapSegment};
+use crate::jliff::tag_map::{TagMapDoc, TagMapSegment, TagMapUnit};
 
 use super::FileConversion;
 

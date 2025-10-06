@@ -203,12 +203,11 @@ impl DbManager {
         project_id: Uuid,
     ) -> DbResult<(Option<String>, Option<String>)> {
         let pool = self.pool().await;
-        let row = sqlx::query(
-            "SELECT default_src_lang, default_tgt_lang FROM projects WHERE id = ?1",
-        )
-        .bind(&project_id.to_string())
-        .fetch_optional(&pool)
-        .await?;
+        let row =
+            sqlx::query("SELECT default_src_lang, default_tgt_lang FROM projects WHERE id = ?1")
+                .bind(&project_id.to_string())
+                .fetch_optional(&pool)
+                .await?;
 
         match row {
             Some(record) => {

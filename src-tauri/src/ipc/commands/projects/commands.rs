@@ -4,17 +4,24 @@
 //! that serve as Tauri command handlers. These functions handle the IPC
 //! layer concerns while delegating business logic to the service module.
 
-use tauri::{AppHandle, State};
+use tauri::{ipc::InvokeError, AppHandle, Emitter, State};
 use uuid::Uuid;
 
 use super::service::ProjectService;
 use crate::db::DbManager;
 use crate::ipc::dto::{
     AddFilesResponseDto, CreateProjectRequest, CreateProjectResponse, EnsureConversionsPlanDto,
-    ProjectDetailsDto, ProjectListItemDto,
+    ProjectDetailsDto, ProjectListItemDto, ProjectsChangedKind, ProjectsChangedPayload,
 };
 use crate::ipc::error::IpcResult;
+use crate::ipc::events::PROJECTS_UPDATED;
 use crate::settings::SettingsManager;
+
+fn emit_projects_changed(app: &AppHandle, payload: ProjectsChangedPayload) {
+    if let Err(err) = app.emit(PROJECTS_UPDATED, payload) {
+        log::warn!(target: "ipc::projects::events", "failed to emit projects change event: {err}");
+    }
+}
 
 /// Creates a new project with the provided source files
 ///
@@ -22,7 +29,7 @@ use crate::settings::SettingsManager;
 /// to the service layer for the actual project creation logic.
 ///
 /// # Arguments
-/// * `_app` - Tauri application handle (unused but required by Tauri)
+/// * `app` - Tauri application handle used to emit project-change events
 /// * `settings` - Settings manager state for app configuration
 /// * `db` - Database manager state for persistence
 /// * `req` - Project creation request from frontend
@@ -44,14 +51,24 @@ use crate::settings::SettingsManager;
 /// ```
 #[tauri::command]
 pub async fn create_project_with_files(
-    _app: AppHandle,
+    app: AppHandle,
     settings: State<'_, SettingsManager>,
     db: State<'_, DbManager>,
     req: CreateProjectRequest,
 ) -> IpcResult<CreateProjectResponse> {
-    ProjectService::create_project_with_files(&settings, &db, req)
+    let response = ProjectService::create_project_with_files(&settings, &db, req)
         .await
-        .map_err(Into::into)
+        .map_err(InvokeError::from)?;
+
+    emit_projects_changed(
+        &app,
+        ProjectsChangedPayload {
+            kind: ProjectsChangedKind::Created,
+            project_id: Some(response.project_id.clone()),
+        },
+    );
+
+    Ok(response)
 }
 
 /// Retrieves detailed information about a specific project
@@ -79,7 +96,7 @@ pub async fn get_project_details(
 ) -> IpcResult<ProjectDetailsDto> {
     ProjectService::get_project_details(&db, project_id)
         .await
-        .map_err(Into::into)
+        .map_err(InvokeError::from)
 }
 
 /// Adds additional files to an existing project
@@ -88,7 +105,7 @@ pub async fn get_project_details(
 /// updating the database with file metadata.
 ///
 /// # Arguments
-/// * `_app` - Tauri application handle (unused but required by Tauri)
+/// * `app` - Tauri application handle used to emit project-change events
 /// * `_settings` - Settings manager state (unused in current implementation)
 /// * `db` - Database manager state for persistence
 /// * `project_id` - UUID of the target project
@@ -106,15 +123,27 @@ pub async fn get_project_details(
 /// ```
 #[tauri::command]
 pub async fn add_files_to_project(
-    _app: AppHandle,
+    app: AppHandle,
     _settings: State<'_, SettingsManager>,
     db: State<'_, DbManager>,
     project_id: Uuid,
     files: Vec<String>,
 ) -> IpcResult<AddFilesResponseDto> {
-    ProjectService::add_files_to_project(&db, project_id, files)
+    let response = ProjectService::add_files_to_project(&db, project_id, files)
         .await
-        .map_err(Into::into)
+        .map_err(InvokeError::from)?;
+
+    if response.inserted_count > 0 {
+        emit_projects_changed(
+            &app,
+            ProjectsChangedPayload {
+                kind: ProjectsChangedKind::FilesChanged,
+                project_id: Some(project_id.to_string()),
+            },
+        );
+    }
+
+    Ok(response)
 }
 
 /// Removes a specific file from a project
@@ -123,6 +152,8 @@ pub async fn add_files_to_project(
 /// artifacts including the physical file and any conversion outputs.
 ///
 /// # Arguments
+/// * `app` - Tauri application handle used to emit project-change events
+/// * `app` - Tauri application handle used to emit project-change events
 /// * `db` - Database manager state for operations
 /// * `project_id` - UUID of the project containing the file
 /// * `project_file_id` - UUID of the file to remove
@@ -139,13 +170,26 @@ pub async fn add_files_to_project(
 /// ```
 #[tauri::command]
 pub async fn remove_project_file(
+    app: AppHandle,
     db: State<'_, DbManager>,
     project_id: Uuid,
     project_file_id: Uuid,
 ) -> IpcResult<u64> {
-    ProjectService::remove_project_file(&db, project_id, project_file_id)
+    let removed = ProjectService::remove_project_file(&db, project_id, project_file_id)
         .await
-        .map_err(Into::into)
+        .map_err(InvokeError::from)?;
+
+    if removed > 0 {
+        emit_projects_changed(
+            &app,
+            ProjectsChangedPayload {
+                kind: ProjectsChangedKind::FilesChanged,
+                project_id: Some(project_id.to_string()),
+            },
+        );
+    }
+
+    Ok(removed)
 }
 
 /// Deletes an entire project and all associated data
@@ -154,6 +198,7 @@ pub async fn remove_project_file(
 /// directory and all contained files from the filesystem.
 ///
 /// # Arguments
+/// * `app` - Tauri application handle used to emit project-change events
 /// * `db` - Database manager state for operations
 /// * `project_id` - UUID of the project to delete
 ///
@@ -167,10 +212,26 @@ pub async fn remove_project_file(
 /// });
 /// ```
 #[tauri::command]
-pub async fn delete_project(db: State<'_, DbManager>, project_id: Uuid) -> IpcResult<u64> {
-    ProjectService::delete_project(&db, project_id)
+pub async fn delete_project(
+    app: AppHandle,
+    db: State<'_, DbManager>,
+    project_id: Uuid,
+) -> IpcResult<u64> {
+    let deleted = ProjectService::delete_project(&db, project_id)
         .await
-        .map_err(Into::into)
+        .map_err(InvokeError::from)?;
+
+    if deleted > 0 {
+        emit_projects_changed(
+            &app,
+            ProjectsChangedPayload {
+                kind: ProjectsChangedKind::Deleted,
+                project_id: Some(project_id.to_string()),
+            },
+        );
+    }
+
+    Ok(deleted)
 }
 
 /// Lists projects with pagination support
@@ -201,7 +262,7 @@ pub async fn list_projects(
 ) -> IpcResult<Vec<ProjectListItemDto>> {
     ProjectService::list_projects(&db, limit, offset)
         .await
-        .map_err(Into::into)
+        .map_err(InvokeError::from)
 }
 
 /// Builds a plan for ensuring all project files have XLIFF conversions
@@ -230,7 +291,7 @@ pub async fn ensure_project_conversions_plan(
 ) -> IpcResult<EnsureConversionsPlanDto> {
     ProjectService::ensure_project_conversions_plan(&db, project_id)
         .await
-        .map_err(Into::into)
+        .map_err(InvokeError::from)
 }
 
 /// Converts an XLIFF file to JLIFF format
@@ -277,7 +338,7 @@ pub async fn convert_xliff_to_jliff(
         schema_abs_path,
     )
     .await
-    .map_err(Into::into)
+    .map_err(InvokeError::from)
 }
 
 /// Reads the contents of a project artifact file
@@ -308,7 +369,7 @@ pub async fn read_project_artifact(
 ) -> IpcResult<String> {
     ProjectService::read_project_artifact(&db, project_id, rel_path)
         .await
-        .map_err(Into::into)
+        .map_err(InvokeError::from)
 }
 
 /// Updates a translation segment in a JLIFF document
@@ -345,7 +406,7 @@ pub async fn update_jliff_segment(
 ) -> IpcResult<super::artifacts::UpdateJliffSegmentResult> {
     ProjectService::update_jliff_segment(&db, project_id, jliff_rel_path, transunit_id, new_target)
         .await
-        .map_err(Into::into)
+        .map_err(InvokeError::from)
 }
 
 /// Updates the status of a conversion operation
@@ -396,5 +457,5 @@ pub async fn update_conversion_status(
         error_message,
     )
     .await
-    .map_err(Into::into)
+    .map_err(InvokeError::from)
 }

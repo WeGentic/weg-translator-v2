@@ -428,8 +428,8 @@ pub async fn build_conversions_plan(
                 src_lang: src_lang.clone(),
                 tgt_lang: tgt_lang.clone(),
                 version: version.clone(),
-                paragraph: true,  // Default to paragraph mode
-                embed: true,      // Default to embedded mode
+                paragraph: true, // Default to paragraph mode
+                embed: true,     // Default to embedded mode
             });
         }
     }

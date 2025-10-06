@@ -5,7 +5,10 @@ mod translations;
 
 // Re-export project management types and commands from the refactored module
 #[allow(unused_imports)]
-pub use projects::{JliffConversionResult as JliffConversionResultDto, UpdateJliffSegmentResult as UpdateJliffSegmentResultDto};
+pub use projects::{
+    JliffConversionResult as JliffConversionResultDto,
+    UpdateJliffSegmentResult as UpdateJliffSegmentResultDto,
+};
 pub use projects::{
     add_files_to_project, convert_xliff_to_jliff, create_project_with_files, delete_project,
     ensure_project_conversions_plan, get_project_details, list_projects, read_project_artifact,

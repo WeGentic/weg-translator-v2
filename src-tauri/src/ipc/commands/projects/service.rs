@@ -10,8 +10,8 @@ use log::{error, info};
 use uuid::Uuid;
 
 use super::artifacts::{
-    build_conversions_plan, convert_xliff_to_jliff, read_project_artifact, update_jliff_segment,
-    JliffConversionResult, UpdateJliffSegmentResult,
+    JliffConversionResult, UpdateJliffSegmentResult, build_conversions_plan,
+    convert_xliff_to_jliff, read_project_artifact, update_jliff_segment,
 };
 use super::constants::{DEFAULT_SOURCE_LANGUAGE, DEFAULT_TARGET_LANGUAGE, DEFAULT_XLIFF_VERSION};
 use super::dto_mappers::{project_details_to_dto, project_file_to_dto, project_list_to_dto};
@@ -23,8 +23,8 @@ use super::validation::{
     validate_conversion_status, validate_optional_language, validate_pagination_params,
     validate_project_files, validate_project_name, validate_project_type, validate_transunit_id,
 };
-use crate::db::{DbManager, NewProject, ProjectFileConversionRequest, ProjectStatus};
 use crate::db::constants::{CONVERTIBLE_EXTENSIONS, SKIP_CONVERSION_EXTENSIONS};
+use crate::db::{DbManager, NewProject, ProjectFileConversionRequest, ProjectStatus};
 use crate::ipc::dto::{
     AddFilesResponseDto, CreateProjectRequest, CreateProjectResponse, EnsureConversionsPlanDto,
     ProjectDetailsDto, ProjectListItemDto,
@@ -89,20 +89,17 @@ impl ProjectService {
         let created_dir = create_project_directory(settings, &project_name, project_id).await?;
 
         // Import files into project directory
-        let imported_files = match import_files_to_project(
-            &created_dir.project_dir,
-            project_id,
-            &validated_files,
-        )
-        .await
-        {
-            Ok(files) => files,
-            Err(error) => {
-                // Clean up project directory on import failure
-                cleanup_project_directory(&created_dir.project_dir).await;
-                return Err(error);
-            }
-        };
+        let imported_files =
+            match import_files_to_project(&created_dir.project_dir, project_id, &validated_files)
+                .await
+            {
+                Ok(files) => files,
+                Err(error) => {
+                    // Clean up project directory on import failure
+                    cleanup_project_directory(&created_dir.project_dir).await;
+                    return Err(error);
+                }
+            };
 
         // Prepare project record for database
         let project_record = NewProject {
@@ -199,7 +196,8 @@ impl ProjectService {
         let project_root = db.project_root_path(project_id).await?;
 
         // Import files to project directory
-        let imported_files = import_files_to_project(&project_root, project_id, &validated_files).await?;
+        let imported_files =
+            import_files_to_project(&project_root, project_id, &validated_files).await?;
 
         // Extract database records
         let file_records: Vec<_> = imported_files.iter().map(|f| f.db_record.clone()).collect();
@@ -212,7 +210,8 @@ impl ProjectService {
             let (default_src, default_tgt) = db.project_language_defaults(project_id).await?;
             let src_lang = default_src.unwrap_or_else(|| DEFAULT_SOURCE_LANGUAGE.to_string());
             let tgt_lang = default_tgt.unwrap_or_else(|| DEFAULT_TARGET_LANGUAGE.to_string());
-            let conversion_request = ProjectFileConversionRequest::new(&src_lang, &tgt_lang, DEFAULT_XLIFF_VERSION);
+            let conversion_request =
+                ProjectFileConversionRequest::new(&src_lang, &tgt_lang, DEFAULT_XLIFF_VERSION);
 
             for file in &inserted_files {
                 let ext = file.ext.to_lowercase();
@@ -293,12 +292,27 @@ impl ProjectService {
                 .conversions
                 .iter()
                 .filter_map(|conv| conv.xliff_rel_path.as_deref())
-                .chain(file_entry.conversions.iter().filter_map(|conv| conv.jliff_rel_path.as_deref()))
-                .chain(file_entry.conversions.iter().filter_map(|conv| conv.tag_map_rel_path.as_deref()))
+                .chain(
+                    file_entry
+                        .conversions
+                        .iter()
+                        .filter_map(|conv| conv.jliff_rel_path.as_deref()),
+                )
+                .chain(
+                    file_entry
+                        .conversions
+                        .iter()
+                        .filter_map(|conv| conv.tag_map_rel_path.as_deref()),
+                )
                 .collect();
 
             // Remove all conversion artifacts
-            remove_multiple_artifacts(&root_path, artifact_paths.into_iter(), "conversion artifact").await;
+            remove_multiple_artifacts(
+                &root_path,
+                artifact_paths.into_iter(),
+                "conversion artifact",
+            )
+            .await;
         }
 
         Ok(removed_count)
@@ -322,10 +336,7 @@ impl ProjectService {
     /// # Robustness
     /// The operation proceeds even if the project directory is missing,
     /// allowing cleanup of orphaned database records.
-    pub async fn delete_project(
-        db: &DbManager,
-        project_id: Uuid,
-    ) -> Result<u64, IpcError> {
+    pub async fn delete_project(db: &DbManager, project_id: Uuid) -> Result<u64, IpcError> {
         // Try to get project root for filesystem cleanup
         let project_root = match db.project_root_path(project_id).await {
             Ok(path) => Some(path),
@@ -412,7 +423,15 @@ impl ProjectService {
         operator: Option<String>,
         schema_abs_path: Option<String>,
     ) -> Result<JliffConversionResult, IpcError> {
-        convert_xliff_to_jliff(db, project_id, conversion_id, xliff_abs_path, operator, schema_abs_path).await
+        convert_xliff_to_jliff(
+            db,
+            project_id,
+            conversion_id,
+            xliff_abs_path,
+            operator,
+            schema_abs_path,
+        )
+        .await
     }
 
     /// Reads a project artifact by relative path

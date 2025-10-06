@@ -30,8 +30,8 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::name::ResolveResult;
 use quick_xml::reader::NsReader;
 
-use super::xml_reader::{decode_local_name, decode_end_name, decode_qname, skip_current_element};
 use super::text_container::read_textual_content;
+use super::xml_reader::{decode_end_name, decode_local_name, decode_qname, skip_current_element};
 
 /// Parses an XLIFF `<originalData>` section and populates the data store.
 ///

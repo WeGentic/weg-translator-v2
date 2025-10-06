@@ -31,9 +31,9 @@ use anyhow::Result;
 use quick_xml::encoding::Decoder;
 use quick_xml::events::BytesStart;
 
+use super::inline_tags::{collect_attrs, resolve_original_data};
 use crate::jliff::options::PlaceholderStyle;
 use crate::jliff::tag_map::TagInstance;
-use super::inline_tags::{collect_attrs, resolve_original_data};
 
 /// Builder for assembling translatable text segments with placeholder management.
 ///
@@ -145,7 +145,12 @@ impl<'a> SegmentBuilder<'a> {
     ///
     /// * `Ok(())` - Element processed successfully
     /// * `Err(anyhow::Error)` - Attribute parsing error
-    pub fn handle_start(&mut self, name: &str, start: &BytesStart<'_>, decoder: Decoder) -> Result<()> {
+    pub fn handle_start(
+        &mut self,
+        name: &str,
+        start: &BytesStart<'_>,
+        decoder: Decoder,
+    ) -> Result<()> {
         let attrs = collect_attrs(start, decoder)?;
         match name {
             "pc" => {
@@ -201,7 +206,12 @@ impl<'a> SegmentBuilder<'a> {
     ///
     /// * `Ok(())` - Element processed successfully
     /// * `Err(anyhow::Error)` - Attribute parsing error
-    pub fn handle_empty(&mut self, name: &str, start: &BytesStart<'_>, decoder: Decoder) -> Result<()> {
+    pub fn handle_empty(
+        &mut self,
+        name: &str,
+        start: &BytesStart<'_>,
+        decoder: Decoder,
+    ) -> Result<()> {
         let attrs = collect_attrs(start, decoder)?;
         match name {
             "pc" => {

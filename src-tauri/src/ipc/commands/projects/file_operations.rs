@@ -13,7 +13,7 @@ use log::{error, warn};
 use tokio::fs;
 use uuid::Uuid;
 
-use super::constants::{PROJECTS_DIR_NAME};
+use super::constants::PROJECTS_DIR_NAME;
 use super::utils::{build_project_slug, next_available_file_name};
 use super::validation::ValidatedFile;
 use crate::db::{NewProjectFile, ProjectFileImportStatus};
@@ -82,7 +82,9 @@ pub async fn create_project_directory(
             "failed to prepare projects directory {:?}: {error}",
             projects_dir
         );
-        return Err(IpcError::Internal("Unable to prepare projects storage directory.".into()));
+        return Err(IpcError::Internal(
+            "Unable to prepare projects storage directory.".into(),
+        ));
     }
 
     // Create unique project directory
@@ -96,7 +98,9 @@ pub async fn create_project_directory(
             "failed to create project directory {:?}: {error}",
             project_dir
         );
-        return Err(IpcError::Internal("Unable to create project directory.".into()));
+        return Err(IpcError::Internal(
+            "Unable to create project directory.".into(),
+        ));
     }
 
     Ok(CreatedProjectDirectory {
@@ -138,19 +142,20 @@ pub async fn import_files_to_project(
 
     for validated_file in validated_files {
         // Find a unique filename in the project directory
-        let stored_filename = match next_available_file_name(project_dir, &validated_file.original_name).await {
-            Ok(name) => name,
-            Err(error) => {
-                error!(
-                    target: "ipc::projects::file_operations",
-                    "failed to resolve unique filename for {:?}: {error}",
-                    validated_file.original_name
-                );
-                return Err(IpcError::Internal(
-                    "Unable to stage imported files for the project.".into(),
-                ));
-            }
-        };
+        let stored_filename =
+            match next_available_file_name(project_dir, &validated_file.original_name).await {
+                Ok(name) => name,
+                Err(error) => {
+                    error!(
+                        target: "ipc::projects::file_operations",
+                        "failed to resolve unique filename for {:?}: {error}",
+                        validated_file.original_name
+                    );
+                    return Err(IpcError::Internal(
+                        "Unable to stage imported files for the project.".into(),
+                    ));
+                }
+            };
 
         let destination_path = project_dir.join(&stored_filename);
 
@@ -243,11 +248,8 @@ pub async fn cleanup_project_directory(project_dir: &Path) {
 /// * `root_path` - Project root directory
 /// * `relative_paths` - Iterator of relative paths to remove
 /// * `label` - Description for logging purposes
-pub async fn remove_multiple_artifacts<'a, I>(
-    root_path: &Path,
-    relative_paths: I,
-    label: &str,
-) where
+pub async fn remove_multiple_artifacts<'a, I>(root_path: &Path, relative_paths: I, label: &str)
+where
     I: Iterator<Item = &'a str>,
 {
     use super::utils::remove_relative_artifact;

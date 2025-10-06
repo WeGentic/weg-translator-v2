@@ -2,6 +2,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 import {
   IPC_EVENT,
+  type ProjectsChangedPayload,
   type TranslationCompletedPayload,
   type TranslationFailedPayload,
   type TranslationProgressPayload,
@@ -30,6 +31,15 @@ export async function onTranslationFailed(
 ): Promise<UnlistenFn> {
   return listen<TranslationFailedPayload>(
     IPC_EVENT.translationFailed,
+    (event) => handler(event.payload),
+  );
+}
+
+export async function onProjectsUpdated(
+  handler: (payload: ProjectsChangedPayload) => void,
+): Promise<UnlistenFn> {
+  return listen<ProjectsChangedPayload>(
+    IPC_EVENT.projectsUpdated,
     (event) => handler(event.payload),
   );
 }

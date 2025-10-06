@@ -4,9 +4,7 @@
 //! the DTOs used for IPC communication with the frontend. It provides
 //! a clean separation between internal data structures and API contracts.
 
-use crate::db::{
-    ProjectDetails, ProjectFileConversionRow, ProjectFileDetails, ProjectListItem,
-};
+use crate::db::{ProjectDetails, ProjectFileConversionRow, ProjectFileDetails, ProjectListItem};
 use crate::ipc::dto::{
     ProjectDetailsDto, ProjectFileConversionDto, ProjectFileDto, ProjectFileWithConversionsDto,
     ProjectListItemDto,
@@ -190,7 +188,9 @@ pub fn project_list_to_dto(projects: Vec<ProjectListItem>) -> Vec<ProjectListIte
 /// # Usage
 /// This is typically used in conversion planning where we need to
 /// look up file details by ID when processing conversion records.
-pub fn create_file_id_map(details: &ProjectDetails) -> std::collections::HashMap<String, &ProjectFileDetails> {
+pub fn create_file_id_map(
+    details: &ProjectDetails,
+) -> std::collections::HashMap<String, &ProjectFileDetails> {
     details
         .files
         .iter()
@@ -206,7 +206,9 @@ pub fn create_file_id_map(details: &ProjectDetails) -> std::collections::HashMap
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::{ProjectFileImportStatus, ProjectStatus, ProjectType, ProjectFileConversionStatus};
+    use crate::db::{
+        ProjectFileConversionStatus, ProjectFileImportStatus, ProjectStatus, ProjectType,
+    };
     use uuid::Uuid;
 
     fn create_test_project_list_item() -> ProjectListItem {
