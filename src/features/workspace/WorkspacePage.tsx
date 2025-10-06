@@ -18,8 +18,6 @@ import type { ProjectListItem } from "@/ipc";
 import { DashboardView } from "@/features/dashboard/DashboardView";
 import { ResourcesView } from "@/features/resources/ResourcesView";
 import { ProjectManagerRoute as ProjectManagerV2View } from "@/features/project-manager-v2";
-import { isProjectManagerV2Enabled } from "@/lib/feature-flags";
-import ProjectManagerViewLegacy from "../project-manager/ProjectManagerView";
 
 const FIXED_MENU_ITEMS: MenuItem[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -35,7 +33,6 @@ export interface WorkspacePageProps {
 
 export function WorkspacePage({ initialView = "projects" }: WorkspacePageProps) {
   const { systemError } = useAppHealth();
-  const projectManagerV2Enabled = isProjectManagerV2Enabled();
 
   const {
     mainView,
@@ -91,11 +88,7 @@ export function WorkspacePage({ initialView = "projects" }: WorkspacePageProps) 
       return <DashboardView />;
     }
     if (mainView === "projects") {
-      if (projectManagerV2Enabled) {
         return <ProjectManagerV2View onOpenProject={handleProjectOpen} />;
-      }
-
-      return <ProjectManagerViewLegacy onOpenProject={handleProjectOpen} />;
     }
 
     if (mainView === "resource") {

@@ -21,10 +21,10 @@ type DeleteProjectDialogProps = {
 export function DeleteProjectDialog({ open, onOpenChange, target, onAfterDelete }: DeleteProjectDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-describedby="delete-project-desc">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete project</DialogTitle>
-          <DialogDescription id="delete-project-desc">
+          <DialogDescription>
             This action permanently deletes the project and its files from disk. This cannot be undone.
           </DialogDescription>
         </DialogHeader>

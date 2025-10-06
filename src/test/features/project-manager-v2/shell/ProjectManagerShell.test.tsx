@@ -25,6 +25,14 @@ const resourceState: ResourceState = {
 };
 
 const runBatchDeleteMock = vi.fn();
+const toastMock = vi.fn();
+let lastWizardProps:
+  | {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      onProjectCreated: () => void;
+    }
+  | null = null;
 const { refreshProjectsResourceMock, invalidateProjectsResourceMock } = vi.hoisted(() => ({
   refreshProjectsResourceMock: vi.fn<[], Promise<void>>(() => Promise.resolve()),
   invalidateProjectsResourceMock: vi.fn(),
@@ -78,8 +86,22 @@ vi.mock("@/features/project-manager-v2/actions/batchDeleteAction", () => ({
   }),
 }));
 
+vi.mock("@/components/ui/use-toast", () => ({
+  useToast: () => ({ toast: toastMock }),
+}));
+
 vi.mock("@/features/project-manager-v2/wizard/CreateProjectWizard", () => ({
-  CreateProjectWizard: () => null,
+  CreateProjectWizard: (props: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onProjectCreated: () => void;
+  }) => {
+    lastWizardProps = props;
+    if (!props.open) {
+      return null;
+    }
+    return <div data-testid="project-manager-wizard">Wizard open</div>;
+  },
 }));
 
 vi.mock("@/features/project-manager-v2/mutations/DeleteProjectDialog", () => ({
@@ -103,8 +125,10 @@ describe("ProjectManagerShell integration", () => {
     resourceState.projects = [];
     resourceState.error = null;
     runBatchDeleteMock.mockClear();
+    toastMock.mockClear();
     refreshProjectsResourceMock.mockClear();
     invalidateProjectsResourceMock.mockClear();
+    lastWizardProps = null;
   });
 
   afterEach(() => {
@@ -314,6 +338,51 @@ describe("ProjectManagerShell integration", () => {
       expect(invalidateProjectsResourceMock).toHaveBeenCalledTimes(1);
       expect(refreshProjectsResourceMock).toHaveBeenCalledTimes(1);
       expect(screen.getByText("No projects yet")).toBeInTheDocument();
+    });
+  });
+
+  it("filters the table via the search input", async () => {
+    resourceState.projects = [
+      buildProject({ projectId: "project-1", name: "Alpha Project", slug: "alpha" }),
+      buildProject({ projectId: "project-2", name: "Beta Project", slug: "beta" }),
+    ];
+
+    const user = userEvent.setup();
+    renderProjectManagerRoute();
+
+    await screen.findByText("Alpha Project");
+
+    const searchField = screen.getByRole("textbox", { name: "Search projects" });
+    await user.clear(searchField);
+    await user.type(searchField, "Beta");
+
+    await waitFor(() => {
+      expect(screen.queryByText("Alpha Project")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("Beta Project")).toBeInTheDocument();
+  });
+
+  it("opens the wizard via the header action", async () => {
+    resourceState.projects = [buildProject({ projectId: "project-1", name: "Alpha Project" })];
+    const user = userEvent.setup();
+    const onCreateProject = vi.fn();
+
+    renderProjectManagerRoute({ onCreateProject });
+
+    await screen.findByText("Alpha Project");
+
+    const createButton = screen.getByRole("button", { name: "Create new project" });
+    await user.click(createButton);
+
+    expect(onCreateProject).toHaveBeenCalledTimes(1);
+    expect(lastWizardProps?.open).toBe(true);
+    expect(screen.getByTestId("project-manager-wizard")).toBeInTheDocument();
+
+    lastWizardProps?.onOpenChange(false);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("project-manager-wizard")).not.toBeInTheDocument();
+      expect(lastWizardProps?.open).toBe(false);
     });
   });
 });

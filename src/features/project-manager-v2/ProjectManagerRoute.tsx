@@ -1,17 +1,12 @@
 import type { ProjectListItem } from "@/ipc";
 
-import { ProjectManagerShell } from "./shell/ProjectManagerShell";
-import { ProjectsBoundary } from "./shell/boundaries/ProjectsBoundary";
+import { ProjectManagerView } from "./ProjectManagerView";
 
-type ProjectManagerRouteProps = {
+export type ProjectManagerRouteProps = {
   onOpenProject?: (project: ProjectListItem) => void;
   onCreateProject?: () => void;
 };
 
 export function ProjectManagerRoute({ onOpenProject, onCreateProject }: ProjectManagerRouteProps) {
-  return (
-    <ProjectsBoundary>
-      <ProjectManagerShell onOpenProject={onOpenProject} onCreateProjectOpen={onCreateProject} />
-    </ProjectsBoundary>
-  );
+  return <ProjectManagerView onOpenProject={onOpenProject} onCreateProject={onCreateProject} />;
 }
