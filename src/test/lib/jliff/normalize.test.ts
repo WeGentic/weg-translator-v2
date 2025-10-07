@@ -6,7 +6,7 @@ import {
   normalizeJliffArtifacts,
   type JliffRoot,
   type TagsRoot,
-} from "@/lib/jliff";
+} from "@/core/ipc";
 
 afterEach(() => clearTokenCache());
 

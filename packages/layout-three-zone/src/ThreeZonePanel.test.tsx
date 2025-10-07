@@ -14,16 +14,17 @@ describe("ThreeZonePanel", () => {
       </ThreeZonePanel>,
     );
 
-    const header = screen.getByText("Header Content").closest("header");
-    expect(header).not.toBeNull();
-    expect(header).toHaveAttribute("data-slot", "header");
+    const headerElement = screen.getByText("Header Content").closest("header");
+    expect(headerElement).not.toBeNull();
+    const resolvedHeader = headerElement as HTMLElement;
+    expect(resolvedHeader.getAttribute("data-slot")).toBe("header");
 
     const toolbar = screen.getByRole("toolbar");
-    expect(toolbar).toHaveTextContent("Toolbar Content");
-    expect(toolbar).toHaveAttribute("data-slot", "toolbar");
+    expect(toolbar.textContent).toContain("Toolbar Content");
+    expect(toolbar.getAttribute("data-slot")).toBe("toolbar");
 
-    expect(screen.getByText("Body Content")).toBeInTheDocument();
-    expect(screen.getByText("Footer Content")).toBeInTheDocument();
+    expect(screen.queryByText("Body Content")).not.toBeNull();
+    expect(screen.queryByText("Footer Content")).not.toBeNull();
   });
 
   it("extracts compound slot components from children", () => {
@@ -44,10 +45,10 @@ describe("ThreeZonePanel", () => {
       </ThreeZonePanel>,
     );
 
-    expect(screen.getByText("Compound Header")).toBeInTheDocument();
-    expect(screen.getByRole("toolbar")).toHaveTextContent("Compound Toolbar");
-    expect(screen.getByText("Compound Content")).toBeInTheDocument();
-    expect(screen.getByText("Compound Footer")).toBeInTheDocument();
+    expect(screen.queryByText("Compound Header")).not.toBeNull();
+    expect(screen.getByRole("toolbar").textContent).toContain("Compound Toolbar");
+    expect(screen.queryByText("Compound Content")).not.toBeNull();
+    expect(screen.queryByText("Compound Footer")).not.toBeNull();
   });
 
   it("falls back to loose children for content when no content slot provided", () => {
@@ -59,10 +60,10 @@ describe("ThreeZonePanel", () => {
       </ThreeZonePanel>,
     );
 
-    expect(screen.getByText("Top")).toBeInTheDocument();
-    expect(screen.getByRole("toolbar")).toHaveTextContent("Tools");
-    expect(screen.getByText("Loose Body")).toBeInTheDocument();
-    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
+    expect(screen.queryByText("Top")).not.toBeNull();
+    expect(screen.getByRole("toolbar").textContent).toContain("Tools");
+    expect(screen.queryByText("Loose Body")).not.toBeNull();
+    expect(screen.queryByRole("contentinfo")).toBeNull();
   });
 
   it("supports variant and content overflow modifiers", () => {
@@ -75,10 +76,12 @@ describe("ThreeZonePanel", () => {
     );
 
     const panel = screen.getByRole("group");
-    expect(panel).toHaveAttribute("data-variant", "quiet");
+    expect(panel.getAttribute("data-variant")).toBe("quiet");
 
-    const content = panel.querySelector(".three-zone-panel__content");
-    expect(content).toHaveClass("three-zone-panel__content--hidden");
-    expect(screen.getByText("Variant Content")).toBeInTheDocument();
+    const contentNode = panel.querySelector(".three-zone-panel__content");
+    expect(contentNode).not.toBeNull();
+    const content = contentNode as HTMLElement;
+    expect(content.classList.contains("three-zone-panel__content--hidden")).toBe(true);
+    expect(screen.queryByText("Variant Content")).not.toBeNull();
   });
 });

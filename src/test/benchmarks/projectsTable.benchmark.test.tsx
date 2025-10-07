@@ -1,10 +1,8 @@
 import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ProjectManagerContent as LegacyProjectManagerContent } from "@/features/project-manager/ProjectManagerContent";
-import { ProjectManagerContent as V2ProjectManagerContent } from "@/features/project-manager-v2/content/ProjectManagerContent";
-import { ProjectManagerStoreProvider } from "@/features/project-manager-v2/state";
-import type { ProjectListItem } from "@/ipc";
+import { ProjectManagerContent } from "@/modules/projects/ProjectManagerContent";
+import type { ProjectListItem } from "@/core/ipc";
 
 const shouldRunBenchmarks = process.env.PROJECT_MANAGER_TABLE_BENCHMARK === "1";
 const describeBench = shouldRunBenchmarks ? describe : describe.skip;
@@ -38,35 +36,34 @@ function createProjects(count: number): ProjectListItem[] {
   });
 }
 
-describeBench("Project Manager table render benchmarks", () => {
-  afterEach(() => {
-    cleanup();
-  });
+beforeEach(() => {
+  if (typeof window !== "undefined") {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes("min-width"),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+  }
+});
 
-  it("legacy table renders 250 projects", () => {
-    const start = performance.now();
-    render(
-      <LegacyProjectManagerContent
-        items={sampleProjects}
-        onOpenProject={vi.fn()}
-        onRequestDelete={vi.fn()}
-      />,
-    );
-    const elapsed = performance.now() - start;
-    console.info(`[benchmark] legacy table render (${PROJECT_COUNT} rows): ${elapsed.toFixed(2)}ms`);
-    expect(elapsed).toBeGreaterThan(0);
-  });
+afterEach(() => {
+  cleanup();
+});
 
+describeBench("Project Manager table render benchmark", () => {
   it("v2 table renders 250 projects", () => {
     const start = performance.now();
     render(
-      <ProjectManagerStoreProvider>
-        <V2ProjectManagerContent
-          projects={sampleProjects}
-          onRequestDelete={vi.fn()}
-          onOpenProject={vi.fn()}
-        />
-      </ProjectManagerStoreProvider>,
+      <ProjectManagerContent
+        items={sampleProjects}
+        onRequestDelete={vi.fn()}
+        onOpenProject={vi.fn()}
+      />,
     );
     const elapsed = performance.now() - start;
     console.info(`[benchmark] v2 table render (${PROJECT_COUNT} rows): ${elapsed.toFixed(2)}ms`);

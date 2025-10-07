@@ -1,0 +1,144 @@
+/* ProjectsDataTable Layout Variables and Styles */
+
+@import "./dropdowns.css";
+
+/**
+ * CSS Custom Properties for ProjectsDataTable
+ *
+ * Defines layout dimensions, spacing, and typography for the table component.
+ * All values align with the design system defined in App.css.
+ */
+:root {
+  /* Table Layout Dimensions */
+  --projects-table-header-height: 48px;
+  --projects-table-toolbar-height: 56px;
+
+  /* Spacing and Padding */
+  --projects-table-header-padding: 0.75rem;
+  --projects-table-cell-padding: 0.75rem;
+
+  /* Typography */
+  --projects-table-header-font-size: 0.75rem;
+  --projects-table-cell-font-size: 0.875rem;
+  --projects-table-line-height: 1.5rem;
+}
+
+/**
+ * Layout Zones
+ *
+ * Three-zone layout system for the table:
+ * 1. Header Zone - Fixed height for title and actions
+ * 2. Toolbar Zone - Fixed height for search/filters
+ * 3. Main Zone - Flexible, scrollable content area
+ */
+
+.projects-table-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.projects-table-header-zone {
+  height: var(--projects-table-header-height);
+  flex-shrink: 0;
+}
+
+.projects-table-toolbar-zone {
+  height: var(--projects-table-toolbar-height);
+  flex-shrink: 0;
+}
+
+.projects-table-main-zone {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  /* Add smooth scrolling for better UX */
+  scroll-behavior: smooth;
+}
+
+/**
+ * Enhanced Row Interactions
+ *
+ * Additional styles for modern row hover/selection effects.
+ * Works in conjunction with inline styles in ProjectsTableGrid.tsx
+ */
+
+/* Smooth scroll for table body */
+.projects-table-main-zone::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.projects-table-main-zone::-webkit-scrollbar-track {
+  background: var(--color-tr-muted);
+  border-radius: 4px;
+}
+
+.projects-table-main-zone::-webkit-scrollbar-thumb {
+  background: var(--color-tr-primary-blue);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.projects-table-main-zone::-webkit-scrollbar-thumb:hover {
+  background: var(--color-tr-accent);
+}
+
+/**
+ * Table Footer Positioning
+ *
+ * The footer is now positioned at the bottom of the table inside the scrollable area.
+ * It uses sticky positioning to remain visible when scrolling through table rows.
+ */
+
+/* Ensure table footer sticks to bottom of scrollable container */
+.projects-table-main-zone tfoot {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+}
+
+/**
+ * Batch Actions Bar Styling
+ *
+ * The batch actions bar appears outside and below the scrollable table area.
+ * It's positioned at the bottom of the main container and appears with animation
+ * when items are selected.
+ */
+
+/* Additional spacing and styling handled in ProjectsTableBatchActions.tsx */
+
+/**
+ * Sticky Actions Column
+ *
+ * The actions column is pinned to the right side of the table.
+ * Background colors are set to match the row backgrounds to prevent
+ * content from showing through during horizontal scrolling.
+ */
+
+/* Actions column background for even rows */
+.projects-table-main-zone tbody tr:nth-child(even) td.sticky {
+  background: var(--color-tr-white);
+}
+
+/* Actions column background for odd rows */
+.projects-table-main-zone tbody tr:nth-child(odd) td.sticky {
+  background: var(--color-tr-muted);
+}
+
+/* Actions column background on hover */
+.projects-table-main-zone tbody tr:hover td.sticky {
+  background: inherit;
+}
+
+/* Actions column background for selected rows */
+.projects-table-main-zone tbody tr[aria-selected="true"] td.sticky {
+  background: var(--color-tr-primary-blue);
+}
+
+/* Actions column header background */
+.projects-table-main-zone thead th.sticky {
+  background: var(--color-tr-muted);
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
+}

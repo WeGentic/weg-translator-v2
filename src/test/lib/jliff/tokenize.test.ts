@@ -7,7 +7,7 @@ import {
   parsePlaceholder,
   parseSegmentKey,
   tokenizeText,
-} from "@/lib/jliff";
+} from "@/core/ipc";
 
 describe("tokenizeText", () => {
   afterEach(() => clearTokenCache());

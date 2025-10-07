@@ -13,9 +13,9 @@ import {
   startTranslation,
   updateAppFolder,
   updateAutoConvertOnOpen,
-} from "@/ipc/client";
-import type { AppSettings } from "@/ipc/types";
-import type { TranslationHistoryRecord, TranslationRequest } from "@/ipc/types";
+} from "@/core/ipc/client";
+import type { AppSettings } from "@/core/ipc/types";
+import type { TranslationHistoryRecord, TranslationRequest } from "@/core/ipc/types";
 
 const invokeMock = vi.mocked(invoke);
 

@@ -4,7 +4,16 @@
     "skipLibCheck": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/core/*": ["./src/core/*"],
+      "@/shared/*": ["./src/shared/*"],
+      "@/shared/ui/*": ["./src/shared/ui/*"],
+      "@/modules/*": ["./src/modules/*"],
+      "@/router/*": ["./src/router/*"]
+    }
   },
   "include": ["vite.config.ts"]
 }

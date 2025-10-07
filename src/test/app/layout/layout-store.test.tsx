@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_FOOTER_HEIGHT, createLayoutStore } from "@/app/layout/layout-store";
+import { DEFAULT_FOOTER_HEIGHT, createLayoutStore } from "@/app/shell/layout-store";
 
 describe("layout store", () => {
   it("applies layout config overrides", () => {

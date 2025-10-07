@@ -1,5 +1,4 @@
 import {
-  Children,
   Fragment,
   isValidElement,
   type HTMLAttributes,
@@ -20,13 +19,15 @@ interface SlotComponent<P = SlotProps> {
   __slot: PanelSlot;
 }
 
-interface SlotProps extends PropsWithChildren<unknown> {}
+type SlotProps = PropsWithChildren;
+
+type SlotAttributes<T extends HTMLElement> = HTMLAttributes<T> & Record<string, unknown>;
 
 export interface ThreeZonePanelSlotProps {
-  header?: HTMLAttributes<HTMLElement>;
-  toolbar?: HTMLAttributes<HTMLDivElement>;
-  content?: HTMLAttributes<HTMLDivElement>;
-  footer?: HTMLAttributes<HTMLElement>;
+  header?: SlotAttributes<HTMLElement>;
+  toolbar?: SlotAttributes<HTMLDivElement>;
+  content?: SlotAttributes<HTMLDivElement>;
+  footer?: SlotAttributes<HTMLElement>;
 }
 
 export interface ThreeZonePanelProps extends PropsWithChildren {
@@ -62,20 +63,21 @@ export function ThreeZonePanel({
   };
   const looseChildren: ReactNode[] = [];
 
-  Children.forEach(children, (child) => {
+  for (const child of flattenChildren(children)) {
     if (!isValidElement(child)) {
       looseChildren.push(child);
-      return;
+      continue;
     }
 
     const slot = getSlot(child);
     if (!slot) {
       looseChildren.push(child);
-      return;
+      continue;
     }
 
-    slotCollections[slot].push((child as ReactElement<SlotProps>).props.children);
-  });
+    const slotChildren = (child as ReactElement<SlotProps>).props.children;
+    slotCollections[slot].push(...flattenChildren(slotChildren));
+  }
 
   if (slotCollections.content.length === 0 && looseChildren.length > 0) {
     looseChildren.forEach((node) => {
@@ -92,22 +94,22 @@ export function ThreeZonePanel({
     slotProps?.header,
     "three-zone-panel__header",
     "header",
-  ) as HTMLAttributes<HTMLElement>;
+  );
   const toolbarAttributes = buildSlotAttributes(
     slotProps?.toolbar,
     "three-zone-panel__toolbar",
     "toolbar",
-  ) as HTMLAttributes<HTMLDivElement>;
+  );
   const contentAttributes = buildSlotAttributes(
     slotProps?.content,
     getContentClassName(contentOverflow),
     "content",
-  ) as HTMLAttributes<HTMLDivElement>;
+  );
   const footerAttributes = buildSlotAttributes(
     slotProps?.footer,
     "three-zone-panel__footer",
     "footer",
-  ) as HTMLAttributes<HTMLElement>;
+  );
 
   return (
     <section
@@ -128,13 +130,6 @@ export function ThreeZonePanel({
       ) : null}
     </section>
   );
-}
-
-export namespace ThreeZonePanel {
-  export let Header: typeof HeaderSlot;
-  export let Toolbar: typeof ToolbarSlot;
-  export let Content: typeof ContentSlot;
-  export let Footer: typeof FooterSlot;
 }
 
 ThreeZonePanel.Header = HeaderSlot;
@@ -161,10 +156,14 @@ function createSlot(slot: PanelSlot, displayName: string): SlotComponent {
   return Slot;
 }
 
+function hasPanelSlotMetadata(type: unknown): type is SlotComponent {
+  return typeof type === "function" && "__slot" in (type as { __slot?: PanelSlot });
+}
+
 function getSlot(element: ReactElement): PanelSlot | null {
   const type = element.type;
-  if (typeof type === "function" && "__slot" in (type as Record<string, unknown>)) {
-    return (type as SlotComponent).__slot;
+  if (hasPanelSlotMetadata(type)) {
+    return type.__slot;
   }
   return null;
 }
@@ -176,24 +175,21 @@ function mergeSlotChildren(nodes: ReactNode[] | undefined): ReactNode | null {
   if (nodes.length === 1) {
     return nodes[0];
   }
-  return nodes.map((node, index) => <Fragment key={index}>{node}</Fragment>);
+  return nodes;
 }
 
 function mergeClassNames(...values: Array<string | undefined | null>): string {
   return values.filter(Boolean).join(" ");
 }
 
-type AnySlotAttributes = HTMLAttributes<HTMLElement> | HTMLAttributes<HTMLDivElement>;
-
-function buildSlotAttributes(
-  attributes: AnySlotAttributes | undefined,
+function buildSlotAttributes<T extends HTMLElement>(
+  attributes: SlotAttributes<T> | undefined,
   baseClassName: string,
   slotName: PanelSlot,
-): AnySlotAttributes {
-  const merged = { ...(attributes ?? {}) } as AnySlotAttributes & {
+): SlotAttributes<T> {
+  const merged = { ...(attributes ?? {}) } as SlotAttributes<T> & {
     className?: string;
     role?: string;
-    [key: string]: unknown;
   };
   merged.className = mergeClassNames(baseClassName, attributes?.className);
   if (merged["data-slot"] == null) {
@@ -210,4 +206,14 @@ function getContentClassName(overflow: "auto" | "hidden"): string {
     "three-zone-panel__content",
     overflow === "auto" ? "three-zone-panel__content--auto" : "three-zone-panel__content--hidden",
   );
+}
+
+function flattenChildren(node: ReactNode): ReactNode[] {
+  if (node == null || typeof node === "boolean") {
+    return [];
+  }
+  if (Array.isArray(node)) {
+    return (node as ReactNode[]).flatMap((child) => flattenChildren(child));
+  }
+  return [node];
 }

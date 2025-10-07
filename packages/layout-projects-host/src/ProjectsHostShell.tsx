@@ -17,6 +17,8 @@ type HostSlot = "header" | "toolbar" | "content" | "footer";
 
 type SlotProps = PropsWithChildren<unknown>;
 
+type SlotAttributes = HTMLAttributes<HTMLDivElement> & { [key: string]: unknown };
+
 interface SlotComponent<P = SlotProps> {
   (props: P): ReactElement | null;
   displayName?: string;
@@ -24,10 +26,10 @@ interface SlotComponent<P = SlotProps> {
 }
 
 export interface ProjectsHostShellSlotProps {
-  header?: HTMLAttributes<HTMLDivElement>;
-  toolbar?: HTMLAttributes<HTMLDivElement>;
-  content?: HTMLAttributes<HTMLDivElement>;
-  footer?: HTMLAttributes<HTMLDivElement>;
+  header?: SlotAttributes;
+  toolbar?: SlotAttributes;
+  content?: SlotAttributes;
+  footer?: SlotAttributes;
 }
 
 export interface ProjectsHostShellProps extends PropsWithChildren {
@@ -94,25 +96,25 @@ function ProjectsHostShellBase({
     slotProps?.header,
     "projects-table-header-zone flex items-center justify-between px-4",
     "header",
-  ) as HTMLAttributes<HTMLDivElement>;
+  );
 
   const toolbarAttributes = buildSlotAttributes(
     slotProps?.toolbar,
     "projects-table-toolbar-zone",
     "toolbar",
-  ) as HTMLAttributes<HTMLDivElement>;
+  );
 
   const contentAttributes = buildSlotAttributes(
     slotProps?.content,
     "projects-table-main-zone",
     "content",
-  ) as HTMLAttributes<HTMLDivElement>;
+  );
 
   const footerAttributes = buildSlotAttributes(
     slotProps?.footer,
     "flex-shrink-0 border-t-2 border-border bg-gradient-to-r from-muted/15 via-muted/8 to-transparent backdrop-blur-sm shadow-sm",
     "footer",
-  ) as HTMLAttributes<HTMLDivElement>;
+  );
 
   const hostClassName = mergeClassNames(HOST_CLASSNAME, className);
   const contentStyle = mergeStyles(contentAttributes.style, { overflowY: contentOverflow });
@@ -156,8 +158,6 @@ export type ProjectsHostShellToolbarProps = PropsWithChildren;
 export type ProjectsHostShellContentProps = PropsWithChildren;
 export type ProjectsHostShellFooterProps = PropsWithChildren;
 
-type SlotAttributes = HTMLAttributes<HTMLDivElement> & { [key: string]: unknown };
-
 function createSlot(slot: HostSlot, displayName: string): SlotComponent {
   const Slot: SlotComponent = ({ children }) => {
     return <Fragment>{children}</Fragment>;
@@ -167,10 +167,14 @@ function createSlot(slot: HostSlot, displayName: string): SlotComponent {
   return Slot;
 }
 
+function hasSlotMetadata(type: unknown): type is SlotComponent {
+  return typeof type === "function" && "__slot" in (type as { __slot?: HostSlot });
+}
+
 function getSlot(element: ReactElement): HostSlot | null {
   const type = element.type;
-  if (typeof type === "function" && "__slot" in (type as Record<string, unknown>)) {
-    return (type as SlotComponent).__slot;
+  if (hasSlotMetadata(type)) {
+    return type.__slot;
   }
   return null;
 }
@@ -229,5 +233,3 @@ function flattenChildren(node: ReactNode, collection: ReactNode[]): void {
   }
   collection.push(node as ReactNode);
 }
-
-export type { ProjectsHostShellProps, ProjectsHostShellSlotProps };

@@ -1,4 +1,4 @@
-@import "../../../../../weg-translator/src/features/project-manager/css/dropdowns.css";
+@import "../../../../src/modules/projects/css/dropdowns.css";
 
 :root {
   --projects-table-header-height: 48px;

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeAll, afterAll } from "vitest";
-import { formatDateParts } from "@/lib/datetime";
+import { formatDateParts } from "@/shared/utils/datetime";
 
 describe("formatDateParts", () => {
   const fixedNow = new Date("2025-01-01T12:00:00.000Z");

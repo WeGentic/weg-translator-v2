@@ -1,0 +1,389 @@
+/* Modern gradient animations optimized for performance */
+@keyframes gradient-shift {
+  0% {
+    transform: translateX(0%) translateY(0%);
+  }
+  33% {
+    transform: translateX(-5%) translateY(-2%);
+  }
+  66% {
+    transform: translateX(2%) translateY(-5%);
+  }
+  100% {
+    transform: translateX(0%) translateY(0%);
+  }
+}
+
+@keyframes gradient-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes gradient-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* Enhanced table animations for smooth interactions */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+@layer utilities {
+  /* Animation utility classes */
+  .animate-gradient-shift {
+    animation: gradient-shift 8s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  .animate-gradient-pulse {
+    animation: gradient-pulse 6s ease-in-out infinite;
+    will-change: opacity, transform;
+  }
+
+  .animate-gradient-rotate {
+    animation: gradient-rotate 20s linear infinite;
+    will-change: transform;
+  }
+
+  /* Respect reduced motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-gradient-shift,
+    .animate-gradient-pulse,
+    .animate-gradient-rotate {
+      animation: none !important;
+      will-change: auto;
+    }
+  }
+
+  /* Custom gradient utilities */
+  .bg-gradient-radial {
+    background: radial-gradient(circle, var(--tw-gradient-stops));
+  }
+
+  .bg-gradient-surface,
+  .bg-gradient-cream {
+    background: var(--gradient-surface);
+  }
+
+  .bg-gradient-primary,
+  .bg-gradient-blue {
+    background: var(--gradient-primary);
+  }
+
+  .bg-gradient-accent {
+    background: var(--gradient-accent);
+  }
+
+  .bg-gradient-surface-radial,
+  .bg-gradient-cream-radial {
+    background: var(--gradient-surface-radial);
+  }
+
+  .bg-gradient-primary-radial,
+  .bg-gradient-blue-radial {
+    background: var(--gradient-primary-radial);
+  }
+
+  .bg-gradient-accent-radial {
+    background: var(--gradient-accent-radial);
+  }
+
+  /* Hover variants */
+  .hover\:bg-gradient-cream:hover,
+  .hover\:bg-gradient-surface:hover {
+    background: var(--gradient-surface);
+  }
+
+  .hover\:bg-gradient-blue:hover,
+  .hover\:bg-gradient-primary:hover {
+    background: var(--gradient-primary);
+  }
+
+  .hover\:bg-gradient-accent:hover {
+    background: var(--gradient-accent);
+  }
+
+  /* Direct color utilities */
+  .bg-cream {
+    background-color: var(--color-tr-white);
+  }
+
+  .bg-cream-dark {
+    background-color: var(--color-tr-anti-primary);
+  }
+
+  .bg-deep-blue {
+    background-color: var(--color-tr-primary-blue);
+  }
+
+  .bg-blue-light {
+    background-color: var(--color-tr-secondary);
+  }
+
+  .bg-orange {
+    background-color: var(--color-tr-accent);
+  }
+
+  .bg-navy {
+    background-color: var(--color-tr-navy);
+  }
+
+  .bg-tr-background {
+    background-color: var(--background);
+  }
+
+  .bg-tr-surface {
+    background-color: var(--card);
+  }
+
+  .bg-tr-muted {
+    background-color: var(--muted);
+  }
+
+  .bg-tr-primary {
+    background-color: var(--primary);
+  }
+
+  .bg-tr-secondary {
+    background-color: var(--secondary);
+  }
+
+  .bg-tr-accent {
+    background-color: var(--accent);
+  }
+
+  .bg-tr-success {
+    background-color: var(--success);
+  }
+
+  .bg-tr-destructive {
+    background-color: var(--destructive);
+  }
+
+  /* Text color utilities */
+  .text-cream {
+    color: var(--color-tr-white);
+  }
+
+  .text-deep-blue {
+    color: var(--color-tr-primary-blue);
+  }
+
+  .text-orange {
+    color: var(--color-tr-accent);
+  }
+
+  .text-navy {
+    color: var(--color-tr-navy);
+  }
+
+  .text-tr-foreground {
+    color: var(--foreground);
+  }
+
+  .text-tr-muted {
+    color: var(--muted-foreground);
+  }
+
+  .text-tr-primary {
+    color: var(--primary);
+  }
+
+  .text-tr-on-primary {
+    color: var(--primary-foreground);
+  }
+
+  .text-tr-accent {
+    color: var(--accent);
+  }
+
+  .text-tr-on-accent {
+    color: var(--accent-foreground);
+  }
+
+  .text-tr-success {
+    color: var(--success);
+  }
+
+  .text-tr-on-success {
+    color: var(--success-foreground);
+  }
+
+  .text-tr-destructive {
+    color: var(--destructive);
+  }
+
+  .text-tr-on-destructive {
+    color: var(--destructive-foreground);
+  }
+
+  /* Border color utilities */
+  .border-cream-dark {
+    border-color: var(--color-tr-anti-primary);
+  }
+
+  .border-deep-blue {
+    border-color: var(--color-tr-primary-blue);
+  }
+
+  .border-orange {
+    border-color: var(--color-tr-accent);
+  }
+
+  .border-tr-default {
+    border-color: var(--border);
+  }
+
+  .border-tr-muted {
+    border-color: var(--muted);
+  }
+}
+
+@layer components {
+  /* Table row animations */
+  .table-row-enter {
+    animation: fadeInUp 0.4s ease-out forwards;
+  }
+
+  .table-row-exit {
+    animation: fadeInUp 0.3s ease-in reverse forwards;
+  }
+
+  /* Status badge animations */
+  .status-badge-pulse {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+
+  /* Loading shimmer effect */
+  .table-loading {
+    background: linear-gradient(
+      90deg,
+      rgba(var(--muted), 0.1) 25%,
+      rgba(var(--muted), 0.3) 50%,
+      rgba(var(--muted), 0.1) 75%
+    );
+    background-size: 200px 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Hover effects */
+  .table-hover-scale {
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .table-hover-scale:hover {
+    transform: scale(1.05);
+  }
+
+  /* Filter transition */
+  .filter-transition {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Sort indicator animation */
+  .sort-indicator {
+    transition: all 0.2s ease-in-out;
+  }
+
+  .sort-indicator.active {
+    transform: scale(1.1);
+    color: var(--primary);
+  }
+
+  /**
+   * Vertical Separator - Partial Height
+   *
+   * Creates a subtle vertical divider line between table columns.
+   * The separator:
+   * - Spans 50% of the cell height (centered vertically)
+   * - Uses theme border color from CSS variables
+   * - Has reduced opacity for subtle appearance
+   * - Positioned absolutely on the right edge of cells
+   *
+   * Applied to header and cell columns via meta.headerClassName/cellClassName
+   */
+  .vertical-separator-partial::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    /* Centered vertical positioning: starts at 25% from top, ends at 25% from bottom */
+    top: 25%;
+    bottom: 25%;
+    /* Thin 1px divider line */
+    width: 1px;
+    /* Use theme's border color variable for consistency */
+    background: var(--color-tr-border);
+    /* Subtle opacity for non-intrusive visual separation */
+    opacity: 0.3;
+    /* Smooth transition when opacity changes */
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  /**
+   * Vertical Separator - Hover Enhancement
+   *
+   * On row hover, slightly increase divider opacity for better visual feedback
+   */
+  tr:hover .vertical-separator-partial::after {
+    opacity: 0.5;
+  }
+}

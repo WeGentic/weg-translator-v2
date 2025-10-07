@@ -1,12 +1,9 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
-import { routeTree } from "./routeTree.gen";
-import { ScreenGuard } from "@/app/layout/screen-guard";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { AppErrorBoundary } from "@/components/AppErrorBoundary";
-import { ToastProvider } from "@/components/ui/toast";
-import { LogProvider } from "@/logging";
+import { routeTree } from "@/router";
+import { ScreenGuard } from "@/app/shell/screen-guard";
+import { AppProviders, useAuth } from "@/app/providers";
 import "./App.css";
 
 interface RouterContext {
@@ -45,16 +42,10 @@ function InnerApp() {
 
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>
-    <LogProvider>
-      <AppErrorBoundary>
-        <AuthProvider>
-          <ToastProvider>
-            <ScreenGuard minWidth={768} minHeight={600}>
-              <InnerApp />
-            </ScreenGuard>
-          </ToastProvider>
-        </AuthProvider>
-      </AppErrorBoundary>
-    </LogProvider>
+    <AppProviders>
+      <ScreenGuard minWidth={768} minHeight={600}>
+        <InnerApp />
+      </ScreenGuard>
+    </AppProviders>
   </StrictMode>,
 );

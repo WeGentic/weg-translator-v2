@@ -1,13 +1,14 @@
 import { useEffect } from "react";
 
 import { useAppHealth } from "@/app/hooks/useAppHealth";
-import { useGlobalNavigationEvents } from "@/app/hooks/useGlobalNavigationEvents";
-import { useWorkspaceShell } from "@/app/hooks/useWorkspaceShell";
-import { CollapsedFooterBar, WorkspaceFooter } from "@/app/layout/main_elements";
-import { ProjectsPanel } from "@/components/projects/ProjectsPanel";
-import { EnhancedAppSettingsPanel } from "@/components/settings/EnhancedAppSettingsPanel";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import type { ProjectListItem } from "@/ipc";
+import { useGlobalNavigationEvents } from "@/modules/workspace/hooks";
+import { useWorkspaceShell } from "@/modules/workspace/state";
+import { CollapsedFooterBar, WorkspaceFooter } from "@/app/shell/main_elements";
+import { ProjectsPanel } from "@/modules/projects/ProjectsPanel";
+import { EnhancedAppSettingsPanel } from "@/modules/settings";
+import { Alert, AlertDescription } from "@/shared/ui/alert";
+import type { ProjectListItem } from "@/core/ipc";
+import { AppProviders } from "@/app/providers";
 
 import "./App.css";
 
@@ -15,7 +16,7 @@ import "./App.css";
  * Legacy shell retained for storybook-style previews. The main application now
  * relies on TanStack Router + workspace routes under `src/routes/`.
  */
-function App() {
+export function LegacyApp() {
   const { health, systemError } = useAppHealth();
   const {
     mainView,
@@ -106,4 +107,10 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AppProviders>
+      <LegacyApp />
+    </AppProviders>
+  );
+}

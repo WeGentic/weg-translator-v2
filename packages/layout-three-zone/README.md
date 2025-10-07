@@ -14,8 +14,8 @@ import { ThreeZonePanel } from "@wegentic/layout-three-zone";
 
 ```tsx
 import { ThreeZonePanel } from "@wegentic/layout-three-zone";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
 
 export function ExamplePanel() {
   return (

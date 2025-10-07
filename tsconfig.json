@@ -10,7 +10,12 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/core/*": ["./src/core/*"],
+      "@/shared/*": ["./src/shared/*"],
+      "@/shared/ui/*": ["./src/shared/ui/*"],
+      "@/modules/*": ["./src/modules/*"],
+      "@/router/*": ["./src/router/*"]
     },
     "types": ["vitest/globals"],
     "allowImportingTsExtensions": true,
@@ -28,7 +33,9 @@
   "include": [
     "src",
     "packages/layout-three-zone/src",
-    "packages/layout-projects-host/src"
+    "packages/layout-projects-host/src",
+    "vite.config.ts",
+    "vite.config.d.ts"
   ],
   "references": [
     { "path": "./tsconfig.node.json" }

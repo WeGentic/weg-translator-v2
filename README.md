@@ -11,12 +11,25 @@ Tauri 2.8.5 desktop application with a **React 19.1** frontend and **Rust 1.89**
 - Capability hardening: shell sidecars limited to an allowlisted flag set; opener/dialog permissions scoped to user actions.
 - CI workflow builds macOS/Windows bundles, caches vendored OpenXLIFF dists, and uploads artifacts.
 
+## Release Notes – Domain-First Refactor (2025-03-01)
+
+- Swapped legacy `src/features`/`src/components` tree for domain-aligned modules under `src/modules`, `src/core`, `src/shared`, and `src/app`; update local branches by rebasing before committing new work.
+- TypeScript, Vite, ESLint, and ShadCN generators now rely on refreshed aliases (`@/modules`, `@/shared`, `@/core`, `@/app`); run `pnpm format:fix` after rebases to realign imports if conflicts surface.
+- Tests and helpers live beside their domains or under `src/test/utils`; ensure new specs follow this layout and use the provided router-aware render utilities.
+- ShadCN scaffolding outputs to `src/shared/ui`; re-run `pnpm shadcn:init` after pulling if your local generator cache predates the alias update.
+- Follow-up backlog: theme token extraction, OpenXLIFF wizard polish, and workspace layout telemetry capture remain tracked in `docs/domain-refactor-journal.md`.
+
 ## Repository layout
 
 ```
-src/                      React frontend (routes, ShadCN components, OpenXLIFF panel)
-src/lib/openxliff.ts      JS wrappers around @tauri-apps/plugin-shell sidecars
-src/lib/fs.ts             Path existence helper (Rust command `path_exists`)
+src/                      React frontend entrypoint
+src/app/                  Application providers, shell layout, shared state
+src/app/shell/            MainLayout implementation, sidebars, footer chrome
+src/core/                 Infrastructure (logging, config, IPC, settings)
+src/modules/              Feature domains (workspace, projects, editor, etc.)
+src/router/               TanStack Router routes + generated tree
+src/shared/               Cross-cutting UI primitives, hooks, styles, utils
+src/test/                 Vitest setup and shared testing utilities
 src-tauri/                Rust backend, Tauri config, sidecar binaries/resources
 src-tauri/sidecars/       Wrapper scripts invoked as sidecars
 src-tauri/resources/      Vendored OpenXLIFF dist + Java runtime per platform
@@ -130,10 +143,14 @@ APP=src-tauri/target/debug/bundle/macos/weg-translator.app/Contents/MacOS/conver
 
 ## Frontend components
 
-- `src/routes/index.tsx`: authenticated translator workspace; surfaces OpenXLIFF tooling and job controls.
-- `src/components/openxliff/OpenXliffPanel.tsx`: full convert/validate/merge UI with path validation, dialogs, and streaming logs.
-- `src/lib/openxliff.ts`: `Command.sidecar` wrappers (execute + streaming variants) returning structured results.
-- `src/lib/fs.ts`: client helper around the Rust `path_exists` command (exists/isFile/isDir).
+- `src/app/providers`: composes logging, auth, toast, and error boundaries for the React tree.
+- `src/router/routes/__root.tsx`: root layout wiring `MainLayout`, navigation dispatch, and workspace footer.
+- `src/modules/workspace/WorkspacePage.tsx`: orchestrates workspace panels and registers global navigation event listeners.
+- `src/modules/projects`: domain surface for project listing, wizard, artifacts overview, and OpenXLIFF tooling.
+- `src/modules/projects/ui/tools/OpenXliffPanel.tsx`: convert/validate/merge UI backed by the Tauri sidecars.
+- `src/core/ipc/openxliff.ts`: typed wrappers over `@tauri-apps/plugin-shell` for OpenXLIFF commands.
+- `src/core/ipc/fs.ts`: path validation helper invoking the Rust `path_exists` command.
+- `src/shared/logging/LogConsole.tsx`: live log viewer fed by `LogProvider` streaming events from the backend.
 
 ## IPC / backend
 

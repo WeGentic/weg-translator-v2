@@ -4,13 +4,12 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import path from "path";
 
-// @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(() => ({
   plugins: [
-    tanstackRouter({ target: "react" }),
+    tanstackRouter({ target: "react", routesDirectory: "src/router/routes", generatedRouteTree: "src/router/routeTree.gen.ts" }),
     react({
       babel: {
         plugins: ["babel-plugin-react-compiler"],
@@ -22,13 +21,17 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@/core": path.resolve(__dirname, "./src/core"),
+      "@/shared": path.resolve(__dirname, "./src/shared"),
+      "@/shared/ui": path.resolve(__dirname, "./src/shared/ui"),
+      "@/modules": path.resolve(__dirname, "./src/modules"),
     },
   },
 
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: ["./src/test/setup.ts"],
+    setupFiles: ["./src/test/setup/index.ts"],
     coverage: {
       reporter: ["text", "lcov"],
     },

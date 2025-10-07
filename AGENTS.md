@@ -55,6 +55,7 @@ Do I have strong, context-supported evidence for this answer?
 
 - Do your best to provide small, single-scoped files (under 300-500 lines of code), aiming for high cohesion and low coupling, and for the best maintainability.
 - Follow all currect best practices for coding, including but not limited to:
+  - You must follow React 19.2 coding guidelines (see docs/react19-guidelines.md)
   - Proper naming conventions
   - YAGNI (You Aren't Gonna Need It)
   - KISS (Keep It Simple, Stupid)
@@ -102,6 +103,25 @@ App will use ONLY these base colors from the WeGentic palette, defined in App.cs
 ```
 
 ## Architecture overview
+
+### Folder Structure
+## Repository layout
+
+```
+src/                      React frontend entrypoint
+src/app/                  Application providers, shell layout, shared state
+src/app/shell/            MainLayout implementation, sidebars, footer chrome
+src/core/                 Infrastructure (logging, config, IPC, settings)
+src/modules/              Feature domains (workspace, projects, editor, etc.)
+src/router/               TanStack Router routes + generated tree
+src/shared/               Cross-cutting UI primitives, hooks, styles, utils
+src/test/                 Vitest setup and shared testing utilities
+src-tauri/                Rust backend, Tauri config, sidecar binaries/resources
+src-tauri/sidecars/       Wrapper scripts invoked as sidecars
+src-tauri/resources/      Vendored OpenXLIFF dist + Java runtime per platform
+scripts/                  Helper scripts (fetch, sync, normalize, build JRE)
+vendor/openxliff/         Source-of-truth OpenXLIFF assets
+.github/workflows/ci.yml  macOS/Windows build workflow
 
 ### Frontend (React 19.1 + TypeScript)
 

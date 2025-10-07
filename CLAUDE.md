@@ -55,6 +55,7 @@ Do I have strong, context-supported evidence for this answer?
 
 - Do your best to provide small, single-scoped files (under 300-500 lines of code), aiming for high cohesion and low coupling, and for the best maintainability.
 - Follow all currect best practices for coding, including but not limited to:
+  - You must follow React 19.2 coding guidelines (see docs/react19-guidelines.md)
   - Proper naming conventions
   - YAGNI (You Aren't Gonna Need It)
   - KISS (Keep It Simple, Stupid)
@@ -89,6 +90,19 @@ pnpm format:check    # check formatting
 **Note:** Prefer `pnpm` for development to stay aligned with the workspace lockfile.
 
 ## Architecture overview
+
+### Folder structure
+
+- `src/app/` – Application providers, shell scaffolding, and auth/layout state.
+- `src/core/` – Infrastructure services such as IPC clients, logging, and config.
+- `src/modules/` – Domain features (projects, workspace, history, settings, editor).
+- `src/shared/` – Cross-cutting UI primitives, hooks, utilities, and styles.
+- `src/router/` – TanStack Router entrypoints and generated route tree.
+- `src/test/` – Vitest setup files plus shared testing utilities.
+- `src-tauri/` – Rust backend source, Tauri config, migrations, and sidecars.
+- `packages/` – Reusable layout packages consumed by the desktop shell.
+- `scripts/` – Helper scripts for OpenXLIFF assets and workspace tooling.
+- `docs/` – Architecture notes, migration guides, and task documentation.
 
 ### Frontend (React 19.1 + TypeScript)
 

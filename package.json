@@ -13,8 +13,9 @@
     "tauri": "tauri",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run",
+    "test:run": "vitest run --silent --reporter=dot",
     "test:coverage": "vitest run --coverage",
     "format": "prettier \"**/*.{cjs,js,jsx,mjs,ts,tsx,json,md,css}\" --write",
     "format:check": "prettier \"**/*.{cjs,js,jsx,mjs,ts,tsx,json,md,css}\" --check"

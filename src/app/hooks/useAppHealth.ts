@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-import { healthCheck, type AppHealthReport } from "@/ipc";
-import { logger } from "@/logging";
+import { healthCheck, type AppHealthReport } from "@/core/ipc";
+import { logger } from "@/core/logging";
 
 /**
  * Bootstraps the IPC health channel once on mount and surfaces the latest health report/error.

@@ -18,7 +18,7 @@ const tsTypeCheckedConfigs = tseslint.configs.recommendedTypeChecked.map((config
     ...config.languageOptions,
     parserOptions: {
       ...config.languageOptions?.parserOptions,
-      projectService: true,
+      project: true,
       tsconfigRootDir: __dirname,
     },
   },
@@ -37,6 +37,7 @@ export default [
       'src-tauri/target',
       'src-tauri/gen',
       'src-tauri/out',
+      'vite.config.d.ts',
     ],
   },
   {

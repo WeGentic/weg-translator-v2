@@ -3,7 +3,7 @@
 Main Objective: Refactor the Project Manager module to leverage React 19 features, removing unnecessary memoization hooks while ensuring no behavioural regressions. UX/UI must remain **IDENTICAL**. Functionality includes project listing, filtering, selection, deletion, and wizard initiation must be perfectly preserved.
 
 General directives:
-- All changes must be confined to a new module `project-manager-v2` under `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator/src/features/project-manager-v2`.
+- All changes must be confined to a new module `project-manager-v2` under `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator/src/modules/projects`.
 - Legacy `project-manager` files must remain untouched, MUST be used as Source of Truth, and copied to the new module as needed and/or refactored as needed, with clear documentation on what was refactored vs. copied.
 
 Task 1 - Establish Baseline & Invariants - Status: COMPLETED
@@ -41,15 +41,15 @@ Step 1.2.2 - Inventory usage of manual memoization hooks across Project Manager 
 Sub-Task 1.3 - Define Migration Strategy & Directory Layout - Status: COMPLETED
   - Directory structure, file classification, and dependency matrix documented (see `project-manager-v2-migration-matrix.md`) to guide subsequent implementation without touching legacy files.
 Step 1.3.1 - Confirm new project-manager-v2 module boundaries and file mapping - Status: COMPLETED
-  - New module root: `src/features/project-manager-v2`. Mirror top-level entry files (`ProjectManagerView.tsx`, `ProjectManagerContent.tsx`, `ProjectManagerToolbar.tsx`, `ProjectManagerHeader.tsx`) plus supporting folders: `components/`, `components/datagrid/`, `components/wizard/` (with nested `steps`, `state`, `utils`), `hooks/`, `types/`, `utils/`, `css/`.
+  - New module root: `src/modules/projects`. Mirror top-level entry files (`ProjectManagerView.tsx`, `ProjectManagerContent.tsx`, `ProjectManagerToolbar.tsx`, `ProjectManagerHeader.tsx`) plus supporting folders: `components/`, `components/datagrid/`, `components/wizard/` (with nested `steps`, `state`, `utils`), `hooks/`, `types/`, `utils/`, `css/`.
   - CSS assets (`css/dropdowns.css`, `css/data-table.css`, `css/new-project-button.css`) remain as-is under v2 folder to avoid touching legacy styles while enabling targeted adjustments.
   - Shared IPC/types remain imported from existing shared locations (`@/ipc`, layout store, etc.); no cross-writes to legacy module. V2 module exports will be wired separately once implementation begins.
 Step 1.3.2 - List all legacy files under src/features/project-manager/ to classify as refactor vs. copy-only, documenting rationale for each decision - Status: COMPLETED
   - Refactor in v2: `ProjectManagerView.tsx`, `ProjectManagerContent.tsx`, `ProjectManagerToolbar.tsx` (core state/data flow overhaul); `components/datagrid/columns.tsx` (align with new data plumbing + compiler), `utils/filterProjects.ts` (dedupe + shared selector), `hooks/useSidebarTwoContentSync.tsx` (ensure compatibility with updated selection strategy), wizard state hook `components/wizard/state/useProjectWizard.ts` (evaluate for compiler-friendly patterns), and wizard steps (details/files/review) where redundant memoization will be removed.
   - Copy with light touch (style parity): `ProjectManagerHeader.tsx`, `components/ProjectManagerFooter.tsx`, `components/datagrid/ProjectsTableGrid.tsx`, `components/datagrid/presentation.tsx`, `components/ProjectsBatchActionsPanel.tsx`, `components/BatchDeleteConfirmDialog.tsx`, `components/ProjectsOverviewCard.tsx`, `components/DeleteProjectDialog.tsx`, `components/EmptyProjectsState.tsx`, wizard scaffolding `components/wizard/CreateProjectWizard.tsx`, `components/wizard/utils/*`, `components/wizard/types.ts`, CSS assets under `css/`, and `types/types.ts`. These may receive naming/typing tweaks but no behavioural shifts.
   - Rationale: Files marked “refactor” either contain duplicated data derivation, heavy hook usage targeted by React 19 migration, or coordinate global state; copy-classified assets are primarily presentational or already compliant with new patterns.
-Step 1.3.3 - Specify target paths inside /Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator/src/features/project-manager-v2, ensuring legacy files remain unchanged. Create a document that will be referenced during the migration - Status: COMPLETED
-  - Target layout finalized (see `project-manager-v2-migration-matrix.md`), mirroring legacy folder structure with explicit refactor vs copy designations. Legacy module untouched; v2 files will reside strictly under `src/features/project-manager-v2`.
+Step 1.3.3 - Specify target paths inside /Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator/src/modules/projects, ensuring legacy files remain unchanged. Create a document that will be referenced during the migration - Status: COMPLETED
+  - Target layout finalized (see `project-manager-v2-migration-matrix.md`), mirroring legacy folder structure with explicit refactor vs copy designations. Legacy module untouched; v2 files will reside strictly under `src/modules/projects`.
 Step 1.3.4 - Produce migration matrix outlining dependencies (shared components, hooks, utils) and note which will be reused or duplicated - Status: COMPLETED
   - Migration matrix recorded in `project-manager-v2-migration-matrix.md` summarizing each source file, plan (refactor/copy), dependencies, and notes. Highlights reuse strategy for shadcn components, TanStack table, layout store, and IPC calls.
 Sub-task 1.4 - Reporting - Status: COMPLETED
@@ -58,7 +58,7 @@ Step 1.4.1 - Generate a full-detailed report from Task 1 analysis for stepwise m
   - Delivered `task-1-analysis-report.md` consolidating behavioural audit, tooling readiness, migration strategy, and risks. Anchors to supporting subtask docs for future reference.
 
 Task 2 - Modernize ProjectManagerView.tsx. Use task-1-documentation.md as a guide - Status: COMPLETED
-  - Completed 2025-02-15: React 19-ready view landed in `src/features/project-manager-v2/ProjectManagerView.tsx`, mirroring legacy UX while removing manual memo hooks (see task-2-documentation.md).
+  - Completed 2025-02-15: React 19-ready view landed in `src/modules/projects/ProjectManagerView.tsx`, mirroring legacy UX while removing manual memo hooks (see task-2-documentation.md).
 Sub-task 2.1 - Streamline state & derived data - Status: COMPLETED
   - Consolidated search/filter state into a `controls` object with equality guards; documented outcomes in subtask-2-1-documentation.md.
 Step 2.1.1 - Evaluate co-locating derived lists (filtered projects) to avoid duplicated `filterProjects` work once compiler-driven memoization is in place - Status: COMPLETED
@@ -120,7 +120,7 @@ Task 4 - Modernize ProjectManagerToolbar.tsx. Use report from Step 1.2.3 and the
 Sub-task 4.1 - Simplify state interactions - Status: COMPLETED
   - Centralised filter updates through a shared patch helper and guarded state resets, eliminating legacy `useMemo`/`Dispatch` usage (documented in subtask-4-1-documentation.md).
 Step 4.1.1 - Map filter setters to consolidated action creators or inline handlers removing unnecessary memo hooks per React Compiler guidance - Status: COMPLETED
-  - Added `applyFilterUpdate` in `src/features/project-manager-v2/ProjectManagerToolbar.tsx:46` to diff incoming values before emitting a single `onFiltersChange` call, replacing legacy `SetStateAction` callbacks.
+  - Added `applyFilterUpdate` in `src/modules/projects/ProjectManagerToolbar.tsx:46` to diff incoming values before emitting a single `onFiltersChange` call, replacing legacy `SetStateAction` callbacks.
 Step 4.1.2 - Plan controlled input refactor ensuring search field retains accessibility while leveraging React 19 event ergonomics - Status: COMPLETED
   - Swapped ad-hoc arrow handlers for `handleSearchInputChange` / `handleClearSearch` (`ProjectManagerToolbar.tsx:62-70`), preserving aria metadata while aligning with React 19 event semantics.
 Sub-task 4.2 - Optimise conditional UI logic - Status: COMPLETED

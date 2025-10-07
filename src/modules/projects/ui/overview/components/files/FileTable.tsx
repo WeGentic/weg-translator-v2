@@ -1,0 +1,514 @@
+import { useMemo, useState, useCallback } from "react";
+import {
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Search,
+  X,
+  Filter,
+  FilePenLine,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
+import { IconTooltipButton } from "@/shared/icons";
+import { FileStatusIndicator } from "./FileStatusIndicator";
+import { FilterChips, type FileFilters } from "./FilterChips";
+import { DropZone } from "@/shared/ui/DropZone";
+import { useTauriFileDrop } from "@/shared/hooks/use-tauri-file-drop";
+import type { ProjectFileWithConversionsDto, ProjectFileConversionDto } from "@/core/ipc";
+import { cn } from "@/shared/utils/class-names";
+import { PROJECT_FILE_EXTENSIONS_WITH_DOT } from "@/modules/projects/config";
+
+const FILE_TABLE_SKELETON_KEYS = ["loader-1", "loader-2", "loader-3"] as const;
+
+type SortField = "name" | "status" | "type";
+type SortDirection = "asc" | "desc" | null;
+
+interface FileTableRow {
+  id: string;
+  name: string;
+  ext: string;
+  size?: number;
+  importStatus: string;
+  conversions: ProjectFileConversionDto[];
+  type: string;
+}
+
+interface Props {
+  files: ProjectFileWithConversionsDto[];
+  isLoading?: boolean;
+  onOpenEditor: (fileId: string) => void;
+  onRemove: (fileId: string) => void;
+  onRebuild: (fileId: string) => void;
+  onAddFiles?: () => void;
+  onFilesDropped?: (files: string[]) => void;
+  rebuildingFileId?: string | null;
+  isProcessing?: boolean;
+}
+
+export function FileTable({
+  files,
+  isLoading = false,
+  onOpenEditor,
+  onRemove,
+  onRebuild,
+  onAddFiles,
+  onFilesDropped,
+  rebuildingFileId,
+  isProcessing = false,
+}: Props) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(() => new Set());
+  const [filters, setFilters] = useState<FileFilters>(() => ({
+    fileTypes: new Set(),
+    statuses: new Set(),
+  }));
+  const [showFilters, setShowFilters] = useState(false);
+  const activeFilterCount = filters.fileTypes.size + filters.statuses.size;
+
+  // Global Tauri drag-drop listener - only one per page
+  const { isDragActive, isDragOver } = useTauriFileDrop({
+    onFilesDropped: onFilesDropped || (() => {}),
+    acceptedFileTypes: PROJECT_FILE_EXTENSIONS_WITH_DOT,
+    disabled: !onFilesDropped || isProcessing,
+  });
+
+  // Transform files to table rows
+  const rows = useMemo<FileTableRow[]>(
+    () =>
+      files.map((fileData) => ({
+        id: fileData.file.id,
+        name: fileData.file.originalName,
+        ext: fileData.file.ext,
+        size: fileData.file.sizeBytes,
+        importStatus: fileData.file.importStatus,
+        conversions: fileData.conversions,
+        type: fileData.file.ext || "unknown",
+      })),
+    [files],
+  );
+
+  // Filter and sort rows
+  const filteredAndSortedRows = useMemo(() => {
+    let filtered = rows;
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter((row) =>
+        row.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply chip filters
+    if (filters.fileTypes.size > 0) {
+      filtered = filtered.filter((row) =>
+        filters.fileTypes.has(row.ext.replace(/^\./, "").toUpperCase())
+      );
+    }
+
+    if (filters.statuses.size > 0) {
+      filtered = filtered.filter((row) => {
+        // Check import status
+        if (filters.statuses.has(row.importStatus)) return true;
+        // Check conversion statuses
+        return row.conversions.some(conv => filters.statuses.has(conv.status));
+      });
+    }
+
+    // Apply sorting
+    if (sortField && sortDirection) {
+      filtered = [...filtered].sort((a, b) => {
+        let aValue = "";
+        let bValue = "";
+
+        switch (sortField) {
+          case "name":
+            aValue = a.name.toLowerCase();
+            bValue = b.name.toLowerCase();
+            break;
+          case "type":
+            aValue = a.type.toLowerCase();
+            bValue = b.type.toLowerCase();
+            break;
+          case "status":
+            aValue = a.importStatus;
+            bValue = b.importStatus;
+            break;
+        }
+
+        const result = aValue.localeCompare(bValue);
+        return sortDirection === "asc" ? result : -result;
+      });
+    }
+
+    return filtered;
+  }, [rows, searchTerm, sortField, sortDirection, filters]);
+
+  // Sort handler
+  const handleSort = useCallback((field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortField(null);
+        setSortDirection(null);
+      } else {
+        setSortDirection("asc");
+      }
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  }, [sortField, sortDirection]);
+
+  // Selection handlers
+  const handleSelectAll = useCallback(() => {
+    setSelectedFiles((prev) => {
+      if (prev.size === filteredAndSortedRows.length) {
+        return new Set();
+      }
+      return new Set(filteredAndSortedRows.map((row) => row.id));
+    });
+  }, [filteredAndSortedRows]);
+
+  const handleSelectFile = useCallback((fileId: string) => {
+    setSelectedFiles((prev) => {
+      const next = new Set(prev);
+      if (next.has(fileId)) {
+        next.delete(fileId);
+      } else {
+        next.add(fileId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Clear search
+  const clearSearch = useCallback(() => {
+    setSearchTerm("");
+  }, []);
+
+  // Format file extension
+  const formatExt = useCallback((ext: string) => {
+    if (!ext) return "";
+    return ext.replace(/^\./, "").slice(0, 4).toUpperCase();
+  }, []);
+
+
+  // Get sort icon
+  const getSortIcon = useCallback((field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />;
+    }
+    if (sortDirection === "asc") {
+      return <ArrowUp className="ml-1 h-3 w-3" />;
+    }
+    if (sortDirection === "desc") {
+      return <ArrowDown className="ml-1 h-3 w-3" />;
+    }
+    return <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />;
+  }, [sortField, sortDirection]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="h-9 w-64 animate-pulse rounded-lg bg-muted" />
+        </div>
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-background/80 shadow-sm">
+          <div className="border-b border-border/60 p-2">
+            <div className="grid grid-cols-5 gap-4">
+              <div className="h-4 w-16 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-12 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-16 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-16 animate-pulse rounded bg-muted ml-auto" />
+            </div>
+          </div>
+          <div className="space-y-0">
+            {FILE_TABLE_SKELETON_KEYS.map((key) => (
+              <div key={key} className="flex items-center gap-4 p-3 border-b border-border/30 last:border-b-0">
+                <div className="h-4 w-4 animate-pulse rounded bg-muted" />
+                <div className="h-4 flex-1 animate-pulse rounded bg-muted" />
+                <div className="h-6 w-12 animate-pulse rounded-full bg-muted" />
+                <div className="h-6 w-16 animate-pulse rounded-full bg-muted" />
+                <div className="flex gap-1">
+                  <div className="h-6 w-6 animate-pulse rounded-full bg-muted" />
+                  <div className="h-6 w-6 animate-pulse rounded-full bg-muted" />
+                  <div className="h-6 w-6 animate-pulse rounded-full bg-muted" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <DropZone
+        onBrowseClick={onAddFiles}
+        variant="empty-state"
+        title="No files yet"
+        showBrowseButton={!!onAddFiles}
+        disabled={isProcessing || (!onFilesDropped && !onAddFiles)}
+        isDragActive={isDragActive}
+        isDragOver={isDragOver}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-3" aria-busy={isProcessing} aria-live="polite">
+      {/* Add files drop zone - persistent when files exist */}
+      {onFilesDropped && (
+        <DropZone
+          onBrowseClick={onAddFiles}
+          variant="compact"
+          title="Add more files"
+          showBrowseButton={!!onAddFiles}
+          isDragActive={isDragActive}
+          isDragOver={isDragOver}
+          disabled={isProcessing}
+        />
+      )}
+
+      {/* Search and filters */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search files..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8 pr-8"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={clearSearch}
+                className="absolute right-1 top-1 h-7 w-7 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              "gap-2",
+              (showFilters || activeFilterCount > 0) && "border-primary/50 bg-primary/5 text-foreground"
+            )}
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
+          {(searchTerm || activeFilterCount > 0) && (
+            <div className="text-sm text-muted-foreground">
+              {filteredAndSortedRows.length} of {rows.length} files
+            </div>
+          )}
+        </div>
+
+        {/* Filter chips */}
+        {showFilters && (
+          <FilterChips
+            files={files}
+            filters={filters}
+            onFiltersChange={setFilters}
+            className="mt-2"
+          />
+        )}
+      </div>
+
+      {/* Bulk actions bar */}
+      {selectedFiles.size > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 p-2">
+          <div className="text-sm font-medium text-foreground">
+            {selectedFiles.size} file{selectedFiles.size === 1 ? '' : 's'} selected
+          </div>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" onClick={() => setSelectedFiles(new Set())}>
+              Clear
+            </Button>
+            <Button variant="outline" size="sm" disabled>
+              Rebuild Selected
+            </Button>
+            <Button variant="outline" size="sm" disabled>
+              Remove Selected
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Empty filtered state */}
+      {filteredAndSortedRows.length === 0 && rows.length > 0 && (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted/60">
+            <Search className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="mb-2 text-sm font-medium text-foreground">No files match your filters</h3>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Try adjusting your search term or filters to find what you're looking for
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSearchTerm("");
+              setFilters({
+                fileTypes: new Set(),
+                statuses: new Set(),
+              });
+            }}
+          >
+            Clear filters
+          </Button>
+        </div>
+      )}
+
+      {/* Table */}
+      {filteredAndSortedRows.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-background/80 shadow-sm">
+          <Table className="[&_td]:py-2 [&_th]:py-2">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[50px]">
+                <input
+                  type="checkbox"
+                  checked={selectedFiles.size === filteredAndSortedRows.length && filteredAndSortedRows.length > 0}
+                  onChange={handleSelectAll}
+                  className="rounded"
+                  disabled={isProcessing || filteredAndSortedRows.length === 0}
+                />
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none hover:bg-muted/50"
+                onClick={() => handleSort("name")}
+              >
+                <div className="flex items-center">
+                  Filename
+                  {getSortIcon("name")}
+                </div>
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none hover:bg-muted/50"
+                onClick={() => handleSort("type")}
+              >
+                <div className="flex items-center">
+                  Type
+                  {getSortIcon("type")}
+                </div>
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none hover:bg-muted/50"
+                onClick={() => handleSort("status")}
+              >
+                <div className="flex items-center">
+                  Status
+                  {getSortIcon("status")}
+                </div>
+              </TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredAndSortedRows.map((row) => (
+              <TableRow
+                key={row.id}
+                className={cn(
+                  "transition-colors",
+                  selectedFiles.has(row.id) && "bg-muted/30"
+                )}
+              >
+                <TableCell>
+                  <input
+                    type="checkbox"
+                    checked={selectedFiles.has(row.id)}
+                    onChange={() => handleSelectFile(row.id)}
+                    className="rounded"
+                    disabled={isProcessing}
+                  />
+                </TableCell>
+                <TableCell>
+                  <button
+                    type="button"
+                    onClick={() => onOpenEditor(row.id)}
+                    className={cn(
+                      "truncate text-left text-sm font-medium text-foreground transition",
+                      "hover:text-primary hover:underline focus:text-primary focus:underline focus:outline-none",
+                      isProcessing && "cursor-not-allowed text-muted-foreground"
+                    )}
+                    title={row.name}
+                    disabled={isProcessing}
+                  >
+                    {row.name}
+                  </button>
+                </TableCell>
+                <TableCell>
+                  <span className="inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium uppercase">
+                    {formatExt(row.ext) || "FILE"}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <FileStatusIndicator
+                    importStatus={row.importStatus}
+                    conversions={row.conversions}
+                  />
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-0.5">
+                    <IconTooltipButton
+                      label="Open in editor"
+                      ariaLabel={`Open ${row.name} in editor`}
+                      onClick={() => onOpenEditor(row.id)}
+                      disabled={isProcessing}
+                    >
+                      <FilePenLine className="h-4 w-4" />
+                    </IconTooltipButton>
+                    <IconTooltipButton
+                      label="Rebuild conversions"
+                      ariaLabel={`Rebuild conversions for ${row.name}`}
+                      onClick={() => onRebuild(row.id)}
+                      tone="muted"
+                      disabled={
+                        isProcessing || row.conversions.length === 0 || rebuildingFileId === row.id
+                      }
+                    >
+                      <RefreshCw className={cn("h-4 w-4", rebuildingFileId === row.id && "animate-spin")} />
+                    </IconTooltipButton>
+                    <IconTooltipButton
+                      label="Remove file"
+                      ariaLabel={`Remove file ${row.name}`}
+                      onClick={() => onRemove(row.id)}
+                      tone="destructive"
+                      disabled={isProcessing}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </IconTooltipButton>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        </div>
+      )}
+    </div>
+  );
+}
