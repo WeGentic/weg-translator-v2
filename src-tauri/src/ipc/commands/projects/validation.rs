@@ -8,6 +8,7 @@ use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::path::PathBuf;
 
+use language_tags::LanguageTag;
 use log::warn;
 use tokio::fs;
 
@@ -228,15 +229,22 @@ pub async fn validate_project_files(
 ///
 /// # Returns
 /// Some(trimmed_string) if non-empty, None if empty or None
-pub fn validate_optional_language(lang: Option<String>) -> Option<String> {
-    lang.and_then(|s| {
-        let trimmed = s.trim();
-        if trimmed.is_empty() {
-            None
-        } else {
-            Some(trimmed.to_string())
-        }
-    })
+pub fn validate_optional_language(lang: Option<String>) -> Result<Option<String>, IpcError> {
+    let Some(raw) = lang.map(|s| s.trim().to_string()) else {
+        return Ok(None);
+    };
+
+    if raw.is_empty() {
+        return Ok(None);
+    }
+
+    LanguageTag::parse(&raw)
+        .map(|tag| Some(tag.to_string()))
+        .map_err(|_| {
+            IpcError::Validation(format!(
+                "Language tag '{raw}' is not a valid BCP-47 identifier."
+            ))
+        })
 }
 
 /// Validates conversion status strings
@@ -347,16 +355,27 @@ mod tests {
     #[test]
     fn test_validate_optional_language() {
         assert_eq!(
-            validate_optional_language(Some("en-US".to_string())),
+            validate_optional_language(Some("en-US".to_string())).unwrap(),
             Some("en-US".to_string())
         );
         assert_eq!(
-            validate_optional_language(Some("  fr-FR  ".to_string())),
+            validate_optional_language(Some("  fr-FR  ".to_string())).unwrap(),
             Some("fr-FR".to_string())
         );
-        assert_eq!(validate_optional_language(Some("".to_string())), None);
-        assert_eq!(validate_optional_language(Some("   ".to_string())), None);
-        assert_eq!(validate_optional_language(None), None);
+        assert_eq!(
+            validate_optional_language(Some("EN-lAtn-us".to_string())).unwrap(),
+            Some("en-Latn-US".to_string())
+        );
+        assert_eq!(
+            validate_optional_language(Some("".to_string())).unwrap(),
+            None
+        );
+        assert_eq!(
+            validate_optional_language(Some("   ".to_string())).unwrap(),
+            None
+        );
+        assert_eq!(validate_optional_language(None).unwrap(), None);
+        assert!(validate_optional_language(Some("invalid_tag!".to_string())).is_err());
     }
 
     #[test]

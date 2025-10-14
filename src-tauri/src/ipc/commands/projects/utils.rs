@@ -2,8 +2,8 @@
 //!
 //! This module contains helper functions for common operations like:
 //! - String manipulation and slug generation
-//! - File naming and collision resolution
 //! - Path validation and security checks
+//! - Cleanup helpers for artifact removal
 
 use std::ffi::OsStr;
 use std::io::ErrorKind;
@@ -13,37 +13,10 @@ use log::warn;
 use tokio::fs;
 use uuid::Uuid;
 
-use super::constants::{DEFAULT_FILE_STEM, DEFAULT_PROJECT_SLUG};
+use super::constants::{
+    DEFAULT_FILE_STEM, DEFAULT_PROJECT_SLUG, PROJECT_DIR_ORIGINAL, PROJECT_DIR_STAGING_ORIGINAL,
+};
 use crate::ipc::error::IpcError;
-
-/// Generates a collision-free filename by appending a counter
-///
-/// When a file with the given name already exists, this function
-/// appends a counter to create a unique filename while preserving
-/// the original extension.
-///
-/// # Arguments
-/// * `original_name` - The desired filename
-/// * `counter` - The collision counter to append
-///
-/// # Examples
-/// ```
-/// assert_eq!(format_collision_name("document.docx", 2), "document-2.docx");
-/// assert_eq!(format_collision_name("README", 3), "README-3");
-/// ```
-pub fn format_collision_name(original_name: &str, counter: usize) -> String {
-    let path = Path::new(original_name);
-    let stem = path
-        .file_stem()
-        .and_then(OsStr::to_str)
-        .filter(|s| !s.is_empty())
-        .unwrap_or(DEFAULT_FILE_STEM);
-    let ext = path.extension().and_then(OsStr::to_str);
-    match ext {
-        Some(ext) if !ext.is_empty() => format!("{stem}-{counter}.{ext}"),
-        _ => format!("{stem}-{counter}"),
-    }
-}
 
 /// Converts a project name into a URL-safe slug
 ///
@@ -85,6 +58,59 @@ pub fn slugify(name: &str) -> String {
     }
 }
 
+fn sanitized_file_stem(name: &str) -> String {
+    let stem = Path::new(name)
+        .file_stem()
+        .and_then(OsStr::to_str)
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or(DEFAULT_FILE_STEM);
+    let slug = slugify(stem);
+    if slug == DEFAULT_PROJECT_SLUG {
+        DEFAULT_FILE_STEM.into()
+    } else {
+        slug
+    }
+}
+
+/// Builds the relative storage path for an original uploaded file.
+///
+/// The stored path follows the convention:
+/// `original/<file_id>__<slugified-name>[.<ext>]`
+pub fn build_original_stored_rel_path(file_id: Uuid, original_name: &str) -> String {
+    let mut file_name = format!("{}__{}", file_id, sanitized_file_stem(original_name));
+    if let Some(ext) = Path::new(original_name)
+        .extension()
+        .and_then(OsStr::to_str)
+        .filter(|ext| !ext.trim().is_empty())
+    {
+        file_name.push('.');
+        file_name.push_str(&ext.to_ascii_lowercase());
+    }
+
+    Path::new(PROJECT_DIR_ORIGINAL)
+        .join(file_name)
+        .to_string_lossy()
+        .to_string()
+}
+
+#[allow(dead_code)]
+pub fn build_staging_original_stored_rel_path(file_id: Uuid, original_name: &str) -> String {
+    let mut file_name = format!("{}__{}", file_id, sanitized_file_stem(original_name));
+    if let Some(ext) = Path::new(original_name)
+        .extension()
+        .and_then(OsStr::to_str)
+        .filter(|ext| !ext.trim().is_empty())
+    {
+        file_name.push('.');
+        file_name.push_str(&ext.to_ascii_lowercase());
+    }
+
+    Path::new(PROJECT_DIR_STAGING_ORIGINAL)
+        .join(file_name)
+        .to_string_lossy()
+        .to_string()
+}
+
 /// Builds a unique project slug combining name and UUID
 ///
 /// Creates a slug by combining the slugified project name with
@@ -110,52 +136,6 @@ pub fn build_project_slug(name: &str, project_id: Uuid) -> String {
     let mut unique = project_id.simple().to_string();
     unique.truncate(8);
     format!("{base}-{unique}")
-}
-
-/// Finds the next available filename in a directory
-///
-/// Generates a unique filename by checking for existing files and
-/// appending collision counters as needed. This prevents overwriting
-/// existing files during project import.
-///
-/// # Arguments
-/// * `dir` - The directory to check for existing files
-/// * `original_name` - The desired filename
-///
-/// # Returns
-/// A unique filename that doesn't conflict with existing files
-///
-/// # Errors
-/// Returns `std::io::Error` if directory access fails
-pub async fn next_available_file_name(
-    dir: &Path,
-    original_name: &str,
-) -> Result<String, std::io::Error> {
-    let mut candidate = if original_name.is_empty() {
-        DEFAULT_FILE_STEM.to_string()
-    } else {
-        original_name.to_string()
-    };
-
-    let mut counter = 1usize;
-    loop {
-        let path = dir.join(&candidate);
-        match fs::metadata(&path).await {
-            Ok(_) => {
-                // File exists, try next collision name
-                candidate = format_collision_name(original_name, counter);
-                counter += 1;
-            }
-            Err(error) => {
-                if error.kind() == ErrorKind::NotFound {
-                    // File doesn't exist, we can use this name
-                    return Ok(candidate);
-                }
-                // Other error, propagate it
-                return Err(error);
-            }
-        }
-    }
 }
 
 /// Validates a relative artifact path to ensure it stays within the project root
@@ -281,6 +261,47 @@ pub fn join_within_project(root_path: &Path, rel_path: &str) -> Option<PathBuf> 
     }
 }
 
+/// Sanitizes an input string so it can be safely used as a filesystem
+/// directory segment for artifacts. Only ASCII alphanumeric characters
+/// and hyphens are preserved; other characters collapse into single
+/// hyphens. Empty or whitespace-only inputs fall back to "unknown".
+pub fn sanitize_artifact_segment(value: &str) -> String {
+    let mut sanitized = String::new();
+    let mut last_was_dash = false;
+
+    for ch in value.trim().chars() {
+        if ch.is_ascii_alphanumeric() {
+            sanitized.push(ch);
+            last_was_dash = false;
+        } else if ch == '-' {
+            if !last_was_dash {
+                sanitized.push('-');
+                last_was_dash = true;
+            }
+        } else if !last_was_dash {
+            sanitized.push('-');
+            last_was_dash = true;
+        }
+    }
+
+    let trimmed = sanitized.trim_matches('-').to_string();
+    if trimmed.is_empty() {
+        "unknown".into()
+    } else {
+        trimmed
+    }
+}
+
+/// Builds the subdirectory name used for language-specific artifacts
+/// by sanitizing both the source and target language codes.
+pub fn build_language_directory_name(src_lang: &str, tgt_lang: &str) -> String {
+    format!(
+        "{}__{}",
+        sanitize_artifact_segment(src_lang),
+        sanitize_artifact_segment(tgt_lang)
+    )
+}
+
 /// Removes a file and attempts to clean up empty parent directories
 ///
 /// This function removes a file and then walks up the directory tree,
@@ -393,12 +414,6 @@ mod tests {
     }
 
     #[test]
-    fn test_format_collision_name_appends_suffix() {
-        assert_eq!(format_collision_name("document.docx", 2), "document-2.docx");
-        assert_eq!(format_collision_name("README", 3), "README-3");
-    }
-
-    #[test]
     fn test_build_project_slug_appends_unique_suffix() {
         let id = Uuid::parse_str("12345678-1234-5678-1234-567812345678").unwrap();
         assert_eq!(
@@ -420,5 +435,21 @@ mod tests {
         assert!(join_within_project(root, "/absolute/path.txt").is_none());
         assert!(join_within_project(root, "").is_none());
         assert!(join_within_project(root, "  ").is_none());
+    }
+
+    #[test]
+    fn test_sanitize_artifact_segment_normalizes_values() {
+        assert_eq!(sanitize_artifact_segment("en-US"), "en-US");
+        assert_eq!(sanitize_artifact_segment("../../etc/passwd"), "etc-passwd");
+        assert_eq!(sanitize_artifact_segment("  "), "unknown");
+    }
+
+    #[test]
+    fn test_build_language_directory_name_sanitizes_components() {
+        let dir = build_language_directory_name("en-US", "fr-FR");
+        assert_eq!(dir, "en-US__fr-FR");
+
+        let malicious = build_language_directory_name("../../en", "fr/../..");
+        assert_eq!(malicious, "en__fr");
     }
 }

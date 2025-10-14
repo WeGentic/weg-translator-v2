@@ -230,12 +230,13 @@ mod tests {
         ProjectFileDetails {
             id: Uuid::new_v4(),
             original_name: "document.docx".to_string(),
-            stored_rel_path: "document.docx".to_string(),
+            stored_rel_path: "original/document.docx".to_string(),
             ext: "docx".to_string(),
             size_bytes: Some(1024),
             import_status: ProjectFileImportStatus::Imported,
             created_at: "2023-01-01T00:00:00Z".to_string(),
             updated_at: "2023-01-01T00:00:00Z".to_string(),
+            hash_sha256: Some("abc123".to_string()),
         }
     }
 

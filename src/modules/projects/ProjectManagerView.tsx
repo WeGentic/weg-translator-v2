@@ -16,7 +16,7 @@ import { ProjectManagerHeader } from "./ProjectManagerHeader";
 import { ProjectManagerToolbar } from "./ProjectManagerToolbar";
 import { ProjectManagerContent } from "./ProjectManagerContent";
 import { EmptyProjectsState } from "./components/EmptyProjectsState";
-import { CreateProjectWizard } from "./components/wizard/CreateProjectWizard";
+import { CreateProjectWizardV2 } from "./components/wizard-v2/CreateProjectWizardV2";
 import { DeleteProjectDialog } from "./components/DeleteProjectDialog";
 import { useSidebarTwoContentSync } from "./state/useSidebarTwoContentSync";
 import {
@@ -242,7 +242,11 @@ export function ProjectManagerView({ onOpenProject, onCreateProject }: ProjectMa
         </div>
       </div>
 
-      <CreateProjectWizard open={isWizardOpen} onOpenChange={setWizardOpen} onProjectCreated={handleProjectCreated} />
+      <CreateProjectWizardV2
+        open={isWizardOpen}
+        onOpenChange={setWizardOpen}
+        onProjectCreated={handleProjectCreated}
+      />
 
       <DeleteProjectDialog
         open={deleteDialogOpen}

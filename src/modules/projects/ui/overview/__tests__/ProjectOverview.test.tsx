@@ -154,6 +154,7 @@ const basePlan: EnsureConversionsPlan = {
   tgtLang: details.defaultTgtLang ?? "it-IT",
   version: "2.1",
   tasks: [],
+  integrityAlerts: [],
 };
 
 const baseSettings: AppSettings = {
@@ -179,7 +180,11 @@ const baseSettings: AppSettings = {
 };
 
 beforeEach(() => {
-  vi.mocked(ensureProjectConversionsPlan).mockResolvedValue({ ...basePlan, tasks: [] });
+  vi.mocked(ensureProjectConversionsPlan).mockResolvedValue({
+    ...basePlan,
+    tasks: [],
+    integrityAlerts: [],
+  });
   vi.mocked(convertXliffToJliff).mockResolvedValue({
     fileId: "c1",
     jliffAbsPath: "/projects/demo/jliff/demo-file1.jliff.json",
@@ -393,5 +398,46 @@ describe("ProjectOverview", () => {
     await waitFor(() => expect(validateStream).toHaveBeenCalled());
 
     expect(ensureProjectConversionsPlan).toHaveBeenCalledTimes(2);
+  });
+
+  it("displays an integrity warning when checksum mismatches are detected", async () => {
+    vi.mocked(getProjectDetails).mockResolvedValue(details);
+    vi.mocked(getAppSettings).mockResolvedValue({ ...baseSettings });
+    vi.mocked(openDialog).mockResolvedValueOnce(["/abs/new.docx"]);
+    vi.mocked(addFilesToProject).mockResolvedValue({
+      inserted: [],
+      insertedCount: 0,
+    });
+
+    const planWithAlert: EnsureConversionsPlan = {
+      ...basePlan,
+      tasks: [],
+      integrityAlerts: [
+        {
+          fileId: "f-alert",
+          fileName: "alert.docx",
+          expectedHash: "abc",
+          actualHash: "def",
+        },
+      ],
+    };
+
+    vi.mocked(ensureProjectConversionsPlan).mockResolvedValue(planWithAlert);
+
+    renderWithProviders(<ProjectOverview projectSummary={projectSummary} />);
+
+    await screen.findByRole("table");
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /browse files/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/file integrity mismatch/i)).toBeInTheDocument(),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByText(/alert\.docx no longer matches the stored checksum\./i),
+      ).toBeInTheDocument(),
+    );
   });
 });

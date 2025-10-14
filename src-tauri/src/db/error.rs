@@ -21,7 +21,7 @@ pub enum DbError {
     NotFound(Uuid),
     #[error("invalid translation stage '{0}' in storage")]
     InvalidStage(String),
-    #[error("invalid job identifier stored in database: {0}")]
+    #[error("invalid UUID stored in database: {0}")]
     InvalidUuid(String),
     #[error("duplicate translation job identifier: {0}")]
     DuplicateJob(Uuid),
@@ -35,8 +35,20 @@ pub enum DbError {
     InvalidProjectFileStatus(String),
     #[error("invalid project file conversion status '{0}' in storage")]
     InvalidProjectFileConversionStatus(String),
+    #[error("invalid file target status '{0}' in storage")]
+    InvalidFileTargetStatus(String),
+    #[error("invalid artifact kind '{0}' in storage")]
+    InvalidArtifactKind(String),
+    #[error("invalid artifact status '{0}' in storage")]
+    InvalidArtifactStatus(String),
+    #[error("invalid job type '{0}' in storage")]
+    InvalidJobType(String),
+    #[error("invalid job state '{0}' in storage")]
+    InvalidJobState(String),
     #[error("project not found: {0}")]
     ProjectNotFound(Uuid),
     #[error("project file conversion not found: {0}")]
     ProjectFileConversionNotFound(Uuid),
+    #[error("refused to create subdirectory with unsafe name: {0}")]
+    InvalidSubdirectory(String),
 }

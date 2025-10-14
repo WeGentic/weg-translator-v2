@@ -235,6 +235,40 @@ impl DbManager {
         build_project_file_conversion(&inserted_row)
     }
 
+    /// Fetches the conversion row along with the owning project identifier.
+    pub async fn load_conversion_with_project(
+        &self,
+        conversion_id: Uuid,
+    ) -> DbResult<(ProjectFileConversionRow, Uuid)> {
+        let pool = self.pool().await;
+        let columns = conversion_projection();
+        let select_query = format!(
+            "SELECT {columns}, pf.project_id AS project_id
+             FROM project_file_conversions c
+             INNER JOIN project_files pf ON pf.id = c.project_file_id
+             WHERE c.id = ?1
+             LIMIT 1",
+            columns = columns
+        );
+
+        let row = sqlx::query(&select_query)
+            .bind(&conversion_id.to_string())
+            .fetch_optional(&pool)
+            .await?;
+
+        let row = match row {
+            Some(record) => record,
+            None => return Err(DbError::ProjectFileConversionNotFound(conversion_id)),
+        };
+
+        let project_id_raw: String = row.try_get("project_id")?;
+        let project_id = Uuid::parse_str(&project_id_raw)
+            .map_err(|_| DbError::InvalidProjectId(project_id_raw.clone()))?;
+        let conversion = build_project_file_conversion(&row)?;
+
+        Ok((conversion, project_id))
+    }
+
     /// Returns conversions that still require processing for the provided language pair.
     pub async fn list_pending_conversions(
         &self,

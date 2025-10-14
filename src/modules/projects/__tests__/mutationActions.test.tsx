@@ -58,7 +58,7 @@ const {
   const mutateProjectsResourceImpl = (
     updater: ProjectsUpdaterFn,
   ): ProjectListItemMock[] => {
-    const next = updater([...resourceState.projects]) as ProjectListItemMock[];
+    const next = updater([...resourceState.projects]);
     resourceState.projects = [...next];
     return [...resourceState.projects];
   };

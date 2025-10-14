@@ -85,7 +85,12 @@ pub use commands::{
 };
 
 // Re-export key types that might be needed by other modules
-pub use artifacts::{JliffConversionResult, UpdateJliffSegmentResult};
+pub use artifacts::{JliffConversionResult, UpdateJliffSegmentResult, build_conversions_plan};
+pub use constants::{
+    DEFAULT_SOURCE_LANGUAGE, DEFAULT_TARGET_LANGUAGE, LOCAL_OWNER_DISPLAY_NAME, LOCAL_OWNER_EMAIL,
+    LOCAL_OWNER_USER_ID,
+};
+pub use utils::build_original_stored_rel_path;
 
 // Internal re-exports for backwards compatibility during migration
 // These support the original projects.rs consumers during the transition
@@ -93,33 +98,3 @@ pub use artifacts::{
     read_project_artifact as read_project_artifact_impl,
     update_jliff_segment as update_jliff_segment_impl,
 };
-
-/// Module version information
-///
-/// This can be used for compatibility checking and debugging
-pub const MODULE_VERSION: &str = "2.0.0";
-
-/// Module description for documentation and tooling
-pub const MODULE_DESCRIPTION: &str =
-    "Refactored project management with improved separation of concerns";
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_module_exports() {
-        // Verify that key types are properly exported
-        assert_eq!(MODULE_VERSION, "2.0.0");
-        assert!(!MODULE_DESCRIPTION.is_empty());
-    }
-
-    #[test]
-    fn test_constants_accessible() {
-        // Verify that constants from submodules are accessible
-        use constants::*;
-        assert_eq!(PROJECT_NAME_MIN_LEN, 2);
-        assert_eq!(PROJECT_NAME_MAX_LEN, 120);
-        assert_eq!(DEFAULT_SOURCE_LANGUAGE, "en-US");
-    }
-}

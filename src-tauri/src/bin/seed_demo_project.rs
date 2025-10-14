@@ -8,9 +8,10 @@ use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 use uuid::Uuid;
 use weg_translator_lib::{
-    ConversionOptions, DbManager, NewProject, NewProjectFile, ProjectFileConversionRequest,
-    ProjectFileConversionStatus, ProjectFileImportStatus, ProjectStatus, ProjectType,
-    convert_xliff,
+    ConversionOptions, DbManager, LOCAL_OWNER_USER_ID, NewProject, NewProjectFile,
+    ProjectFileConversionRequest, ProjectFileConversionStatus, ProjectFileImportStatus,
+    ProjectFileRole, ProjectFileStorageState, ProjectLifecycleStatus, ProjectStatus, ProjectType,
+    build_original_stored_rel_path, convert_xliff,
 };
 
 const DB_FILE_NAME: &str = "weg_translator.db";
@@ -259,21 +260,33 @@ async fn run(config: CliConfig) -> Result<()> {
         project_type: ProjectType::Translation,
         root_path: project_root.to_string_lossy().to_string(),
         status: ProjectStatus::Active,
+        owner_user_id: LOCAL_OWNER_USER_ID.to_string(),
+        client_id: None,
+        domain_id: None,
+        lifecycle_status: ProjectLifecycleStatus::Ready,
+        archived_at: None,
         default_src_lang: Some(config.src_lang.clone()),
         default_tgt_lang: Some(config.tgt_lang.clone()),
         metadata: None,
     };
+
+    let stored_rel_path = build_original_stored_rel_path(file_id, doc_filename);
 
     let project_file = NewProjectFile {
         id: file_id,
         project_id,
         original_name: doc_filename.to_string(),
         original_path: doc_source.to_string_lossy().to_string(),
-        stored_rel_path: doc_filename.to_string(),
+        stored_rel_path,
         ext: doc_ext,
         size_bytes: doc_size,
         checksum_sha256: None,
         import_status: ProjectFileImportStatus::Imported,
+        role: ProjectFileRole::Source,
+        storage_state: ProjectFileStorageState::Copied,
+        mime_type: None,
+        hash_sha256: None,
+        importer: Some("seed-demo".to_string()),
     };
 
     let db = DbManager::new_with_base_dir(&app_dir)

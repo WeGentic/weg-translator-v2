@@ -4,16 +4,18 @@ mod shared;
 mod translations;
 
 // Re-export project management types and commands from the refactored module
+pub use projects::{
+    DEFAULT_SOURCE_LANGUAGE, DEFAULT_TARGET_LANGUAGE, LOCAL_OWNER_DISPLAY_NAME, LOCAL_OWNER_EMAIL,
+    LOCAL_OWNER_USER_ID, add_files_to_project, build_conversions_plan,
+    build_original_stored_rel_path, convert_xliff_to_jliff, create_project_with_files,
+    delete_project, ensure_project_conversions_plan, get_project_details, list_projects,
+    read_project_artifact, read_project_artifact_impl, remove_project_file,
+    update_conversion_status, update_jliff_segment, update_jliff_segment_impl,
+};
 #[allow(unused_imports)]
 pub use projects::{
     JliffConversionResult as JliffConversionResultDto,
     UpdateJliffSegmentResult as UpdateJliffSegmentResultDto,
-};
-pub use projects::{
-    add_files_to_project, convert_xliff_to_jliff, create_project_with_files, delete_project,
-    ensure_project_conversions_plan, get_project_details, list_projects, read_project_artifact,
-    read_project_artifact_impl, remove_project_file, update_conversion_status,
-    update_jliff_segment, update_jliff_segment_impl,
 };
 pub use settings::{
     get_app_settings, path_exists, update_app_folder, update_auto_convert_on_open,

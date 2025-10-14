@@ -188,15 +188,38 @@ export async function ensureProjectConversionsPlan(projectId: string) {
   return safeInvoke<EnsureConversionsPlan>("ensure_project_conversions_plan", { project_id: projectId, projectId });
 }
 
+export interface ConversionValidationSummary {
+  validator?: string;
+  passed?: boolean;
+  skipped?: boolean;
+  message?: string;
+  schemaPath?: string;
+}
+
 export async function updateConversionStatus(
   conversionId: string,
   status: "pending" | "running" | "completed" | "failed",
-  payload?: { xliffRelPath?: string; jliffRelPath?: string; tagMapRelPath?: string; errorMessage?: string },
+  payload?: {
+    xliffRelPath?: string;
+    jliffRelPath?: string;
+    tagMapRelPath?: string;
+    errorMessage?: string;
+    validation?: ConversionValidationSummary;
+  },
 ) {
   const xliff_rel_path = payload?.xliffRelPath;
   const jliff_rel_path = payload?.jliffRelPath;
   const tag_map_rel_path = payload?.tagMapRelPath;
   const error_message = payload?.errorMessage;
+  const xliff_validation_payload = payload?.validation
+    ? {
+        validator: payload.validation.validator,
+        passed: payload.validation.passed,
+        skipped: payload.validation.skipped,
+        message: payload.validation.message,
+        schemaPath: payload.validation.schemaPath,
+      }
+    : undefined;
   return safeInvoke<void>("update_conversion_status", {
     // send both snake_case and camelCase for compatibility
     conversion_id: conversionId,
@@ -210,6 +233,10 @@ export async function updateConversionStatus(
     tagMapRelPath: tag_map_rel_path,
     error_message,
     errorMessage: error_message,
+    ...(xliff_validation_payload !== undefined && {
+      xliff_validation: xliff_validation_payload,
+      xliffValidation: xliff_validation_payload,
+    }),
   });
 }
 

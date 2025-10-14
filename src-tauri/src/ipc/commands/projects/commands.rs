@@ -4,7 +4,8 @@
 //! that serve as Tauri command handlers. These functions handle the IPC
 //! layer concerns while delegating business logic to the service module.
 
-use tauri::{ipc::InvokeError, AppHandle, Emitter, State};
+use serde_json::Value;
+use tauri::{AppHandle, Emitter, State, ipc::InvokeError};
 use uuid::Uuid;
 
 use super::service::ProjectService;
@@ -446,6 +447,7 @@ pub async fn update_conversion_status(
     jliff_rel_path: Option<String>,
     tag_map_rel_path: Option<String>,
     error_message: Option<String>,
+    xliff_validation: Option<Value>,
 ) -> IpcResult<()> {
     ProjectService::update_conversion_status(
         &db,
@@ -455,6 +457,7 @@ pub async fn update_conversion_status(
         jliff_rel_path,
         tag_map_rel_path,
         error_message,
+        xliff_validation,
     )
     .await
     .map_err(InvokeError::from)

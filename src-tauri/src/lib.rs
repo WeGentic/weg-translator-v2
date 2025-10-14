@@ -5,18 +5,28 @@ mod settings;
 
 pub mod ipc_test {
     pub use crate::ipc::commands::{
-        read_project_artifact_impl, update_jliff_segment_impl, with_project_file_lock,
+        build_conversions_plan, read_project_artifact_impl, update_jliff_segment_impl,
+        with_project_file_lock,
     };
 }
 
+pub use crate::db::constants::MIGRATOR;
 pub use crate::db::{
-    DbError, DbManager, NewProject, NewProjectFile, NewTranslationRecord,
-    PersistedTranslationOutput, ProjectFileConversionRequest, ProjectFileConversionStatus,
-    ProjectFileImportStatus, ProjectStatus, ProjectType,
+    ArtifactKind, DbError, DbManager, FileTargetBackfillSummary, FilesystemArtifactBackfillSummary,
+    NewProject, NewProjectFile, NewTranslationRecord, PersistedTranslationOutput,
+    ProjectFileConversionRequest, ProjectFileConversionStatus, ProjectFileImportStatus,
+    ProjectFileRole, ProjectFileStorageState, ProjectLifecycleStatus, ProjectStatus, ProjectType,
 };
-pub use crate::ipc::dto::{TranslationHistoryRecord, TranslationRequest, TranslationStage};
+pub use crate::ipc::commands::{
+    DEFAULT_SOURCE_LANGUAGE, DEFAULT_TARGET_LANGUAGE, LOCAL_OWNER_DISPLAY_NAME, LOCAL_OWNER_EMAIL,
+    LOCAL_OWNER_USER_ID, build_original_stored_rel_path,
+};
+pub use crate::ipc::dto::{
+    PipelineJobSummary, TranslationHistoryRecord, TranslationRequest, TranslationStage,
+};
 pub use crate::jliff::{ConversionOptions, GeneratedArtifact, convert_xliff};
 
+use crate::db::JobState;
 use ipc::{
     TranslationState, add_files_to_project, clear_translation_history, convert_xliff_to_jliff,
     create_project_with_files, delete_project, ensure_project_conversions_plan, fail_translation,
@@ -31,11 +41,12 @@ use log::LevelFilter;
 use log::kv::VisitSource;
 use serde_json::{Map as JsonMap, Value as JsonValue};
 use std::fs;
-use tauri::Manager;
 use tauri::async_runtime;
+use tauri::{Emitter, Manager};
 use tauri_plugin_log::{Builder as LogBuilder, Target, TargetKind};
 use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 
+use crate::ipc::events::PIPELINE_JOBS_NEED_ATTENTION;
 use crate::settings::{SettingsManager, load_or_init};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -81,15 +92,120 @@ pub fn run() {
                     .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;
             }
 
-            let db_manager =
-                async_runtime::block_on(DbManager::new_with_base_dir(&initial_settings.app_folder))
-                    .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;
+            let db_performance = crate::db::DatabasePerformanceConfig::from_strings(
+                &initial_settings.database_journal_mode,
+                &initial_settings.database_synchronous,
+            );
+
+            let db_manager = async_runtime::block_on(DbManager::new_with_base_dir_and_performance(
+                &initial_settings.app_folder,
+                db_performance,
+            ))
+            .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;
+
+            let owner_backfill =
+                async_runtime::block_on(db_manager.clone().backfill_project_owner(
+                    LOCAL_OWNER_USER_ID,
+                    LOCAL_OWNER_EMAIL,
+                    LOCAL_OWNER_DISPLAY_NAME,
+                ))
+                .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;
+
+            if owner_backfill.ensured_user || owner_backfill.updated_projects > 0 {
+                log::info!(
+                    target: "app::startup",
+                    "backfill_local_owner ensured_user={} updated_projects={}",
+                    owner_backfill.ensured_user,
+                    owner_backfill.updated_projects
+                );
+            }
+
+            let language_backfill =
+                async_runtime::block_on(db_manager.clone().backfill_project_language_pairs(
+                    crate::ipc::commands::DEFAULT_SOURCE_LANGUAGE,
+                    crate::ipc::commands::DEFAULT_TARGET_LANGUAGE,
+                ))
+                .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;
+
+            if language_backfill.inserted_pairs > 0 {
+                log::info!(
+                    target: "app::startup",
+                    "backfill_language_pairs inserted_pairs={}",
+                    language_backfill.inserted_pairs
+                );
+            }
 
             let active_jobs = async_runtime::block_on(db_manager.clone().list_jobs(100, 0))
                 .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;
 
             let translation_state = TranslationState::new();
             translation_state.hydrate_from_records(&active_jobs);
+
+            let pipeline_jobs_attention = async_runtime::block_on(
+                db_manager
+                    .clone()
+                    .list_pipeline_jobs_needing_attention(),
+            )
+            .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;
+
+            if !pipeline_jobs_attention.is_empty() {
+                let pending_count = pipeline_jobs_attention
+                    .iter()
+                    .filter(|job| job.state == JobState::Pending)
+                    .count();
+                let failed_count = pipeline_jobs_attention
+                    .iter()
+                    .filter(|job| job.state == JobState::Failed)
+                    .count();
+
+                log::warn!(
+                    target: "app::startup",
+                    "pipeline jobs require manual attention: pending={} failed={}",
+                    pending_count,
+                    failed_count
+                );
+
+                for job in &pipeline_jobs_attention {
+                    log::warn!(
+                        target: "app::startup::jobs",
+                        "job_id={} project_id={} type={} state={} attempts={} file_target_id={:?} artifact_id={:?} error={:?}",
+                        job.job_id,
+                        job.project_id,
+                        job.job_type.as_str(),
+                        job.state.as_str(),
+                        job.attempts,
+                        job.file_target_id,
+                        job.artifact_id,
+                        job.error
+                    );
+                }
+
+                let attention_payload: Vec<PipelineJobSummary> = pipeline_jobs_attention
+                    .into_iter()
+                    .map(|job| PipelineJobSummary {
+                        job_id: job.job_id.to_string(),
+                        project_id: job.project_id.to_string(),
+                        job_type: job.job_type.as_str().to_string(),
+                        state: job.state.as_str().to_string(),
+                        attempts: job.attempts,
+                        file_target_id: job.file_target_id.map(|id| id.to_string()),
+                        artifact_id: job.artifact_id.map(|id| id.to_string()),
+                        error: job.error.clone(),
+                        created_at: job.created_at,
+                        started_at: job.started_at,
+                        finished_at: job.finished_at,
+                    })
+                    .collect();
+
+                let app_handle = app.handle();
+                if let Err(error) = app_handle.emit(PIPELINE_JOBS_NEED_ATTENTION, &attention_payload)
+                {
+                    log::warn!(
+                        target: "app::startup",
+                        "failed to emit pipeline attention event: {error}"
+                    );
+                }
+            }
 
             app.manage(settings_manager);
             app.manage(db_manager);

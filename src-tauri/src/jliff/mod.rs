@@ -15,12 +15,28 @@ use serde_json::Value;
 pub use model::JliffDocument;
 pub use options::ConversionOptions;
 
+/// Summary of the schema validation performed for a generated JLIFF artifact.
+#[derive(Debug, Clone)]
+pub struct JliffValidationSummary {
+    pub validator: String,
+    pub schema_path: Option<String>,
+    pub passed: bool,
+    pub skipped: bool,
+    pub message: Option<String>,
+}
+
 /// Output metadata describing where generated artifacts were written.
 #[derive(Debug, Clone)]
 pub struct GeneratedArtifact {
     pub file_id: String,
     pub jliff_path: PathBuf,
     pub tag_map_path: PathBuf,
+    pub validation: Option<JliffValidationSummary>,
+}
+
+struct CompiledValidator {
+    validator: Option<Validator>,
+    skipped_reason: Option<String>,
 }
 
 /// Convert the provided XLIFF document into JLIFF + tag-map artifacts on disk.
@@ -33,7 +49,13 @@ pub fn convert_xliff(opts: &ConversionOptions) -> Result<Vec<GeneratedArtifact>>
         )
     })?;
 
-    let validator = compile_validator(opts.schema_path.as_deref())?;
+    let schema_path_string = opts
+        .schema_path
+        .as_ref()
+        .map(|path| path.display().to_string());
+    let compiled_validator = compile_validator(opts.schema_path.as_deref())?;
+    let validator = compiled_validator.validator;
+    let skipped_reason = compiled_validator.skipped_reason;
     let conversions = converter::convert(opts)?;
 
     let mut filtered: Vec<(converter::FileConversion, (usize, usize))> =
@@ -100,6 +122,7 @@ pub fn convert_xliff(opts: &ConversionOptions) -> Result<Vec<GeneratedArtifact>>
     let jliff_value =
         serde_json::to_value(&primary.jliff).context("Failed to serialize JLIFF document")?;
 
+    let mut validation_summary = None;
     if let Some(validator) = validator.as_ref() {
         let errors = collect_validation_errors(validator, &jliff_value);
         if !errors.is_empty() {
@@ -114,6 +137,21 @@ pub fn convert_xliff(opts: &ConversionOptions) -> Result<Vec<GeneratedArtifact>>
                 summary
             );
         }
+        validation_summary = Some(JliffValidationSummary {
+            validator: "jliff_schema".to_string(),
+            schema_path: schema_path_string.clone(),
+            passed: true,
+            skipped: false,
+            message: None,
+        });
+    } else if schema_path_string.is_some() {
+        validation_summary = Some(JliffValidationSummary {
+            validator: "jliff_schema".to_string(),
+            schema_path: schema_path_string.clone(),
+            passed: false,
+            skipped: true,
+            message: skipped_reason,
+        });
     }
 
     write_json(&jliff_path, &jliff_value, opts.pretty)?;
@@ -126,6 +164,7 @@ pub fn convert_xliff(opts: &ConversionOptions) -> Result<Vec<GeneratedArtifact>>
         file_id: primary.file_id,
         jliff_path,
         tag_map_path,
+        validation: validation_summary,
     }])
 }
 
@@ -146,9 +185,12 @@ fn compute_prefix(opts: &ConversionOptions) -> Result<String> {
     Ok(stem.to_string())
 }
 
-fn compile_validator(path: Option<&Path>) -> Result<Option<Validator>> {
+fn compile_validator(path: Option<&Path>) -> Result<CompiledValidator> {
     let Some(path) = path else {
-        return Ok(None);
+        return Ok(CompiledValidator {
+            validator: None,
+            skipped_reason: None,
+        });
     };
     if !path.exists() {
         log::warn!(
@@ -156,7 +198,10 @@ fn compile_validator(path: Option<&Path>) -> Result<Option<Validator>> {
             "Skipping JLIFF schema validation, schema file not found: {}",
             path.display()
         );
-        return Ok(None);
+        return Ok(CompiledValidator {
+            validator: None,
+            skipped_reason: Some(format!("Schema file not found: {}", path.display())),
+        });
     }
 
     let schema_bytes = fs::read(path)
@@ -170,18 +215,27 @@ fn compile_validator(path: Option<&Path>) -> Result<Option<Validator>> {
             "Provided JLIFF schema failed meta-validation ({}). Validation will be skipped.",
             err
         );
-        return Ok(None);
+        return Ok(CompiledValidator {
+            validator: None,
+            skipped_reason: Some(format!("Schema failed meta-validation: {}", err)),
+        });
     }
 
     match jsonschema::validator_for(&schema_json) {
-        Ok(validator) => Ok(Some(validator)),
+        Ok(validator) => Ok(CompiledValidator {
+            validator: Some(validator),
+            skipped_reason: None,
+        }),
         Err(err) => {
             log::warn!(
                 target: "jliff::convert",
                 "Unable to build JSON schema validator ({}). Validation will be skipped.",
                 err
             );
-            Ok(None)
+            Ok(CompiledValidator {
+                validator: None,
+                skipped_reason: Some(format!("Failed to build validator: {}", err)),
+            })
         }
     }
 }

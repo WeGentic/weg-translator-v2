@@ -12,10 +12,127 @@ use crate::db::builders::{
 };
 use crate::db::error::{DbError, DbResult};
 use crate::db::manager::DbManager;
-use crate::db::types::{NewProject, NewProjectFile, ProjectDetails, ProjectListItem};
+use crate::db::types::{
+    LanguagePairBackfillSummary, NewProject, NewProjectFile, OwnerBackfillSummary, ProjectDetails,
+    ProjectLifecycleStatus, ProjectListItem,
+};
 use crate::db::utils::now_iso8601;
 
 impl DbManager {
+    /// Ensures the placeholder local owner user exists and assigns it to orphaned projects.
+    pub async fn backfill_project_owner(
+        &self,
+        owner_user_id: &str,
+        owner_email: &str,
+        owner_display_name: &str,
+    ) -> DbResult<OwnerBackfillSummary> {
+        let _guard = self.write_lock.lock().await;
+        let pool = self.pool().await;
+        let mut tx = pool.begin().await?;
+
+        let inserted_user = sqlx::query(
+            "INSERT OR IGNORE INTO users (user_id, email, display_name) VALUES (?1, ?2, ?3)",
+        )
+        .bind(owner_user_id)
+        .bind(owner_email)
+        .bind(owner_display_name)
+        .execute(tx.as_mut())
+        .await?
+        .rows_affected()
+            > 0;
+
+        let now = now_iso8601();
+        let updated_projects = sqlx::query(
+            "UPDATE projects
+             SET owner_user_id = ?1,
+                 updated_at = ?2
+             WHERE owner_user_id NOT IN (SELECT user_id FROM users)
+                OR TRIM(owner_user_id) = ''",
+        )
+        .bind(owner_user_id)
+        .bind(&now)
+        .execute(tx.as_mut())
+        .await?
+        .rows_affected();
+
+        tx.commit().await?;
+
+        Ok(OwnerBackfillSummary {
+            ensured_user: inserted_user,
+            updated_projects,
+        })
+    }
+
+    /// Ensures each project has at least one language pair based on the defaults stored on the project.
+    pub async fn backfill_project_language_pairs(
+        &self,
+        fallback_src_lang: &str,
+        fallback_tgt_lang: &str,
+    ) -> DbResult<LanguagePairBackfillSummary> {
+        let _guard = self.write_lock.lock().await;
+        let pool = self.pool().await;
+        let mut tx = pool.begin().await?;
+
+        let projects = sqlx::query("SELECT id, default_src_lang, default_tgt_lang FROM projects")
+            .fetch_all(tx.as_mut())
+            .await?;
+
+        let mut inserted_pairs = 0u64;
+
+        for row in projects {
+            let project_id_raw: String = row.try_get("id")?;
+            let project_id = Uuid::parse_str(&project_id_raw)
+                .map_err(|_| DbError::InvalidProjectId(project_id_raw.clone()))?;
+
+            let src_lang = row
+                .try_get::<Option<String>, _>("default_src_lang")?
+                .and_then(|value| {
+                    let trimmed = value.trim();
+                    if trimmed.is_empty() {
+                        None
+                    } else {
+                        Some(trimmed.to_string())
+                    }
+                })
+                .unwrap_or_else(|| fallback_src_lang.trim().to_string());
+
+            let tgt_lang = row
+                .try_get::<Option<String>, _>("default_tgt_lang")?
+                .and_then(|value| {
+                    let trimmed = value.trim();
+                    if trimmed.is_empty() {
+                        None
+                    } else {
+                        Some(trimmed.to_string())
+                    }
+                })
+                .unwrap_or_else(|| fallback_tgt_lang.trim().to_string());
+
+            if src_lang.is_empty() || tgt_lang.is_empty() {
+                continue;
+            }
+
+            let pair_id = Uuid::new_v4();
+            let rows = sqlx::query(
+                "INSERT OR IGNORE INTO project_language_pairs (pair_id, project_id, src_lang, trg_lang)
+                 VALUES (?1, ?2, ?3, ?4)",
+            )
+            .bind(&pair_id.to_string())
+            .bind(&project_id.to_string())
+            .bind(&src_lang)
+            .bind(&tgt_lang)
+            .execute(tx.as_mut())
+            .await?
+            .rows_affected();
+
+            inserted_pairs += rows;
+        }
+
+        tx.commit().await?;
+
+        Ok(LanguagePairBackfillSummary { inserted_pairs })
+    }
+
     /// Inserts a project alongside any initial file rows within a single transaction.
     pub async fn insert_project_with_files(
         &self,
@@ -50,8 +167,25 @@ impl DbManager {
             .transpose()?;
 
         let query = sqlx::query(
-            "INSERT INTO projects (id, name, slug, project_type, root_path, status, default_src_lang, default_tgt_lang, created_at, updated_at, metadata)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9, ?10)",
+            "INSERT INTO projects (
+                 id,
+                 name,
+                 slug,
+                 project_type,
+                 root_path,
+                 status,
+                 owner_user_id,
+                 client_id,
+                 domain_id,
+                 lifecycle_status,
+                 archived_at,
+                 default_src_lang,
+                 default_tgt_lang,
+                 created_at,
+                 updated_at,
+                 metadata
+             )
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?14, ?15)",
         )
         .bind(&id)
         .bind(&project.name)
@@ -59,6 +193,11 @@ impl DbManager {
         .bind(project.project_type.as_str())
         .bind(&project.root_path)
         .bind(project.status.as_str())
+        .bind(&project.owner_user_id)
+        .bind(project.client_id.as_deref())
+        .bind(project.domain_id.as_deref())
+        .bind(project.lifecycle_status.as_str())
+        .bind(project.archived_at.as_deref())
         .bind(project.default_src_lang.as_deref())
         .bind(project.default_tgt_lang.as_deref())
         .bind(&now)
@@ -138,7 +277,15 @@ impl DbManager {
         let root_path: String = project_row.try_get("root_path")?;
 
         let file_rows = sqlx::query(
-            "SELECT id, original_name, stored_rel_path, ext, size_bytes, import_status, created_at, updated_at
+            "SELECT id,
+                    original_name,
+                    stored_rel_path,
+                    ext,
+                    size_bytes,
+                    import_status,
+                    created_at,
+                    updated_at,
+                    hash_sha256
              FROM project_files
              WHERE project_id = ?1
              ORDER BY created_at ASC",
@@ -217,6 +364,64 @@ impl DbManager {
             }
             None => Err(DbError::ProjectNotFound(project_id)),
         }
+    }
+
+    /// Updates the stored project root path.
+    pub async fn update_project_root_path(
+        &self,
+        project_id: Uuid,
+        root_path: &str,
+    ) -> DbResult<()> {
+        let _guard = self.write_lock.lock().await;
+        let pool = self.pool().await;
+        let now = now_iso8601();
+
+        let result = sqlx::query(
+            "UPDATE projects
+             SET root_path = ?1,
+                 updated_at = ?2
+             WHERE id = ?3",
+        )
+        .bind(root_path)
+        .bind(&now)
+        .bind(&project_id.to_string())
+        .execute(&pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(DbError::ProjectNotFound(project_id));
+        }
+
+        Ok(())
+    }
+
+    /// Updates the lifecycle status for the given project.
+    pub async fn update_project_lifecycle_status(
+        &self,
+        project_id: Uuid,
+        status: ProjectLifecycleStatus,
+    ) -> DbResult<()> {
+        let _guard = self.write_lock.lock().await;
+        let pool = self.pool().await;
+        let now = now_iso8601();
+
+        let result = sqlx::query(
+            "UPDATE projects
+             SET lifecycle_status = ?1,
+                 updated_at = ?2
+             WHERE id = ?3",
+        )
+        .bind(status.as_str())
+        .bind(&now)
+        .bind(&project_id.to_string())
+        .execute(&pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(DbError::ProjectNotFound(project_id));
+        }
+
+        Ok(())
     }
 
     /// Deletes a project row and returns the number of affected records.

@@ -57,6 +57,8 @@ pub(super) async fn build_app_settings_dto(
         show_notifications: current.show_notifications,
         enable_sound_notifications: current.enable_sound_notifications,
         max_parallel_conversions: current.max_parallel_conversions,
+        database_journal_mode: current.database_journal_mode,
+        database_synchronous: current.database_synchronous,
     })
 }
 

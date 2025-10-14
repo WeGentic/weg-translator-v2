@@ -6,19 +6,31 @@
 //! - JLIFF document manipulation and updates
 //! - Artifact path resolution and security validation
 
+use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
-use log::error;
+use log::{error, warn};
 use serde::Serialize;
+use serde_json::json;
+use sqlx::Row;
 use tokio::fs;
 use uuid::Uuid;
 
-use super::constants::{DEFAULT_SOURCE_LANGUAGE, DEFAULT_TARGET_LANGUAGE, DEFAULT_XLIFF_VERSION};
-use super::utils::resolve_project_relative_path;
-use crate::db::DbManager;
+use super::constants::{
+    DEFAULT_SOURCE_LANGUAGE, DEFAULT_TARGET_LANGUAGE, DEFAULT_XLIFF_VERSION, PROJECT_DIR_ARTIFACTS,
+    PROJECT_DIR_ARTIFACTS_XJLIFF, PROJECT_DIR_ARTIFACTS_XLIFF,
+};
+use super::file_operations::compute_sha256_streaming;
+use super::utils::{
+    build_language_directory_name, join_within_project, resolve_project_relative_path,
+};
+use crate::db::{
+    ArtifactKind, ArtifactStatus, DbManager, FileTargetStatus, ProjectFileConversionRequest,
+};
 use crate::ipc::commands::shared::{fs_error, with_project_file_lock};
-use crate::ipc::dto::EnsureConversionsPlanDto;
+use crate::ipc::dto::{EnsureConversionsPlanDto, FileIntegrityAlertDto};
 use crate::ipc::error::IpcError;
 use crate::jliff::{ConversionOptions, JliffDocument, convert_xliff};
 
@@ -263,8 +275,28 @@ pub async fn convert_xliff_to_jliff(
         .find(|row| row.id == conversion_id)
         .ok_or_else(|| IpcError::Validation("Conversion was not found for project.".into()))?;
 
-    // Ensure JLIFF output directory exists
-    let jliff_dir = DbManager::ensure_subdir(&root_path, "jliff")?;
+    let src_lang = if conversion.src_lang.trim().is_empty() {
+        details
+            .default_src_lang
+            .clone()
+            .unwrap_or_else(|| DEFAULT_SOURCE_LANGUAGE.to_string())
+    } else {
+        conversion.src_lang.clone()
+    };
+    let tgt_lang = if conversion.tgt_lang.trim().is_empty() {
+        details
+            .default_tgt_lang
+            .clone()
+            .unwrap_or_else(|| DEFAULT_TARGET_LANGUAGE.to_string())
+    } else {
+        conversion.tgt_lang.clone()
+    };
+
+    let artifacts_root = DbManager::ensure_subdir(&root_path, PROJECT_DIR_ARTIFACTS)?;
+    let jliff_root =
+        DbManager::ensure_subdir(artifacts_root.as_path(), PROJECT_DIR_ARTIFACTS_XJLIFF)?;
+    let pair_dir_name = build_language_directory_name(&src_lang, &tgt_lang);
+    let jliff_dir = DbManager::ensure_subdir(jliff_root.as_path(), &pair_dir_name)?;
 
     // Process operator parameter
     let operator = operator
@@ -296,16 +328,47 @@ pub async fn convert_xliff_to_jliff(
         details.id.to_string(),
         operator,
     );
+    options.file_prefix = Some(conversion.project_file_id.to_string());
     options.schema_path = schema_path;
 
+    let file_target_id = db
+        .find_file_target(project_id, conversion.project_file_id, &src_lang, &tgt_lang)
+        .await
+        .map_err(IpcError::from)?;
+
     // Perform XLIFF to JLIFF conversion
-    let artifacts = convert_xliff(&options).map_err(|error| {
-        error!(
-            target: "ipc::projects::artifacts",
-            "failed to convert XLIFF to JLIFF for conversion {conversion_id}: {error}"
-        );
-        IpcError::Internal(format!("Failed to convert XLIFF to JLIFF: {}", error))
-    })?;
+    let artifacts = match convert_xliff(&options) {
+        Ok(artifacts) => artifacts,
+        Err(error) => {
+            let message = format!("Failed to convert XLIFF to JLIFF: {error}");
+            error!(
+                target: "ipc::projects::artifacts",
+                "failed to convert XLIFF to JLIFF for conversion {conversion_id}: {error}"
+            );
+            if let Some(file_target_id) = file_target_id {
+                let job_key = format!("CONVERT_JLIFF::{}::{}", project_id, file_target_id);
+                if let Err(job_error) = db
+                    .insert_job_row(
+                        "CONVERT_JLIFF",
+                        project_id,
+                        "FAILED",
+                        Some(file_target_id),
+                        None,
+                        Some(message.as_str()),
+                        1,
+                        job_key.as_str(),
+                    )
+                    .await
+                {
+                    warn!(
+                        target: "ipc::projects::artifacts",
+                        "failed to log CONVERT_JLIFF failure for conversion {conversion_id}: {job_error}"
+                    );
+                }
+            }
+            return Err(IpcError::Internal(message));
+        }
+    };
 
     if artifacts.is_empty() {
         return Err(IpcError::Internal("No <file> element found in XLIFF document.".into()).into());
@@ -336,12 +399,115 @@ pub async fn convert_xliff_to_jliff(
             IpcError::Internal("Tag-map output path is outside the project folder.".into())
         })?;
 
+    let jliff_rel_string = jliff_rel.to_string_lossy().to_string();
+    let tag_map_rel_string = tag_map_rel.to_string_lossy().to_string();
+
+    if let Some(file_target_id) = file_target_id {
+        let job_key = format!("CONVERT_JLIFF::{}::{}", project_id, file_target_id);
+        let metadata = match fs::metadata(&artifact.jliff_path).await {
+            Ok(data) => Some(data),
+            Err(error) => {
+                warn!(
+                    target: "ipc::projects::artifacts",
+                    "failed to inspect JLIFF artifact {:?}: {error}; persisting without size metadata",
+                    artifact.jliff_path
+                );
+                None
+            }
+        };
+
+        let artifact_size = metadata.and_then(|meta| match i64::try_from(meta.len()) {
+            Ok(value) => Some(value),
+            Err(_) => {
+                warn!(
+                    target: "ipc::projects::artifacts",
+                    "JLIFF artifact {} exceeds i64 range; persisting without size metadata",
+                    jliff_rel_string
+                );
+                None
+            }
+        });
+
+        match db
+            .upsert_artifact(
+                file_target_id,
+                ArtifactKind::Jliff,
+                &jliff_rel_string,
+                artifact_size,
+                None,
+                Some("OpenXLIFF"),
+                ArtifactStatus::Generated,
+            )
+            .await
+        {
+            Ok(artifact_record) => {
+                let artifact_id = artifact_record.artifact_id;
+                if let Some(summary) = artifact.validation.as_ref() {
+                    let payload = json!({
+                        "schemaPath": summary.schema_path,
+                        "skipped": summary.skipped,
+                        "message": summary.message,
+                    });
+
+                    if let Err(validation_error) = db
+                        .insert_validation_record(
+                            artifact_id,
+                            &summary.validator,
+                            summary.passed,
+                            Some(&payload),
+                        )
+                        .await
+                    {
+                        warn!(
+                            target: "ipc::projects::artifacts",
+                            "failed to persist validation record for artifact {artifact_id}: {validation_error}"
+                        );
+                    }
+                }
+
+                db.update_file_target_status(file_target_id, FileTargetStatus::Extracted)
+                    .await
+                    .map_err(IpcError::from)?;
+
+                if let Err(job_error) = db
+                    .insert_job_row(
+                        "CONVERT_JLIFF",
+                        project_id,
+                        "SUCCEEDED",
+                        Some(file_target_id),
+                        Some(artifact_id),
+                        None,
+                        1,
+                        job_key.as_str(),
+                    )
+                    .await
+                {
+                    warn!(
+                        target: "ipc::projects::artifacts",
+                        "failed to log CONVERT_JLIFF success for conversion {conversion_id}: {job_error}"
+                    );
+                }
+            }
+            Err(db_error) => {
+                error!(
+                    target: "ipc::projects::artifacts",
+                    "failed to upsert JLIFF artifact metadata for conversion {conversion_id}: {db_error}"
+                );
+            }
+        }
+    } else {
+        warn!(
+            target: "ipc::projects::artifacts",
+            "conversion {conversion_id} generated JLIFF but no file_target exists for {src_lang}->{tgt_lang}; skipping artifact persistence"
+        );
+    }
+
     Ok(JliffConversionResult {
         file_id: conversion.project_file_id.to_string(),
         jliff_abs_path: artifact.jliff_path.to_string_lossy().to_string(),
-        jliff_rel_path: jliff_rel.to_string_lossy().to_string(),
+        jliff_rel_path: jliff_rel_string,
         tag_map_abs_path: artifact.tag_map_path.to_string_lossy().to_string(),
-        tag_map_rel_path: tag_map_rel.to_string_lossy().to_string(),
+        tag_map_rel_path: tag_map_rel_string,
     })
 }
 
@@ -383,12 +549,264 @@ pub async fn build_conversions_plan(
     let version = DEFAULT_XLIFF_VERSION.to_string();
 
     let root_path = PathBuf::from(&details.root_path);
-    let xliff_dir = DbManager::ensure_subdir(&root_path, "xliff")?;
+    let artifacts_root = DbManager::ensure_subdir(&root_path, PROJECT_DIR_ARTIFACTS)?;
+    let xliff_root =
+        DbManager::ensure_subdir(artifacts_root.as_path(), PROJECT_DIR_ARTIFACTS_XLIFF)?;
+
+    let file_lookup = super::dto_mappers::create_file_id_map(&details);
+
+    let pool = db.pool().await;
+    let project_id_str = project_id.to_string();
+    let mut file_target_rows = sqlx::query(
+        "SELECT
+             ft.file_target_id,
+             ft.file_id,
+             ft.status,
+             lp.src_lang,
+             lp.trg_lang,
+             pf.stored_rel_path,
+             pf.hash_sha256
+         FROM file_targets ft
+         INNER JOIN project_language_pairs lp ON lp.pair_id = ft.pair_id
+         INNER JOIN project_files pf ON pf.id = ft.file_id
+         WHERE pf.project_id = ?1
+         ORDER BY pf.created_at ASC",
+    )
+    .bind(&project_id_str)
+    .fetch_all(&pool)
+    .await
+    .map_err(|error| {
+        error!(
+            target: "ipc::projects::artifacts",
+            "failed to fetch file targets for project {project_id}: {error}"
+        );
+        IpcError::Internal("Unable to load file targets for conversion planning.".into())
+    })?;
+
+    if file_target_rows.is_empty() {
+        db.bridge_project_conversions(project_id)
+            .await
+            .map_err(IpcError::from)?;
+        file_target_rows = sqlx::query(
+            "SELECT
+                 ft.file_target_id,
+                 ft.file_id,
+                 ft.status,
+                 lp.src_lang,
+                 lp.trg_lang,
+                 pf.stored_rel_path,
+                 pf.hash_sha256
+             FROM file_targets ft
+             INNER JOIN project_language_pairs lp ON lp.pair_id = ft.pair_id
+             INNER JOIN project_files pf ON pf.id = ft.file_id
+             WHERE pf.project_id = ?1
+             ORDER BY pf.created_at ASC",
+        )
+        .bind(&project_id_str)
+        .fetch_all(&pool)
+        .await
+        .map_err(|error| {
+            error!(
+                target: "ipc::projects::artifacts",
+                "failed to fetch file targets after bridging for project {project_id}: {error}"
+            );
+            IpcError::Internal("Unable to load file targets for conversion planning.".into())
+        })?;
+    }
+
+    let mut hash_cache: HashMap<Uuid, Option<String>> = HashMap::new();
+    let mut integrity_alerts: Vec<FileIntegrityAlertDto> = Vec::new();
+
+    if !file_target_rows.is_empty() {
+        let mut tasks = Vec::new();
+
+        for row in file_target_rows {
+            let status_raw: String = row.try_get::<String, _>("status").map_err(|error| {
+                error!(
+                    target: "ipc::projects::artifacts",
+                    "failed to read file target status for project {project_id}: {error}"
+                );
+                IpcError::Internal("Corrupted file target data.".into())
+            })?;
+            let status = FileTargetStatus::from_str(&status_raw).ok_or_else(|| {
+                error!(
+                    target: "ipc::projects::artifacts",
+                    "invalid file target status '{status_raw}' for project {project_id}"
+                );
+                IpcError::Internal("Corrupted file target data.".into())
+            })?;
+
+            if matches!(status, FileTargetStatus::Extracted) {
+                continue;
+            }
+
+            let file_id_str: String = row.try_get::<String, _>("file_id").map_err(|error| {
+                error!(
+                    target: "ipc::projects::artifacts",
+                    "failed to read file target file_id for project {project_id}: {error}"
+                );
+                IpcError::Internal("Corrupted file target data.".into())
+            })?;
+
+            let file_id = Uuid::parse_str(&file_id_str).map_err(|parse_error| {
+                error!(
+                    target: "ipc::projects::artifacts",
+                    "invalid file_id '{file_id_str}' in file_targets for project {project_id}: {parse_error}"
+                );
+                IpcError::Internal("Corrupted file target data.".into())
+            })?;
+
+            let mut src_lang: String = row
+                .try_get::<String, _>("src_lang")
+                .map_err(|error| {
+                    error!(
+                        target: "ipc::projects::artifacts",
+                        "failed to read file target source language for project {project_id}: {error}"
+                    );
+                    IpcError::Internal("Corrupted file target data.".into())
+                })?
+                .trim()
+                .to_string();
+
+            if src_lang.is_empty() {
+                src_lang = project_src_lang.clone();
+            }
+
+            let mut tgt_lang: String = row
+                .try_get::<String, _>("trg_lang")
+                .map_err(|error| {
+                    error!(
+                        target: "ipc::projects::artifacts",
+                        "failed to read file target target language for project {project_id}: {error}"
+                    );
+                    IpcError::Internal("Corrupted file target data.".into())
+                })?
+                .trim()
+                .to_string();
+
+            if tgt_lang.is_empty() {
+                tgt_lang = project_tgt_lang.clone();
+            }
+
+            let stored_rel_path: String = row
+                .try_get::<String, _>("stored_rel_path")
+                .map_err(|error| {
+                    error!(
+                        target: "ipc::projects::artifacts",
+                        "failed to read stored_rel_path for file target ({file_id}) in project {project_id}: {error}"
+                    );
+                    IpcError::Internal("Corrupted file target data.".into())
+                })?;
+
+            if stored_rel_path.trim().is_empty() {
+                warn!(
+                    target: "ipc::projects::artifacts",
+                    "skipping file target for file {file_id} in project {project_id} due to empty stored path"
+                );
+                continue;
+            }
+
+            let expected_hash = row
+            .try_get::<Option<String>, _>("hash_sha256")
+            .map_err(|error| {
+                error!(
+                    target: "ipc::projects::artifacts",
+                    "failed to read hash for file target ({file_id}) in project {project_id}: {error}"
+                );
+                IpcError::Internal("Corrupted file target data.".into())
+            })?
+            .and_then(|value| {
+                let trimmed = value.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_ascii_lowercase())
+                }
+            });
+
+            if let Some(ref expected_hash) = expected_hash {
+                if let Some(actual_hash) = cached_file_hash(
+                    &mut hash_cache,
+                    file_id,
+                    root_path.as_path(),
+                    &stored_rel_path,
+                )
+                .await
+                {
+                    if actual_hash != *expected_hash {
+                        warn!(
+                            target: "ipc::projects::artifacts",
+                            "stored hash mismatch for file {file_id} in project {project_id}: expected={} actual={}",
+                            expected_hash,
+                            actual_hash
+                        );
+                        let file_name = file_lookup
+                            .get(&file_id.to_string())
+                            .map(|details| details.original_name.clone())
+                            .unwrap_or_else(|| stored_rel_path.clone());
+                        integrity_alerts.push(FileIntegrityAlertDto {
+                            file_id: file_id.to_string(),
+                            file_name,
+                            expected_hash: expected_hash.clone(),
+                            actual_hash: actual_hash.clone(),
+                        });
+                    }
+                }
+            }
+
+            let conversion_request =
+                ProjectFileConversionRequest::new(&src_lang, &tgt_lang, &version);
+            let conversion = db
+                .find_or_create_conversion_for_file(file_id, &conversion_request)
+                .await
+                .map_err(IpcError::from)?;
+
+            if conversion.xliff_rel_path.is_some() && !matches!(status, FileTargetStatus::Failed) {
+                warn!(
+                    target: "ipc::projects::artifacts",
+                    "file target for file {file_id} is {} but conversion {} already has an XLIFF path; skipping",
+                    status.as_str(),
+                    conversion.id
+                );
+                continue;
+            }
+
+            let lang_dir =
+                build_language_directory_name(&conversion.src_lang, &conversion.tgt_lang);
+            let pair_dir = DbManager::ensure_subdir(xliff_root.as_path(), &lang_dir)?;
+            let target_name = format!("{}.xlf", conversion.project_file_id);
+            let output_abs_path = pair_dir.join(target_name);
+            let input_abs_path =
+                join_within_project(&root_path, &stored_rel_path).ok_or_else(|| {
+                    IpcError::Validation(
+                        "Stored file path resolves outside the project directory.".into(),
+                    )
+                })?;
+
+            tasks.push(crate::ipc::dto::EnsureConversionsTaskDto {
+                conversion_id: conversion.id.to_string(),
+                project_file_id: conversion.project_file_id.to_string(),
+                input_abs_path: input_abs_path.display().to_string(),
+                output_abs_path: output_abs_path.display().to_string(),
+                src_lang: conversion.src_lang.clone(),
+                tgt_lang: conversion.tgt_lang.clone(),
+                version: conversion.version.clone(),
+                paragraph: conversion.paragraph,
+                embed: conversion.embed,
+            });
+        }
+
+        return Ok(EnsureConversionsPlanDto {
+            project_id: details.id.to_string(),
+            src_lang: project_src_lang,
+            tgt_lang: project_tgt_lang,
+            version,
+            tasks,
+            integrity_alerts,
+        });
+    }
 
     let mut tasks = Vec::new();
-
-    // Create file lookup map for efficient access
-    let file_map = super::dto_mappers::create_file_id_map(&details);
 
     // Process conversions that need XLIFF generation
     for row in details
@@ -409,16 +827,52 @@ pub async fn build_conversions_plan(
             row.tgt_lang.clone()
         };
 
-        if let Some(file_details) = file_map.get(&row.project_file_id.to_string()) {
-            let input_abs_path = root_path.join(&file_details.stored_rel_path);
+        if let Some(file_details) = file_lookup.get(&row.project_file_id.to_string()) {
+            if let Some(expected_hash) = file_details.hash_sha256.as_deref().and_then(|value| {
+                let trimmed = value.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_ascii_lowercase())
+                }
+            }) {
+                if let Some(actual_hash) = cached_file_hash(
+                    &mut hash_cache,
+                    file_details.id,
+                    root_path.as_path(),
+                    &file_details.stored_rel_path,
+                )
+                .await
+                {
+                    if actual_hash != expected_hash {
+                        warn!(
+                            target: "ipc::projects::artifacts",
+                            "stored hash mismatch for file {} in project {}: expected={} actual={}",
+                            file_details.id,
+                            project_id,
+                            expected_hash,
+                            actual_hash
+                        );
+                        integrity_alerts.push(FileIntegrityAlertDto {
+                            file_id: file_details.id.to_string(),
+                            file_name: file_details.original_name.clone(),
+                            expected_hash: expected_hash.clone(),
+                            actual_hash: actual_hash.clone(),
+                        });
+                    }
+                }
+            }
 
-            // Generate XLIFF filename: <stem>.<src>-<tgt>.xlf
-            let stem = Path::new(&file_details.stored_rel_path)
-                .file_stem()
-                .and_then(std::ffi::OsStr::to_str)
-                .unwrap_or("file");
-            let target_name = format!("{}.{}-{}.xlf", stem, src_lang, tgt_lang);
-            let output_abs_path = xliff_dir.join(target_name);
+            let input_abs_path = join_within_project(&root_path, &file_details.stored_rel_path)
+                .ok_or_else(|| {
+                    IpcError::Validation(
+                        "Stored file path resolves outside the project directory.".into(),
+                    )
+                })?;
+            let lang_dir = build_language_directory_name(&src_lang, &tgt_lang);
+            let pair_dir = DbManager::ensure_subdir(xliff_root.as_path(), &lang_dir)?;
+            let target_name = format!("{}.xlf", file_details.id);
+            let output_abs_path = pair_dir.join(target_name);
 
             tasks.push(crate::ipc::dto::EnsureConversionsTaskDto {
                 conversion_id: row.id.to_string(),
@@ -440,6 +894,7 @@ pub async fn build_conversions_plan(
         tgt_lang: project_tgt_lang,
         version,
         tasks,
+        integrity_alerts,
     })
 }
 
@@ -463,6 +918,47 @@ async fn get_project_root(db: &DbManager, project_id: Uuid) -> Result<PathBuf, I
                 root.display()
             );
             Err(fs_error("resolve project root", error))
+        }
+    }
+}
+
+async fn cached_file_hash(
+    cache: &mut HashMap<Uuid, Option<String>>,
+    file_id: Uuid,
+    root_path: &Path,
+    stored_rel_path: &str,
+) -> Option<String> {
+    if let Some(existing) = cache.get(&file_id) {
+        return existing.clone();
+    }
+
+    let Some(abs_path) = join_within_project(root_path, stored_rel_path) else {
+        warn!(
+            target: "ipc::projects::artifacts",
+            "unable to compute hash for file {}: stored path '{}' is invalid within project root",
+            file_id,
+            stored_rel_path
+        );
+        cache.insert(file_id, None);
+        return None;
+    };
+
+    match compute_sha256_streaming(&abs_path).await {
+        Ok((_bytes, hash)) => {
+            let normalized = hash.to_ascii_lowercase();
+            cache.insert(file_id, Some(normalized.clone()));
+            Some(normalized)
+        }
+        Err(error) => {
+            error!(
+                target: "ipc::projects::artifacts",
+                "failed to compute hash for file {} at {}: {}",
+                file_id,
+                abs_path.display(),
+                error
+            );
+            cache.insert(file_id, None);
+            None
         }
     }
 }

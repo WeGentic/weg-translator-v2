@@ -41,7 +41,12 @@ impl From<DbError> for IpcError {
             | DbError::InvalidProjectType(_)
             | DbError::InvalidProjectStatus(_)
             | DbError::InvalidProjectFileStatus(_)
-            | DbError::InvalidProjectFileConversionStatus(_) => {
+            | DbError::InvalidProjectFileConversionStatus(_)
+            | DbError::InvalidFileTargetStatus(_)
+            | DbError::InvalidArtifactKind(_)
+            | DbError::InvalidArtifactStatus(_)
+            | DbError::InvalidJobType(_)
+            | DbError::InvalidJobState(_) => {
                 IpcError::Internal("Stored project data is invalid. Refresh and retry.".into())
             }
             DbError::ProjectNotFound(id) => {
@@ -50,6 +55,9 @@ impl From<DbError> for IpcError {
             DbError::ProjectFileConversionNotFound(id) => IpcError::Validation(format!(
                 "Conversion {id} was not found for the requested project file.",
             )),
+            DbError::InvalidSubdirectory(_) => IpcError::Validation(
+                "Unable to derive a safe directory name for the requested operation.".into(),
+            ),
             DbError::Sqlx(_) => {
                 IpcError::Internal("Database operation failed unexpectedly. Please retry.".into())
             }

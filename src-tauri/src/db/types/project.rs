@@ -79,6 +79,81 @@ impl ProjectFileImportStatus {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectLifecycleStatus {
+    Creating,
+    Ready,
+    InProgress,
+    Completed,
+    Error,
+}
+
+impl ProjectLifecycleStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ProjectLifecycleStatus::Creating => "CREATING",
+            ProjectLifecycleStatus::Ready => "READY",
+            ProjectLifecycleStatus::InProgress => "IN_PROGRESS",
+            ProjectLifecycleStatus::Completed => "COMPLETED",
+            ProjectLifecycleStatus::Error => "ERROR",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectFileRole {
+    Source,
+    Reference,
+    TranslationMemory,
+    Termbase,
+    Styleguide,
+    Other,
+}
+
+impl ProjectFileRole {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ProjectFileRole::Source => "source",
+            ProjectFileRole::Reference => "reference",
+            ProjectFileRole::TranslationMemory => "tm",
+            ProjectFileRole::Termbase => "termbase",
+            ProjectFileRole::Styleguide => "styleguide",
+            ProjectFileRole::Other => "other",
+        }
+    }
+}
+
+impl Default for ProjectFileRole {
+    fn default() -> Self {
+        ProjectFileRole::Source
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectFileStorageState {
+    Staged,
+    Copied,
+    Missing,
+    Deleted,
+}
+
+impl ProjectFileStorageState {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ProjectFileStorageState::Staged => "STAGED",
+            ProjectFileStorageState::Copied => "COPIED",
+            ProjectFileStorageState::Missing => "MISSING",
+            ProjectFileStorageState::Deleted => "DELETED",
+        }
+    }
+}
+
+impl Default for ProjectFileStorageState {
+    fn default() -> Self {
+        ProjectFileStorageState::Copied
+    }
+}
+
 /// Metadata describing a project file stored in the database.
 #[derive(Debug, Clone)]
 pub struct ProjectFileDetails {
@@ -90,6 +165,7 @@ pub struct ProjectFileDetails {
     pub import_status: ProjectFileImportStatus,
     pub created_at: String,
     pub updated_at: String,
+    pub hash_sha256: Option<String>,
 }
 
 /// Aggregates a file with its associated conversions.
@@ -120,6 +196,11 @@ pub struct NewProject {
     pub project_type: ProjectType,
     pub root_path: String,
     pub status: ProjectStatus,
+    pub owner_user_id: String,
+    pub client_id: Option<String>,
+    pub domain_id: Option<String>,
+    pub lifecycle_status: ProjectLifecycleStatus,
+    pub archived_at: Option<String>,
     pub default_src_lang: Option<String>,
     pub default_tgt_lang: Option<String>,
     pub metadata: Option<Value>,
@@ -137,6 +218,11 @@ pub struct NewProjectFile {
     pub size_bytes: Option<i64>,
     pub checksum_sha256: Option<String>,
     pub import_status: ProjectFileImportStatus,
+    pub role: ProjectFileRole,
+    pub storage_state: ProjectFileStorageState,
+    pub mime_type: Option<String>,
+    pub hash_sha256: Option<String>,
+    pub importer: Option<String>,
 }
 
 /// Compact representation used in project list queries.
@@ -152,4 +238,17 @@ pub struct ProjectListItem {
     pub updated_at: String,
     pub file_count: i64,
     pub activity_status: String,
+}
+
+/// Summary of owner backfill execution.
+#[derive(Debug, Clone, Copy)]
+pub struct OwnerBackfillSummary {
+    pub ensured_user: bool,
+    pub updated_projects: u64,
+}
+
+/// Summary of language pair backfill execution.
+#[derive(Debug, Clone, Copy)]
+pub struct LanguagePairBackfillSummary {
+    pub inserted_pairs: u64,
 }

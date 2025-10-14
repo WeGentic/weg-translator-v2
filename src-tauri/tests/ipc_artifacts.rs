@@ -6,21 +6,14 @@ use tempfile::{TempDir, tempdir};
 use tokio::sync::oneshot;
 use tokio::time::sleep;
 use uuid::Uuid;
-use weg_translator_lib::DbManager;
-use weg_translator_lib::NewProject;
-use weg_translator_lib::ProjectStatus as PStatus;
-use weg_translator_lib::ProjectType as PType;
+use weg_translator_lib::MIGRATOR;
 use weg_translator_lib::ipc_test::{
     read_project_artifact_impl, update_jliff_segment_impl, with_project_file_lock,
 };
-
-const MIGRATIONS: &[&str] = &[
-    include_str!("../migrations/004_create_projects.sql"),
-    include_str!("../migrations/005_create_project_files.sql"),
-    include_str!("../migrations/006_add_project_languages.sql"),
-    include_str!("../migrations/007_create_project_file_conversions.sql"),
-    include_str!("../migrations/008_add_jliff_columns.sql"),
-];
+use weg_translator_lib::{
+    DbManager, LOCAL_OWNER_USER_ID, NewProject, ProjectLifecycleStatus as PLStatus,
+    ProjectStatus as PStatus, ProjectType as PType,
+};
 
 #[tokio::test]
 async fn read_project_artifact_returns_contents() {
@@ -190,6 +183,11 @@ async fn seed_project() -> (DbManager, Uuid, TempDir, std::path::PathBuf) {
         project_type: PType::Translation,
         root_path: root.to_string_lossy().to_string(),
         status: PStatus::Active,
+        owner_user_id: LOCAL_OWNER_USER_ID.to_string(),
+        client_id: None,
+        domain_id: None,
+        lifecycle_status: PLStatus::Ready,
+        archived_at: None,
         default_src_lang: Some("en-US".into()),
         default_tgt_lang: Some("fr-FR".into()),
         metadata: None,
@@ -205,7 +203,7 @@ async fn seed_project() -> (DbManager, Uuid, TempDir, std::path::PathBuf) {
 
 async fn new_manager() -> DbManager {
     let pool = new_test_pool().await;
-    apply_migrations(&pool).await;
+    MIGRATOR.run(&pool).await.expect("apply migrations");
     DbManager::from_pool(pool)
 }
 
@@ -215,13 +213,4 @@ async fn new_test_pool() -> SqlitePool {
         .connect(":memory:")
         .await
         .expect("open memory db")
-}
-
-async fn apply_migrations(pool: &SqlitePool) {
-    for sql in MIGRATIONS {
-        sqlx::query(sql)
-            .execute(pool)
-            .await
-            .expect("migration execution failed");
-    }
 }

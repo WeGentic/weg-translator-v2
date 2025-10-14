@@ -11,10 +11,214 @@ use crate::ipc::dto::{
 use super::constants::PROJECT_FILE_CONVERSION_COLUMNS;
 use super::error::{DbError, DbResult};
 use super::types::{
-    ProjectFileConversionRow, ProjectFileConversionStatus, ProjectFileDetails,
-    ProjectFileImportStatus, ProjectFileWithConversions, ProjectListItem, ProjectStatus,
-    ProjectType,
+    Artifact, ArtifactKind, ArtifactStatus, Client, Domain, FileTarget, FileTargetStatus, Job,
+    JobState, JobType, LanguagePair, Note, ProjectFileConversionRow, ProjectFileConversionStatus,
+    ProjectFileDetails, ProjectFileImportStatus, ProjectFileWithConversions, ProjectListItem,
+    ProjectStatus, ProjectType, User, Validation,
 };
+
+/// Maps a reference user row into a strongly typed value.
+#[allow(dead_code)]
+pub fn build_user(row: &SqliteRow) -> DbResult<User> {
+    Ok(User {
+        user_id: row.try_get("user_id")?,
+        email: row.try_get("email")?,
+        display_name: row.try_get("display_name")?,
+        created_at: row.try_get("created_at")?,
+    })
+}
+
+/// Maps a client reference row into [`Client`].
+#[allow(dead_code)]
+pub fn build_client(row: &SqliteRow) -> DbResult<Client> {
+    Ok(Client {
+        client_id: row.try_get("client_id")?,
+        name: row.try_get("name")?,
+    })
+}
+
+/// Maps a domain reference row into [`Domain`].
+#[allow(dead_code)]
+pub fn build_domain(row: &SqliteRow) -> DbResult<Domain> {
+    Ok(Domain {
+        domain_id: row.try_get("domain_id")?,
+        name: row.try_get("name")?,
+    })
+}
+
+/// Hydrates a language pair row for a project.
+#[allow(dead_code)]
+pub fn build_language_pair(row: &SqliteRow) -> DbResult<LanguagePair> {
+    let pair_id_raw: String = row.try_get("pair_id")?;
+    let project_id_raw: String = row.try_get("project_id")?;
+
+    let pair_id =
+        Uuid::parse_str(&pair_id_raw).map_err(|_| DbError::InvalidUuid(pair_id_raw.clone()))?;
+    let project_id = Uuid::parse_str(&project_id_raw)
+        .map_err(|_| DbError::InvalidProjectId(project_id_raw.clone()))?;
+
+    Ok(LanguagePair {
+        pair_id,
+        project_id,
+        src_lang: row.try_get("src_lang")?,
+        trg_lang: row.try_get("trg_lang")?,
+        created_at: row.try_get("created_at")?,
+    })
+}
+
+/// Hydrates a file target row for downstream processing.
+#[allow(dead_code)]
+pub fn build_file_target(row: &SqliteRow) -> DbResult<FileTarget> {
+    let file_target_id_raw: String = row.try_get("file_target_id")?;
+    let file_id_raw: String = row.try_get("file_id")?;
+    let pair_id_raw: String = row.try_get("pair_id")?;
+    let status_raw: String = row.try_get("status")?;
+
+    let file_target_id = Uuid::parse_str(&file_target_id_raw)
+        .map_err(|_| DbError::InvalidUuid(file_target_id_raw.clone()))?;
+    let file_id =
+        Uuid::parse_str(&file_id_raw).map_err(|_| DbError::InvalidUuid(file_id_raw.clone()))?;
+    let pair_id =
+        Uuid::parse_str(&pair_id_raw).map_err(|_| DbError::InvalidUuid(pair_id_raw.clone()))?;
+
+    let status = FileTargetStatus::from_str(&status_raw)
+        .ok_or_else(|| DbError::InvalidFileTargetStatus(status_raw.clone()))?;
+
+    Ok(FileTarget {
+        file_target_id,
+        file_id,
+        pair_id,
+        status,
+        created_at: row.try_get("created_at")?,
+        updated_at: row.try_get("updated_at")?,
+    })
+}
+
+/// Hydrates an artifact row for a file target.
+#[allow(dead_code)]
+pub fn build_artifact(row: &SqliteRow) -> DbResult<Artifact> {
+    let artifact_id_raw: String = row.try_get("artifact_id")?;
+    let file_target_id_raw: String = row.try_get("file_target_id")?;
+    let kind_raw: String = row.try_get("kind")?;
+    let status_raw: String = row.try_get("status")?;
+
+    let artifact_id = Uuid::parse_str(&artifact_id_raw)
+        .map_err(|_| DbError::InvalidUuid(artifact_id_raw.clone()))?;
+    let file_target_id = Uuid::parse_str(&file_target_id_raw)
+        .map_err(|_| DbError::InvalidUuid(file_target_id_raw.clone()))?;
+
+    let kind = ArtifactKind::from_str(&kind_raw)
+        .ok_or_else(|| DbError::InvalidArtifactKind(kind_raw.clone()))?;
+    let status = ArtifactStatus::from_str(&status_raw)
+        .ok_or_else(|| DbError::InvalidArtifactStatus(status_raw.clone()))?;
+
+    Ok(Artifact {
+        artifact_id,
+        file_target_id,
+        kind,
+        rel_path: row.try_get("rel_path")?,
+        size_bytes: row.try_get("size_bytes")?,
+        checksum: row.try_get("checksum")?,
+        tool: row.try_get("tool")?,
+        status,
+        created_at: row.try_get("created_at")?,
+        updated_at: row.try_get("updated_at")?,
+    })
+}
+
+/// Hydrates a validation record for an artifact.
+#[allow(dead_code)]
+pub fn build_validation(row: &SqliteRow) -> DbResult<Validation> {
+    let validation_id_raw: String = row.try_get("validation_id")?;
+    let artifact_id_raw: String = row.try_get("artifact_id")?;
+
+    let validation_id = Uuid::parse_str(&validation_id_raw)
+        .map_err(|_| DbError::InvalidUuid(validation_id_raw.clone()))?;
+    let artifact_id = Uuid::parse_str(&artifact_id_raw)
+        .map_err(|_| DbError::InvalidUuid(artifact_id_raw.clone()))?;
+
+    let result_json: Option<String> = row.try_get("result_json")?;
+    let result_json = match result_json {
+        Some(raw) => Some(serde_json::from_str::<Value>(&raw)?),
+        None => None,
+    };
+
+    let passed_value: i64 = row.try_get("passed")?;
+    let passed = passed_value != 0;
+
+    Ok(Validation {
+        validation_id,
+        artifact_id,
+        validator: row.try_get("validator")?,
+        passed,
+        result_json,
+        created_at: row.try_get("created_at")?,
+    })
+}
+
+/// Hydrates a project note row.
+#[allow(dead_code)]
+pub fn build_note(row: &SqliteRow) -> DbResult<Note> {
+    let note_id_raw: String = row.try_get("note_id")?;
+    let project_id_raw: String = row.try_get("project_id")?;
+
+    let note_id =
+        Uuid::parse_str(&note_id_raw).map_err(|_| DbError::InvalidUuid(note_id_raw.clone()))?;
+    let project_id = Uuid::parse_str(&project_id_raw)
+        .map_err(|_| DbError::InvalidProjectId(project_id_raw.clone()))?;
+
+    Ok(Note {
+        note_id,
+        project_id,
+        author_user_id: row.try_get("author_user_id")?,
+        body: row.try_get("body")?,
+        created_at: row.try_get("created_at")?,
+    })
+}
+
+/// Hydrates a background job row.
+#[allow(dead_code)]
+pub fn build_job(row: &SqliteRow) -> DbResult<Job> {
+    let job_id_raw: String = row.try_get("job_id")?;
+    let project_id_raw: String = row.try_get("project_id")?;
+    let job_type_raw: String = row.try_get("job_type")?;
+    let state_raw: String = row.try_get("state")?;
+
+    let job_id =
+        Uuid::parse_str(&job_id_raw).map_err(|_| DbError::InvalidUuid(job_id_raw.clone()))?;
+    let project_id = Uuid::parse_str(&project_id_raw)
+        .map_err(|_| DbError::InvalidProjectId(project_id_raw.clone()))?;
+
+    let job_type = JobType::from_str(&job_type_raw)
+        .ok_or_else(|| DbError::InvalidJobType(job_type_raw.clone()))?;
+    let state = JobState::from_str(&state_raw)
+        .ok_or_else(|| DbError::InvalidJobState(state_raw.clone()))?;
+
+    let file_target_id = row
+        .try_get::<Option<String>, _>("file_target_id")?
+        .map(|value| Uuid::parse_str(&value).map_err(|_| DbError::InvalidUuid(value.clone())))
+        .transpose()?;
+
+    let artifact_id = row
+        .try_get::<Option<String>, _>("artifact_id")?
+        .map(|value| Uuid::parse_str(&value).map_err(|_| DbError::InvalidUuid(value.clone())))
+        .transpose()?;
+
+    Ok(Job {
+        job_id,
+        project_id,
+        job_type,
+        job_key: row.try_get("job_key")?,
+        file_target_id,
+        artifact_id,
+        state,
+        attempts: row.try_get("attempts")?,
+        error: row.try_get("error")?,
+        created_at: row.try_get("created_at")?,
+        started_at: row.try_get("started_at")?,
+        finished_at: row.try_get("finished_at")?,
+    })
+}
 
 /// Builds a stored job from a database row.
 pub fn build_stored_job(row: &SqliteRow) -> DbResult<StoredTranslationJob> {
@@ -116,6 +320,16 @@ pub fn build_project_file_details(row: &SqliteRow) -> DbResult<ProjectFileDetail
         import_status,
         created_at: row.try_get("created_at")?,
         updated_at: row.try_get("updated_at")?,
+        hash_sha256: row
+            .try_get::<Option<String>, _>("hash_sha256")?
+            .and_then(|value| {
+                let trimmed = value.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
+            }),
     })
 }
 

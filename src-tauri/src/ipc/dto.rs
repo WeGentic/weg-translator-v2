@@ -136,6 +136,27 @@ pub struct AppHealthReport {
     pub build_profile: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PipelineJobSummary {
+    pub job_id: String,
+    pub project_id: String,
+    pub job_type: String,
+    pub state: String,
+    pub attempts: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_target_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artifact_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    pub created_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub started_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub finished_at: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredTranslationJob {
@@ -208,6 +229,8 @@ pub struct AppSettingsDto {
     pub show_notifications: bool,
     pub enable_sound_notifications: bool,
     pub max_parallel_conversions: u32,
+    pub database_journal_mode: String,
+    pub database_synchronous: String,
 }
 
 // ===== Projects: Details & Conversions DTOs =====
@@ -299,10 +322,21 @@ pub struct EnsureConversionsTaskDto {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct FileIntegrityAlertDto {
+    pub file_id: String,
+    pub file_name: String,
+    pub expected_hash: String,
+    pub actual_hash: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EnsureConversionsPlanDto {
     pub project_id: String,
     pub src_lang: String,
     pub tgt_lang: String,
     pub version: String,
     pub tasks: Vec<EnsureConversionsTaskDto>,
+    #[serde(default)]
+    pub integrity_alerts: Vec<FileIntegrityAlertDto>,
 }

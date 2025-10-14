@@ -142,6 +142,8 @@ export interface AppSettings {
   showNotifications: boolean;
   enableSoundNotifications: boolean;
   maxParallelConversions: number;
+  databaseJournalMode: string;
+  databaseSynchronous: string;
 }
 
 // ===== Project Details & Conversions =====
@@ -231,6 +233,14 @@ export interface EnsureConversionsPlan {
   tgtLang: string;
   version: string;
   tasks: EnsureConversionsTask[];
+  integrityAlerts: FileIntegrityAlert[];
+}
+
+export interface FileIntegrityAlert {
+  fileId: string;
+  fileName: string;
+  expectedHash: string;
+  actualHash: string;
 }
 
 export const IPC_EVENT = {

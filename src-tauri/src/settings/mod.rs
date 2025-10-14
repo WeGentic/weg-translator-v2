@@ -25,6 +25,8 @@ pub struct AppSettings {
     pub show_notifications: bool,
     pub enable_sound_notifications: bool,
     pub max_parallel_conversions: u32,
+    pub database_journal_mode: String,
+    pub database_synchronous: String,
 }
 
 impl AppSettings {
@@ -59,6 +61,10 @@ struct RawSettings {
     enable_sound_notifications: bool,
     #[serde(default = "default_max_parallel")]
     max_parallel_conversions: u32,
+    #[serde(default = "default_database_journal_mode")]
+    database_journal_mode: String,
+    #[serde(default = "default_database_synchronous")]
+    database_synchronous: String,
 }
 
 impl RawSettings {
@@ -74,6 +80,8 @@ impl RawSettings {
             show_notifications: settings.show_notifications,
             enable_sound_notifications: settings.enable_sound_notifications,
             max_parallel_conversions: settings.max_parallel_conversions,
+            database_journal_mode: settings.database_journal_mode.clone(),
+            database_synchronous: settings.database_synchronous.clone(),
         }
     }
 }
@@ -266,6 +274,8 @@ pub fn load_or_init(
             show_notifications: raw.show_notifications,
             enable_sound_notifications: raw.enable_sound_notifications,
             max_parallel_conversions: raw.max_parallel_conversions,
+            database_journal_mode: raw.database_journal_mode,
+            database_synchronous: raw.database_synchronous,
         })
     } else {
         Ok(AppSettings {
@@ -279,6 +289,8 @@ pub fn load_or_init(
             show_notifications: true,
             enable_sound_notifications: false,
             max_parallel_conversions: default_max_parallel(),
+            database_journal_mode: default_database_journal_mode(),
+            database_synchronous: default_database_synchronous(),
         })
     }
 }
@@ -325,6 +337,14 @@ fn default_xliff_version() -> String {
 
 fn default_max_parallel() -> u32 {
     4
+}
+
+fn default_database_journal_mode() -> String {
+    "WAL".to_string()
+}
+
+fn default_database_synchronous() -> String {
+    "NORMAL".to_string()
 }
 
 pub async fn move_directory(old_path: &Path, new_path: &Path) -> io::Result<()> {

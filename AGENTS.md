@@ -12,9 +12,20 @@ Your highest priority is accuracy and reliability. When you are unsure, you must
 
 ## Coding Standards
 
-- Project is based on the Tauri + React + TypeScript + TailwindCSS, with npm workspaces.
-- Any UI components must use ShadCN (v. 3.3.1) and TailwindCSS 4.1.1
-- Frontend must be written in React 19.1.1, using most recent patterns and best practices, and the new Compiler.
+- Project is based on the Tauri + React + TypeScript, with npm workspaces.
+
+## Coding guidelines
+
+- Do your best to provide small, single-scoped files (under 300-500 lines of code), aiming for high cohesion and low coupling, and for the best maintainability.
+- Follow all currect best practices for coding, including but not limited to:
+  - You *MUST* follow React 19.2 coding guidelines (see docs/react19-guidelines.md)
+  - When UI is involved, you will always provide separate CSS files for styling.
+  - Proper naming conventions
+  - YAGNI (You Aren't Gonna Need It)
+  - KISS (Keep It Simple, Stupid)
+  - DRY (Don't Repeat Yourself)
+  - SOLID principles
+  - Proper error handling
 
 ## Reward Structure (Behavioral Guidance)
 

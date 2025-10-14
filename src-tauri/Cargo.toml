@@ -37,6 +37,8 @@ sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "sqlite", "uuid"
 libc = "0.2.175"
 quick-xml = "0.38.3"
 jsonschema = "0.33.0"
+language-tags = "0.3.2"
+sha2 = "0.10.9"
 
 [dev-dependencies]
 tempfile = "3.23.0"
@@ -44,3 +46,7 @@ tempfile = "3.23.0"
 [[bin]]
 name = "seed-demo-project"
 path = "src/bin/seed_demo_project.rs"
+
+[[bin]]
+name = "backfill-legacy-data"
+path = "src/bin/backfill_legacy_data.rs"

@@ -47,6 +47,12 @@ type ProcessingState = {
   fileCount: number;
 };
 
+const firstMeaningfulLine = (value?: string | null) =>
+  value
+    ?.split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line.length > 0);
+
 export function ProjectOverview({ projectSummary }: Props) {
   const projectId = projectSummary.projectId;
   const { user } = useAuth();
@@ -181,6 +187,16 @@ export function ProjectOverview({ projectSummary }: Props) {
         return { ok: false as const, error: detail };
       }
 
+      const validationSummary = {
+        validator: "xliff_schema",
+        passed: true,
+        skipped: false,
+        message:
+          val.message ||
+          firstMeaningfulLine(val.stdout) ||
+          firstMeaningfulLine(val.stderr),
+      };
+
       let jliffResult: JliffConversionResult;
       try {
         jliffResult = await convertXliffToJliff({
@@ -200,6 +216,7 @@ export function ProjectOverview({ projectSummary }: Props) {
         xliffRelPath: rel,
         jliffRelPath: jliffResult.jliffRelPath,
         tagMapRelPath: jliffResult.tagMapRelPath,
+        validation: validationSummary,
       });
       return { ok: true as const };
     } catch (e) {
@@ -303,6 +320,20 @@ export function ProjectOverview({ projectSummary }: Props) {
 
       const plan = await ensureProjectConversionsPlan(projectId);
       advanceProcessing(3);
+
+      if (plan.integrityAlerts.length > 0) {
+        const alertNames = plan.integrityAlerts.map((alert) => alert.fileName);
+        const displayNames = alertNames.slice(0, 3).join(", ");
+        const remaining = alertNames.length - 3;
+        const description = remaining > 0
+          ? `${displayNames} and ${remaining} other${remaining === 1 ? "" : "s"} no longer match their stored checksums.`
+          : `${displayNames} no longer ${alertNames.length === 1 ? "matches" : "match"} the stored checksum.`;
+        toast({
+          variant: "destructive",
+          title: "File integrity mismatch",
+          description,
+        });
+      }
 
       if (plan.tasks.length > 0) {
         conversionsTriggered = true;

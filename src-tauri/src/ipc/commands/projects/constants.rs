@@ -20,6 +20,34 @@ pub const PROJECT_NAME_MAX_LEN: usize = 120;
 /// the app folder organized
 pub const PROJECTS_DIR_NAME: &str = "projects";
 
+/// Default local owner user identifier used until user management is implemented.
+pub const LOCAL_OWNER_USER_ID: &str = "local-user";
+/// Default email used for the local owner placeholder user.
+pub const LOCAL_OWNER_EMAIL: &str = "local@localhost";
+/// Default display name used for the local owner placeholder user.
+pub const LOCAL_OWNER_DISPLAY_NAME: &str = "Local Owner";
+
+/// Subdirectory under each project where original uploaded files are stored.
+pub const PROJECT_DIR_ORIGINAL: &str = "original";
+
+/// Temporary staging directory used while importing files.
+pub const PROJECT_DIR_STAGING: &str = ".staging";
+
+/// Directory within the staging area where original files are placed.
+pub const PROJECT_DIR_STAGING_ORIGINAL: &str = ".staging/original";
+
+/// Root folder for generated artifacts under each project.
+pub const PROJECT_DIR_ARTIFACTS: &str = "artifacts";
+
+/// Subfolder for generated XLIFF artifacts.
+pub const PROJECT_DIR_ARTIFACTS_XLIFF: &str = "xliff";
+
+/// Subfolder for generated JLIFF artifacts.
+pub const PROJECT_DIR_ARTIFACTS_XJLIFF: &str = "xjliff";
+
+/// Subfolder for generated QA reports.
+pub const PROJECT_DIR_ARTIFACTS_QA: &str = "qa";
+
 /// File extensions that are accepted for project import
 ///
 /// This list includes:

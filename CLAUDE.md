@@ -14,7 +14,7 @@ Your highest priority is accuracy and reliability. When you are unsure, you must
 
 ## Weg Translator Desktop
 
-Tauri 2.8.5 desktop application with a **React 19.1** frontend and **Rust 1.89** backend that wraps the OpenXLIFF command-line tools as sidecars. The app ships a minimal Java 21 runtime, exposes convert/merge/validate flows in the UI, and showcases secured IPC between React and Tauri.
+Tauri 2.8.5 desktop application with a **React 19.2** frontend and **Rust 1.89** backend that wraps the OpenXLIFF command-line tools as sidecars. The app ships a minimal Java 21 runtime, exposes convert/merge/validate flows in the UI, and showcases secured IPC between React and Tauri.
 
 ## Reward Structure (Behavioral Guidance)
 
@@ -62,32 +62,6 @@ Do I have strong, context-supported evidence for this answer?
   - DRY (Don't Repeat Yourself)
   - SOLID principles
   - Proper error handling
-
-## Development commands
-
-```bash
-# Development (launches Vite + Tauri backend with hot reload)
-pnpm tauri dev
-
-# Build debug bundle (macOS .app/.dmg or Windows .msi/.exe)
-pnpm tauri build -- --debug
-
-# Frontend tests (Vitest + Testing Library)
-pnpm test            # watch mode
-pnpm test:run        # single run
-pnpm test:coverage   # with coverage
-
-# Rust backend tests
-cargo test --manifest-path src-tauri/Cargo.toml
-
-# Linting & formatting
-pnpm lint            # check
-pnpm lint:fix        # auto-fix
-pnpm format          # format all files
-pnpm format:check    # check formatting
-```
-
-**Note:** Prefer `pnpm` for development to stay aligned with the workspace lockfile.
 
 ## Architecture overview
 
