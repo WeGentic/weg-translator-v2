@@ -9,12 +9,11 @@ const UPDATED_WITHIN_THRESHOLDS: Record<DatePreset, number | null> = {
   "30d": 30 * 24 * 60 * 60 * 1000,
 };
 
-const SEARCHABLE_FIELDS: Array<keyof Pick<ProjectListItem, "name" | "slug" | "projectType" | "status" | "activityStatus">> = [
+const SEARCHABLE_FIELDS: Array<keyof Pick<ProjectListItem, "name" | "slug" | "projectType" | "status">> = [
   "name",
   "slug",
   "projectType",
   "status",
-  "activityStatus",
 ];
 
 function withinUpdatedThreshold(item: ProjectListItem, thresholdMs: number | null, now: number): boolean {
@@ -48,10 +47,10 @@ export function filterProjects(items: ProjectListItem[], filters: TableFilters, 
   const thresholdMs = UPDATED_WITHIN_THRESHOLDS[filters.updatedWithin];
 
   return items.filter((item) => {
-    const activityStatus = item.activityStatus?.toLowerCase() as string | undefined;
-    const projectType = item.projectType?.toLowerCase() as string | undefined;
+    const activityStatus = item.activityStatus?.toLowerCase();
+    const projectType = item.projectType?.toLowerCase();
 
-    if (filters.progress !== "all" && activityStatus !== filters.progress) {
+    if (filters.progress !== "all" && activityStatus && activityStatus !== filters.progress) {
       return false;
     }
 

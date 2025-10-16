@@ -48,8 +48,8 @@ export function useSidebarTwoContentSync({
         />,
       );
     } else {
-      const activeProjects = projects.filter((p) => p.status === "active").length;
-      const totalFiles = projects.reduce((sum, p) => sum + p.fileCount, 0);
+      const activeProjects = projects.filter((p) => p.status?.toLowerCase() === "active").length;
+      const totalFiles = projects.reduce((sum, p) => sum + (p.fileCount ?? 0), 0);
 
       const now = Date.now();
       const oneDayAgo = now - 24 * 60 * 60 * 1000;

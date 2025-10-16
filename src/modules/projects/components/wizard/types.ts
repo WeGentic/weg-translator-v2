@@ -1,11 +1,10 @@
-import type { ProjectType } from "@/core/ipc";
 import { PROJECT_FILE_EXTENSIONS } from "@/modules/projects/config";
 
 export type WizardStep = 0 | 1 | 2;
 
 export interface NewProjectForm {
   name: string;
-  type: ProjectType | "";
+  type: string;
   srcLang: string;
   tgtLang: string;
   files: string[];

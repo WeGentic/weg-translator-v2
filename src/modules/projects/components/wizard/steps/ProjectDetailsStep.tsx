@@ -71,7 +71,7 @@ export function ProjectDetailsStep({ form, errors, onChange }: ProjectDetailsSte
           Project type
           <span className="text-xs font-normal text-muted-foreground">Required</span>
         </Label>
-        <Select value={form.type} onValueChange={(value) => onChange({ type: value as NewProjectForm["type"] })}>
+        <Select value={form.type} onValueChange={(value) => onChange({ type: value })}>
           <SelectTrigger
             id="project-type"
             aria-invalid={Boolean(errors.type)}

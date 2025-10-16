@@ -8,7 +8,6 @@
 
 import {
   useCallback,
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -39,10 +38,6 @@ interface WizardDetailsStepProps {
   targetLanguages: string[];
   onToggleTargetLanguage: (value: string) => void;
   onRemoveTargetLanguage: (value: string) => void;
-  /**
-   * Counter used to force-reset local state when the wizard is cleared.
-   */
-  resetSignal: number;
 }
 
 export function WizardDetailsStep({
@@ -59,7 +54,6 @@ export function WizardDetailsStep({
   targetLanguages,
   onToggleTargetLanguage,
   onRemoveTargetLanguage,
-  resetSignal,
 }: WizardDetailsStepProps) {
   const languageMap = useMemo<Map<string, EnhancedLanguageOption>>(() => {
     return createLanguageMap(COMMON_LANGUAGES);
@@ -76,14 +70,6 @@ export function WizardDetailsStep({
   const [sourceOpen, setSourceOpen] = useState(false);
   const [targetOpen, setTargetOpen] = useState(false);
   const [fieldOpen, setFieldOpen] = useState(false);
-
-  useEffect(() => {
-    setSourceSearch("");
-    setTargetSearch("");
-    setSourceOpen(false);
-    setTargetOpen(false);
-    setFieldOpen(false);
-  }, [resetSignal]);
 
   const filteredSourceOptions = useMemo(() => {
     const query = sourceSearch.trim().toLowerCase();

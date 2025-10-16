@@ -5,7 +5,6 @@
  * while ensuring that all parts of the wizard share a single source of truth.
  */
 
-import type { CreateProjectRequest } from "@/core/ipc";
 import type { LanguageOption } from "../wizard/utils/languages";
 
 /**
@@ -17,7 +16,7 @@ export type WizardStep = "details" | "files";
 /**
  * The only project type supported when creating a project from the wizard.
  */
-export type WizardProjectType = CreateProjectRequest["projectType"];
+export type WizardProjectType = "translation" | "rag";
 
 /**
  * Extends the shared language option with a pre-computed short label that is

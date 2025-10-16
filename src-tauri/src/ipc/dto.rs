@@ -122,6 +122,335 @@ pub enum ProjectsChangedKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PermissionOverrideDto {
+    pub permission: String,
+    pub is_allowed: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserProfileDto {
+    pub user_uuid: String,
+    pub username: String,
+    pub email: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<String>,
+    pub roles: Vec<String>,
+    pub permission_overrides: Vec<PermissionOverrideDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateUserPayload {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user_uuid: Option<String>,
+    pub username: String,
+    pub email: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phone: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub address: Option<String>,
+    #[serde(default)]
+    pub roles: Vec<String>,
+    #[serde(default)]
+    pub permission_overrides: Vec<PermissionOverrideDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateUserPayload {
+    pub user_uuid: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phone: Option<Option<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub address: Option<Option<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub roles: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub permission_overrides: Option<Vec<PermissionOverrideDto>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientDto {
+    pub client_uuid: String,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vat_number: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateClientPayload {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_uuid: Option<String>,
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phone: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub address: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vat_number: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateClientPayload {
+    pub client_uuid: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub email: Option<Option<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phone: Option<Option<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub address: Option<Option<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vat_number: Option<Option<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<Option<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectLanguagePairDto {
+    pub source_lang: String,
+    pub target_lang: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileLanguagePairDto {
+    pub source_lang: String,
+    pub target_lang: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateProjectPayload {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_uuid: Option<String>,
+    pub project_name: String,
+    #[serde(default = "default_project_status")]
+    pub project_status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user_uuid: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_uuid: Option<String>,
+    pub r#type: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+    #[serde(default)]
+    pub subjects: Vec<String>,
+    pub language_pairs: Vec<ProjectLanguagePairDto>,
+}
+
+fn default_project_status() -> String {
+    "active".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateProjectPayload {
+    pub project_uuid: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_status: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user_uuid: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_uuid: Option<Option<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub r#type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notes: Option<Option<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subjects: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language_pairs: Option<Vec<ProjectLanguagePairDto>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectRecordV2Dto {
+    pub project_uuid: String,
+    pub project_name: String,
+    pub creation_date: String,
+    pub update_date: String,
+    pub project_status: String,
+    pub user_uuid: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_uuid: Option<String>,
+    pub r#type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileInfoV2Dto {
+    pub file_uuid: String,
+    pub ext: String,
+    pub r#type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub segment_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectFileLinkDto {
+    pub project_uuid: String,
+    pub file_uuid: String,
+    pub filename: String,
+    pub stored_at: String,
+    pub r#type: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtifactV2Dto {
+    pub artifact_uuid: String,
+    pub project_uuid: String,
+    pub file_uuid: String,
+    pub artifact_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub segment_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token_count: Option<i64>,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JobV2Dto {
+    pub artifact_uuid: String,
+    pub job_type: String,
+    pub project_uuid: String,
+    pub job_status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_log: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectFileBundleV2Dto {
+    pub file: ProjectFileLinkDto,
+    pub info: FileInfoV2Dto,
+    pub language_pairs: Vec<FileLanguagePairDto>,
+    pub artifacts: Vec<ArtifactV2Dto>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectBundleV2Dto {
+    pub project: ProjectRecordV2Dto,
+    pub subjects: Vec<String>,
+    pub language_pairs: Vec<ProjectLanguagePairDto>,
+    pub files: Vec<ProjectFileBundleV2Dto>,
+    pub jobs: Vec<JobV2Dto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AttachProjectFilePayload {
+    pub project_uuid: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_uuid: Option<String>,
+    pub filename: String,
+    pub stored_at: String,
+    pub r#type: String,
+    pub ext: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub segment_count: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_count: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+    pub language_pairs: Vec<FileLanguagePairDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpsertArtifactPayload {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artifact_uuid: Option<String>,
+    pub project_uuid: String,
+    pub file_uuid: String,
+    pub artifact_type: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub segment_count: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_count: Option<i64>,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateArtifactStatusPayload {
+    pub artifact_uuid: String,
+    pub status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub segment_count: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_count: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpsertJobPayload {
+    pub artifact_uuid: String,
+    pub job_type: String,
+    pub project_uuid: String,
+    pub job_status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error_log: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateJobStatusPayload {
+    pub artifact_uuid: String,
+    pub job_type: String,
+    pub job_status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error_log: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProjectsChangedPayload {
     pub kind: ProjectsChangedKind,
     #[serde(skip_serializing_if = "Option::is_none")]

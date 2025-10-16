@@ -90,11 +90,15 @@ export interface AppHealthReport {
   buildProfile: string;
 }
 
-export type ProjectType = "translation" | "rag";
+export type ProjectType = string;
 
-export type ProjectStatus = "active" | "archived";
-export type ProjectActivityStatus = "pending" | "running" | "completed" | "failed";
+export type ProjectStatus = string;
+export type ProjectActivityStatus = string;
 
+/**
+ * @deprecated Legacy create-project payload retained for reference while the
+ * v2 schema replaces the original pipeline.
+ */
 export interface CreateProjectRequest {
   name: string;
   projectType: ProjectType;
@@ -103,6 +107,9 @@ export interface CreateProjectRequest {
   files: string[];
 }
 
+/**
+ * @deprecated Legacy response shape from the removed project pipeline.
+ */
 export interface CreateProjectResponse {
   projectId: string;
   slug: string;
@@ -116,10 +123,12 @@ export interface ProjectListItem {
   slug: string;
   projectType: ProjectType;
   status: ProjectStatus;
-  activityStatus: ProjectActivityStatus;
-  fileCount: number;
+  activityStatus?: ProjectActivityStatus;
+  fileCount?: number;
   createdAt: string;
   updatedAt: string;
+  clientId?: string | null;
+  notes?: string | null;
 }
 
 export interface AppSettings {

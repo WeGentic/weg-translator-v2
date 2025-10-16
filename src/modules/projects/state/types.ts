@@ -16,10 +16,10 @@ export type ProjectRow = {
 };
 
 export const PROGRESS_FILTER_OPTIONS = ["all", "pending", "running", "completed", "failed"] as const;
-export type ProgressFilter = (typeof PROGRESS_FILTER_OPTIONS)[number];
+export type ProgressFilter = string;
 
 export const PROJECT_TYPE_FILTER_OPTIONS = ["all", "translation", "rag"] as const;
-export type TypeFilter = (typeof PROJECT_TYPE_FILTER_OPTIONS)[number];
+export type TypeFilter = string;
 
 export const DATE_PRESET_OPTIONS = ["any", "24h", "7d", "30d"] as const;
 export type DatePreset = (typeof DATE_PRESET_OPTIONS)[number];

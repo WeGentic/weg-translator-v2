@@ -4,256 +4,192 @@
 //! managed via SQLx migrations. Each statement is idempotent so the bootstrap
 //! can be safely executed on every launch.
 
-use sqlx::Error as SqlxError;
 use sqlx::{Executor, Sqlite, SqlitePool, Transaction};
 
-const CORE_TABLE_STATEMENTS: &[&str] = &[
-    // Translation history (legacy playground, kept for completeness).
-    r#"
-    CREATE TABLE IF NOT EXISTS translation_jobs (
-        id TEXT PRIMARY KEY,
-        source_language TEXT NOT NULL,
-        target_language TEXT NOT NULL,
-        input_text TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'queued',
-        stage TEXT NOT NULL DEFAULT 'received',
-        progress REAL NOT NULL DEFAULT 0.0,
-        queued_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-        started_at TEXT,
-        completed_at TEXT,
-        failed_at TEXT,
-        failure_reason TEXT,
-        metadata TEXT,
-        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-        CHECK(progress >= 0.0 AND progress <= 1.0),
-        CHECK(status IN ('queued', 'running', 'completed', 'failed')),
-        CHECK(stage IN ('received', 'preparing', 'translating', 'completed', 'failed'))
-    )
-    "#,
-    r#"
-    CREATE TABLE IF NOT EXISTS translation_outputs (
-        job_id TEXT PRIMARY KEY,
-        output_text TEXT NOT NULL,
-        model_name TEXT,
-        input_token_count INTEGER DEFAULT 0,
-        output_token_count INTEGER DEFAULT 0,
-        total_token_count INTEGER DEFAULT 0,
-        duration_ms INTEGER,
-        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-        FOREIGN KEY(job_id) REFERENCES translation_jobs(id) ON DELETE CASCADE
-    )
-    "#,
+const TABLE_STATEMENTS: &[&str] = &[
     r#"
     CREATE TABLE IF NOT EXISTS users (
-        user_id TEXT PRIMARY KEY,
-        email TEXT NOT NULL UNIQUE,
-        display_name TEXT,
-        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        user_uuid TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        email TEXT NOT NULL,
+        phone TEXT,
+        address TEXT
+    )
+    "#,
+    r#"
+    CREATE TABLE IF NOT EXISTS user_roles (
+        user_uuid TEXT NOT NULL,
+        role TEXT NOT NULL,
+        PRIMARY KEY (user_uuid, role),
+        FOREIGN KEY (user_uuid) REFERENCES users(user_uuid) ON UPDATE CASCADE ON DELETE CASCADE
+    )
+    "#,
+    r#"
+    CREATE TABLE IF NOT EXISTS user_permission_overrides (
+        user_uuid TEXT NOT NULL,
+        permission TEXT NOT NULL,
+        is_allowed INTEGER NOT NULL DEFAULT 1 CHECK (is_allowed IN (0, 1)),
+        PRIMARY KEY (user_uuid, permission),
+        FOREIGN KEY (user_uuid) REFERENCES users(user_uuid) ON UPDATE CASCADE ON DELETE CASCADE
     )
     "#,
     r#"
     CREATE TABLE IF NOT EXISTS clients (
-        client_id TEXT PRIMARY KEY,
-        name TEXT NOT NULL UNIQUE
-    )
-    "#,
-    r#"
-    CREATE TABLE IF NOT EXISTS domains (
-        domain_id TEXT PRIMARY KEY,
-        name TEXT NOT NULL UNIQUE
+        client_uuid TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT,
+        phone TEXT,
+        address TEXT,
+        vat_number TEXT,
+        note TEXT
     )
     "#,
     r#"
     CREATE TABLE IF NOT EXISTS projects (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        slug TEXT NOT NULL,
-        project_type TEXT NOT NULL CHECK (project_type IN ('translation','rag')),
-        root_path TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','archived')),
-        owner_user_id TEXT NOT NULL REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE RESTRICT,
-        client_id TEXT REFERENCES clients(client_id) ON DELETE SET NULL,
-        domain_id TEXT REFERENCES domains(domain_id) ON DELETE SET NULL,
-        lifecycle_status TEXT NOT NULL DEFAULT 'CREATING'
-            CHECK (lifecycle_status IN ('CREATING','READY','IN_PROGRESS','COMPLETED','ERROR')),
-        archived_at TEXT,
-        default_src_lang TEXT,
-        default_tgt_lang TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        metadata TEXT
+        project_uuid TEXT PRIMARY KEY,
+        project_name TEXT NOT NULL,
+        creation_date TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        update_date TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        project_status TEXT NOT NULL,
+        user_uuid TEXT NOT NULL,
+        client_uuid TEXT,
+        type TEXT NOT NULL,
+        notes TEXT,
+        FOREIGN KEY (user_uuid) REFERENCES users(user_uuid) ON UPDATE CASCADE ON DELETE RESTRICT,
+        FOREIGN KEY (client_uuid) REFERENCES clients(client_uuid) ON UPDATE CASCADE ON DELETE SET NULL
+    )
+    "#,
+    r#"
+    CREATE TABLE IF NOT EXISTS project_subjects (
+        project_uuid TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        PRIMARY KEY (project_uuid, subject),
+        FOREIGN KEY (project_uuid) REFERENCES projects(project_uuid) ON UPDATE CASCADE ON DELETE CASCADE
     )
     "#,
     r#"
     CREATE TABLE IF NOT EXISTS project_language_pairs (
-        pair_id TEXT PRIMARY KEY,
-        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-        src_lang TEXT NOT NULL,
-        trg_lang TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-        UNIQUE(project_id, src_lang, trg_lang)
+        project_uuid TEXT NOT NULL,
+        source_lang TEXT NOT NULL,
+        target_lang TEXT NOT NULL,
+        PRIMARY KEY (project_uuid, source_lang, target_lang),
+        FOREIGN KEY (project_uuid) REFERENCES projects(project_uuid) ON UPDATE CASCADE ON DELETE CASCADE
+    )
+    "#,
+    r#"
+    CREATE TABLE IF NOT EXISTS file_info (
+        file_uuid TEXT PRIMARY KEY,
+        ext TEXT NOT NULL,
+        type TEXT NOT NULL,
+        size_bytes INTEGER,
+        segment_count INTEGER,
+        token_count INTEGER,
+        notes TEXT
     )
     "#,
     r#"
     CREATE TABLE IF NOT EXISTS project_files (
-        id TEXT PRIMARY KEY,
-        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-        original_name TEXT NOT NULL,
-        original_path TEXT NOT NULL,
-        stored_rel_path TEXT NOT NULL,
-        ext TEXT NOT NULL,
-        size_bytes INTEGER,
-        checksum_sha256 TEXT,
-        hash_sha256 TEXT,
-        import_status TEXT NOT NULL DEFAULT 'imported'
-            CHECK (import_status IN ('imported','failed')),
-        role TEXT NOT NULL DEFAULT 'source'
-            CHECK (role IN ('source','reference','tm','termbase','styleguide','other')),
-        mime_type TEXT,
-        storage_state TEXT NOT NULL DEFAULT 'COPIED'
-            CHECK (storage_state IN ('STAGED','COPIED','MISSING','DELETED')),
-        importer TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        UNIQUE(project_id, stored_rel_path)
+        project_uuid TEXT NOT NULL,
+        file_uuid TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        stored_at TEXT NOT NULL,
+        type TEXT NOT NULL,
+        PRIMARY KEY (project_uuid, file_uuid),
+        FOREIGN KEY (project_uuid) REFERENCES projects(project_uuid) ON UPDATE CASCADE ON DELETE CASCADE,
+        FOREIGN KEY (file_uuid) REFERENCES file_info(file_uuid) ON UPDATE CASCADE ON DELETE RESTRICT
     )
     "#,
     r#"
-    CREATE TABLE IF NOT EXISTS project_file_conversions (
-        id TEXT PRIMARY KEY,
-        project_file_id TEXT NOT NULL REFERENCES project_files(id) ON DELETE CASCADE,
-        src_lang TEXT NOT NULL,
-        tgt_lang TEXT NOT NULL,
-        version TEXT NOT NULL DEFAULT '2.1'
-            CHECK (version IN ('2.0','2.1','2.2')),
-        paragraph INTEGER NOT NULL DEFAULT 1 CHECK (paragraph IN (0,1)),
-        embed INTEGER NOT NULL DEFAULT 1 CHECK (embed IN (0,1)),
-        xliff_rel_path TEXT,
-        jliff_rel_path TEXT,
-        tag_map_rel_path TEXT,
-        status TEXT NOT NULL DEFAULT 'pending'
-            CHECK (status IN ('pending','running','completed','failed')),
-        started_at TEXT,
-        completed_at TEXT,
-        failed_at TEXT,
-        error_message TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        UNIQUE(project_file_id, src_lang, tgt_lang, version)
-    )
-    "#,
-    r#"
-    CREATE TABLE IF NOT EXISTS file_targets (
-        file_target_id TEXT PRIMARY KEY,
-        file_id TEXT NOT NULL REFERENCES project_files(id) ON DELETE CASCADE,
-        pair_id TEXT NOT NULL REFERENCES project_language_pairs(pair_id) ON DELETE CASCADE,
-        status TEXT NOT NULL DEFAULT 'PENDING'
-            CHECK (status IN ('PENDING','EXTRACTED','FAILED')),
-        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-        UNIQUE(file_id, pair_id)
+    CREATE TABLE IF NOT EXISTS file_language_pairs (
+        project_uuid TEXT NOT NULL,
+        file_uuid TEXT NOT NULL,
+        source_lang TEXT NOT NULL,
+        target_lang TEXT NOT NULL,
+        PRIMARY KEY (project_uuid, file_uuid, source_lang, target_lang),
+        FOREIGN KEY (project_uuid, file_uuid) REFERENCES project_files(project_uuid, file_uuid) ON UPDATE CASCADE ON DELETE CASCADE
     )
     "#,
     r#"
     CREATE TABLE IF NOT EXISTS artifacts (
-        artifact_id TEXT PRIMARY KEY,
-        file_target_id TEXT NOT NULL REFERENCES file_targets(file_target_id) ON DELETE CASCADE,
-        kind TEXT NOT NULL CHECK (kind IN ('xliff','jliff','qa_report','preview')),
-        rel_path TEXT NOT NULL,
+        artifact_uuid TEXT PRIMARY KEY,
+        project_uuid TEXT NOT NULL,
+        file_uuid TEXT NOT NULL,
+        artifact_type TEXT NOT NULL,
         size_bytes INTEGER,
-        checksum TEXT,
-        tool TEXT,
-        status TEXT NOT NULL DEFAULT 'GENERATED'
-            CHECK (status IN ('GENERATED','FAILED')),
-        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-        UNIQUE(file_target_id, kind)
-    )
-    "#,
-    r#"
-    CREATE TABLE IF NOT EXISTS validations (
-        validation_id TEXT PRIMARY KEY,
-        artifact_id TEXT NOT NULL REFERENCES artifacts(artifact_id) ON DELETE CASCADE,
-        validator TEXT NOT NULL,
-        passed INTEGER NOT NULL CHECK (passed IN (0,1)),
-        result_json TEXT,
-        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-    )
-    "#,
-    r#"
-    CREATE TABLE IF NOT EXISTS notes (
-        note_id TEXT PRIMARY KEY,
-        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-        author_user_id TEXT NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
-        body TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        segment_count INTEGER,
+        token_count INTEGER,
+        status TEXT NOT NULL,
+        FOREIGN KEY (project_uuid, file_uuid) REFERENCES project_files(project_uuid, file_uuid) ON UPDATE CASCADE ON DELETE CASCADE
     )
     "#,
     r#"
     CREATE TABLE IF NOT EXISTS jobs (
-        job_id TEXT PRIMARY KEY,
-        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-        job_type TEXT NOT NULL CHECK (job_type IN ('COPY_FILE','EXTRACT_XLIFF','CONVERT_JLIFF','VALIDATE')),
-        job_key TEXT NOT NULL,
-        file_target_id TEXT REFERENCES file_targets(file_target_id) ON DELETE CASCADE,
-        artifact_id TEXT REFERENCES artifacts(artifact_id) ON DELETE CASCADE,
-        state TEXT NOT NULL DEFAULT 'PENDING'
-            CHECK (state IN ('PENDING','RUNNING','SUCCEEDED','FAILED','CANCELLED')),
-        attempts INTEGER NOT NULL DEFAULT 0,
-        error TEXT,
-        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-        started_at TEXT,
-        finished_at TEXT
+        artifact_uuid TEXT NOT NULL,
+        job_type TEXT NOT NULL,
+        project_uuid TEXT NOT NULL,
+        job_status TEXT NOT NULL,
+        error_log TEXT,
+        PRIMARY KEY (artifact_uuid, job_type),
+        FOREIGN KEY (artifact_uuid) REFERENCES artifacts(artifact_uuid) ON UPDATE CASCADE ON DELETE CASCADE,
+        FOREIGN KEY (project_uuid) REFERENCES projects(project_uuid) ON UPDATE CASCADE ON DELETE CASCADE
     )
     "#,
 ];
 
-const INDEX_AND_TRIGGER_STATEMENTS: &[&str] = &[
-    r#"CREATE INDEX IF NOT EXISTS idx_translation_jobs_status ON translation_jobs(status)"#,
-    r#"CREATE INDEX IF NOT EXISTS idx_translation_jobs_created_at ON translation_jobs(created_at)"#,
-    r#"CREATE INDEX IF NOT EXISTS idx_translation_outputs_created_at ON translation_outputs(created_at)"#,
-    r#"CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_slug ON projects(slug)"#,
-    r#"CREATE UNIQUE INDEX IF NOT EXISTS ux_projects_owner_name ON projects(owner_user_id, name COLLATE NOCASE) WHERE archived_at IS NULL"#,
-    r#"CREATE INDEX IF NOT EXISTS idx_projects_default_lang ON projects(default_src_lang, default_tgt_lang)"#,
-    r#"CREATE INDEX IF NOT EXISTS idx_project_files_project ON project_files(project_id)"#,
-    r#"CREATE INDEX IF NOT EXISTS idx_project_file_conversions_status ON project_file_conversions(status)"#,
-    r#"CREATE INDEX IF NOT EXISTS idx_project_file_conversions_file ON project_file_conversions(project_file_id)"#,
-    r#"CREATE INDEX IF NOT EXISTS ix_jobs_project_state ON jobs(project_id, state)"#,
-    r#"CREATE UNIQUE INDEX IF NOT EXISTS ux_jobs_job_key ON jobs(job_key)"#,
-    r#"CREATE INDEX IF NOT EXISTS ix_artifacts_kind_path ON artifacts(kind, rel_path)"#,
+const INDEX_STATEMENTS: &[&str] = &[
+    r#"CREATE INDEX IF NOT EXISTS idx_project_language_pairs_project ON project_language_pairs(project_uuid)"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_project_files_project ON project_files(project_uuid)"#,
+    r#"CREATE INDEX IF NOT EXISTS idx_artifacts_project ON artifacts(project_uuid)"#,
+    r#"CREATE UNIQUE INDEX IF NOT EXISTS ux_artifacts_project_artifact ON artifacts(project_uuid, artifact_uuid)"#,
+];
+
+const TRIGGER_STATEMENTS: &[&str] = &[
     r#"
-    CREATE TRIGGER IF NOT EXISTS trg_projects_updated_at
+    CREATE TRIGGER IF NOT EXISTS projects_set_update_date
     AFTER UPDATE ON projects
     FOR EACH ROW
+    WHEN NEW.update_date = OLD.update_date
     BEGIN
-      UPDATE projects
-        SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
-      WHERE id = NEW.id
-        AND updated_at = OLD.updated_at;
+        UPDATE projects
+        SET update_date = CURRENT_TIMESTAMP
+        WHERE project_uuid = NEW.project_uuid
+          AND update_date = OLD.update_date;
     END
     "#,
     r#"
-    CREATE TRIGGER IF NOT EXISTS trg_file_targets_updated_at
-    AFTER UPDATE ON file_targets
+    CREATE TRIGGER IF NOT EXISTS flp_must_be_subset_of_plp_insert
+    BEFORE INSERT ON file_language_pairs
     FOR EACH ROW
+    WHEN NOT EXISTS (
+        SELECT 1
+        FROM project_language_pairs
+        WHERE project_uuid = NEW.project_uuid
+          AND source_lang = NEW.source_lang
+          AND target_lang = NEW.target_lang
+    )
     BEGIN
-      UPDATE file_targets
-        SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
-      WHERE file_target_id = NEW.file_target_id
-        AND updated_at = OLD.updated_at;
+        SELECT RAISE(
+            ABORT,
+            'file language pair must match existing project language pair'
+        );
     END
     "#,
     r#"
-    CREATE TRIGGER IF NOT EXISTS trg_artifacts_updated_at
-    AFTER UPDATE ON artifacts
+    CREATE TRIGGER IF NOT EXISTS flp_must_be_subset_of_plp_update
+    BEFORE UPDATE ON file_language_pairs
     FOR EACH ROW
+    WHEN NOT EXISTS (
+        SELECT 1
+        FROM project_language_pairs
+        WHERE project_uuid = NEW.project_uuid
+          AND source_lang = NEW.source_lang
+          AND target_lang = NEW.target_lang
+    )
     BEGIN
-      UPDATE artifacts
-        SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
-      WHERE artifact_id = NEW.artifact_id
-        AND updated_at = OLD.updated_at;
+        SELECT RAISE(
+            ABORT,
+            'file language pair must match existing project language pair'
+        );
     END
     "#,
 ];
@@ -266,44 +202,17 @@ pub async fn initialise_schema(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 }
 
 async fn ensure_schema(tx: &mut Transaction<'_, Sqlite>) -> Result<(), sqlx::Error> {
-    for statement in CORE_TABLE_STATEMENTS {
+    for statement in TABLE_STATEMENTS {
         tx.execute(sqlx::query(statement)).await?;
     }
 
-    for statement in INDEX_AND_TRIGGER_STATEMENTS {
+    for statement in INDEX_STATEMENTS {
         tx.execute(sqlx::query(statement)).await?;
     }
 
-    // Backward compatibility: add columns that may be missing from legacy databases.
-    add_column_if_missing(tx, "project_files", "hash_sha256 TEXT").await?;
-    add_column_if_missing(tx, "project_file_conversions", "jliff_rel_path TEXT").await?;
-    add_column_if_missing(tx, "project_file_conversions", "tag_map_rel_path TEXT").await?;
-
-    // Seed the default local owner expected by the rest of the application.
-    tx.execute(sqlx::query(
-        r#"
-        INSERT OR IGNORE INTO users (user_id, email, display_name)
-        VALUES ('local-user', 'local@localhost', 'Local Owner')
-        "#,
-    ))
-    .await?;
+    for statement in TRIGGER_STATEMENTS {
+        tx.execute(sqlx::query(statement)).await?;
+    }
 
     Ok(())
-}
-
-async fn add_column_if_missing(
-    tx: &mut Transaction<'_, Sqlite>,
-    table: &str,
-    column_definition: &str,
-) -> Result<(), sqlx::Error> {
-    let statement = format!("ALTER TABLE {table} ADD COLUMN {column_definition}");
-    match tx.execute(sqlx::query(&statement)).await {
-        Ok(_) => Ok(()),
-        Err(SqlxError::Database(db_error))
-            if db_error.message().contains("duplicate column name") =>
-        {
-            Ok(())
-        }
-        Err(err) => Err(err),
-    }
 }

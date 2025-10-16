@@ -8,6 +8,7 @@ pub mod language_pair;
 pub mod note;
 pub mod project;
 pub mod reference;
+pub mod schema;
 pub mod translation;
 pub mod validation;
 
@@ -28,3 +29,6 @@ pub use project::{
 pub use reference::{Client, Domain, User};
 pub use translation::{NewTranslationRecord, PersistedTranslationOutput};
 pub use validation::Validation;
+
+#[allow(unused_imports)]
+pub use schema::*;

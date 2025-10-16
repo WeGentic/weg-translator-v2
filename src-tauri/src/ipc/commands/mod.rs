@@ -1,22 +1,12 @@
-mod projects;
+mod artifacts_v2;
+mod clients_v2;
+mod jobs_v2;
+mod projects_v2;
 mod settings;
 mod shared;
 mod translations;
+mod users_v2;
 
-// Re-export project management types and commands from the refactored module
-pub use projects::{
-    DEFAULT_SOURCE_LANGUAGE, DEFAULT_TARGET_LANGUAGE, LOCAL_OWNER_DISPLAY_NAME, LOCAL_OWNER_EMAIL,
-    LOCAL_OWNER_USER_ID, add_files_to_project, build_conversions_plan,
-    build_original_stored_rel_path, convert_xliff_to_jliff, create_project_with_files,
-    delete_project, ensure_project_conversions_plan, get_project_details, list_projects,
-    read_project_artifact, read_project_artifact_impl, remove_project_file,
-    update_conversion_status, update_jliff_segment, update_jliff_segment_impl,
-};
-#[allow(unused_imports)]
-pub use projects::{
-    JliffConversionResult as JliffConversionResultDto,
-    UpdateJliffSegmentResult as UpdateJliffSegmentResultDto,
-};
 pub use settings::{
     get_app_settings, path_exists, update_app_folder, update_auto_convert_on_open,
     update_default_languages, update_max_parallel_conversions, update_notifications, update_theme,
@@ -26,6 +16,27 @@ pub use shared::with_project_file_lock;
 pub use translations::{
     clear_translation_history, fail_translation, get_translation_job, list_active_jobs,
     list_translation_history, start_translation,
+};
+
+pub use artifacts_v2::{
+    delete_artifact_record_v2, list_artifacts_for_file_v2, update_artifact_status_v2,
+    upsert_artifact_record_v2,
+};
+pub use clients_v2::{
+    create_client_record_v2, delete_client_record_v2, get_client_record_v2, list_client_records_v2,
+    update_client_record_v2,
+};
+pub use jobs_v2::{
+    delete_job_record_v2, list_jobs_for_project_v2, update_job_status_v2, upsert_job_record_v2,
+};
+pub use projects_v2::{
+    attach_project_file_v2, create_project_bundle_v2, delete_project_bundle_v2,
+    detach_project_file_v2, get_project_bundle_v2, list_project_records_v2,
+    update_project_bundle_v2,
+};
+pub use users_v2::{
+    create_user_profile_v2, delete_user_profile_v2, get_user_profile_v2, list_user_profiles_v2,
+    update_user_profile_v2,
 };
 
 use log::debug;

@@ -15,8 +15,8 @@ export type ProjectRow = {
   updated: DateParts;
 };
 
-export type ProgressFilter = "all" | ProjectActivityStatus;
-export type TypeFilter = "all" | ProjectType;
+export type ProgressFilter = string;
+export type TypeFilter = string;
 export type DatePreset = "any" | "24h" | "7d" | "30d";
 
 export interface TableFilters {

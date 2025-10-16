@@ -58,6 +58,7 @@ impl From<DbError> for IpcError {
             DbError::InvalidSubdirectory(_) => IpcError::Validation(
                 "Unable to derive a safe directory name for the requested operation.".into(),
             ),
+            DbError::ConstraintViolation(message) => IpcError::Validation(message.to_string()),
             DbError::Sqlx(ref db_error) => {
                 log::error!(
                     target: "ipc::error",

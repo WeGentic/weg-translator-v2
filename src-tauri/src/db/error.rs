@@ -51,4 +51,6 @@ pub enum DbError {
     ProjectFileConversionNotFound(Uuid),
     #[error("refused to create subdirectory with unsafe name: {0}")]
     InvalidSubdirectory(String),
+    #[error("constraint violation: {0}")]
+    ConstraintViolation(&'static str),
 }

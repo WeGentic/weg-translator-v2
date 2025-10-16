@@ -96,7 +96,7 @@ export function ProjectManagerToolbar({
             <div className="flex items-center gap-1.5">
               <Select
                 value={filters.progress}
-                onValueChange={(value) => applyFilterUpdate("progress", value as ProgressFilter)}
+                onValueChange={(value: ProgressFilter) => applyFilterUpdate("progress", value)}
               >
                 <SelectTrigger className="h-9 w-[120px] border-border/50 bg-background/60 text-sm transition-all duration-200 hover:bg-background/80 hover:border-border/70 focus:ring-2 focus:ring-ring/60">
                   <SelectValue placeholder="Status" />
@@ -137,7 +137,7 @@ export function ProjectManagerToolbar({
 
               <Select
                 value={filters.projectType}
-                onValueChange={(value) => applyFilterUpdate("projectType", value as TypeFilter)}
+                onValueChange={(value: TypeFilter) => applyFilterUpdate("projectType", value)}
               >
                 <SelectTrigger className="h-9 w-[120px] border-border/50 bg-background/60 text-sm transition-all duration-200 hover:bg-background/80 hover:border-border/70 focus:ring-2 focus:ring-ring/60">
                   <SelectValue placeholder="Type" />
@@ -166,7 +166,7 @@ export function ProjectManagerToolbar({
 
               <Select
                 value={filters.updatedWithin}
-                onValueChange={(value) => applyFilterUpdate("updatedWithin", value as DatePreset)}
+                onValueChange={(value: DatePreset) => applyFilterUpdate("updatedWithin", value)}
               >
                 <SelectTrigger className="h-9 w-[110px] border-border/50 bg-background/60 text-sm transition-all duration-200 hover:bg-background/80 hover:border-border/70 focus:ring-2 focus:ring-ring/60">
                   <SelectValue placeholder="Date" />
@@ -260,7 +260,7 @@ export function ProjectManagerToolbar({
                       <label className="text-xs font-medium text-muted-foreground">Status</label>
                       <Select
                         value={filters.progress}
-                        onValueChange={(value) => applyFilterUpdate("progress", value as ProgressFilter)}
+                        onValueChange={(value: ProgressFilter) => applyFilterUpdate("progress", value)}
                       >
                         <SelectTrigger className="h-8 text-sm">
                           <SelectValue />
@@ -279,7 +279,7 @@ export function ProjectManagerToolbar({
                       <label className="text-xs font-medium text-muted-foreground">Type</label>
                       <Select
                         value={filters.projectType}
-                        onValueChange={(value) => applyFilterUpdate("projectType", value as TypeFilter)}
+                        onValueChange={(value: TypeFilter) => applyFilterUpdate("projectType", value)}
                       >
                         <SelectTrigger className="h-8 text-sm">
                           <SelectValue />
@@ -296,7 +296,7 @@ export function ProjectManagerToolbar({
                       <label className="text-xs font-medium text-muted-foreground">Updated</label>
                       <Select
                         value={filters.updatedWithin}
-                        onValueChange={(value) => applyFilterUpdate("updatedWithin", value as DatePreset)}
+                        onValueChange={(value: DatePreset) => applyFilterUpdate("updatedWithin", value)}
                       >
                         <SelectTrigger className="h-8 text-sm">
                           <SelectValue />

@@ -4,20 +4,18 @@ mod jliff;
 mod settings;
 
 pub mod ipc_test {
-    pub use crate::ipc::commands::{
-        build_conversions_plan, read_project_artifact_impl, update_jliff_segment_impl,
-        with_project_file_lock,
-    };
+    pub use crate::ipc::commands::with_project_file_lock;
 }
+pub use crate::db::types::schema::{
+    FileLanguagePairInput, NewClientArgs, NewFileInfoArgs, NewProjectArgs, NewProjectFileArgs,
+    NewUserArgs, PermissionOverrideInput, ProjectLanguagePairInput, ProjectSubjectInput,
+    UpdateProjectArgs,
+};
 pub use crate::db::{
     ArtifactKind, ArtifactStatus, DbError, DbManager, FileTargetStatus, NewProject, NewProjectFile,
     NewTranslationRecord, PersistedTranslationOutput, ProjectFileConversionRequest,
     ProjectFileConversionStatus, ProjectFileImportStatus, ProjectFileRole, ProjectFileStorageState,
     ProjectLifecycleStatus, ProjectStatus, ProjectType, initialise_schema,
-};
-pub use crate::ipc::commands::{
-    DEFAULT_SOURCE_LANGUAGE, DEFAULT_TARGET_LANGUAGE, LOCAL_OWNER_DISPLAY_NAME, LOCAL_OWNER_EMAIL,
-    LOCAL_OWNER_USER_ID, build_original_stored_rel_path,
 };
 pub use crate::ipc::dto::{
     PipelineJobSummary, TranslationHistoryRecord, TranslationRequest, TranslationStage,
@@ -26,14 +24,18 @@ pub use crate::jliff::{ConversionOptions, GeneratedArtifact, convert_xliff};
 
 use crate::db::JobState;
 use ipc::{
-    TranslationState, add_files_to_project, clear_translation_history, convert_xliff_to_jliff,
-    create_project_with_files, delete_project, ensure_project_conversions_plan, fail_translation,
-    get_app_settings, get_project_details, get_translation_job, health_check, list_active_jobs,
-    list_projects, list_translation_history, path_exists, read_project_artifact,
-    remove_project_file, start_translation, update_app_folder, update_auto_convert_on_open,
-    update_conversion_status, update_default_languages, update_jliff_segment,
-    update_max_parallel_conversions, update_notifications, update_theme, update_ui_language,
-    update_xliff_version,
+    TranslationState, attach_project_file_v2, clear_translation_history, create_client_record_v2,
+    create_project_bundle_v2, create_user_profile_v2, delete_artifact_record_v2,
+    delete_client_record_v2, delete_job_record_v2, delete_project_bundle_v2,
+    delete_user_profile_v2, detach_project_file_v2, fail_translation, get_app_settings,
+    get_client_record_v2, get_project_bundle_v2, get_translation_job, get_user_profile_v2,
+    health_check, list_active_jobs, list_artifacts_for_file_v2, list_client_records_v2,
+    list_jobs_for_project_v2, list_project_records_v2, list_translation_history,
+    list_user_profiles_v2, path_exists, start_translation, update_app_folder,
+    update_artifact_status_v2, update_auto_convert_on_open, update_client_record_v2,
+    update_default_languages, update_job_status_v2, update_max_parallel_conversions,
+    update_notifications, update_project_bundle_v2, update_theme, update_ui_language,
+    update_user_profile_v2, update_xliff_version, upsert_artifact_record_v2, upsert_job_record_v2,
 };
 use log::LevelFilter;
 use log::kv::VisitSource;
@@ -101,77 +103,15 @@ pub fn run() {
             ))
             .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;
 
-            let active_jobs = async_runtime::block_on(db_manager.clone().list_jobs(100, 0))
-                .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;
+            // Legacy translation tables were removed; start with an empty job list until the new
+            // pipeline lands.
+            let active_jobs = Vec::new();
 
             let translation_state = TranslationState::new();
             translation_state.hydrate_from_records(&active_jobs);
 
-            let pipeline_jobs_attention = async_runtime::block_on(
-                db_manager
-                    .clone()
-                    .list_pipeline_jobs_needing_attention(),
-            )
-            .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;
-
-            if !pipeline_jobs_attention.is_empty() {
-                let pending_count = pipeline_jobs_attention
-                    .iter()
-                    .filter(|job| job.state == JobState::Pending)
-                    .count();
-                let failed_count = pipeline_jobs_attention
-                    .iter()
-                    .filter(|job| job.state == JobState::Failed)
-                    .count();
-
-                log::warn!(
-                    target: "app::startup",
-                    "pipeline jobs require manual attention: pending={} failed={}",
-                    pending_count,
-                    failed_count
-                );
-
-                for job in &pipeline_jobs_attention {
-                    log::warn!(
-                        target: "app::startup::jobs",
-                        "job_id={} project_id={} type={} state={} attempts={} file_target_id={:?} artifact_id={:?} error={:?}",
-                        job.job_id,
-                        job.project_id,
-                        job.job_type.as_str(),
-                        job.state.as_str(),
-                        job.attempts,
-                        job.file_target_id,
-                        job.artifact_id,
-                        job.error
-                    );
-                }
-
-                let attention_payload: Vec<PipelineJobSummary> = pipeline_jobs_attention
-                    .into_iter()
-                    .map(|job| PipelineJobSummary {
-                        job_id: job.job_id.to_string(),
-                        project_id: job.project_id.to_string(),
-                        job_type: job.job_type.as_str().to_string(),
-                        state: job.state.as_str().to_string(),
-                        attempts: job.attempts,
-                        file_target_id: job.file_target_id.map(|id| id.to_string()),
-                        artifact_id: job.artifact_id.map(|id| id.to_string()),
-                        error: job.error.clone(),
-                        created_at: job.created_at,
-                        started_at: job.started_at,
-                        finished_at: job.finished_at,
-                    })
-                    .collect();
-
-                let app_handle = app.handle();
-                if let Err(error) = app_handle.emit(PIPELINE_JOBS_NEED_ATTENTION, &attention_payload)
-                {
-                    log::warn!(
-                        target: "app::startup",
-                        "failed to emit pipeline attention event: {error}"
-                    );
-                }
-            }
+            let pipeline_jobs_attention: Vec<crate::ipc::dto::PipelineJobSummary> = Vec::new();
+            // No pipeline jobs to report while the legacy queue is disabled.
 
             app.manage(settings_manager);
             app.manage(db_manager);
@@ -181,33 +121,47 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             clear_translation_history,
-            create_project_with_files,
-            get_project_details,
-            add_files_to_project,
-            remove_project_file,
-            delete_project,
-            ensure_project_conversions_plan,
-            convert_xliff_to_jliff,
-            update_conversion_status,
-            read_project_artifact,
             update_auto_convert_on_open,
             health_check,
             get_translation_job,
             get_app_settings,
             list_active_jobs,
-            list_projects,
             list_translation_history,
             path_exists,
             update_app_folder,
             start_translation,
             fail_translation,
-            update_jliff_segment,
             update_theme,
             update_ui_language,
             update_default_languages,
             update_xliff_version,
             update_notifications,
-            update_max_parallel_conversions
+            update_max_parallel_conversions,
+            create_user_profile_v2,
+            update_user_profile_v2,
+            delete_user_profile_v2,
+            get_user_profile_v2,
+            list_user_profiles_v2,
+            create_client_record_v2,
+            update_client_record_v2,
+            delete_client_record_v2,
+            get_client_record_v2,
+            list_client_records_v2,
+            create_project_bundle_v2,
+            update_project_bundle_v2,
+            delete_project_bundle_v2,
+            get_project_bundle_v2,
+            list_project_records_v2,
+            attach_project_file_v2,
+            detach_project_file_v2,
+            upsert_artifact_record_v2,
+            update_artifact_status_v2,
+            delete_artifact_record_v2,
+            list_artifacts_for_file_v2,
+            upsert_job_record_v2,
+            update_job_status_v2,
+            delete_job_record_v2,
+            list_jobs_for_project_v2
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

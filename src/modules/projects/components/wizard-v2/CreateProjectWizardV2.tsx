@@ -16,7 +16,8 @@ import {
 
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 
-import { createProject, type CreateProjectResponse } from "@/core/ipc";
+import { createProjectBundle } from "@/core/ipc";
+import type { ProjectBundle } from "@/shared/types/database";
 import { Dialog, DialogClose, DialogContent } from "@/shared/ui/dialog";
 import { useToast } from "@/shared/ui/use-toast";
 import { cn } from "@/shared/utils/class-names";
@@ -31,13 +32,14 @@ import { WizardFooter } from "./components/WizardFooter";
 import { useWizardDropzone } from "./hooks/useWizardDropzone";
 import { useWizardFiles } from "./hooks/useWizardFiles";
 import type { DraftFileEntry, WizardFeedbackState, WizardStep } from "./types";
+import { buildLanguagePairs, LanguagePairError } from "./utils/languagePairs";
 
 import "./wizard-v2.css";
 
 interface CreateProjectWizardV2Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onProjectCreated?: (project: CreateProjectResponse) => void;
+  onProjectCreated?: (project: ProjectBundle) => void;
 }
 
 interface FinalizeState {
@@ -47,6 +49,7 @@ interface FinalizeState {
 
 export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: CreateProjectWizardV2Props) {
   const { toast } = useToast();
+  const LOCAL_OWNER_USER_ID = "local-user";
   const [submissionPending, startSubmission] = useTransition();
   const [projectName, setProjectName] = useState("");
   const [clientName, setClientName] = useState("");
@@ -217,25 +220,46 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
       return;
     }
 
-    const filePaths = files.map((entry) => entry.path);
+    let languagePairs;
+
+    try {
+      languagePairs = buildLanguagePairs(srcLang, targetLanguages);
+    } catch (validationError) {
+      const message =
+        validationError instanceof LanguagePairError
+          ? validationError.message
+          : "Check language selections before continuing.";
+      setFeedbackState("error");
+      setFeedbackMessage(message);
+      setStep("details");
+      toast({
+        variant: "destructive",
+        title: "Invalid language configuration",
+        description: message,
+      });
+      return;
+    }
 
     startSubmission(async () => {
       setFeedbackState("loading");
       setFeedbackMessage("Creating project…");
 
       try {
-        const response = await createProject({
-          name: trimmedName,
-          projectType: DEFAULT_PROJECT_TYPE,
-          defaultSrcLang: srcLang,
-          defaultTgtLang: primaryTarget,
-          files: filePaths,
+        const response = await createProjectBundle({
+          projectName: trimmedName,
+          projectStatus: "active",
+          userUuid: LOCAL_OWNER_USER_ID,
+          clientUuid: null,
+          type: DEFAULT_PROJECT_TYPE,
+          notes: notes ? notes : null,
+          subjects: projectField ? [projectField] : [],
+          languagePairs,
         });
 
         onProjectCreated?.(response);
         toast({
           title: "Project created",
-          description: `${trimmedName} is ready with ${filePaths.length} file${filePaths.length === 1 ? "" : "s"}.`,
+          description: `${trimmedName} was created. TODO: wire file ingestion into the v2 pipeline.`,
         });
         handleClear();
         onOpenChange(false);
@@ -257,9 +281,10 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
     finalizeState.ready,
     submissionPending,
     projectName,
+    projectField,
+    notes,
     sourceLanguage,
     targetLanguages,
-    files,
     startSubmission,
     onProjectCreated,
     toast,
@@ -301,22 +326,22 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
 
           <form className="wizard-v2-form" aria-label="New project details">
             {step === "details" ? (
-              <WizardDetailsStep
-                projectName={projectName}
-                onProjectNameChange={setProjectName}
-                clientName={clientName}
-                onClientNameChange={setClientName}
-                projectField={projectField}
+            <WizardDetailsStep
+              key={localResetCounter}
+              projectName={projectName}
+              onProjectNameChange={setProjectName}
+              clientName={clientName}
+              onClientNameChange={setClientName}
+              projectField={projectField}
                 onProjectFieldChange={setProjectField}
                 notes={notes}
                 onNotesChange={setNotes}
-                sourceLanguage={sourceLanguage}
-                onSourceLanguageSelect={setSourceLanguage}
-                targetLanguages={targetLanguages}
-                onToggleTargetLanguage={toggleTargetLanguage}
-                onRemoveTargetLanguage={removeTargetLanguage}
-                resetSignal={localResetCounter}
-              />
+              sourceLanguage={sourceLanguage}
+              onSourceLanguageSelect={setSourceLanguage}
+              targetLanguages={targetLanguages}
+              onToggleTargetLanguage={toggleTargetLanguage}
+              onRemoveTargetLanguage={removeTargetLanguage}
+            />
             ) : (
               <WizardFilesStep
                 files={files}

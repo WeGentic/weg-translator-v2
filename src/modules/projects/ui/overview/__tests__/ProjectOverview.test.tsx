@@ -177,6 +177,8 @@ const baseSettings: AppSettings = {
   showNotifications: true,
   enableSoundNotifications: false,
   maxParallelConversions: 4,
+  databaseJournalMode: "wal",
+  databaseSynchronous: "normal",
 };
 
 beforeEach(() => {

@@ -46,6 +46,8 @@ const baseSettings: AppSettings = {
   showNotifications: true,
   enableSoundNotifications: true,
   maxParallelConversions: 4,
+  databaseJournalMode: "wal",
+  databaseSynchronous: "normal",
 };
 
 describe("EnhancedAppSettingsPanel", () => {

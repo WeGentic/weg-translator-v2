@@ -79,6 +79,8 @@ describe("ipc/client", () => {
       showNotifications: true,
       enableSoundNotifications: false,
       maxParallelConversions: 4,
+      databaseJournalMode: "wal",
+      databaseSynchronous: "normal",
     };
     invokeMock.mockResolvedValueOnce(settings);
 
@@ -119,6 +121,8 @@ describe("ipc/client", () => {
       showNotifications: true,
       enableSoundNotifications: false,
       maxParallelConversions: 4,
+      databaseJournalMode: "wal",
+      databaseSynchronous: "normal",
     };
     invokeMock.mockResolvedValueOnce(settings);
 

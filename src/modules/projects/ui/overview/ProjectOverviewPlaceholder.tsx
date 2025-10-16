@@ -45,7 +45,7 @@ export function ProjectOverviewPlaceholder({ project }: ProjectOverviewPlacehold
           <InfoRow label="Slug" value={project.slug} />
           <InfoRow label="Project type" value={formatProjectType(project.projectType)} />
           <InfoRow label="Status" value={formatProjectStatus(project.status)} />
-          <InfoRow label="Files" value={`${project.fileCount}`} />
+          <InfoRow label="Files" value={`${project.fileCount ?? 0}`} />
           <InfoRow label="Last updated" value={formattedUpdatedAt} />
           <InfoRow label="Created" value={formattedCreatedAt} />
         </CardContent>
@@ -83,11 +83,15 @@ function safeFormatDate(isoDate: string) {
 }
 
 function formatProjectType(type: ProjectListItem["projectType"]) {
+  if (!type) return "—";
   if (type === "rag") return "Retrieval-Augmented Generation";
-  return "Translation";
+  if (type === "translation") return "Translation";
+  return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 function formatProjectStatus(status: ProjectListItem["status"]) {
+  if (!status) return "—";
   if (status === "archived") return "Archived";
-  return "Active";
+  if (status === "active") return "Active";
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
