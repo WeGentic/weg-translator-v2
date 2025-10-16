@@ -16,18 +16,14 @@ pub use conversion::{
     NewProjectFileConversion, ProjectFileConversionRequest, ProjectFileConversionRow,
     ProjectFileConversionStatus,
 };
-pub use file_target::{
-    FileTarget, FileTargetBackfillSummary, FileTargetBridgeOutcome, FileTargetStatus,
-    FilesystemArtifactBackfillSummary,
-};
+pub use file_target::{FileTarget, FileTargetStatus};
 pub use job::{Job, JobState, JobType};
 pub use language_pair::LanguagePair;
 pub use note::Note;
 pub use project::{
-    LanguagePairBackfillSummary, NewProject, NewProjectFile, OwnerBackfillSummary, ProjectDetails,
-    ProjectFileDetails, ProjectFileImportStatus, ProjectFileRole, ProjectFileStorageState,
-    ProjectFileWithConversions, ProjectLifecycleStatus, ProjectListItem, ProjectStatus,
-    ProjectType,
+    NewProject, NewProjectFile, ProjectDetails, ProjectFileDetails, ProjectFileImportStatus,
+    ProjectFileRole, ProjectFileStorageState, ProjectFileWithConversions, ProjectLifecycleStatus,
+    ProjectListItem, ProjectStatus, ProjectType,
 };
 pub use reference::{Client, Domain, User};
 pub use translation::{NewTranslationRecord, PersistedTranslationOutput};

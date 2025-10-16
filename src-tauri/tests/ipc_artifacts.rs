@@ -6,13 +6,12 @@ use tempfile::{TempDir, tempdir};
 use tokio::sync::oneshot;
 use tokio::time::sleep;
 use uuid::Uuid;
-use weg_translator_lib::MIGRATOR;
 use weg_translator_lib::ipc_test::{
     read_project_artifact_impl, update_jliff_segment_impl, with_project_file_lock,
 };
 use weg_translator_lib::{
     DbManager, LOCAL_OWNER_USER_ID, NewProject, ProjectLifecycleStatus as PLStatus,
-    ProjectStatus as PStatus, ProjectType as PType,
+    ProjectStatus as PStatus, ProjectType as PType, initialise_schema,
 };
 
 #[tokio::test]
@@ -203,7 +202,7 @@ async fn seed_project() -> (DbManager, Uuid, TempDir, std::path::PathBuf) {
 
 async fn new_manager() -> DbManager {
     let pool = new_test_pool().await;
-    MIGRATOR.run(&pool).await.expect("apply migrations");
+    initialise_schema(&pool).await.expect("apply schema");
     DbManager::from_pool(pool)
 }
 

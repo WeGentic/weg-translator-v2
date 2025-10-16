@@ -46,7 +46,3 @@ tempfile = "3.23.0"
 [[bin]]
 name = "seed-demo-project"
 path = "src/bin/seed_demo_project.rs"
-
-[[bin]]
-name = "backfill-legacy-data"
-path = "src/bin/backfill_legacy_data.rs"

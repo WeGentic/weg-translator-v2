@@ -13,6 +13,3 @@ pub const SKIP_CONVERSION_EXTENSIONS: &[&str] = &["xlf", "xliff", "mqxliff", "sd
 pub const CONVERTIBLE_EXTENSIONS: &[&str] = &[
     "doc", "docx", "ppt", "pptx", "xls", "xlsx", "odt", "odp", "ods", "html", "xml", "dita", "md",
 ];
-
-/// Compiled migration references used to initialise and upgrade the SQLite schema.
-pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");

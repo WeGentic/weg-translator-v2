@@ -1,15 +1,21 @@
 //! Core database manager responsible for owning the SQLite pool.
 
+use std::env;
 use std::fs;
+use std::io::ErrorKind;
 use std::path::Path;
 use std::sync::Arc;
 
-use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
+use sqlx::{
+    SqlitePool,
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+};
 use tokio::sync::{Mutex, RwLock};
 
 use super::config::DatabasePerformanceConfig;
-use super::constants::{MIGRATOR, SQLITE_DB_FILE};
+use super::constants::SQLITE_DB_FILE;
 use super::error::DbResult;
+use super::schema::initialise_schema;
 
 /// Central entry-point for all database interactions. Wraps the SQLite pool and synchronises writes.
 #[derive(Clone)]
@@ -59,10 +65,26 @@ impl DbManager {
         performance: DatabasePerformanceConfig,
     ) -> Result<SqlitePool, sqlx::Error> {
         let db_path = base_dir.join(SQLITE_DB_FILE);
-        let connection_url = format!("sqlite://{}", db_path.to_string_lossy());
+        if reset_on_launch_enabled() {
+            if let Err(error) = fs::remove_file(&db_path) {
+                if error.kind() != ErrorKind::NotFound {
+                    return Err(sqlx::Error::Io(error));
+                }
+            } else {
+                log::warn!(
+                    target: "db::manager",
+                    "resetting database because WEG_TRANSLATOR_RESET_DB is set; removed {}",
+                    db_path.display()
+                );
+            }
+        }
+        let mut connect_options = SqliteConnectOptions::new()
+            .filename(&db_path)
+            .create_if_missing(true);
+        connect_options = connect_options.foreign_keys(true);
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
-            .connect(&connection_url)
+            .connect_with(connect_options)
             .await?;
         sqlx::query("PRAGMA foreign_keys = ON;")
             .execute(&pool)
@@ -77,7 +99,7 @@ impl DbManager {
             performance.synchronous().as_str()
         );
         sqlx::query(&synchronous).execute(&pool).await?;
-        MIGRATOR.run(&pool).await?;
+        initialise_schema(&pool).await?;
         Ok(pool)
     }
 
@@ -92,5 +114,15 @@ impl DbManager {
         drop(writer);
         old_pool.close().await;
         Ok(())
+    }
+}
+
+fn reset_on_launch_enabled() -> bool {
+    match env::var("WEG_TRANSLATOR_RESET_DB") {
+        Ok(value) => {
+            let normalized = value.trim().to_ascii_lowercase();
+            matches!(normalized.as_str(), "1" | "true" | "yes" | "on" | "reset")
+        }
+        Err(_) => false,
     }
 }

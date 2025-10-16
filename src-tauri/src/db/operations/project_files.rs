@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::{Component, Path};
 
-use log::debug;
+use log::{debug, error};
 use sqlx::{Executor, Sqlite, Transaction};
 use uuid::Uuid;
 
@@ -61,7 +61,16 @@ impl DbManager {
         .bind(file.importer.as_deref())
         .bind(&now);
 
-        tx.execute(query).await?;
+        if let Err(sql_error) = tx.execute(query).await {
+            error!(
+                target: "db::project_files",
+                "failed to insert project file '{}' (project {}): {}",
+                file.original_name,
+                project_id,
+                sql_error
+            );
+            return Err(DbError::from(sql_error));
+        }
 
         debug!(
             target: "db::project_files",
@@ -92,14 +101,27 @@ impl DbManager {
 
         let mut inserted = Vec::with_capacity(new_files.len());
         for file in new_files {
-            let row = sqlx::query(
-                "SELECT id, original_name, stored_rel_path, ext, size_bytes, import_status, created_at, updated_at
+            let row = match sqlx::query(
+                "SELECT id, original_name, stored_rel_path, ext, size_bytes, import_status, hash_sha256, created_at, updated_at
                  FROM project_files WHERE id = ?1 AND project_id = ?2",
             )
             .bind(&file.id.to_string())
             .bind(&project_id.to_string())
             .fetch_one(tx.as_mut())
-            .await?;
+            .await
+            {
+                Ok(row) => row,
+                Err(sql_error) => {
+                    error!(
+                        target: "db::project_files",
+                        "failed to fetch inserted project file {} (project {}): {}",
+                        file.id,
+                        project_id,
+                        sql_error
+                    );
+                    return Err(DbError::from(sql_error));
+                }
+            };
 
             inserted.push(build_project_file_details(&row)?);
         }

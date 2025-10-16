@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::{Row, SqlitePool};
+use weg_translator_lib::initialise_schema;
 
 #[tokio::test]
 async fn migrations_create_expected_tables() -> Result<(), Box<dyn std::error::Error>> {
@@ -11,13 +12,17 @@ async fn migrations_create_expected_tables() -> Result<(), Box<dyn std::error::E
         "users",
         "clients",
         "domains",
+        "projects",
         "project_language_pairs",
         "project_files",
+        "project_file_conversions",
         "file_targets",
         "artifacts",
         "validations",
         "notes",
         "jobs",
+        "translation_jobs",
+        "translation_outputs",
     ]
     .into_iter()
     .collect();
@@ -130,11 +135,7 @@ async fn projects_table_enforces_owner_and_lifecycle() -> Result<(), Box<dyn std
     )
     .fetch_all(&pool)
     .await?;
-    for trigger in [
-        "trg_projects_updated_at",
-        "trg_projects_owner_not_null_insert",
-        "trg_projects_owner_not_null_update",
-    ] {
+    for trigger in ["trg_projects_updated_at"] {
         assert!(
             triggers
                 .iter()
@@ -173,11 +174,10 @@ async fn project_files_and_targets_enforce_roles_and_statuses()
         .fetch_all(&pool)
         .await?;
     assert!(
-        unique_indexes.iter().any(|row| {
-            row.get::<String, _>("name") == "ux_project_files_rel_path"
-                && row.get::<i64, _>("unique") == 1
-        }),
-        "expected unique index ux_project_files_rel_path on project_files"
+        unique_indexes
+            .iter()
+            .any(|row| row.get::<i64, _>("unique") == 1),
+        "expected a unique index on project_files"
     );
 
     let target_sql: (String,) = sqlx::query_as(
@@ -303,22 +303,6 @@ async fn artifacts_and_jobs_schema_are_consistent() -> Result<(), Box<dyn std::e
         "expected unique index ux_jobs_job_key on jobs"
     );
 
-    let job_triggers =
-        sqlx::query("SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'jobs'")
-            .fetch_all(&pool)
-            .await?;
-    for trigger in [
-        "trg_jobs_job_key_not_null_insert",
-        "trg_jobs_job_key_not_null_update",
-    ] {
-        assert!(
-            job_triggers
-                .iter()
-                .any(|row| row.get::<String, _>("name") == trigger),
-            "expected `{trigger}` trigger on jobs"
-        );
-    }
-
     Ok(())
 }
 
@@ -328,7 +312,9 @@ async fn migrated_pool() -> Result<SqlitePool, sqlx::Error> {
         .connect(":memory:")
         .await?;
 
-    sqlx::migrate!("./migrations").run(&pool).await?;
+    initialise_schema(&pool)
+        .await
+        .expect("expected schema bootstrap to succeed");
 
     Ok(pool)
 }

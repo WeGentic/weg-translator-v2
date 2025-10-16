@@ -9,13 +9,11 @@ pub mod ipc_test {
         with_project_file_lock,
     };
 }
-
-pub use crate::db::constants::MIGRATOR;
 pub use crate::db::{
-    ArtifactKind, DbError, DbManager, FileTargetBackfillSummary, FilesystemArtifactBackfillSummary,
-    NewProject, NewProjectFile, NewTranslationRecord, PersistedTranslationOutput,
-    ProjectFileConversionRequest, ProjectFileConversionStatus, ProjectFileImportStatus,
-    ProjectFileRole, ProjectFileStorageState, ProjectLifecycleStatus, ProjectStatus, ProjectType,
+    ArtifactKind, ArtifactStatus, DbError, DbManager, FileTargetStatus, NewProject, NewProjectFile,
+    NewTranslationRecord, PersistedTranslationOutput, ProjectFileConversionRequest,
+    ProjectFileConversionStatus, ProjectFileImportStatus, ProjectFileRole, ProjectFileStorageState,
+    ProjectLifecycleStatus, ProjectStatus, ProjectType, initialise_schema,
 };
 pub use crate::ipc::commands::{
     DEFAULT_SOURCE_LANGUAGE, DEFAULT_TARGET_LANGUAGE, LOCAL_OWNER_DISPLAY_NAME, LOCAL_OWNER_EMAIL,
@@ -102,38 +100,6 @@ pub fn run() {
                 db_performance,
             ))
             .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;
-
-            let owner_backfill =
-                async_runtime::block_on(db_manager.clone().backfill_project_owner(
-                    LOCAL_OWNER_USER_ID,
-                    LOCAL_OWNER_EMAIL,
-                    LOCAL_OWNER_DISPLAY_NAME,
-                ))
-                .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;
-
-            if owner_backfill.ensured_user || owner_backfill.updated_projects > 0 {
-                log::info!(
-                    target: "app::startup",
-                    "backfill_local_owner ensured_user={} updated_projects={}",
-                    owner_backfill.ensured_user,
-                    owner_backfill.updated_projects
-                );
-            }
-
-            let language_backfill =
-                async_runtime::block_on(db_manager.clone().backfill_project_language_pairs(
-                    crate::ipc::commands::DEFAULT_SOURCE_LANGUAGE,
-                    crate::ipc::commands::DEFAULT_TARGET_LANGUAGE,
-                ))
-                .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;
-
-            if language_backfill.inserted_pairs > 0 {
-                log::info!(
-                    target: "app::startup",
-                    "backfill_language_pairs inserted_pairs={}",
-                    language_backfill.inserted_pairs
-                );
-            }
 
             let active_jobs = async_runtime::block_on(db_manager.clone().list_jobs(100, 0))
                 .map_err(|err| Box::new(err) as Box<dyn std::error::Error>)?;

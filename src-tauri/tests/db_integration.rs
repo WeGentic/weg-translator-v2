@@ -4,19 +4,15 @@ use uuid::Uuid;
 
 use weg_translator_lib::{
     DbError, DbManager, NewTranslationRecord, PersistedTranslationOutput, TranslationHistoryRecord,
-    TranslationRequest, TranslationStage,
+    TranslationRequest, TranslationStage, initialise_schema,
 };
-
-const MIGRATIONS: &[&str] = &[
-    include_str!("../migrations/001_create_translation_jobs.sql"),
-    include_str!("../migrations/002_create_translation_outputs.sql"),
-    include_str!("../migrations/003_seed_demo_data.sql"),
-];
 
 #[tokio::test]
 async fn migrations_apply_successfully() {
     let pool = new_test_pool().await;
-    apply_migrations(&pool).await;
+    initialise_schema(&pool)
+        .await
+        .expect("expected schema bootstrap to succeed");
 
     let table_count: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('translation_jobs', 'translation_outputs')",
@@ -154,7 +150,9 @@ async fn clear_history_removes_completed_jobs_only() {
 
 async fn new_manager() -> DbManager {
     let pool = new_test_pool().await;
-    apply_migrations(&pool).await;
+    initialise_schema(&pool)
+        .await
+        .expect("expected schema bootstrap to succeed");
     DbManager::from_pool(pool)
 }
 
@@ -189,15 +187,4 @@ fn assert_snapshot_matches(record: &TranslationHistoryRecord, request: &Translat
         .expect("completed job should have an output snapshot");
     assert_eq!(output.output_text, "Translated text");
     assert_eq!(output.duration_ms, Some(512));
-}
-
-async fn apply_migrations(pool: &SqlitePool) {
-    // Running migrations synchronously guarantees deterministic schema state
-    // for each test.
-    for sql in MIGRATIONS {
-        sqlx::query(sql)
-            .execute(pool)
-            .await
-            .expect("migration execution failed");
-    }
 }

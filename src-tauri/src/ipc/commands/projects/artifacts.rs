@@ -557,7 +557,7 @@ pub async fn build_conversions_plan(
 
     let pool = db.pool().await;
     let project_id_str = project_id.to_string();
-    let mut file_target_rows = sqlx::query(
+    let file_target_rows = sqlx::query(
         "SELECT
              ft.file_target_id,
              ft.file_id,
@@ -582,37 +582,6 @@ pub async fn build_conversions_plan(
         );
         IpcError::Internal("Unable to load file targets for conversion planning.".into())
     })?;
-
-    if file_target_rows.is_empty() {
-        db.bridge_project_conversions(project_id)
-            .await
-            .map_err(IpcError::from)?;
-        file_target_rows = sqlx::query(
-            "SELECT
-                 ft.file_target_id,
-                 ft.file_id,
-                 ft.status,
-                 lp.src_lang,
-                 lp.trg_lang,
-                 pf.stored_rel_path,
-                 pf.hash_sha256
-             FROM file_targets ft
-             INNER JOIN project_language_pairs lp ON lp.pair_id = ft.pair_id
-             INNER JOIN project_files pf ON pf.id = ft.file_id
-             WHERE pf.project_id = ?1
-             ORDER BY pf.created_at ASC",
-        )
-        .bind(&project_id_str)
-        .fetch_all(&pool)
-        .await
-        .map_err(|error| {
-            error!(
-                target: "ipc::projects::artifacts",
-                "failed to fetch file targets after bridging for project {project_id}: {error}"
-            );
-            IpcError::Internal("Unable to load file targets for conversion planning.".into())
-        })?;
-    }
 
     let mut hash_cache: HashMap<Uuid, Option<String>> = HashMap::new();
     let mut integrity_alerts: Vec<FileIntegrityAlertDto> = Vec::new();

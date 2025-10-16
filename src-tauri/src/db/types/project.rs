@@ -239,16 +239,3 @@ pub struct ProjectListItem {
     pub file_count: i64,
     pub activity_status: String,
 }
-
-/// Summary of owner backfill execution.
-#[derive(Debug, Clone, Copy)]
-pub struct OwnerBackfillSummary {
-    pub ensured_user: bool,
-    pub updated_projects: u64,
-}
-
-/// Summary of language pair backfill execution.
-#[derive(Debug, Clone, Copy)]
-pub struct LanguagePairBackfillSummary {
-    pub inserted_pairs: u64,
-}

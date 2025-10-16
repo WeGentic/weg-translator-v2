@@ -104,9 +104,18 @@ impl ProjectService {
             .await
             .map_err(|error| IpcError::from(DbError::from(error)))?;
 
-        db.insert_project(project, &mut tx)
-            .await
-            .map_err(IpcError::from)?;
+        if let Err(db_error) = db.insert_project(project, &mut tx).await {
+            error!(
+                target: "ipc::projects::service",
+                "failed to insert project {} during seeding: {db_error}",
+                project.id
+            );
+            eprintln!(
+                "seed_project_metadata: failed to insert project {}: {db_error}",
+                project.id
+            );
+            return Err(IpcError::from(db_error));
+        }
 
         let mut pair_set = HashSet::new();
         let mut seeded_pairs = Vec::new();
@@ -125,7 +134,7 @@ impl ProjectService {
             }
 
             let pair_id = Uuid::new_v4();
-            sqlx::query(
+            let insert_pair = sqlx::query(
                 "INSERT INTO project_language_pairs (pair_id, project_id, src_lang, trg_lang)
                  VALUES (?1, ?2, ?3, ?4)",
             )
@@ -134,8 +143,23 @@ impl ProjectService {
             .bind(&key.0)
             .bind(&key.1)
             .execute(tx.as_mut())
-            .await
-            .map_err(|error| IpcError::from(DbError::from(error)))?;
+            .await;
+
+            if let Err(sql_error) = insert_pair {
+                error!(
+                    target: "ipc::projects::service",
+                    "failed to insert language pair ({}, {}) for project {}: {}",
+                    key.0,
+                    key.1,
+                    project.id,
+                    sql_error
+                );
+                eprintln!(
+                    "seed_project_metadata: failed to insert language pair ({}, {}) for project {}: {}",
+                    key.0, key.1, project.id, sql_error
+                );
+                return Err(IpcError::from(DbError::from(sql_error)));
+            }
 
             seeded_pairs.push(SeededLanguagePair {
                 pair_id,
@@ -169,9 +193,19 @@ impl ProjectService {
                 importer: None,
             };
 
-            db.insert_project_file(&new_file, &mut tx)
-                .await
-                .map_err(IpcError::from)?;
+            if let Err(db_error) = db.insert_project_file(&new_file, &mut tx).await {
+                error!(
+                    target: "ipc::projects::service",
+                    "failed to insert project file {} (project {}): {db_error}",
+                    new_file.original_name,
+                    project.id
+                );
+                eprintln!(
+                    "seed_project_metadata: failed to insert project file {} (project {}): {db_error}",
+                    new_file.original_name, project.id
+                );
+                return Err(IpcError::from(db_error));
+            }
 
             seeded_files.push(SeededProjectFile {
                 file_id,
@@ -185,7 +219,7 @@ impl ProjectService {
         for file in &seeded_files {
             for pair in &seeded_pairs {
                 let target_id = Uuid::new_v4();
-                sqlx::query(
+                let insert_target = sqlx::query(
                     "INSERT INTO file_targets (file_target_id, file_id, pair_id, status)
                      VALUES (?1, ?2, ?3, ?4)",
                 )
@@ -194,8 +228,23 @@ impl ProjectService {
                 .bind(&pair.pair_id.to_string())
                 .bind("PENDING")
                 .execute(tx.as_mut())
-                .await
-                .map_err(|error| IpcError::from(DbError::from(error)))?;
+                .await;
+
+                if let Err(sql_error) = insert_target {
+                    error!(
+                        target: "ipc::projects::service",
+                        "failed to insert file target for file {} / pair {} in project {}: {}",
+                        file.file_id,
+                        pair.pair_id,
+                        project.id,
+                        sql_error
+                    );
+                    eprintln!(
+                        "seed_project_metadata: failed to insert file target for file {} / pair {} in project {}: {}",
+                        file.file_id, pair.pair_id, project.id, sql_error
+                    );
+                    return Err(IpcError::from(DbError::from(sql_error)));
+                }
 
                 let ext = file.extension.to_lowercase();
                 if SKIP_CONVERSION_EXTENSIONS.contains(&ext.as_str())
@@ -286,6 +335,16 @@ impl ProjectService {
                 )
                 .await
             {
+                error!(
+                    target: "ipc::projects::service",
+                    "failed to persist staging metadata for file {} (project {}): {error}",
+                    file.file_id,
+                    seeded.project_id
+                );
+                eprintln!(
+                    "stage_original_files: failed metadata update for file {} (project {}): {error}",
+                    file.file_id, seeded.project_id
+                );
                 let message = format!(
                     "Unable to persist staged metadata for {}: {error}",
                     file.original_name
@@ -319,6 +378,16 @@ impl ProjectService {
                 )
                 .await
             {
+                error!(
+                    target: "ipc::projects::service",
+                    "failed to log COPY_FILE job for file {} (project {}): {error}",
+                    file.file_id,
+                    seeded.project_id
+                );
+                eprintln!(
+                    "stage_original_files: failed to log COPY_FILE job for file {} (project {}): {error}",
+                    file.file_id, seeded.project_id
+                );
                 let message = format!(
                     "Unable to log COPY_FILE job for {}: {error}",
                     file.original_name
@@ -600,6 +669,12 @@ impl ProjectService {
         project_id: Uuid,
         file_paths: Vec<String>,
     ) -> Result<AddFilesResponseDto, IpcError> {
+        info!(
+            target: "ipc::projects::service",
+            "add_files_to_project requested for project {} with {} file(s)",
+            project_id,
+            file_paths.len()
+        );
         // Validate files early
         let validated_files = validate_project_files(file_paths).await?;
 
@@ -634,9 +709,19 @@ impl ProjectService {
                 }
 
                 // Ensure a pending conversion row exists for this file
-                let _ = db
+                if let Err(error) = db
                     .find_or_create_conversion_for_file(file.id, &conversion_request)
-                    .await?;
+                    .await
+                {
+                    error!(
+                        target: "ipc::projects::service",
+                        "failed to create conversion stub for file {} in project {}: {}",
+                        file.id,
+                        project_id,
+                        error
+                    );
+                    return Err(IpcError::from(error));
+                }
             }
         }
 
@@ -645,6 +730,13 @@ impl ProjectService {
             .iter()
             .map(|file| project_file_to_dto(file))
             .collect::<Vec<_>>();
+
+        info!(
+            target: "ipc::projects::service",
+            "add_files_to_project imported {} file(s) into project {}",
+            inserted_dtos.len(),
+            project_id
+        );
 
         Ok(AddFilesResponseDto {
             inserted: inserted_dtos,
@@ -1238,8 +1330,10 @@ struct ValidationPayload {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::constants::MIGRATOR;
+    use crate::db::initialise_schema;
+    use crate::settings::AppSettings;
     use sqlx::sqlite::SqlitePoolOptions;
+    use tempfile::TempDir;
 
     async fn new_manager() -> DbManager {
         let pool = SqlitePoolOptions::new()
@@ -1247,7 +1341,7 @@ mod tests {
             .connect(":memory:")
             .await
             .expect("open in-memory db");
-        MIGRATOR.run(&pool).await.expect("apply migrations");
+        initialise_schema(&pool).await.expect("apply schema");
         DbManager::from_pool(pool)
     }
 
@@ -1348,6 +1442,66 @@ mod tests {
             tbx_count, 0,
             "non-convertible TBX file should not get legacy conversion rows"
         );
+    }
+
+    #[tokio::test]
+    async fn create_project_with_files_seeds_from_request() {
+        let temp_dir = TempDir::new().expect("temporary directory");
+        let app_root = temp_dir.path().join("app-root");
+        std::fs::create_dir_all(&app_root).expect("create app root");
+
+        let settings = AppSettings {
+            app_folder: app_root.clone(),
+            auto_convert_on_open: true,
+            theme: "system".into(),
+            ui_language: "en-US".into(),
+            default_source_language: "en-US".into(),
+            default_target_language: "fr-FR".into(),
+            default_xliff_version: "2.0".into(),
+            show_notifications: true,
+            enable_sound_notifications: false,
+            max_parallel_conversions: 2,
+            database_journal_mode: "WAL".into(),
+            database_synchronous: "NORMAL".into(),
+        };
+
+        let settings_manager =
+            SettingsManager::new(temp_dir.path().join("settings.yaml"), settings);
+
+        let manager = new_manager().await;
+        let pool = manager.pool().await;
+        let indexes: Vec<(String, Option<String>)> = sqlx::query_as(
+            "SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='jobs'",
+        )
+        .fetch_all(&pool)
+        .await
+        .expect("inspect job indexes");
+        assert!(
+            indexes.iter().any(|(name, _)| name == "ux_jobs_job_key"),
+            "job_key unique index missing"
+        );
+
+        let fixture_dir = TempDir::new().expect("fixture directory");
+        let fixture_path = fixture_dir.path().join("sample.docx");
+        tokio::fs::write(&fixture_path, b"wizard-ingest-test")
+            .await
+            .expect("write fixture");
+
+        let request = CreateProjectRequest {
+            name: "Wizard Flow Smoke".into(),
+            project_type: "translation".into(),
+            default_src_lang: Some("en-US".into()),
+            default_tgt_lang: Some("fr-FR".into()),
+            files: vec![fixture_path.to_string_lossy().to_string()],
+        };
+
+        let response =
+            ProjectService::create_project_with_files(&settings_manager, &manager, request)
+                .await
+                .expect("create project via service");
+
+        assert_eq!(response.file_count, 1);
+        assert!(response.slug.contains("wizard-flow-smoke"));
     }
 
     // Note: Full integration tests would require database and filesystem setup

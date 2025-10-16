@@ -170,8 +170,6 @@ impl DbManager {
         project_file_id: Uuid,
         request: &ProjectFileConversionRequest,
     ) -> DbResult<ProjectFileConversionRow> {
-        let paragraph_flag = if request.paragraph { 1 } else { 0 };
-        let embed_flag = if request.embed { 1 } else { 0 };
         let file_id = project_file_id.to_string();
         let columns = conversion_projection();
         let select_existing = format!(
@@ -180,8 +178,6 @@ impl DbManager {
                AND src_lang = ?2
                AND tgt_lang = ?3
                AND version = ?4
-               AND paragraph = ?5
-               AND embed = ?6
              LIMIT 1",
             columns = columns,
         );
@@ -191,12 +187,33 @@ impl DbManager {
             .bind(&request.src_lang)
             .bind(&request.tgt_lang)
             .bind(&request.version)
-            .bind(paragraph_flag)
-            .bind(embed_flag)
             .fetch_optional(tx.as_mut())
             .await?
         {
-            return build_project_file_conversion(&row);
+            let mut conversion = build_project_file_conversion(&row)?;
+
+            if conversion.paragraph != request.paragraph || conversion.embed != request.embed {
+                let paragraph_flag = if request.paragraph { 1 } else { 0 };
+                let embed_flag = if request.embed { 1 } else { 0 };
+                sqlx::query(
+                    "UPDATE project_file_conversions
+                     SET paragraph = ?1,
+                         embed = ?2,
+                         updated_at = ?3
+                     WHERE id = ?4",
+                )
+                .bind(paragraph_flag)
+                .bind(embed_flag)
+                .bind(now_iso8601())
+                .bind(&conversion.id.to_string())
+                .execute(tx.as_mut())
+                .await?;
+
+                conversion.paragraph = request.paragraph;
+                conversion.embed = request.embed;
+            }
+
+            return Ok(conversion);
         }
 
         let new_conversion = NewProjectFileConversion {
@@ -219,8 +236,36 @@ impl DbManager {
 
         let conversion_id = new_conversion.id;
 
-        self.insert_project_file_conversions(std::slice::from_ref(&new_conversion), tx)
-            .await?;
+        if let Err(err) = self
+            .insert_project_file_conversions(std::slice::from_ref(&new_conversion), tx)
+            .await
+        {
+            if let DbError::Sqlx(sqlx::Error::Database(db_err)) = &err {
+                if db_err.message().contains("UNIQUE constraint failed") {
+                    let select_existing = format!(
+                        "SELECT {columns} FROM project_file_conversions
+                         WHERE project_file_id = ?1
+                           AND src_lang = ?2
+                           AND tgt_lang = ?3
+                           AND version = ?4
+                         LIMIT 1",
+                        columns = columns,
+                    );
+
+                    let existing = sqlx::query(&select_existing)
+                        .bind(&file_id)
+                        .bind(&request.src_lang)
+                        .bind(&request.tgt_lang)
+                        .bind(&request.version)
+                        .fetch_one(tx.as_mut())
+                        .await?;
+
+                    return build_project_file_conversion(&existing);
+                }
+            }
+
+            return Err(err);
+        }
 
         let select_inserted = format!(
             "SELECT {columns} FROM project_file_conversions WHERE id = ?1",
@@ -242,13 +287,18 @@ impl DbManager {
     ) -> DbResult<(ProjectFileConversionRow, Uuid)> {
         let pool = self.pool().await;
         let columns = conversion_projection();
+        let prefixed_columns = columns
+            .split(',')
+            .map(|column| format!("c.{}", column.trim()))
+            .collect::<Vec<_>>()
+            .join(", ");
         let select_query = format!(
             "SELECT {columns}, pf.project_id AS project_id
              FROM project_file_conversions c
              INNER JOIN project_files pf ON pf.id = c.project_file_id
              WHERE c.id = ?1
              LIMIT 1",
-            columns = columns
+            columns = prefixed_columns
         );
 
         let row = sqlx::query(&select_query)

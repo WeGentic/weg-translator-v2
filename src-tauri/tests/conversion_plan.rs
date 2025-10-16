@@ -9,10 +9,11 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 use weg_translator_lib::ipc_test::build_conversions_plan;
 use weg_translator_lib::{
-    DbManager, LOCAL_OWNER_USER_ID, NewProject, NewProjectFile, ProjectFileConversionRequest,
-    ProjectFileImportStatus as FileImportStatus, ProjectFileRole as FileRole,
-    ProjectFileStorageState as FileStorageState, ProjectLifecycleStatus as LifecycleStatus,
-    ProjectStatus, ProjectType, build_original_stored_rel_path,
+    DbManager, FileTargetStatus as FTStatus, LOCAL_OWNER_USER_ID, NewProject, NewProjectFile,
+    ProjectFileConversionRequest, ProjectFileImportStatus as FileImportStatus,
+    ProjectFileRole as FileRole, ProjectFileStorageState as FileStorageState,
+    ProjectLifecycleStatus as LifecycleStatus, ProjectStatus, ProjectType,
+    build_original_stored_rel_path, initialise_schema,
 };
 
 #[tokio::test]
@@ -45,7 +46,10 @@ async fn build_conversions_plan_generates_expected_tasks() {
         .ensure_language_pair(project_id, "en-US", "it-IT")
         .await
         .expect("ensure language pair");
-    insert_file_target(&db_dir, file_id, pair.pair_id).await;
+    manager
+        .ensure_file_target(file_id, pair.pair_id, FTStatus::Pending)
+        .await
+        .expect("create file target");
 
     let plan = build_conversions_plan(&manager, project_id)
         .await
@@ -101,7 +105,7 @@ async fn build_conversions_plan_generates_expected_tasks() {
     assert_eq!(
         file_targets.len(),
         1,
-        "bridge should create one file target"
+        "expected a single file target for the language pair"
     );
 }
 
@@ -134,9 +138,12 @@ async fn artifact_upsert_updates_existing_record() {
         .ensure_language_pair(project_id, "en-US", "it-IT")
         .await
         .expect("ensure language pair");
-    insert_file_target(&db_dir, file_id, pair.pair_id).await;
+    manager
+        .ensure_file_target(file_id, pair.pair_id, FTStatus::Pending)
+        .await
+        .expect("create file target");
 
-    // Ensure conversion bridging establishes file targets.
+    // Ensure conversion planning uses the existing file target.
     let plan = build_conversions_plan(&manager, project_id)
         .await
         .expect("build plan for bridging");
@@ -158,7 +165,7 @@ async fn artifact_upsert_updates_existing_record() {
         .expect("list file targets");
     let target = targets
         .first()
-        .expect("expected a bridged file target for conversion planning");
+        .expect("expected a file target for conversion planning");
 
     let first_rel_path = format!("artifacts/xliff/en-US__it-IT/{}-draft.xlf", file_id);
     let artifact_id = manager
@@ -244,45 +251,9 @@ async fn create_manager(db_dir: &Path) -> DbManager {
         .await
         .expect("set synchronous mode");
 
-    sqlx::migrate!("./migrations")
-        .run(&pool)
-        .await
-        .expect("run database migrations");
+    initialise_schema(&pool).await.expect("apply schema");
 
     DbManager::from_pool(pool)
-}
-
-async fn insert_file_target(db_dir: &Path, file_id: Uuid, pair_id: Uuid) {
-    let db_file = db_dir.join("weg-translator.db");
-    let connect_options = SqliteConnectOptions::new()
-        .filename(&db_file)
-        .create_if_missing(true);
-
-    let pool = SqlitePoolOptions::new()
-        .max_connections(1)
-        .connect_with(connect_options)
-        .await
-        .expect("open sqlite to insert file target");
-
-    let file_target_id = Uuid::new_v4().to_string();
-    query(
-        "INSERT INTO file_targets (
-             file_target_id,
-             file_id,
-             pair_id,
-             status,
-             created_at,
-             updated_at
-         ) VALUES (?1, ?2, ?3, 'PENDING', strftime('%Y-%m-%dT%H:%M:%fZ','now'), strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
-    )
-    .bind(&file_target_id)
-    .bind(&file_id.to_string())
-    .bind(&pair_id.to_string())
-    .execute(&pool)
-    .await
-    .expect("insert file target row");
-
-    pool.close().await;
 }
 
 fn scoped_tempdir() -> TempDir {

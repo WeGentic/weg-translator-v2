@@ -58,7 +58,12 @@ impl From<DbError> for IpcError {
             DbError::InvalidSubdirectory(_) => IpcError::Validation(
                 "Unable to derive a safe directory name for the requested operation.".into(),
             ),
-            DbError::Sqlx(_) => {
+            DbError::Sqlx(ref db_error) => {
+                log::error!(
+                    target: "ipc::error",
+                    "sqlx error surfaced to IPC: {}",
+                    db_error
+                );
                 IpcError::Internal("Database operation failed unexpectedly. Please retry.".into())
             }
         }
