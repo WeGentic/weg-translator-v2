@@ -23,12 +23,22 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { Textarea } from "@/shared/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
+import type { ClientRecord } from "@/shared/types/database";
+
+import { WizardClientField } from "./WizardClientField";
 
 interface WizardDetailsStepProps {
   projectName: string;
   onProjectNameChange: (value: string) => void;
   clientName: string;
   onClientNameChange: (value: string) => void;
+  clientOptions: ClientRecord[];
+  clientLoading: boolean;
+  clientErrorMessage: string | null;
+  selectedClientUuid: string | null;
+  onClientSelect: (client: ClientRecord | null) => void;
+  onRequestClientCreate: (initialName: string) => void;
   projectField: string;
   onProjectFieldChange: (value: string) => void;
   notes: string;
@@ -45,6 +55,12 @@ export function WizardDetailsStep({
   onProjectNameChange,
   clientName,
   onClientNameChange,
+  clientOptions,
+  clientLoading,
+  clientErrorMessage,
+  selectedClientUuid,
+  onClientSelect,
+  onRequestClientCreate,
   projectField,
   onProjectFieldChange,
   notes,
@@ -123,6 +139,28 @@ export function WizardDetailsStep({
     [projectFieldMap],
   );
 
+  const handleClientValueChange = useCallback(
+    (value: string) => {
+      onClientNameChange(value);
+    },
+    [onClientNameChange],
+  );
+
+  const handleClientSelect = useCallback(
+    (client: ClientRecord) => {
+      onClientSelect(client);
+      onClientNameChange(client.name);
+    },
+    [onClientNameChange, onClientSelect],
+  );
+
+  const handleClientCreateRequest = useCallback(
+    (initialName: string) => {
+      onRequestClientCreate(initialName);
+    },
+    [onRequestClientCreate],
+  );
+
   return (
     <>
       <div className="wizard-v2-field">
@@ -133,7 +171,7 @@ export function WizardDetailsStep({
           id="wizard-v2-project-name"
           value={projectName}
           onChange={(event) => onProjectNameChange(event.target.value)}
-          placeholder="e.g. Marketing localisation"
+          placeholder="Provide a name for your project"
           aria-required="true"
           className={cn("wizard-v2-input", "wizard-v2-input--primary", "wizard-v2-control")}
         />
@@ -142,7 +180,7 @@ export function WizardDetailsStep({
       <div className="wizard-v2-language-grid" role="group" aria-label="Language selection">
         <section className="wizard-v2-language-panel" aria-labelledby="wizard-v2-source-label">
           <div className="wizard-v2-language-header">
-            <Label id="wizard-v2-source-label" htmlFor="wizard-v2-source-language" className="wizard-v2-label">
+            <Label id="wizard-v2-source-label" htmlFor="wizard-v2-source-language" className="wizard-v2-label-darker">
               Source language
             </Label>
           </div>
@@ -207,7 +245,7 @@ export function WizardDetailsStep({
 
         <section className="wizard-v2-language-panel" aria-labelledby="wizard-v2-target-label">
           <div className="wizard-v2-language-header">
-            <Label id="wizard-v2-target-label" htmlFor="wizard-v2-target-language-trigger" className="wizard-v2-label">
+            <Label id="wizard-v2-target-label" htmlFor="wizard-v2-target-language-trigger" className="wizard-v2-label-darker">
               Target languages
             </Label>
             <span className="wizard-v2-language-count" aria-live="polite">
@@ -296,9 +334,21 @@ export function WizardDetailsStep({
 
       <div className="wizard-v2-field-grid wizard-v2-field-grid--paired">
         <div className="wizard-v2-field">
-          <Label htmlFor="wizard-v2-project-field" className="wizard-v2-label">
-            Project field
-          </Label>
+          <div className="wizard-v2-label-row">
+            <Label htmlFor="wizard-v2-project-field" className="wizard-v2-label">
+              Subject
+            </Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="wizard-v2-icon-button" aria-label="Add project field">
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" align="end">
+                Add new subject
+              </TooltipContent>
+            </Tooltip>
+          </div>
           <Popover open={fieldOpen} onOpenChange={setFieldOpen}>
             <PopoverTrigger asChild>
               <button
@@ -343,15 +393,37 @@ export function WizardDetailsStep({
           </Popover>
         </div>
         <div className="wizard-v2-field">
-          <Label htmlFor="wizard-v2-client" className="wizard-v2-label">
-            Client (optional)
-          </Label>
-          <Input
-            id="wizard-v2-client"
+          <div className="wizard-v2-label-row">
+            <Label htmlFor="wizard-v2-client" className="wizard-v2-label">
+              Client (optional)
+            </Label>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="wizard-v2-icon-button"
+                  aria-label="Add client"
+                  onClick={() => handleClientCreateRequest(clientName.trim())}
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" align="end">
+                Add new client
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <WizardClientField
+            inputId="wizard-v2-client"
             value={clientName}
-            onChange={(event) => onClientNameChange(event.target.value)}
-            placeholder="e.g. Acme Corp"
-            className={cn("wizard-v2-input", "wizard-v2-control")}
+            options={clientOptions}
+            onValueChange={handleClientValueChange}
+            onSelect={handleClientSelect}
+            onResetSelection={() => onClientSelect(null)}
+            onCreateRequested={handleClientCreateRequest}
+            selectedClientUuid={selectedClientUuid}
+            isLoading={clientLoading}
+            errorMessage={clientErrorMessage}
           />
         </div>
       </div>

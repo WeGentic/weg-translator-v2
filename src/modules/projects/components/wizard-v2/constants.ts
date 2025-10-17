@@ -8,7 +8,7 @@
 import type { WizardProjectType, FileRoleValue } from "./types";
 
 export const FILE_ROLE_LABELS: Record<FileRoleValue, string> = {
-  processable: "Processable",
+  processable: "Translation",
   reference: "Reference",
   instructions: "Instructions",
   image: "Image",

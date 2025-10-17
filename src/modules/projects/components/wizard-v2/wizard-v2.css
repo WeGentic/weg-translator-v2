@@ -19,8 +19,8 @@
   border-radius: 16px;
   border: 1px solid color-mix(in oklab, var(--color-tr-border) 65%, transparent);
   background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-primary-blue) 12%, transparent), transparent 55%)
-    color-mix(in oklab, var(--color-tr-anti-primary) 18%, transparent);
+    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-primary-blue) 50%, transparent)),
+    color-mix(in oklab, var(--color-tr-primary-blue) 70%, transparent);
   background-color: color-mix(in oklab, var(--color-tr-white) 35%, transparent);
   box-shadow:
     0 32px 80px -32px color-mix(in oklab, black 45%, transparent),
@@ -70,7 +70,7 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 30%, var(--color-tr-antiwhite) 20%);
+  color: color-mix(in oklab, var(--color-tr-anti-primary) 90%, var(--color-tr-antiwhite) 10%);
 }
 
 .wizard-v2-dialog > button[aria-label="Close dialog"] {
@@ -91,6 +91,113 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.wizard-v2-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wizard-v2-autocomplete {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wizard-v2-autocomplete-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklab, var(--color-tr-border) 60%, transparent);
+  background:
+    var(--color-tr-anti-primary);
+  box-shadow:
+    0 28px 60px -26px color-mix(in oklab, black 40%, transparent),
+    0 10px 28px -24px color-mix(in oklab, var(--color-tr-primary-blue) 35%, transparent);
+  padding: 8px;
+}
+
+.wizard-v2-autocomplete-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 0.82rem;
+  background: color-mix(in oklab, var(--color-tr-primary-blue) 25%, transparent);
+  color: color-mix(in oklab, var(--color-tr-primary-blue) 35%, var(--color-tr-antiwhite) 15%);
+  transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease;
+}
+
+.wizard-v2-autocomplete-item.is-highlighted {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--color-tr-ring) 85%, transparent);
+  background: color-mix(in oklab, var(--color-tr-secondary) 88%, transparent);
+}
+
+.wizard-v2-autocomplete-item.is-selected {
+  border-color: color-mix(in oklab, var(--color-tr-primary-blue) 55%, transparent);
+  background: color-mix(in oklab, var(--color-tr-secondary) 55%, transparent);
+  color: color-mix(in oklab, var(--color-tr-anti-primary) 92%, var(--color-tr-antiwhite) 8%);
+}
+
+.wizard-v2-autocomplete-primary {
+  font-weight: 600;
+    color: color-mix(in oklab, var(--color-tr-primary-blue) 85%, var(--color-tr-sidebar-primary) 10%);
+
+}
+
+.wizard-v2-autocomplete-secondary {
+  font-size: 0.72rem;
+  color: color-mix(in oklab, var(--color-tr-primary-blue) 85%, var(--color-tr-sidebar-primary) 10%);
+}
+
+.wizard-v2-autocomplete-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  font-size: 0.78rem;
+  color: color-mix(in oklab, var(--color-tr-muted-foreground) 80%, var(--color-tr-sidebar-primary) 15%);
+}
+
+.wizard-v2-autocomplete-error {
+  margin: 0;
+  font-size: 0.72rem;
+  color: color-mix(in oklab, var(--color-tr-destructive) 55%, var(--color-tr-antiwhite) 25%);
+}
+
+.wizard-v2-client-hint {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: color-mix(in oklab, var(--color-tr-primary-blue) 70%, var(--color-tr-antiwhite) 15%);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.wizard-v2-client-hint:hover {
+  color: color-mix(in oklab, var(--color-tr-secondary) 70%, var(--color-tr-primary-blue) 20%);
+  text-decoration: underline;
 }
 
 .wizard-v2-field-grid {
@@ -114,7 +221,16 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 10%);
+  color: color-mix(in oklab, var(--color-tr-anti-primary) 90%, var(--color-tr-antiwhite) 10%);
+}
+
+.wizard-v2-label-darker {
+  font-size: 0.72rem;
+  line-height: 1.1;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: color-mix(in oklab, var(--color-tr-primary) 90%, var(--color-tr-antiwhite) 10%);
 }
 
 .wizard-v2-control {
@@ -163,7 +279,7 @@
   background:
     linear-gradient(135deg, color-mix(in oklab, var(--color-tr-accent) 28%, transparent), transparent 65%)
     color-mix(in oklab, var(--color-tr-white) 62%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 20%, var(--color-tr-antiwhite) 10%);
+  color: color-mix(in oklab, var(--color-tr-primary) 80%, var(--color-tr-antiwhite) 10%);
   border-color: color-mix(in oklab, var(--color-tr-accent) 55%, transparent);
 }
 
@@ -180,14 +296,51 @@
   min-height: var(--wizard-control-height);
   border-radius: 10px;
   border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-anti-primary) 35%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 20%);
+  background: color-mix(in oklab, var(--color-tr-anti-primary) 85%, transparent);
+  color: color-mix(in oklab, var(--color-tr-primary-blue) 35%, var(--color-tr-antiwhite) 20%);
   padding: 8px 12px;
   font-size: 0.8rem;
   box-shadow:
     0 18px 36px -18px color-mix(in oklab, black 30%, transparent),
     0 1px 0 0 color-mix(in oklab, white 28%, transparent) inset;
   transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.wizard-v2-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--color-tr-border) 60%, transparent);
+  background: color-mix(in oklab, var(--color-tr-accent) 35%, transparent);
+  color: color-mix(in oklab, var(--color-tr-primary-blue) 45%, var(--color-tr-antiwhite) 25%);
+  box-shadow:
+    0 12px 24px -16px color-mix(in oklab, black 35%, transparent),
+    0 1px 0 0 color-mix(in oklab, white 30%, transparent) inset;
+  transition: transform 150ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+
+.wizard-v2-icon-button:hover {
+  background: color-mix(in oklab, var(--color-tr-accent) 55%, transparent);
+  border-color: color-mix(in oklab, var(--color-tr-ring) 55%, transparent);
+  transform: translateY(-1px);
+  box-shadow:
+    0 18px 28px -18px color-mix(in oklab, var(--color-tr-ring) 45%, transparent),
+    0 1px 0 0 color-mix(in oklab, white 38%, transparent) inset;
+}
+
+.wizard-v2-icon-button:focus-visible {
+  outline: none;
+  border-color: color-mix(in oklab, var(--color-tr-ring) 60%, transparent);
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--color-tr-ring) 35%, transparent),
+    0 18px 36px -20px color-mix(in oklab, var(--color-tr-ring) 55%, transparent);
+}
+
+.wizard-v2-icon-button svg {
+  pointer-events: none;
 }
 
 .wizard-v2-combobox-trigger:hover {
@@ -277,6 +430,8 @@
   overflow-y: auto;
   gap: 6px;
   overscroll-behavior: contain;
+  padding-top: 4px;
+  padding-right: 4px;
 }
 
 .wizard-v2-option {
@@ -286,21 +441,21 @@
   gap: 8px;
   border-radius: 8px;
   border: 1px solid transparent;
-  background: color-mix(in oklab, var(--color-tr-anti-primary) 30%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 20%);
+  background: color-mix(in oklab, var(--color-tr-anti-primary) 70%, transparent);
+  color: color-mix(in oklab, var(--color-tr-primary) 35%, var(--color-tr-antiwhite) 20%);
   padding: 7px 9px;
   transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
 }
 
 .wizard-v2-option:hover {
-  border-color: color-mix(in oklab, var(--color-tr-accent) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-accent) 18%, var(--color-tr-anti-primary) 30%);
+  border-color: color-mix(in oklab, var(--color-tr-primary) 95%, transparent);
+  background: color-mix(in oklab, var(--color-tr-primary) 18%, var(--color-tr-primary) 30%);
   transform: translateY(-1px);
 }
 
 .wizard-v2-option.is-selected {
   border-color: color-mix(in oklab, var(--color-tr-ring) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-accent) 28%, transparent);
+  background: color-mix(in oklab, var(--color-tr-secondary) 30%, transparent);
   box-shadow: 0 14px 28px -18px color-mix(in oklab, var(--color-tr-accent) 35%, transparent);
 }
 
@@ -378,9 +533,9 @@
   justify-content: center;
   min-width: 22px;
   padding: 0 6px;
-  border-radius: 999px;
-  background: color-mix(in oklab, var(--color-tr-accent) 24%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 25%, var(--color-tr-antiwhite) 5%);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--color-tr-primary-blue) 94%, transparent);
+  color: color-mix(in oklab, var(--color-tr-secondary) 95%, var(--color-tr-antiwhite) 5%);
   font-size: 0.7rem;
   font-weight: 600;
 }
@@ -405,9 +560,6 @@
   flex-wrap: wrap;
   gap: 6px;
   padding: 3px 5px;
-  border-radius: 10px;
-  border: 1px dashed color-mix(in oklab, var(--color-tr-border) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-anti-primary) 18%, transparent);
   min-height: 28px;
 }
 
@@ -490,10 +642,10 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-accent) 20%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 30%, var(--color-tr-antiwhite) 10%);
+  border-radius: 10px;
+  border: 1px solid var(--color-tr-primary-blue);
+  background: color-mix(in oklab, var(--color-tr-primary-blue) 50%, transparent);
+  color: var(--color-tr-anti-primary);
   font-size: 0.78rem;
   font-weight: 600;
   padding: 7px 0;
@@ -501,8 +653,9 @@
 }
 
 .wizard-v2-option-done:hover {
-  border-color: color-mix(in oklab, var(--color-tr-accent) 45%, transparent);
+  border-color: color-mix(in oklab, var(--color-tr-primary-blue) 45%, transparent);
   background: color-mix(in oklab, var(--color-tr-accent) 30%, transparent);
+  color: var(--color-tr-primary);
 }
 
 .wizard-v2-option-done:focus-visible {
@@ -528,7 +681,7 @@
   gap: 8px;
   min-height: calc(var(--wizard-control-height) - 4px);
   padding: 0 18px;
-  border-radius: 999px;
+  border-radius: 10px;
   font-size: 0.84rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -581,7 +734,7 @@
 .wizard-v2-action--clear {
   border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
   background: color-mix(in oklab, var(--color-tr-sidebar-accent) 70%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 10%);
+  color: color-mix(in oklab, var(--color-tr-primary-blue) 75%, var(--color-tr-antiwhite) 10%);
   box-shadow:
     0 12px 28px -22px color-mix(in oklab, black 28%, transparent),
     0 1px 0 0 color-mix(in oklab, white 22%, transparent) inset;
@@ -589,40 +742,29 @@
 
 .wizard-v2-action--clear:hover {
   border-color: color-mix(in oklab, var(--color-tr-accent) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-accent) 20%, var(--color-tr-sidebar-accent) 60%);
+  background: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-sidebar-accent) 60%);
   transform: translateY(-1px);
+    color: color-mix(in oklab, var(--color-tr-destructive) 95%, var(--color-tr-antiwhite) 10%);
+
 }
 
 .wizard-v2-action--clear:focus-visible {
   outline: none;
   border-color: color-mix(in oklab, var(--color-tr-ring) 50%, transparent);
-  box-shadow:
-    0 0 0 2px color-mix(in oklab, var(--color-tr-ring) 35%, transparent),
-    0 10px 28px -22px color-mix(in oklab, black 28%, transparent);
+
 }
 
 .wizard-v2-action--next {
-  border: 1px solid color-mix(in oklab, var(--color-tr-accent) 65%, transparent);
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in oklab, var(--color-tr-primary-blue) 55%, transparent),
-      color-mix(in oklab, var(--color-tr-accent) 45%, transparent)
-    );
+  border: 1px solid color-mix(in oklab, var(--color-tr-primary-blue) 65%, transparent);
+    background: color-mix(in oklab, var(--color-tr-primary-blue) 95%, transparent);
   color: color-mix(in oklab, var(--color-tr-anti-primary) 80%, white 20%);
-  box-shadow:
-    0 18px 42px -24px color-mix(in oklab, var(--color-tr-primary-blue) 55%, transparent),
-    0 1px 0 0 color-mix(in oklab, white 20%, transparent) inset;
+
 }
 
 .wizard-v2-action--next:hover:not(:disabled) {
   border-color: color-mix(in oklab, var(--color-tr-ring) 60%, transparent);
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in oklab, var(--color-tr-primary-blue) 65%, transparent),
-      color-mix(in oklab, var(--color-tr-accent) 55%, transparent)
-    );
+      background: color-mix(in oklab, var(--color-tr-primary-blue) 75%, transparent);
+
   transform: translateY(-1px);
 }
 
@@ -642,8 +784,12 @@
 }
 
 .wizard-v2-files-step {
+  --wizard-control-height: 40px;
+  position: relative;
   display: grid;
-  gap: 14px;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
 }
 
 .wizard-v2-feedback-test {
@@ -710,16 +856,22 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px;
+  gap: 10px;
+  padding:12px 12px;
   border-radius: 14px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 65%, transparent);
+  margin-top: 12px;
+  margin-bottom: 12px;
+  margin-left: 20%;
+  margin-right: 20%;
+  border: 1px solid color-mix(in oklab, var(--color-tr-border) 15%, transparent);
   background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-anti-primary) 28%, transparent), transparent 80%)
-    color-mix(in oklab, var(--color-tr-white) 55%, transparent);
+    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-primary-blue) 28%, transparent), transparent 80%)
+    color-mix(in oklab, var(--color-tr-primary-blue) 55%, transparent);
   box-shadow:
-    0 22px 48px -28px color-mix(in oklab, black 35%, transparent),
-    0 1px 0 0 color-mix(in oklab, white 16%, transparent) inset;
+    0 32px 80px -32px color-mix(in oklab, black 45%, transparent),
+    0 1px 0 0 color-mix(in oklab, white 25%, transparent) inset,
+    0 -1px 0 0 color-mix(in oklab, var(--color-tr-antiwhite) 10%, transparent) inset;
+  backdrop-filter: blur(24px) saturate(140%);
   cursor: pointer;
   transition:
     border-color 160ms ease,
@@ -728,13 +880,14 @@
     box-shadow 160ms ease;
   outline: none;
   overflow: hidden;
+  min-height: clamp(180px, 26vh, 260px);
 }
 
 .wizard-v2-dropzone:hover {
   border-color: color-mix(in oklab, var(--color-tr-accent) 50%, transparent);
   background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-accent) 22%, transparent), transparent 75%)
-    color-mix(in oklab, var(--color-tr-white) 60%, transparent);
+    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-primary-blue) 10%, transparent), transparent 80%)
+    color-mix(in oklab, var(--color-tr-primary-blue) 25%, transparent);
   transform: translateY(-1px);
 }
 
@@ -780,30 +933,17 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   gap: 14px;
-  align-items: stretch;
-}
-
-@media (min-width: 640px) {
-  .wizard-v2-dropzone-body {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-
-.wizard-v2-dropzone-leadin {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  min-width: 0;
 }
 
 .wizard-v2-dropzone-icon {
   flex-shrink: 0;
-  width: 38px;
-  height: 38px;
-  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 12px;
@@ -813,7 +953,7 @@
     color-mix(in oklab, var(--color-tr-anti-primary) 35%, transparent);
   color: color-mix(in oklab, var(--color-tr-sidebar-primary) 32%, var(--color-tr-antiwhite) 12%);
   box-shadow:
-    0 18px 32px -22px color-mix(in oklab, black 32%, transparent),
+    0 18px 32px -26px color-mix(in oklab, black 32%, transparent),
     0 1px 0 0 color-mix(in oklab, white 18%, transparent) inset;
 }
 
@@ -822,34 +962,42 @@
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+  max-width: 420px;
 }
 
 .wizard-v2-dropzone-title {
-  font-size: 0.84rem;
+  font-size: 0.86rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 30%, var(--color-tr-antiwhite) 10%);
+  color: color-mix(in oklab, var(--color-tr-anti-primary) 90%, var(--color-tr-antiwhite) 10%);
   margin: 0;
 }
 
 .wizard-v2-dropzone-subtitle {
   margin: 0;
-  font-size: 0.74rem;
-  line-height: 1.4;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 58%, var(--color-tr-sidebar-primary) 10%);
+  font-size: 0.72rem;
+  line-height: 1.45;
+color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-antiwhite) 10%);
+  }
+
+.wizard-v2-dropzone-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 .wizard-v2-dropzone-browse {
-  align-self: flex-start;
+  align-self: center;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  border-radius: 999px;
+  border-radius: 7px;
   border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
   background: color-mix(in oklab, var(--color-tr-sidebar-accent) 70%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 12%);
+  color: color-mix(in oklab, var(--color-tr-primary-blue) 75%, var(--color-tr-antiwhite) 12%);
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -861,16 +1009,10 @@
     transform 150ms ease;
 }
 
-@media (min-width: 640px) {
-  .wizard-v2-dropzone-browse {
-    align-self: center;
-  }
-}
-
 .wizard-v2-dropzone-browse:hover {
   border-color: color-mix(in oklab, var(--color-tr-accent) 45%, transparent);
   background: color-mix(in oklab, var(--color-tr-accent) 22%, var(--color-tr-sidebar-accent) 60%);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 25%, var(--color-tr-antiwhite) 8%);
+  color: color-mix(in oklab, var(--color-tr-primary-blue) 95%, var(--color-tr-antiwhite) 8%);
   transform: translateY(-1px);
 }
 
@@ -884,9 +1026,10 @@
   position: relative;
   z-index: 1;
   margin: 0;
+  text-align: center;
   font-size: 0.68rem;
   line-height: 1.5;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 65%, var(--color-tr-sidebar-primary) 8%);
+  color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-sidebar-primary) 8%);
 }
 
 .wizard-v2-file-input {
@@ -902,9 +1045,22 @@
 
 .wizard-v2-files-empty {
   border-radius: 12px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-muted) 80%, transparent);
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 60%, var(--color-tr-sidebar-primary) 12%);
+  border: 1px solid color-mix(in oklab, var(--color-tr-border) 15%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-secondary) 28%, transparent), transparent 80%)
+    color-mix(in oklab, var(--color-tr-secondary) 55%, transparent);
+  box-shadow:
+    0 32px 80px -32px color-mix(in oklab, black 45%, transparent),
+    0 1px 0 0 color-mix(in oklab, white 25%, transparent) inset,
+    0 -1px 0 0 color-mix(in oklab, var(--color-tr-antiwhite) 10%, transparent) inset;
+  backdrop-filter: blur(24px) saturate(140%);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+  outline: none;
   padding: 14px 16px;
   display: grid;
   gap: 6px;
@@ -925,24 +1081,35 @@
 
 .wizard-v2-file-table {
   border-radius: 12px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 50%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-tr-border) 15%, transparent);
   background:
-    linear-gradient(140deg, color-mix(in oklab, var(--color-tr-anti-primary) 22%, transparent), transparent 70%)
-    color-mix(in oklab, var(--color-tr-white) 60%, transparent);
+    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-secondary) 28%, transparent), transparent 80%)
+    color-mix(in oklab, var(--color-tr-secondary) 55%, transparent);
   box-shadow:
-    0 24px 52px -28px color-mix(in oklab, black 35%, transparent),
-    0 1px 0 0 color-mix(in oklab, white 18%, transparent) inset;
-  overflow: hidden;
+    0 32px 80px -32px color-mix(in oklab, black 45%, transparent),
+    0 1px 0 0 color-mix(in oklab, white 25%, transparent) inset,
+    0 -1px 0 0 color-mix(in oklab, var(--color-tr-antiwhite) 10%, transparent) inset;
+  backdrop-filter: blur(24px) saturate(140%);
+  cursor: default;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+  outline: none;
   display: grid;
   grid-template-rows: auto 1fr;
+  overflow: hidden;
 }
 
 .wizard-v2-file-table-header {
   padding: 8px 14px;
   border-bottom: 1px solid color-mix(in oklab, var(--color-tr-border) 40%, transparent);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  background: transparent;
 }
 
 .wizard-v2-file-count {
@@ -953,10 +1120,34 @@
   color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 12%);
 }
 
+.wizard-v2-file-role-summary {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: color-mix(in oklab, var(--color-tr-muted-foreground) 60%, var(--color-tr-sidebar-primary) 12%);
+}
+
 .wizard-v2-file-table-scroll {
-  max-height: 200px;
+  max-height: 300px;
   overflow: auto;
-  padding-inline: 1px;
+  background: transparent;
+}
+
+.wizard-v2-file-table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  background: transparent;
+}
+
+.wizard-v2-file-table-scroll thead,
+.wizard-v2-file-table-scroll tbody,
+.wizard-v2-file-table-scroll th,
+.wizard-v2-file-table-scroll td {
+  background: transparent;
+}
+
+.wizard-v2-file-table-scroll th {
+  border-bottom: 1px solid color-mix(in oklab, var(--color-tr-border) 35%, transparent);
 }
 
 .wizard-v2-file-table-scroll::-webkit-scrollbar {
@@ -985,7 +1176,15 @@
   font-size: 0.76rem;
   font-weight: 500;
   color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 12%);
-  word-break: break-all;
+  word-break: normal;
+}
+
+.wizard-v2-file-name span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wizard-v2-file-type {
@@ -994,13 +1193,51 @@
 }
 
 .wizard-v2-type-badge {
-  border-radius: 10px;
-  padding: 1px 7px;
+  --wizard-type-accent: color-mix(in oklab, var(--color-tr-ring) 65%, transparent);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 2px 10px;
   font-size: 0.6rem;
-  letter-spacing: 0.1em;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-anti-primary) 30%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 10%);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: color-mix(in oklab, var(--color-tr-sidebar-accent) 96%, transparent);
+  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 82%, var(--color-tr-antiwhite) 18%);
+  border: 1px solid color-mix(in oklab, var(--wizard-type-accent) 55%, transparent);
+  box-shadow: inset 4px 0 0 -1px color-mix(in oklab, var(--wizard-type-accent) 70%, transparent);
+}
+
+.wizard-v2-type-badge--document {
+  --wizard-type-accent: color-mix(in oklab, var(--color-tr-primary-blue) 70%, var(--color-tr-accent) 30%);
+}
+
+.wizard-v2-type-badge--spreadsheet {
+  --wizard-type-accent: color-mix(in oklab, var(--color-tr-success) 75%, var(--color-tr-sidebar-primary) 25%);
+}
+
+.wizard-v2-type-badge--presentation {
+  --wizard-type-accent: color-mix(in oklab, var(--color-tr-secondary) 70%, var(--color-tr-sidebar-primary) 30%);
+}
+
+.wizard-v2-type-badge--image {
+  --wizard-type-accent: color-mix(in oklab, var(--color-tr-primary-blue) 60%, var(--color-tr-sidebar-foreground) 40%);
+}
+
+.wizard-v2-type-badge--archive {
+  --wizard-type-accent: color-mix(in oklab, var(--color-tr-navy) 70%, var(--color-tr-anti-primary) 30%);
+}
+
+.wizard-v2-type-badge--media {
+  --wizard-type-accent: color-mix(in oklab, var(--color-tr-destructive) 65%, var(--color-tr-sidebar-primary) 35%);
+}
+
+.wizard-v2-type-badge--code {
+  --wizard-type-accent: color-mix(in oklab, var(--color-tr-ring) 70%, var(--color-tr-sidebar-primary) 30%);
+}
+
+.wizard-v2-type-badge--other {
+  --wizard-type-accent: color-mix(in oklab, var(--color-tr-muted-foreground) 65%, transparent);
 }
 
 .wizard-v2-file-role {
@@ -1008,13 +1245,76 @@
 }
 
 .wizard-v2-role-badge {
-  border-radius: 10px;
-  padding: 1px 8px;
+  --wizard-role-accent: color-mix(in oklab, var(--color-tr-primary-blue) 62%, transparent);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 3px 12px;
   font-size: 0.6rem;
   letter-spacing: 0.08em;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 50%, transparent);
-  background: color-mix(in oklab, var(--color-tr-muted) 75%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 30%, var(--color-tr-antiwhite) 12%);
+  text-transform: uppercase;
+  border: 1px solid color-mix(in oklab, var(--wizard-role-accent) 55%, transparent);
+  background: color-mix(in oklab, var(--wizard-role-accent) 8%, var(--color-tr-sidebar-accent) 95%);
+  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 82%, var(--color-tr-antiwhite) 18%);
+}
+
+.wizard-v2-role-variant--processable {
+  --wizard-role-accent: color-mix(in oklab, var(--color-tr-primary-blue) 72%, var(--color-tr-accent) 28%);
+}
+
+.wizard-v2-role-variant--reference {
+  --wizard-role-accent: color-mix(in oklab, var(--color-tr-accent) 68%, var(--color-tr-sidebar-primary) 32%);
+}
+
+.wizard-v2-role-variant--instructions {
+  --wizard-role-accent: color-mix(in oklab, var(--color-tr-secondary) 72%, var(--color-tr-sidebar-primary) 28%);
+}
+
+.wizard-v2-role-variant--image {
+  --wizard-role-accent: color-mix(in oklab, var(--color-tr-success) 70%, var(--color-tr-sidebar-primary) 30%);
+}
+
+.wizard-v2-role-trigger {
+  border-radius: 10px;
+  border: 0.5px solid color-mix(in oklab, var(--wizard-role-accent) 45%, transparent);
+  background: color-mix(in oklab, var(--wizard-role-accent) 8%, var(--color-tr-sidebar-accent) 94%);
+  padding-inline: 6px;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+  --tw-ring-color: transparent !important;
+  --tw-ring-offset-width: 0px !important;
+  --tw-ring-offset-color: transparent !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  box-shadow: none !important;
+  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 80%, var(--color-tr-antiwhite) 20%);
+}
+
+.wizard-v2-role-trigger:focus-visible,
+.wizard-v2-role-trigger[data-state="open"] {
+  border-color: color-mix(in oklab, var(--wizard-role-accent) 65%, transparent);
+  background: color-mix(in oklab, var(--wizard-role-accent) 12%, var(--color-tr-sidebar-accent) 92%);
+}
+
+.wizard-v2-role-menu {
+  background: color-mix(in oklab, var(--color-tr-sidebar-accent) 97%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-tr-border) 40%, transparent);
+}
+
+.wizard-v2-role-item {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 70%, var(--color-tr-antiwhite) 30%);
+}
+
+.wizard-v2-role-item[data-state="checked"] {
+  background: color-mix(in oklab, var(--color-tr-accent) 12%, var(--color-tr-sidebar-accent) 90%);
 }
 
 .wizard-v2-feedback-overlay {
@@ -1151,20 +1451,7 @@
   transform: translateY(-1px);
 }
 
-.wizard-v2-role-trigger {
-  border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-muted) 82%, transparent);
-  padding-inline: 8px;
-  min-height: 26px;
-  font-size: 0.64rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
 
-.wizard-v2-role-trigger[data-state="open"] {
-  border-color: color-mix(in oklab, var(--color-tr-ring) 45%, transparent);
-}
 
 .wizard-v2-file-actions {
   display: flex;
@@ -1200,6 +1487,95 @@
   outline: none;
   border-color: color-mix(in oklab, var(--color-tr-ring) 45%, transparent);
   box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-tr-ring) 30%, transparent);
+}
+
+.wizard-v2-client-dialog {
+  max-width: 700px;
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(85vh, 700px);
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  padding: clamp(18px, 3vw, 22px);
+  border-radius: 16px;
+  border: 1px solid color-mix(in oklab, var(--color-tr-border) 65%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-secondary) 50%, transparent)),
+    color-mix(in oklab, var(--color-tr-primary-blue) 70%, transparent);
+  background-color: color-mix(in oklab, var(--color-tr-white) 35%, transparent);
+  box-shadow:
+    0 32px 80px -32px color-mix(in oklab, black 45%, transparent),
+    0 1px 0 0 color-mix(in oklab, white 25%, transparent) inset,
+    0 -1px 0 0 color-mix(in oklab, var(--color-tr-antiwhite) 10%, transparent) inset;
+  backdrop-filter: blur(24px) saturate(140%);
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: visible;
+  will-change: transform, backdrop-filter;
+  transition: backdrop-filter 150ms ease, box-shadow 200ms ease;
+}
+
+.wizard-v2-client-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+}
+
+.wizard-v2-client-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.wizard-v2-client-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.wizard-v2-client-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 5px;
+}
+
+.wizard-v2-client-field--address,
+.wizard-v2-client-field--notes {
+  grid-column: span 2;
+}
+
+.wizard-v2-client-label {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--color-tr-primary) 85%, var(--color-tr-antiwhite) 12%);
+}
+
+.wizard-v2-client-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.wizard-v2-client-error {
+  margin: 0;
+  font-size: 0.78rem;
+  color: color-mix(in oklab, var(--color-tr-destructive) 55%, var(--color-tr-antiwhite) 15%);
+}
+
+@media (max-width: 720px) {
+  .wizard-v2-client-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wizard-v2-client-field--address,
+  .wizard-v2-client-field--notes {
+    grid-column: span 1;
+  }
 }
 .wizard-v2-close {
   display: inline-flex;
