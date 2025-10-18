@@ -5,6 +5,8 @@
  * while ensuring that all parts of the wizard share a single source of truth.
  */
 
+import type { ProjectLanguagePair } from "@/shared/types/database";
+
 import type { LanguageOption } from "../wizard/utils/languages";
 
 /**
@@ -63,3 +65,32 @@ export type FileWithPath = File & { path?: string };
  * project creation request is in flight.
  */
 export type WizardFeedbackState = "idle" | "loading" | "error";
+
+export interface WizardFinalizeFileDescriptor {
+  id: string;
+  name: string;
+  extension: string;
+  role: FileRoleValue;
+  path: string;
+}
+
+export interface WizardFinalizePayload {
+  projectName: string;
+  projectFolderName: string;
+  projectType: WizardProjectType;
+  userUuid: string;
+  clientUuid: string | null;
+  subjects: string[];
+  notes: string | null;
+  languagePairs: ProjectLanguagePair[];
+  files: WizardFinalizeFileDescriptor[];
+}
+
+export interface WizardFinalizeValidationIssue {
+  focusStep: WizardStep;
+  message: string;
+}
+
+export type WizardFinalizeBuildResult =
+  | { success: true; payload: WizardFinalizePayload }
+  | { success: false; issue: WizardFinalizeValidationIssue };

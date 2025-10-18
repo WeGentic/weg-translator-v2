@@ -33,10 +33,179 @@ import { WizardFooter } from "./components/WizardFooter";
 import { useWizardClients } from "./hooks/useWizardClients";
 import { useWizardDropzone } from "./hooks/useWizardDropzone";
 import { useWizardFiles } from "./hooks/useWizardFiles";
-import type { DraftFileEntry, WizardFeedbackState, WizardStep } from "./types";
+import type {
+  DraftFileEntry,
+  WizardFeedbackState,
+  WizardStep,
+  WizardProjectType,
+  WizardFinalizeBuildResult,
+  WizardFinalizePayload,
+} from "./types";
 import { buildLanguagePairs, LanguagePairError } from "./utils/languagePairs";
 
 import "./wizard-v2.css";
+
+const INVALID_FOLDER_CHARS = /[<>:"/\\|?*\u0000-\u001F]/g;
+const RESERVED_WINDOWS_NAMES = new Set([
+  "CON",
+  "PRN",
+  "AUX",
+  "NUL",
+  "COM1",
+  "COM2",
+  "COM3",
+  "COM4",
+  "COM5",
+  "COM6",
+  "COM7",
+  "COM8",
+  "COM9",
+  "LPT1",
+  "LPT2",
+  "LPT3",
+  "LPT4",
+  "LPT5",
+  "LPT6",
+  "LPT7",
+  "LPT8",
+  "LPT9",
+]);
+
+interface BuildWizardFinalizePayloadParams {
+  projectName: string;
+  projectType: WizardProjectType;
+  userUuid: string;
+  clientUuid: string | null;
+  projectField: string;
+  notes: string;
+  sourceLanguage: string | null;
+  targetLanguages: readonly string[];
+  files: readonly DraftFileEntry[];
+}
+
+function sanitizeProjectFolderName(rawName: string): string {
+  const trimmed = rawName.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const withoutForbidden = trimmed.replace(INVALID_FOLDER_CHARS, "");
+  const collapsedWhitespace = withoutForbidden.replace(/\s+/g, " ");
+  const strippedEdges = collapsedWhitespace.replace(/^[. ]+|[. ]+$/g, "").trim();
+
+  if (strippedEdges.length === 0) {
+    return "";
+  }
+
+  const reservedSafe = RESERVED_WINDOWS_NAMES.has(strippedEdges.toUpperCase())
+    ? `_${strippedEdges}`
+    : strippedEdges;
+
+  return reservedSafe.slice(0, 120);
+}
+
+function buildWizardFinalizePayload(params: BuildWizardFinalizePayloadParams): WizardFinalizeBuildResult {
+  const trimmedProjectName = params.projectName.trim();
+  if (!trimmedProjectName) {
+    return {
+      success: false,
+      issue: {
+        focusStep: "details",
+        message: "Provide a project name in the Details step before finalizing.",
+      },
+    };
+  }
+
+  const projectFolderName = sanitizeProjectFolderName(trimmedProjectName);
+  if (!projectFolderName) {
+    return {
+      success: false,
+      issue: {
+        focusStep: "details",
+        message: "Project name must include valid characters for a folder name.",
+      },
+    };
+  }
+
+  if (!params.sourceLanguage) {
+    return {
+      success: false,
+      issue: {
+        focusStep: "details",
+        message: "Select a source language to continue.",
+      },
+    };
+  }
+
+  let languagePairs: WizardFinalizePayload["languagePairs"] = [];
+
+  try {
+    languagePairs = buildLanguagePairs(params.sourceLanguage, params.targetLanguages);
+  } catch (cause) {
+    const message =
+      cause instanceof LanguagePairError
+        ? cause.message
+        : "Check language selections before continuing.";
+    return {
+      success: false,
+      issue: {
+        focusStep: "details",
+        message,
+      },
+    };
+  }
+
+  if (params.files.length === 0) {
+    return {
+      success: false,
+      issue: {
+        focusStep: "files",
+        message: "Add at least one file to finalize the project.",
+      },
+    };
+  }
+
+  const files: WizardFinalizePayload["files"] = [];
+
+  for (const file of params.files) {
+    const trimmedPath = file.path.trim();
+    if (trimmedPath.length === 0) {
+      return {
+        success: false,
+        issue: {
+          focusStep: "files",
+          message: `Resolve the missing path for ${file.name} before finalizing.`,
+        },
+      };
+    }
+
+    files.push({
+      id: file.id,
+      name: file.name,
+      extension: file.extension,
+      role: file.role,
+      path: trimmedPath,
+    });
+  }
+
+  const trimmedNotes = params.notes.trim();
+  const subject = params.projectField.trim();
+
+  return {
+    success: true,
+    payload: {
+      projectName: trimmedProjectName,
+      projectFolderName,
+      projectType: params.projectType,
+      userUuid: params.userUuid,
+      clientUuid: params.clientUuid,
+      subjects: subject ? [subject] : [],
+      notes: trimmedNotes ? trimmedNotes : null,
+      languagePairs,
+      files,
+    },
+  };
+}
 
 interface CreateProjectWizardV2Props {
   open: boolean;
@@ -283,57 +452,53 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
       return;
     }
 
-    const trimmedName = projectName.trim();
-    const srcLang = sourceLanguage;
-    const primaryTarget = targetLanguages[0] ?? null;
+    const finalizeResult = buildWizardFinalizePayload({
+      projectName,
+      projectType: DEFAULT_PROJECT_TYPE,
+      userUuid: LOCAL_OWNER_USER_ID,
+      clientUuid: selectedClientUuid ?? null,
+      projectField,
+      notes,
+      sourceLanguage,
+      targetLanguages,
+      files,
+    });
 
-    if (!trimmedName || !srcLang || !primaryTarget) {
+    if (!finalizeResult.success) {
       setFeedbackState("error");
-      setFeedbackMessage("Project details are incomplete. Please return to the Details step and fill in the missing fields.");
-      setStep("details");
-      return;
-    }
-
-    let languagePairs;
-
-    try {
-      languagePairs = buildLanguagePairs(srcLang, targetLanguages);
-    } catch (validationError) {
-      const message =
-        validationError instanceof LanguagePairError
-          ? validationError.message
-          : "Check language selections before continuing.";
-      setFeedbackState("error");
-      setFeedbackMessage(message);
-      setStep("details");
+      setFeedbackMessage(finalizeResult.issue.message);
+      setStep(finalizeResult.issue.focusStep);
       toast({
         variant: "destructive",
-        title: "Invalid language configuration",
-        description: message,
+        title: "Cannot finalize project",
+        description: finalizeResult.issue.message,
       });
       return;
     }
+
+    const payload = finalizeResult.payload;
 
     startSubmission(async () => {
       setFeedbackState("loading");
       setFeedbackMessage("Creating project…");
 
       try {
+        console.debug("[wizard] finalize payload", payload);
         const response = await createProjectBundle({
-          projectName: trimmedName,
+          projectName: payload.projectName,
           projectStatus: "active",
-          userUuid: LOCAL_OWNER_USER_ID,
-          clientUuid: selectedClientUuid ?? null,
-          type: DEFAULT_PROJECT_TYPE,
-          notes: notes ? notes : null,
-          subjects: projectField ? [projectField] : [],
-          languagePairs,
+          userUuid: payload.userUuid,
+          clientUuid: payload.clientUuid,
+          type: payload.projectType,
+          notes: payload.notes,
+          subjects: payload.subjects,
+          languagePairs: payload.languagePairs,
         });
 
         onProjectCreated?.(response);
         toast({
           title: "Project created",
-          description: `${trimmedName} was created. TODO: wire file ingestion into the v2 pipeline.`,
+          description: `${payload.projectName} was created. TODO: wire file ingestion into the v2 pipeline.`,
         });
         handleClear();
         onOpenChange(false);
@@ -360,6 +525,7 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
     selectedClientUuid,
     sourceLanguage,
     targetLanguages,
+    files,
     startSubmission,
     onProjectCreated,
     toast,

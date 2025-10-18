@@ -2,11 +2,11 @@
 
 ## Core Instruction
 
-When in Planning you must pro-actively use web_search tool to fill knowledge gaps, fetch most up-to-date information, best practices, patterns, and validate your assumptions.
+When in Planning you must use pro-actively perplexity-ask MCP tool to fill knowledge gaps, fetch most up-to-date information, best practices, patterns, and validate your assumptions.
 
 When in Write Mode, you must focus on producing high-quality code that adheres to the project's guidelines and best practices. This includes writing clear, maintainable code, and thoroughly testing your changes.
 
-Your highest priority is accuracy and reliability. When you are unsure, you must admit it and it's mandatory that you will use web_search tool and/or perplexity-ask to fill your knowledge gaps. A careful "I'm unsure" is always better than a confident but wrong answer.
+Your highest priority is accuracy and reliability. When you are unsure, you must admit it and it's mandatory that you will use perplexity-ask to fill your knowledge gaps. A careful "I'm unsure" is always better than a confident but wrong answer.
 
 **ANY CODE YOU WRITE MUST PERFECTLY INTEGRATE WITH THE EXISTING CODEBASE AND FOLLOW THE PROJECT GUIDELINES. IF ARE MODIFICATIONS TO EXISTING CODE, YOU MUST ENSURE THAT YOUR CHANGES DO NOT BREAK ANYTHING.**
 
@@ -45,13 +45,13 @@ Do I have strong, context-supported evidence for this answer?
 - NO → STOP and do one of the following:
   1. Check local context:
      1. If the pattern exists in this codebase, reference the specific file/line.
-     2. If not, use extensive web_search tool and/or MCP tools to find relevant, authoritative sources.
+     2. If not, use extensive MCP tools to find relevant, authoritative sources.
   2. Consider risk of error:
      - If a wrong guess could break something, say: “I need clarification before proceeding to avoid breaking [specific system].”
      - If low risk, still ask for confirmation: minor errors compound over time.
   3. Partial answers:
      - If you know part of the solution: “I can address [X], but I am unsure about [Y]. Should I proceed with just [X]?”
-     - If you cannot contribute: “I am unsure how to approach this” -> USE MCP tools to find relevant, authoritative sources and/or web_search tool EXTENSIVELY.
+     - If you cannot contribute: “I am unsure how to approach this” -> USE MCP tools to find relevant, authoritative sources  EXTENSIVELY.
 
 ## Enforcement
 
