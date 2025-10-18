@@ -3,11 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listClientRecords } from "@/core/ipc/db/clients";
 import type { ClientRecord } from "@/shared/types/database";
 
-import type { ClientsFilterValue } from "@/modules/clients/constants";
-
 export interface UseClientsDataOptions {
   search: string;
-  filter: ClientsFilterValue;
 }
 
 export interface UseClientsDataResult {
@@ -25,7 +22,7 @@ function normalizeOptionalField(value: string | null | undefined): string | null
   return trimmed && trimmed.length > 0 ? trimmed : null;
 }
 
-export function useClientsData({ search, filter }: UseClientsDataOptions): UseClientsDataResult {
+export function useClientsData({ search }: UseClientsDataOptions): UseClientsDataResult {
   const [clients, setClients] = useState<ClientRecord[]>([]);
   const [isLoading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,21 +83,11 @@ export function useClientsData({ search, filter }: UseClientsDataOptions): UseCl
   const normalizedSearch = search.trim().toLowerCase();
 
   const filteredClients = useMemo(() => {
-    const byFilter = clients.filter((client) => {
-      if (filter === "with-contact") {
-        return Boolean(client.email || client.phone);
-      }
-      if (filter === "missing-contact") {
-        return !client.email && !client.phone;
-      }
-      return true;
-    });
-
     if (normalizedSearch.length === 0) {
-      return byFilter;
+      return clients;
     }
 
-    return byFilter.filter((client) => {
+    return clients.filter((client) => {
       const haystacks = [
         client.name,
         client.email,
@@ -113,7 +100,7 @@ export function useClientsData({ search, filter }: UseClientsDataOptions): UseCl
         .filter((value): value is string => Boolean(value && value.trim().length > 0))
         .some((value) => value.toLowerCase().includes(normalizedSearch));
     });
-  }, [clients, filter, normalizedSearch]);
+  }, [clients, normalizedSearch]);
 
   const upsertClient = useCallback((record: ClientRecord) => {
     setClients((current) => {

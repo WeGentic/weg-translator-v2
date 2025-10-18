@@ -1,5 +1,28 @@
 # Weg Translator Plan – Progress Log
 
+## Step 2.1 (Clients quick action button)
+- Inserted a Clients button with `UsersRound` icon styling into `src/app/shell/sidebar-two-content/DashboardQuickActions.tsx`, keeping parity with the existing sidebar button classes.
+- Verified the new button inherits standard hover and focus treatments provided by the sidebar-two styles.
+
+## Step 2.2 (Clients quick action wiring)
+- Added a Clients quick-action handler in `src/app/shell/sidebar-two-content/DashboardQuickActions.tsx` that dispatches `app:navigate` events targeting the new view while preserving button accessibility semantics.
+- Persisted the target view in session storage via `src/modules/workspace/navigation/main-view-persist.ts` so the workspace boots directly into the Clients surface with no sidebar flicker.
+- Adjusted `src/app/shell/layout-sidebar-two.tsx` so the Clients navigation still surfaces the Quick Actions panel, keeping sidebar-two content stable while the main view switches.
+
+## Step 5.1 (Clients table visual parity)
+- Reworked `src/modules/clients/view/components/ClientsTable.tsx` to mirror `ProjectsTableGrid`, reusing the gradient header, hover states, and table typography.
+- Imported the shared projects data-table stylesheet in `ClientsView` and pared back bespoke rules in `src/modules/clients/view/clients-view.css`, leaving lightweight padding helpers.
+- Updated `ClientsContent` to match the workspace content wrapper structure so the clients table now occupies the same layout zone as the projects grid.
+
+## Step 5.2 (Clients data hydration)
+- Hardened `src/core/ipc/db/clients.ts` so `listClientRecords` accepts both camelCase and legacy snake_case payloads and guards against missing identifiers.
+- Added `src/core/ipc/db/__tests__/clients.test.ts` to cover the mapping fixes and error path.
+- Hooked the session-storage view queue into the quick action + workspace route so the SQL-backed fetch occurs after the correct pane is active.
+
+## Step 5.3 (Validation commands)
+- Ran `pnpm typecheck`, `pnpm lint`, and `pnpm test`; typecheck succeeds, while lint hits the pre-existing `projectFolder` regex warning and vitest still fails on the wizard drag-drop listeners.
+- New IPC mapping tests pass, confirming the SQL payload is hydrated correctly despite the lingering suite failure.
+
 ## Step 3.1 (Clients view scaffolding)
 - Created `ClientsView`, `ClientsHeader`, `ClientsToolbar`, and `ClientsContent` components in `src/modules/clients/view/` mirroring the dashboard layout semantics with clients-specific ids and aria attributes.
 - Added `src/modules/clients/view/index.ts` and `src/modules/clients/index.ts` to expose the new view for workspace integration.

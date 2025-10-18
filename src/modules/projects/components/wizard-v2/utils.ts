@@ -15,6 +15,18 @@ export function extractFileName(filePath: string): string {
 }
 
 /**
+ * Returns the filename without its last extension segment.
+ */
+export function extractFileStem(fileName: string): string {
+  const terminal = extractFileName(fileName);
+  const lastDot = terminal.lastIndexOf(".");
+  if (lastDot <= 0) {
+    return terminal;
+  }
+  return terminal.slice(0, lastDot);
+}
+
+/**
  * Extracts the terminal extension of a filename (uppercase) or returns an em dash
  * placeholder when no extension is present. The em dash matches the previous UI.
  */
@@ -51,4 +63,36 @@ export function createLanguageMap(options: readonly LanguageOption[]): Map<strin
       return [option.code, { ...option, compactLabel }];
     }),
   );
+}
+
+/**
+ * Joins filesystem path segments while preserving the dominant separator found in
+ * the first segment. Trailing and leading separators are trimmed to avoid double
+ * separators when composing absolute paths across platforms.
+ */
+export function joinPathSegments(...segments: string[]): string {
+  if (segments.length === 0) {
+    return "";
+  }
+
+  const trimmedSegments = segments.map((segment, index) => {
+    if (segment.length === 0) {
+      return "";
+    }
+    let next = segment;
+    if (index === 0) {
+      next = next.replace(/[/\\]+$/g, "");
+    } else {
+      next = next.replace(/^[\\/]+/, "").replace(/[/\\]+$/g, "");
+    }
+    return next;
+  });
+
+  const first = trimmedSegments[0];
+  const separator =
+    first.includes("\\") && !first.includes("/") ? "\\" : "/";
+
+  return trimmedSegments
+    .filter((segment, index) => segment.length > 0 || index === 0)
+    .join(separator);
 }

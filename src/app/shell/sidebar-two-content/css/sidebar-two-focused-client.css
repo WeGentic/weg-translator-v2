@@ -1,0 +1,86 @@
+.sidebar-two-focused-client {
+  margin-top: 0.35rem;
+}
+
+.sidebar-two-focused-client__group {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  border-radius: 0.75rem;
+  background: color-mix(in oklch, var(--color-tr-accent) 45%, var(--color-tr-muted));
+  border: 1px solid color-mix(in oklch, var(--color-tr-border) 70%, transparent);
+  box-shadow:
+    0 6px 12px -8px rgb(22 28 45 / 0.35),
+    inset 0 1px 0 0 color-mix(in oklch, var(--color-tr-white) 90%, transparent);
+  overflow: hidden;
+}
+
+.sidebar-two-focused-client__indicator {
+  width: 4px;
+  background: color-mix(in oklch, var(--color-tr-secondary) 80%, var(--color-tr-primary-blue));
+  border-right: 1px solid color-mix(in oklch, var(--color-tr-border) 65%, transparent);
+}
+
+.sidebar-two-focused-client__main {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.45rem 0.65rem;
+  border: none;
+  background: transparent;
+  color: var(--color-tr-primary-blue);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.16s ease-in-out, color 0.16s ease-in-out;
+}
+
+.sidebar-two-focused-client__main:hover {
+  background: color-mix(in oklch, var(--color-tr-accent) 60%, transparent);
+  color: var(--color-tr-anti-primary);
+}
+
+.sidebar-two-focused-client__main:focus-visible {
+  outline: 2px solid var(--color-tr-ring);
+  outline-offset: -2px;
+}
+
+.sidebar-two-focused-client__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-two-focused-client__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  border: none;
+  background: transparent;
+  color: color-mix(in oklch, var(--color-tr-primary-blue) 80%, black 20%);
+  cursor: pointer;
+  transition: background-color 0.16s ease-in-out, color 0.16s ease-in-out;
+}
+
+.sidebar-two-focused-client__close:hover {
+  background: color-mix(in oklch, var(--color-tr-accent) 70%, transparent);
+  color: var(--color-tr-anti-primary);
+}
+
+.sidebar-two-focused-client__close:focus-visible {
+  outline: 2px solid var(--color-tr-ring);
+  outline-offset: -2px;
+}
+
+.sidebar-two-focused-client__close-icon {
+  width: 14px;
+  height: 14px;
+}

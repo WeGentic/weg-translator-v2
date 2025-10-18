@@ -1,6 +1,10 @@
 import { useEffect } from "react";
 
-import { toEditorViewKey, type MainView } from "@/app/state/main-view";
+import {
+  CLIENT_VIEW_PREFIX,
+  toEditorViewKey,
+  type MainView,
+} from "@/app/state/main-view";
 import { logger } from "@/core/logging";
 
 /**
@@ -46,6 +50,12 @@ export function useGlobalNavigationEvents({
           void logger.debug?.("Navigate: editor placeholder view");
           onChangeView("editor");
         }
+        return;
+      }
+
+      if (view?.startsWith(CLIENT_VIEW_PREFIX)) {
+        onChangeView(view as MainView);
+        return;
       }
     };
 

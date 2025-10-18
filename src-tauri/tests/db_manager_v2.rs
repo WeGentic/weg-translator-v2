@@ -1,10 +1,11 @@
 use sqlx::sqlite::SqlitePoolOptions;
+use tempfile::tempdir;
 use uuid::Uuid;
 
 use weg_translator_lib::{
-    DbError, DbManager, FileLanguagePairInput, NewClientArgs, NewFileInfoArgs, NewProjectArgs,
-    NewProjectFileArgs, NewUserArgs, PermissionOverrideInput, ProjectLanguagePairInput,
-    ProjectSubjectInput, UpdateProjectArgs, initialise_schema,
+    DbError, DbManager, DatabasePerformanceConfig, FileLanguagePairInput, NewClientArgs,
+    NewFileInfoArgs, NewProjectArgs, NewProjectFileArgs, NewUserArgs, PermissionOverrideInput,
+    ProjectLanguagePairInput, ProjectSubjectInput, UpdateProjectArgs, initialise_schema,
 };
 
 async fn memory_manager() -> DbManager {
@@ -193,4 +194,40 @@ async fn updating_language_pairs_requires_non_empty_list() {
         }
         other => panic!("expected constraint violation, got {other:?}"),
     }
+}
+
+#[tokio::test]
+async fn clients_persist_across_manager_reopen() {
+    let temp_dir = tempdir().expect("temporary directory should be created");
+    let manager = DbManager::new_with_base_dir_and_performance(
+        temp_dir.path(),
+        DatabasePerformanceConfig::default(),
+    )
+    .await
+    .expect("database manager should initialise");
+
+    let client_uuid = Uuid::new_v4();
+    manager
+        .create_client_record(sample_client_args(client_uuid))
+        .await
+        .expect("client creation should succeed");
+
+    manager
+        .reopen_with_base_dir(temp_dir.path())
+        .await
+        .expect("manager reopen should succeed");
+
+    let fetched = manager
+        .get_client_record(client_uuid)
+        .await
+        .expect("client fetch should succeed");
+
+    let record = fetched.expect("client record should persist across reopen");
+    assert_eq!(record.client_uuid, client_uuid);
+    assert_eq!(record.name, "Acme Corp");
+
+    drop(manager);
+    temp_dir
+        .close()
+        .expect("temporary directory should be removed after manager drop");
 }

@@ -12,8 +12,8 @@ pub use crate::db::types::schema::{
     UpdateProjectArgs,
 };
 pub use crate::db::{
-    ArtifactKind, ArtifactStatus, DbError, DbManager, FileTargetStatus, NewProject, NewProjectFile,
-    NewTranslationRecord, PersistedTranslationOutput, ProjectFileConversionRequest,
+    ArtifactKind, ArtifactStatus, DbError, DbManager, DatabasePerformanceConfig, FileTargetStatus,
+    NewProject, NewProjectFile, NewTranslationRecord, PersistedTranslationOutput, ProjectFileConversionRequest,
     ProjectFileConversionStatus, ProjectFileImportStatus, ProjectFileRole, ProjectFileStorageState,
     ProjectLifecycleStatus, ProjectStatus, ProjectType, initialise_schema,
 };

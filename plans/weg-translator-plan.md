@@ -245,3 +245,43 @@ Sidebar navigation relies on window-level "app:navigate" events, so any new view
 **How to**: Use Vitest with Testing Library for hook testing, dispatch CustomEvent in WorkspacePage test, document commands in PR notes.
 **Check**: Ensure tests fail before implementation, pass after, and command outputs show no regressions.
 **Gate (Exit Criteria)**: Test suite validates new logic and standard quality commands succeed locally.
+
+### Task 5
+
+**Status**: IN_PROGRESS
+**Detailed description (scope/goals)**: Polish the Clients dashboard by matching the Projects data grid look-and-feel and ensuring client records load accurately from the SQL-backed IPC layer.
+**Feature required (optional)**: F-002, F-003
+**Purpose/Outcome**: Deliver a consistent, reliable clients table experience that mirrors existing project UI standards.
+
+#### Step 5.1
+
+**Status**: COMPLETED
+**Description**: Align ClientsTable styling with `ProjectsTableGrid`, including header gradients, row hover/selection behaviors, and container spacing.
+**Codebase touched**: src/modules/clients/view/components/ClientsTable.tsx, src/modules/clients/view/clients-view.css, shared table styles (read-only)
+**Sample snippets (optional)**: None yet.
+**What to do***: Port the Projects grid class structure to ClientsTable, reuse shared CSS tokens/utility classes, and remove ad-hoc wrappers that deviate from the standard layout.
+**How to**: Compare className usage between the two tables, extract any missing utility classes, and verify responsive behavior at different viewport sizes.
+**Check**: Visual QA confirms the clients table matches Projects table aesthetics and retains accessibility.
+**Gate (Exit Criteria)**: Clients table renders with identical structure and interaction cues as ProjectsTableGrid.
+
+#### Step 5.2
+
+**Status**: COMPLETED
+**Description**: Correct client data-fetching logic so the SQL dataset is mapped without missing or stale fields, and refresh flows stay in sync after mutations.
+**Codebase touched**: src/modules/clients/hooks/useClientsData.ts, src/core/ipc/db/clients.ts, related types/tests
+**Sample snippets (optional)**: None yet.
+**What to do***: Audit the IPC response mapping, ensure pagination/sorting assumptions match backend shape, and adjust the hook to prevent stale caching or mismatched IDs.
+**How to**: Reproduce the faulty fetch scenario, update the mapper/hook, and cover with unit tests.
+**Check**: Console shows accurate client rows sourced from the database; tests guard against regressions.
+**Gate (Exit Criteria)**: Clients list reflects the real dataset consistently after initial load and refreshes.
+
+#### Step 5.3
+
+**Status**: IN_PROGRESS
+**Description**: Re-run validation commands and update automated coverage if new logic was added.
+**Codebase touched**: package scripts (execution only), src/modules/clients/__tests__ (if needed)
+**Sample snippets (optional)**: None yet.
+**What to do***: Execute `pnpm typecheck`, `pnpm lint`, `pnpm test`, and add assertions covering the fixed data mapping if gaps exist.
+**How to**: Extend existing clients hook tests or add new cases for malformed data; document command outcomes.
+**Check**: All quality gates succeed locally; tests fail when data mapping regresses.
+**Gate (Exit Criteria)**: Commands pass and new test cases (if any) validate the fixes.

@@ -7,11 +7,18 @@
  * To use: Import and render this component in your development environment.
  */
 
-import { Plus, FileUp, Folder, Settings, Home, FileText, X } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { Plus, FileUp, Folder, Settings, Home, FileText, X, UsersRound } from "lucide-react";
+
+import { queueWorkspaceMainView } from "@/modules/workspace/navigation/main-view-persist";
+import { toClientViewKey } from "@/app/state/main-view";
+import { dispatchClientClear, dispatchClientFocus } from "@/modules/clients/events";
+import { cn } from "@/shared/utils/class-names";
 import "./css/sidebar-two-button.css";
 import "./css/sidebar-two-zone.css";
 import "./css/sidebar-two-selectable-item.css";
 import "./css/sidebar-two-dropzone.css";
+import "./css/sidebar-two-focused-client.css";
 
 export function SidebarTwoStylesTest() {
   return (
@@ -331,9 +338,129 @@ export function SidebarTwoStylesTest() {
 /**
  * Example: How to apply these styles to the existing DashboardQuickActions component
  */
-export function DashboardQuickActions() {
+interface FocusedClientSummary {
+  clientUuid: string;
+  clientName: string;
+}
+
+interface DashboardQuickActionsProps {
+  activeView?: "dashboard" | "clients" | "client-detail";
+  focusedClient?: FocusedClientSummary | null;
+}
+
+export function DashboardQuickActions({
+  activeView = "dashboard",
+  focusedClient = null,
+}: DashboardQuickActionsProps = {}) {
+  const navigate = useNavigate();
+
+  const isClientsActive = activeView === "clients" || activeView === "client-detail";
+
+  const handleOpenClients = () => {
+    if (isClientsActive) {
+      dispatchClientClear();
+      queueWorkspaceMainView("dashboard");
+      navigate({ to: "/dashboard" })
+        .catch(() => undefined)
+        .finally(() => {
+          window.dispatchEvent(
+            new CustomEvent("app:navigate", {
+              detail: { view: "dashboard" },
+            }),
+          );
+        });
+      return;
+    }
+
+    queueWorkspaceMainView("clients");
+
+    navigate({ to: "/" })
+      .catch(() => undefined)
+      .finally(() => {
+        window.dispatchEvent(
+          new CustomEvent("app:navigate", {
+            detail: { view: "clients" },
+          }),
+        );
+      });
+  };
+
+  const focusedClientLabel = (() => {
+    if (!focusedClient) {
+      return null;
+    }
+    const trimmed = focusedClient.clientName.trim();
+    return trimmed.length > 0 ? trimmed : "Client";
+  })();
+
+  const handleFocusedClientOpen = () => {
+    if (!focusedClient || !focusedClientLabel) {
+      return;
+    }
+    dispatchClientFocus({
+      clientUuid: focusedClient.clientUuid,
+      clientName: focusedClientLabel,
+    });
+    window.dispatchEvent(
+      new CustomEvent("app:navigate", {
+        detail: {
+          view: toClientViewKey(focusedClient.clientUuid),
+          clientName: focusedClientLabel,
+        },
+      }),
+    );
+  };
+
+  const handleFocusedClientDismiss = () => {
+    dispatchClientClear();
+    window.dispatchEvent(
+      new CustomEvent("app:navigate", {
+        detail: { view: "clients" },
+      }),
+    );
+  };
+
   return (
     <div className="flex flex-col gap-3 p-4">
+      <button
+        type="button"
+        className={cn(
+          "sidebar-two-button",
+          isClientsActive && ["sidebar-two-button--clicked", "sidebar-two-button--active"],
+        )}
+        aria-label="Open clients view"
+        onClick={handleOpenClients}
+        aria-pressed={isClientsActive}
+      >
+        <UsersRound className="size-4" aria-hidden="true" />
+        Clients
+      </button>
+      {focusedClient && focusedClientLabel ? (
+        <div className="sidebar-two-focused-client" role="group" aria-label="Selected client">
+          <div className="sidebar-two-focused-client__group">
+            <span className="sidebar-two-focused-client__indicator" aria-hidden="true" />
+            <button
+              type="button"
+              className="sidebar-two-focused-client__main"
+              onClick={handleFocusedClientOpen}
+              aria-label={`Open ${focusedClientLabel}`}
+            >
+              <UsersRound className="size-4" aria-hidden="true" />
+              <span className="sidebar-two-focused-client__label" title={focusedClientLabel}>
+                {focusedClientLabel}
+              </span>
+            </button>
+            <button
+              type="button"
+              className="sidebar-two-focused-client__close"
+              onClick={handleFocusedClientDismiss}
+              aria-label="Close client view"
+            >
+              <X className="sidebar-two-focused-client__close-icon" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      ) : null}
       {/* Apply sidebar-two-button class */}
       <button type="button" className="sidebar-two-button">
         <Plus className="size-4" />

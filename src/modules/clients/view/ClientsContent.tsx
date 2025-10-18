@@ -1,22 +1,29 @@
 'use no memo';
 
 import { useMemo, useState } from "react";
-import { getCoreRowModel, getSortedRowModel, useReactTable, type SortingState } from "@tanstack/react-table";
+import {
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type RowSelectionState,
+  type SortingState,
+} from "@tanstack/react-table";
 
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import type { ClientRecord } from "@/shared/types/database";
 
-import type { ClientsFilterValue } from "@/modules/clients/constants";
 import { ClientsTable } from "./components/ClientsTable";
-import { DEFAULT_SORT_COLUMN_ID, buildClientColumns, toClientRow } from "./components/columns";
+import { DEFAULT_SORT_COLUMN_ID, buildClientColumns, toClientRow, type ClientRow } from "./components/columns";
 
 export interface ClientsContentProps {
   clients: ClientRecord[];
   search: string;
-  filter: ClientsFilterValue;
   isLoading?: boolean;
   error?: string | null;
   onRetry?: () => void;
+  onRequestOpen?: (client: ClientRow) => void;
+  onRequestEdit?: (client: ClientRow) => void;
+  onRequestDelete?: (client: ClientRow) => void;
 }
 
 const DEFAULT_SORTING: SortingState = [{ id: DEFAULT_SORT_COLUMN_ID, desc: false }];
@@ -24,16 +31,27 @@ const DEFAULT_SORTING: SortingState = [{ id: DEFAULT_SORT_COLUMN_ID, desc: false
 export function ClientsContent({
   clients,
   search,
-  filter,
   isLoading = false,
   error = null,
   onRetry,
+  onRequestOpen,
+  onRequestEdit,
+  onRequestDelete,
 }: ClientsContentProps) {
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const clientRows = useMemo(() => clients.map(toClientRow), [clients]);
 
-  const columns = useMemo(() => buildClientColumns(), []);
+  const columns = useMemo(
+    () =>
+      buildClientColumns({
+        onRequestOpen,
+        onRequestEdit,
+        onRequestDelete,
+      }),
+    [onRequestOpen, onRequestEdit, onRequestDelete],
+  );
   const trimmedSearch = search.trim();
 
   const table = useReactTable({
@@ -41,18 +59,21 @@ export function ClientsContent({
     columns,
     state: {
       sorting,
+      rowSelection,
     },
     onSortingChange: setSorting,
+    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    enableRowSelection: true,
   });
 
   const tableRows = table.getRowModel().rows;
 
   return (
-    <main className="flex-1 min-h-0 overflow-hidden bg-tr-white p-6" aria-label="Clients main content">
+    <section className="flex h-full w-full min-h-0 flex-1 flex-col" aria-label="Clients main content">
       {error ? (
-        <div className="mb-4">
+        <div className="px-6 pb-4">
           <Alert variant="destructive">
             <AlertTitle>Unable to load clients</AlertTitle>
             <AlertDescription>
@@ -71,15 +92,14 @@ export function ClientsContent({
         </div>
       ) : null}
 
-      <div className="clients-content-region flex min-h-0 flex-1 flex-col">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         <ClientsTable
           table={table}
           rows={tableRows}
           searchTerm={trimmedSearch}
-          activeFilter={filter}
           isLoading={isLoading}
         />
       </div>
-    </main>
+    </section>
   );
 }

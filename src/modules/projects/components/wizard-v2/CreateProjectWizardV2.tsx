@@ -12,12 +12,21 @@ import {
   useMemo,
   useState,
   useTransition,
+  useRef,
 } from "react";
 
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
-import { createClientRecord, createProjectBundle } from "@/core/ipc";
-import type { ClientRecord, CreateClientInput, ProjectBundle } from "@/shared/types/database";
+import { createClientRecord, createProjectWithAssets, updateJobStatus, upsertArtifactRecord } from "@/core/ipc";
+import { convertStream, validateStream } from "@/core/ipc/openxliff";
+import type {
+  ClientRecord,
+  CreateClientInput,
+  CreateProjectWithAssetsInput,
+  CreateProjectWithAssetsResponse,
+  ProjectBundle,
+} from "@/shared/types/database";
 import { Dialog, DialogClose, DialogContent } from "@/shared/ui/dialog";
 import { useToast } from "@/shared/ui/use-toast";
 import { cn } from "@/shared/utils/class-names";
@@ -44,10 +53,14 @@ import type {
   WizardFinalizeErrorCategory,
   WizardFinalizeProgressDescriptor,
   WizardFinalizeErrorDescriptor,
+  WizardFinalizeProgressEventPayload,
+  WizardConversionPlan,
+  WizardConversionTask,
 } from "./types";
 import { buildLanguagePairs, LanguagePairError } from "./utils/languagePairs";
+import { extractFileName, extractFileStem, joinPathSegments } from "./utils";
 import { generateUniqueProjectFolderName, sanitizeProjectFolderName } from "./utils/projectFolder";
-import { getProjectsResourceSnapshot } from "../../data/projectsResource";
+import { getProjectsResourceSnapshot, refreshProjectsResource } from "../../data/projectsResource";
 
 import "./wizard-v2.css";
 
@@ -88,7 +101,22 @@ const FINALIZE_PHASE_COPY: Record<WizardFinalizePhase, WizardFinalizeProgressDes
     description: "Scheduling translation conversions for each language pair.",
     actionLabel: "Planning…",
   },
+  "running-conversions": {
+    phase: "running-conversions",
+    headline: "Converting files",
+    description: "Generating XLIFF files for each language pair.",
+    actionLabel: "Converting…",
+  },
 };
+
+const PROJECT_CREATE_PROGRESS_EVENT = "project:create:progress";
+
+function isWizardFinalizePhase(value: unknown): value is WizardFinalizePhase {
+  return (
+    typeof value === "string" &&
+    Object.prototype.hasOwnProperty.call(FINALIZE_PHASE_COPY, value)
+  );
+}
 
 const FINALIZE_ERROR_COPY: Record<WizardFinalizeErrorCategory, Pick<WizardFinalizeErrorDescriptor, "headline" | "hint">> = {
   validation: {
@@ -134,7 +162,7 @@ interface BackendErrorShape {
   detail?: string;
 }
 
-function createProgressFeedback(
+export function createProgressFeedback(
   phase: WizardFinalizePhase,
   descriptionOverride?: string,
 ): WizardFinalizeFeedback {
@@ -150,7 +178,7 @@ function createProgressFeedback(
   };
 }
 
-function createErrorFeedback(
+export function createErrorFeedback(
   category: WizardFinalizeErrorCategory,
   description: string,
   detail?: string,
@@ -282,7 +310,7 @@ function mapErrorCodeToCategory(code?: string, message?: string): WizardFinalize
   return ERROR_CODE_CATEGORY[normalized] ?? inferCategoryFromMessage(message);
 }
 
-function resolveFinalizeError(error: unknown): WizardFinalizeFeedback {
+export function resolveFinalizeError(error: unknown): WizardFinalizeFeedback {
   const parsed = parseBackendError(error);
   const category = mapErrorCodeToCategory(parsed.code, parsed.message);
   const description = parsed.message ?? FINALIZE_ERROR_COPY[category].hint ?? "Unknown error";
@@ -304,7 +332,7 @@ interface BuildWizardFinalizePayloadParams {
   existingFolderNames?: readonly string[];
 }
 
-function buildWizardFinalizePayload(params: BuildWizardFinalizePayloadParams): WizardFinalizeBuildResult {
+export function buildWizardFinalizePayload(params: BuildWizardFinalizePayloadParams): WizardFinalizeBuildResult {
   const trimmedProjectName = params.projectName.trim();
   if (!trimmedProjectName) {
     return {
@@ -415,6 +443,135 @@ function buildWizardFinalizePayload(params: BuildWizardFinalizePayloadParams): W
   };
 }
 
+export function buildCreateProjectWithAssetsInput(
+  payload: WizardFinalizePayload,
+): CreateProjectWithAssetsInput {
+  return {
+    projectName: payload.projectName,
+    projectFolderName: payload.projectFolderName,
+    projectStatus: "active",
+    userUuid: payload.userUuid,
+    clientUuid: payload.clientUuid ?? undefined,
+    type: payload.projectType,
+    notes: payload.notes ?? undefined,
+    subjects: payload.subjects,
+    languagePairs: payload.languagePairs,
+    assets: payload.files.map((file) => ({
+      draftId: file.id,
+      name: file.name,
+      extension: file.extension,
+      role: file.role,
+      path: file.path,
+    })),
+  };
+}
+
+export function deriveWizardConversionPlan(
+  response: CreateProjectWithAssetsResponse,
+  input: CreateProjectWithAssetsInput,
+): WizardConversionPlan {
+  const projectUuid = response.project.project.projectUuid;
+  const projectDir = response.projectDir;
+  const tasks: WizardConversionPlan["tasks"] = [];
+
+  for (const asset of response.assets) {
+    if (asset.role !== "processable") {
+      continue;
+    }
+
+    if (!asset.storedRelPath) {
+      console.warn(
+        "[wizard] Skipping conversion planning for asset without stored path",
+        asset,
+      );
+      continue;
+    }
+
+    const sourceAbsPath = joinPathSegments(projectDir, asset.storedRelPath);
+    const fileStem = extractFileStem(asset.storedRelPath);
+
+    for (const pair of input.languagePairs) {
+      const languageFolder = `${pair.sourceLang}_${pair.targetLang}`;
+      const outputRelPath = joinPathSegments(
+        "Translations",
+        languageFolder,
+        `${fileStem}.xlf`,
+      );
+      const outputAbsPath = joinPathSegments(projectDir, outputRelPath);
+
+      tasks.push({
+        draftId: asset.draftId,
+        fileUuid: asset.fileUuid ?? null,
+        artifactUuid: null,
+        jobType: "xliff_conversion",
+        sourceLanguage: pair.sourceLang,
+        targetLanguage: pair.targetLang,
+        sourceAbsPath,
+        outputAbsPath,
+        outputRelPath,
+      });
+    }
+  }
+
+  if (tasks.length > 0) {
+    console.debug(
+      "[wizard] Prepared conversion tasks for project",
+      projectUuid,
+      tasks.map((task) => ({
+        draftId: task.draftId,
+        source: task.sourceAbsPath,
+        target: task.outputAbsPath,
+        pair: `${task.sourceLanguage}→${task.targetLanguage}`,
+      })),
+    );
+  } else {
+    console.debug(
+      "[wizard] No conversion tasks generated for project (no processable assets or language pairs)",
+      projectUuid,
+    );
+  }
+
+  return {
+    projectUuid,
+    projectDir,
+    tasks,
+  };
+}
+
+export function mapConversionPlanFromResponse(
+  response: CreateProjectWithAssetsResponse,
+): WizardConversionPlan | null {
+  const plan = response.conversionPlan;
+  if (!plan) {
+    return null;
+  }
+
+  const { projectUuid, tasks } = plan;
+  const projectDir = response.projectDir;
+
+  return {
+    projectUuid,
+    projectDir,
+    tasks: tasks.map((task) => ({
+      draftId: task.draftId,
+      fileUuid: task.fileUuid ?? null,
+      artifactUuid: task.artifactUuid ?? null,
+      jobType: task.jobType ?? null,
+      sourceLanguage: task.sourceLang,
+      targetLanguage: task.targetLang,
+      sourceAbsPath: task.sourcePath,
+      outputRelPath: task.xliffRelPath,
+      outputAbsPath: joinPathSegments(projectDir, task.xliffRelPath),
+    })),
+  };
+}
+
+export function describeConversionTask(task: WizardConversionTask, index: number, total: number): string {
+  const fileName = extractFileName(task.sourceAbsPath);
+  const position = `${index + 1} of ${total}`;
+  return `Converting ${fileName} (${task.sourceLanguage} → ${task.targetLanguage}) — ${position}.`;
+}
+
 interface CreateProjectWizardV2Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -456,6 +613,161 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
   const dismissFeedback = useCallback(() => {
     setFeedback({ status: "idle" });
   }, []);
+
+  const conversionPlanRef = useRef<WizardConversionPlan | null>(null);
+
+  const runConversionPlan = useCallback(
+    async (plan: WizardConversionPlan) => {
+      if (plan.tasks.length === 0) {
+        return;
+      }
+
+      const total = plan.tasks.length;
+
+      for (let index = 0; index < total; index += 1) {
+        const task = plan.tasks[index];
+        const description = describeConversionTask(task, index, total);
+        setFeedback(createProgressFeedback("running-conversions", description));
+
+        const markJobStatus = async (
+          status: "pending" | "running" | "completed" | "failed",
+          errorLog?: string,
+        ) => {
+          if (!task.artifactUuid || !task.jobType) {
+            return;
+          }
+
+          try {
+            await updateJobStatus({
+              artifactUuid: task.artifactUuid,
+              jobType: task.jobType,
+              jobStatus: status,
+              errorLog,
+            });
+          } catch (jobError) {
+            console.warn(
+              "[wizard] failed to update job status",
+              status,
+              jobError,
+            );
+          }
+        };
+
+        const markArtifactGenerated = async () => {
+          if (!task.artifactUuid || !task.fileUuid) {
+            return;
+          }
+
+          try {
+            await upsertArtifactRecord({
+              artifactUuid: task.artifactUuid,
+              projectUuid: plan.projectUuid,
+              fileUuid: task.fileUuid,
+              artifactType: "xliff",
+              status: "GENERATED",
+            });
+          } catch (artifactError) {
+            console.warn(
+              "[wizard] failed to persist artifact metadata",
+              artifactError,
+            );
+          }
+        };
+
+        await markJobStatus("running");
+
+        const result = await convertStream(
+          {
+            file: task.sourceAbsPath,
+            srcLang: task.sourceLanguage,
+            tgtLang: task.targetLanguage,
+            xliff: task.outputAbsPath,
+          },
+          {
+            onStdout: (line) => {
+              if (line.trim().length > 0) {
+                console.debug("[wizard] convert stdout", line.trim());
+              }
+            },
+            onStderr: (line) => {
+              if (line.trim().length > 0) {
+                console.warn("[wizard] convert stderr", line.trim());
+              }
+            },
+          },
+        );
+
+        if (!result?.ok) {
+          const message =
+            result?.knownError?.message ??
+            result?.message ??
+            `Conversion failed for ${extractFileName(task.sourceAbsPath)}.`;
+          const detailCandidate =
+            result?.knownError?.detail ??
+            result?.stderr ??
+            result?.stdout ??
+            undefined;
+          const detail = detailCandidate && detailCandidate.trim().length > 0 ? detailCandidate.trim() : undefined;
+
+          await markJobStatus("failed", detail ?? message);
+
+          throw {
+            code: "CONVERSION_STREAM_FAILED",
+            message,
+            detail,
+          } satisfies BackendErrorShape;
+        }
+
+        const validationResult = await validateStream(
+          { xliff: task.outputAbsPath },
+          {
+            onStdout: (line) => {
+              if (line.trim().length > 0) {
+                console.debug("[wizard] validate stdout", line.trim());
+              }
+            },
+            onStderr: (line) => {
+              if (line.trim().length > 0) {
+                console.warn("[wizard] validate stderr", line.trim());
+              }
+            },
+          },
+        );
+
+        if (!validationResult.ok) {
+          const message =
+            validationResult.knownError?.message ??
+            validationResult.message ??
+            `Validation failed for ${extractFileName(task.outputAbsPath)}.`;
+          const detailCandidate =
+            validationResult.knownError?.detail ??
+            validationResult.stderr ??
+            validationResult.stdout ??
+            undefined;
+          const detail = detailCandidate && detailCandidate.trim().length > 0 ? detailCandidate.trim() : undefined;
+
+          await markJobStatus("failed", detail ?? message);
+
+          throw {
+            code: "VALIDATION_FAILED",
+            message,
+            detail,
+          } satisfies BackendErrorShape;
+        }
+
+        await markJobStatus("completed");
+        await markArtifactGenerated();
+      }
+
+      setFeedback(
+        createProgressFeedback(
+          "running-conversions",
+          "Conversions completed successfully.",
+        ),
+      );
+    },
+    [setFeedback],
+  );
 
   const showDropError = useCallback((message: string) => {
     setFeedback(
@@ -692,27 +1004,79 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
     }
 
     const payload = finalizeResult.payload;
+    const commandInput = buildCreateProjectWithAssetsInput(payload);
 
     startSubmission(async () => {
-      setFeedback(createProgressFeedback("creating-project-record"));
+      setFeedback(createProgressFeedback("validating-input"));
+
+      let unlistenProgress: UnlistenFn | null = null;
 
       try {
-        console.debug("[wizard] finalize payload", payload);
-        const response = await createProjectBundle({
-          projectName: payload.projectName,
-          projectStatus: "active",
-          userUuid: payload.userUuid,
-          clientUuid: payload.clientUuid,
-          type: payload.projectType,
-          notes: payload.notes,
-          subjects: payload.subjects,
-          languagePairs: payload.languagePairs,
-        });
+        try {
+          unlistenProgress = await listen<WizardFinalizeProgressEventPayload>(
+            PROJECT_CREATE_PROGRESS_EVENT,
+            (event) => {
+              const payload = event.payload;
+              if (!payload) {
+                return;
+              }
 
-        onProjectCreated?.(response);
+              const { phase, description, projectFolderName } = payload;
+
+              if (
+                projectFolderName &&
+                projectFolderName !== commandInput.projectFolderName
+              ) {
+                return;
+              }
+
+              if (isWizardFinalizePhase(phase)) {
+                setFeedback(createProgressFeedback(phase, description));
+              }
+            },
+          );
+        } catch (listenerError) {
+          console.warn(
+            "[wizard] failed to register project create progress listener",
+            listenerError,
+          );
+        }
+
+        console.debug("[wizard] finalize payload", payload);
+        console.debug("[wizard] createProjectWithAssets input", commandInput);
+        const response = await createProjectWithAssets(commandInput);
+        console.debug("[wizard] createProjectWithAssets response", response);
+
+        const conversionPlan =
+          mapConversionPlanFromResponse(response) ??
+          deriveWizardConversionPlan(response, commandInput);
+        conversionPlanRef.current = conversionPlan;
+
+        const processableCount = response.assets.filter(
+          (asset) => asset.role === "processable" && asset.storedRelPath,
+        ).length;
+        const expectedTasks = processableCount * commandInput.languagePairs.length;
+        if (expectedTasks > 0 && conversionPlan.tasks.length !== expectedTasks) {
+          console.warn(
+            "[wizard] Conversion plan mismatch detected",
+            { expectedTasks, actualTasks: conversionPlan.tasks.length },
+          );
+        }
+
+        if (conversionPlan.tasks.length > 0) {
+          await runConversionPlan(conversionPlan);
+        }
+
+        onProjectCreated?.(response.project);
+        void refreshProjectsResource().catch((refreshError) => {
+          console.warn(
+            "[wizard] failed to refresh projects resource after creation",
+            refreshError,
+          );
+        });
         toast({
           title: "Project created",
-          description: `${payload.projectName} was created. TODO: wire file ingestion into the v2 pipeline.`,
+          description: `${payload.projectName} has been created and initial conversions completed.`,
         });
         handleClear();
         onOpenChange(false);
@@ -733,6 +1097,14 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
             description: "We couldn't create the project. Please review the inputs and try again.",
           });
         }
+      } finally {
+        if (unlistenProgress) {
+          try {
+            unlistenProgress();
+          } catch (cleanupError) {
+            console.warn("[wizard] failed to remove progress listener", cleanupError);
+          }
+        }
       }
     });
   }, [
@@ -747,11 +1119,20 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
     files,
     setFeedback,
     startSubmission,
+    runConversionPlan,
     onProjectCreated,
     toast,
     handleClear,
     onOpenChange,
   ]);
+
+  const handleRetryFinalize = useCallback(() => {
+    if (submissionPending) {
+      return;
+    }
+    dismissFeedback();
+    handleFinalize();
+  }, [dismissFeedback, handleFinalize, submissionPending]);
 
   const resetWizardOnClose = useCallback(() => {
     handleClear();
@@ -852,7 +1233,11 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
             />
           </form>
 
-          <WizardFeedbackOverlay feedback={feedback} onDismiss={dismissFeedback} />
+          <WizardFeedbackOverlay
+            feedback={feedback}
+            onDismiss={dismissFeedback}
+            onRetry={!submissionPending ? handleRetryFinalize : undefined}
+          />
         </div>
       </DialogContent>
       </Dialog>

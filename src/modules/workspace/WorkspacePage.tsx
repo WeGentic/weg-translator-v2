@@ -8,7 +8,7 @@ import { type MenuItem } from "@/app/shell/main_elements";
 import { useAppHealth } from "@/app/hooks/useAppHealth";
 import { useGlobalNavigationEvents } from "@/modules/workspace/hooks";
 import { useWorkspaceShell } from "@/modules/workspace/state";
-import { toProjectViewKey, type MainView } from "@/app/state/main-view";
+import { parseClientIdFromKey, toProjectViewKey, type MainView } from "@/app/state/main-view";
 import { EditorPanel, EditorPlaceholder } from "@/modules/editor";
 import { ProjectOverview } from "@/modules/projects/ui/overview/ProjectOverview";
 import { ProjectOverviewPlaceholder } from "@/modules/projects/ui/overview/ProjectOverviewPlaceholder";
@@ -19,6 +19,7 @@ import { DashboardView } from "@/modules/dashboard";
 import { ResourcesView } from "@/modules/resources";
 import { ProjectManagerRoute as ProjectManagerV2View } from "@/modules/projects";
 import { ClientsView } from "@/modules/clients";
+import { ClientDetailsView } from "@/modules/clients/view/ClientDetailsView";
 
 const FIXED_MENU_ITEMS: MenuItem[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -95,6 +96,18 @@ export function WorkspacePage({ initialView = "projects" }: WorkspacePageProps) 
 
     if (mainView === "clients") {
       return <ClientsView />;
+    }
+
+    const activeClientId = parseClientIdFromKey(mainView);
+    if (activeClientId) {
+      return (
+        <ClientDetailsView
+          clientUuid={activeClientId}
+          onBack={() => {
+            setMainView("clients");
+          }}
+        />
+      );
     }
 
     if (mainView === "resource") {

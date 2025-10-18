@@ -1,8 +1,12 @@
-'use no memo';
+"use no memo";
 
 import type { ColumnDef } from "@tanstack/react-table";
+import { FolderOpen, Pencil, Trash2 } from "lucide-react";
 
 import type { ClientRecord } from "@/shared/types/database";
+import { Button } from "@/shared/ui/button";
+import { Checkbox } from "@/shared/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 
 export interface ClientRow {
   id: string;
@@ -60,8 +64,57 @@ export function toClientRow(record: ClientRecord): ClientRow {
   };
 }
 
-export function buildClientColumns(): ColumnDef<ClientRow>[] {
+export interface ClientColumnOptions {
+  onRequestOpen?: (client: ClientRow) => void;
+  onRequestEdit?: (client: ClientRow) => void;
+  onRequestDelete?: (client: ClientRow) => void;
+}
+
+export function buildClientColumns(options: ClientColumnOptions = {}): ColumnDef<ClientRow>[] {
   return [
+    {
+      id: "select",
+      header: ({ table }) => {
+        const isAllSelected = table.getIsAllRowsSelected();
+        const isSomeSelected = table.getIsSomeRowsSelected();
+        const checkedState = isAllSelected ? true : isSomeSelected ? "indeterminate" : false;
+
+        return (
+          <Checkbox
+            aria-label="Select all clients"
+            checked={checkedState}
+            onCheckedChange={(value) => {
+              table.toggleAllRowsSelected(value === true);
+            }}
+            className="translate-y-[1px]"
+          />
+        );
+      },
+      cell: ({ row }) => {
+        const isSelected = row.getIsSelected();
+        const isSomeSelected = row.getIsSomeSelected();
+        const checkedState = isSelected ? true : isSomeSelected ? "indeterminate" : false;
+        const trimmedName = row.original.name.trim();
+        const nameLabel = trimmedName.length > 0 ? trimmedName : "client";
+
+        return (
+          <Checkbox
+            aria-label={`Select ${nameLabel}`}
+            checked={checkedState}
+            onCheckedChange={(value) => {
+              row.toggleSelected(value === true);
+            }}
+            className="translate-y-[1px]"
+          />
+        );
+      },
+      enableSorting: false,
+      enableHiding: false,
+      meta: {
+        headerClassName: "w-12 px-3 text-center",
+        cellClassName: "w-12 px-3 text-center",
+      } satisfies ColumnMetaShape,
+    },
     {
       accessorKey: "name",
       id: "name",
@@ -96,7 +149,7 @@ export function buildClientColumns(): ColumnDef<ClientRow>[] {
     {
       accessorKey: "email",
       id: "email",
-      header: () => <span className="text-xs font-semibold uppercase tracking-wide">Email</span>,
+      header: () => <span className="text-xs font-semibold text-foreground">Email</span>,
       cell: ({ getValue }) => <FormatPlaceholder value={getValue<string | null>()} />,
       enableSorting: false,
       meta: {
@@ -107,7 +160,7 @@ export function buildClientColumns(): ColumnDef<ClientRow>[] {
     {
       accessorKey: "phone",
       id: "phone",
-      header: () => <span className="text-xs font-semibold uppercase tracking-wide">Phone</span>,
+      header: () => <span className="text-xs font-semibold text-foreground">Phone</span>,
       cell: ({ getValue }) => <FormatPlaceholder value={getValue<string | null>()} />,
       enableSorting: false,
       meta: {
@@ -116,57 +169,95 @@ export function buildClientColumns(): ColumnDef<ClientRow>[] {
       } satisfies ColumnMetaShape,
     },
     {
-      accessorKey: "address",
-      id: "address",
-      header: () => <span className="text-xs font-semibold uppercase tracking-wide">Address</span>,
-      cell: ({ getValue }) => {
-        const value = getValue<string | null>();
-        if (!value) {
-          return <FormatPlaceholder value={null} />;
-        }
-        return (
-          <span className="line-clamp-2 text-sm text-foreground/90" title={value}>
-            {value}
-          </span>
-        );
-      },
+      id: "actions",
+      header: () => <span className="text-xs font-semibold text-foreground">Actions</span>,
+      cell: ({ row }) => (
+        <ClientActionsCell
+          client={row.original}
+          onRequestOpen={options.onRequestOpen}
+          onRequestEdit={options.onRequestEdit}
+          onRequestDelete={options.onRequestDelete}
+        />
+      ),
       enableSorting: false,
       meta: {
-        headerClassName: "min-w-[220px]",
-        cellClassName: "min-w-[220px]",
-      } satisfies ColumnMetaShape,
-    },
-    {
-      accessorKey: "vatNumber",
-      id: "vatNumber",
-      header: () => <span className="text-xs font-semibold uppercase tracking-wide">VAT #</span>,
-      cell: ({ getValue }) => <FormatPlaceholder value={getValue<string | null>()} />,
-      enableSorting: false,
-      meta: {
-        headerClassName: "min-w-[120px]",
-        cellClassName: "min-w-[120px]",
-      } satisfies ColumnMetaShape,
-    },
-    {
-      accessorKey: "note",
-      id: "note",
-      header: () => <span className="text-xs font-semibold uppercase tracking-wide">Note</span>,
-      cell: ({ getValue }) => {
-        const value = getValue<string | null>();
-        if (!value) {
-          return <FormatPlaceholder value={null} />;
-        }
-        return (
-          <span className="line-clamp-2 text-sm text-foreground/90" title={value}>
-            {value}
-          </span>
-        );
-      },
-      enableSorting: false,
-      meta: {
-        headerClassName: "min-w-[200px]",
-        cellClassName: "min-w-[200px]",
+        headerClassName: "min-w-[160px] text-center",
+        cellClassName: "min-w-[160px] text-right",
       } satisfies ColumnMetaShape,
     },
   ];
+}
+
+function ClientActionsCell({
+  client,
+  onRequestOpen,
+  onRequestEdit,
+  onRequestDelete,
+}: {
+  client: ClientRow;
+  onRequestOpen?: (client: ClientRow) => void;
+  onRequestEdit?: (client: ClientRow) => void;
+  onRequestDelete?: (client: ClientRow) => void;
+}) {
+  const trimmedName = client.name.trim();
+  const nameLabel = trimmedName.length > 0 ? trimmedName : "client";
+
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Open ${nameLabel}`}
+            onClick={() => {
+              onRequestOpen?.(client);
+            }}
+          >
+            <FolderOpen className="size-4" aria-hidden="true" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" align="end">
+          Open client
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Edit ${nameLabel}`}
+            onClick={() => {
+              onRequestEdit?.(client);
+            }}
+          >
+            <Pencil className="size-4" aria-hidden="true" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" align="center">
+          Edit client
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Delete ${nameLabel}`}
+            onClick={() => {
+              onRequestDelete?.(client);
+            }}
+          >
+            <Trash2 className="size-4" aria-hidden="true" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" align="start">
+          Delete client
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
 }

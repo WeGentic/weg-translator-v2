@@ -2,7 +2,6 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useClientsData } from "@/modules/clients/hooks/useClientsData";
-import type { ClientsFilterValue } from "@/modules/clients/constants";
 import type { ClientRecord } from "@/shared/types/database";
 import { listClientRecords } from "@/core/ipc/db/clients";
 
@@ -47,35 +46,21 @@ describe("useClientsData", () => {
     vi.clearAllMocks();
   });
 
-  it("loads clients and applies search/filter criteria", async () => {
+  it("loads clients and applies search criteria", async () => {
     mockListClientRecords.mockResolvedValue([...BASE_CLIENTS]);
 
-    type HookProps = { search: string; filter: ClientsFilterValue };
-    const initialProps: HookProps = { search: "", filter: "all" };
-
-    const { result, rerender } = renderHook((props: HookProps) => useClientsData(props), {
-      initialProps,
+    const { result, rerender } = renderHook(({ search }: { search: string }) => useClientsData({ search }), {
+      initialProps: { search: "" },
     });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.error).toBeNull();
     expect(result.current.clients).toHaveLength(3);
 
-    rerender({ search: "acme", filter: "all" });
+    rerender({ search: "acme" });
     await waitFor(() => {
       expect(result.current.clients).toHaveLength(1);
       expect(result.current.clients[0]?.name).toBe("Acme Localization");
-    });
-
-    rerender({ search: "", filter: "with-contact" });
-    await waitFor(() => {
-      expect(result.current.clients).toHaveLength(2);
-    });
-
-    rerender({ search: "", filter: "missing-contact" });
-    await waitFor(() => {
-      expect(result.current.clients).toHaveLength(1);
-      expect(result.current.clients[0]?.name).toBe("Chronicle Media");
     });
 
     act(() => {
@@ -90,10 +75,10 @@ describe("useClientsData", () => {
       });
     });
 
-    rerender({ search: "", filter: "with-contact" });
+    rerender({ search: "" });
     await waitFor(() => {
       expect(result.current.clients[0]?.name).toBe("Acme Localization");
-      expect(result.current.clients).toHaveLength(3);
+      expect(result.current.clients).toHaveLength(4);
     });
   });
 
@@ -101,7 +86,7 @@ describe("useClientsData", () => {
     mockListClientRecords.mockRejectedValueOnce(new Error("network down"));
     mockListClientRecords.mockResolvedValueOnce([...BASE_CLIENTS.slice(0, 1)]);
 
-    const { result } = renderHook(() => useClientsData({ search: "", filter: "all" }));
+    const { result } = renderHook(() => useClientsData({ search: "" }));
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.error).toMatch(/network down/i);

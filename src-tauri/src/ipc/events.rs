@@ -3,3 +3,5 @@ pub const TRANSLATION_COMPLETED: &str = "translation://completed";
 pub const TRANSLATION_FAILED: &str = "translation://failed";
 pub const PROJECTS_UPDATED: &str = "projects://updated";
 pub const PIPELINE_JOBS_NEED_ATTENTION: &str = "pipeline://jobs_need_attention";
+pub const PROJECT_CREATE_PROGRESS: &str = "project:create:progress";
+pub const PROJECT_CREATE_COMPLETE: &str = "project:create:complete";

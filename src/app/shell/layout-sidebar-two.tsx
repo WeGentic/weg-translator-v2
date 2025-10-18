@@ -1,8 +1,14 @@
-import { useEffect, useState, type PropsWithChildren } from "react";
+import { useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { ChevronLeft } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/utils/class-names";
+import { CLIENT_VIEW_PREFIX } from "@/app/state/main-view";
+import {
+  CLIENT_CLEAR_EVENT,
+  CLIENT_FOCUS_EVENT,
+  type ClientFocusDetail,
+} from "@/modules/clients/events";
 import { useLayoutSelector, useLayoutStoreApi } from "./layout-context";
 import { DashboardQuickActions } from "./sidebar-two-content/DashboardQuickActions";
 import { EditorMenu } from "./sidebar-two-content/EditorMenu";
@@ -31,8 +37,24 @@ export function LayoutSidebarTwo({
   const layoutStore = useLayoutStoreApi();
   const sidebarTwo = useLayoutSelector((state) => state.sidebarTwo);
   const sidebarTwoContent = useLayoutSelector((state) => state.sidebarTwoContent);
+  type SidebarView =
+    | "projects"
+    | "dashboard"
+    | "resource"
+    | "clients"
+    | "settings"
+    | "editor"
+    | "project"
+    | "client-detail";
+
   const [currentPage, setCurrentPage] = useState<string>("Projects");
-  const [currentView, setCurrentView] = useState<string>("projects");
+  const [currentView, setCurrentView] = useState<SidebarView>("projects");
+  const [focusedClient, setFocusedClient] = useState<ClientFocusDetail | null>(null);
+  const currentViewRef = useRef<SidebarView>("projects");
+
+  useEffect(() => {
+    currentViewRef.current = currentView;
+  }, [currentView]);
 
   useEffect(() => {
     const store = layoutStore;
@@ -49,7 +71,7 @@ export function LayoutSidebarTwo({
   // Listen for navigation events to update the page title and current view
   useEffect(() => {
     const handler: EventListener = (event) => {
-      const custom = event as CustomEvent<{ view?: string } | undefined>;
+      const custom = event as CustomEvent<{ view?: string; clientName?: string } | undefined>;
       const view = custom.detail?.view;
 
       if (view === "projects") {
@@ -61,6 +83,19 @@ export function LayoutSidebarTwo({
       } else if (view === "resource") {
         setCurrentPage("Resources");
         setCurrentView("resource");
+      } else if (view === "clients") {
+        setCurrentPage("Quick Actions");
+        setCurrentView("clients");
+      } else if (view?.startsWith(CLIENT_VIEW_PREFIX)) {
+        const clientId = view.slice(CLIENT_VIEW_PREFIX.length);
+        const clientName = custom.detail?.clientName;
+        setCurrentPage(clientName ? `Client: ${clientName}` : "Client");
+        setCurrentView("client-detail");
+        currentViewRef.current = "client-detail";
+        setFocusedClient((previous) => ({
+          clientUuid: clientId,
+          clientName: clientName ?? previous?.clientName ?? "Client",
+        }));
       } else if (view === "settings") {
         setCurrentPage("Settings");
         setCurrentView("settings");
@@ -73,9 +108,8 @@ export function LayoutSidebarTwo({
         setCurrentPage(projectName ? `Project: ${projectName}` : "Project");
         setCurrentView("project");
       } else if (view) {
-        // Capitalize first letter of any other view
         setCurrentPage(view.charAt(0).toUpperCase() + view.slice(1));
-        setCurrentView(view);
+        setCurrentView("projects");
       }
     };
 
@@ -97,12 +131,42 @@ export function LayoutSidebarTwo({
     return () => window.removeEventListener("sidebar-two:title", handler);
   }, []);
 
+  useEffect(() => {
+    const handleFocus = (event: Event) => {
+      const custom = event as CustomEvent<ClientFocusDetail>;
+      setFocusedClient(custom.detail);
+      setCurrentPage(
+        custom.detail.clientName.length > 0 ? `Client: ${custom.detail.clientName}` : "Client",
+      );
+      currentViewRef.current = "client-detail";
+      setCurrentView("client-detail");
+    };
+
+    const handleClear = () => {
+      setFocusedClient(null);
+      const wasFocused = currentViewRef.current === "client-detail";
+      if (wasFocused) {
+        currentViewRef.current = "clients";
+      }
+      setCurrentPage((previous) => (wasFocused ? "Quick Actions" : previous));
+      setCurrentView((previous) => (wasFocused ? "clients" : previous));
+    };
+
+    window.addEventListener(CLIENT_FOCUS_EVENT, handleFocus as EventListener);
+    window.addEventListener(CLIENT_CLEAR_EVENT, handleClear);
+
+    return () => {
+      window.removeEventListener(CLIENT_FOCUS_EVENT, handleFocus as EventListener);
+      window.removeEventListener(CLIENT_CLEAR_EVENT, handleClear);
+    };
+  }, []);
+
   // Auto-hide sidebar when on Settings view
   useEffect(() => {
     const store = layoutStore;
     if (currentView === "settings") {
       store.getState().setSidebarTwo({ visible: false });
-    } else if (!sidebarTwo.visible && currentView !== "settings") {
+    } else if (!sidebarTwo.visible) {
       // Restore visibility when leaving Settings (unless manually hidden)
       store.getState().setSidebarTwo({ visible: true });
     }
@@ -126,7 +190,21 @@ export function LayoutSidebarTwo({
     // Return view-specific content based on current route
     switch (currentView) {
       case "dashboard":
-        return <DashboardQuickActions />;
+        return <DashboardQuickActions activeView="dashboard" />;
+      case "clients":
+        return (
+          <DashboardQuickActions
+            activeView="clients"
+            focusedClient={focusedClient}
+          />
+        );
+      case "client-detail":
+        return (
+          <DashboardQuickActions
+            activeView="client-detail"
+            focusedClient={focusedClient}
+          />
+        );
       case "editor":
         return <EditorMenu />;
       case "resource":

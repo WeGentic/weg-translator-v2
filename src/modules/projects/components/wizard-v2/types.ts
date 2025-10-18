@@ -95,7 +95,8 @@ export type WizardFinalizePhase =
   | "preparing-folders"
   | "copying-assets"
   | "registering-database"
-  | "planning-conversions";
+  | "planning-conversions"
+  | "running-conversions";
 
 export type WizardFinalizeErrorCategory =
   | "validation"
@@ -123,3 +124,29 @@ export type WizardFinalizeFeedback =
   | { status: "idle" }
   | { status: "progress"; progress: WizardFinalizeProgressDescriptor }
   | { status: "error"; error: WizardFinalizeErrorDescriptor };
+
+export interface WizardFinalizeProgressEventPayload {
+  phase: string;
+  description?: string;
+  actionLabel?: string;
+  projectFolderName?: string;
+  projectUuid?: string;
+}
+
+export interface WizardConversionTask {
+  draftId: string;
+  fileUuid: string | null;
+  artifactUuid: string | null;
+  jobType: string | null;
+  sourceLanguage: string;
+  targetLanguage: string;
+  sourceAbsPath: string;
+  outputAbsPath: string;
+  outputRelPath: string;
+}
+
+export interface WizardConversionPlan {
+  projectUuid: string;
+  projectDir: string;
+  tasks: WizardConversionTask[];
+}

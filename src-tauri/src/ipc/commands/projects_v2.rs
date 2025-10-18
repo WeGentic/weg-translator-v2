@@ -1,29 +1,33 @@
+use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use serde_json::json;
 use tauri::ipc::InvokeError;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 use tokio::task;
 use uuid::Uuid;
 
 use crate::db::DbManager;
 use crate::db::types::{
-    FileInfoRecord, FileLanguagePairInput, NewFileInfoArgs, NewProjectArgs, NewProjectFileArgs,
-    ProjectBundle, ProjectFileBundle, ProjectLanguagePairInput, ProjectRecord, ProjectSubjectInput,
-    UpdateProjectArgs,
+    FileInfoRecord, FileLanguagePairInput, NewArtifactArgs, NewFileInfoArgs, NewJobArgs, NewProjectArgs,
+    NewProjectFileArgs, ProjectBundle, ProjectFileBundle, ProjectLanguagePairInput, ProjectRecord,
+    ProjectSubjectInput, UpdateProjectArgs,
 };
 use crate::ipc::dto::{
-    ArtifactV2Dto, AttachProjectFilePayload, CreateProjectPayload,
+    ArtifactV2Dto, AttachProjectFilePayload, ConversionPlanDto, ConversionTaskDto, CreateProjectPayload,
     CreateProjectWithAssetsPayload, CreateProjectWithAssetsResponseDto, FileInfoV2Dto,
     FileLanguagePairDto, JobV2Dto, ProjectAssetDescriptorDto, ProjectAssetResultDto,
     ProjectAssetRoleDto, ProjectBundleV2Dto, ProjectFileBundleV2Dto, ProjectFileLinkDto,
     ProjectLanguagePairDto, ProjectRecordV2Dto, UpdateProjectPayload,
 };
+use crate::ipc::events::{PROJECT_CREATE_COMPLETE, PROJECT_CREATE_PROGRESS};
 use crate::settings::SettingsManager;
 use crate::ipc::error::{IpcError, IpcResult};
 
 #[tauri::command]
 pub async fn create_project_with_assets_v2(
+    app: AppHandle,
     db: State<'_, DbManager>,
     settings: State<'_, SettingsManager>,
     payload: CreateProjectWithAssetsPayload,
@@ -35,12 +39,35 @@ pub async fn create_project_with_assets_v2(
     );
 
     let folder_name = validate_project_folder_name(&payload.project_folder_name)?;
+    emit_progress_event(
+        &app,
+        folder_name,
+        None,
+        "validating-input",
+        Some("Validating project details."),
+    );
+
     let settings_snapshot = settings.current().await;
     let projects_root = settings_snapshot.projects_dir();
     let destination = projects_root.join(folder_name);
 
     ensure_destination_available(destination.clone(), folder_name).await?;
+    emit_progress_event(
+        &app,
+        folder_name,
+        None,
+        "preparing-folders",
+        Some("Preparing project directories on disk."),
+    );
     let scaffold_guard = create_project_scaffold(destination.clone()).await?;
+
+    emit_progress_event(
+        &app,
+        folder_name,
+        None,
+        "creating-project-record",
+        Some("Saving project metadata."),
+    );
 
     let project_args = map_new_project_args_from_assets_payload(&payload)?;
     let project_bundle = db
@@ -49,6 +76,14 @@ pub async fn create_project_with_assets_v2(
         .map_err(IpcError::from)?;
 
     let project_uuid = project_bundle.project.project_uuid;
+
+    emit_progress_event(
+        &app,
+        folder_name,
+        Some(project_uuid),
+        "copying-assets",
+        Some("Copying project files."),
+    );
 
     let copied_assets = copy_project_assets(&destination, &payload.assets).await?;
 
@@ -100,6 +135,31 @@ pub async fn create_project_with_assets_v2(
         return Err(error.into());
     }
 
+    emit_progress_event(
+        &app,
+        folder_name,
+        Some(project_uuid),
+        "registering-database",
+        Some("Registering files in the database."),
+    );
+
+    emit_progress_event(
+        &app,
+        folder_name,
+        Some(project_uuid),
+        "planning-conversions",
+        Some("Planning conversion jobs."),
+    );
+
+    let conversion_plan = prepare_conversion_plan(
+        &db,
+        project_uuid,
+        &destination,
+        &copied_assets,
+        &payload.language_pairs,
+    )
+    .await?;
+
     let refreshed_bundle = db
         .get_project_bundle(project_uuid)
         .await
@@ -122,10 +182,17 @@ pub async fn create_project_with_assets_v2(
         project: map_project_bundle(refreshed_bundle),
         project_dir: destination.to_string_lossy().into_owned(),
         assets: asset_results,
-        conversion_plan: None,
+        conversion_plan,
     };
 
     scaffold_guard.commit();
+
+    let task_count = response
+        .conversion_plan
+        .as_ref()
+        .map(|plan| plan.tasks.len())
+        .unwrap_or(0);
+    emit_completion_event(&app, folder_name, project_uuid, task_count);
 
     Ok(response)
 }
@@ -451,6 +518,252 @@ fn cleanup_files(paths: &[PathBuf]) {
             );
         }
     }
+}
+
+fn emit_progress_event(
+    app: &AppHandle,
+    folder_name: &str,
+    project_uuid: Option<Uuid>,
+    phase: &str,
+    description: Option<&str>,
+) {
+    let payload = json!({
+        "phase": phase,
+        "projectFolderName": folder_name,
+        "projectUuid": project_uuid.map(|value| value.to_string()),
+        "description": description,
+    });
+
+    if let Err(error) = app.emit(PROJECT_CREATE_PROGRESS, payload) {
+        log::warn!(
+            target: "ipc::projects_v2",
+            "failed to emit project creation progress event: {error}"
+        );
+    }
+}
+
+fn emit_completion_event(
+    app: &AppHandle,
+    folder_name: &str,
+    project_uuid: Uuid,
+    task_count: usize,
+) {
+    let payload = json!({
+        "projectFolderName": folder_name,
+        "projectUuid": project_uuid.to_string(),
+        "conversionTaskCount": task_count,
+    });
+
+    if let Err(error) = app.emit(PROJECT_CREATE_COMPLETE, payload) {
+        log::warn!(
+            target: "ipc::projects_v2",
+            "failed to emit project creation completion event: {error}"
+        );
+    }
+}
+
+fn sanitize_locale_segment(input: &str) -> String {
+    let trimmed = input.trim();
+    let mut sanitized = String::with_capacity(trimmed.len());
+
+    for ch in trimmed.chars() {
+        if ch.is_ascii_alphanumeric() || ch == '-' {
+            sanitized.push(ch);
+        } else if ch == '_' {
+            sanitized.push('_');
+        } else {
+            sanitized.push('_');
+        }
+    }
+
+    let collapsed = sanitized.trim_matches('_');
+    if collapsed.is_empty() {
+        "und".into()
+    } else {
+        collapsed.to_string()
+    }
+}
+
+fn language_pair_directory_name(pair: &ProjectLanguagePairDto) -> String {
+    let source = sanitize_locale_segment(&pair.source_lang);
+    let target = sanitize_locale_segment(&pair.target_lang);
+    format!("{source}_{target}")
+}
+
+async fn create_language_pair_directories(
+    translations_root: &Path,
+    language_pairs: &[ProjectLanguagePairDto],
+) -> Result<(), InvokeError> {
+    if language_pairs.is_empty() {
+        return Ok(());
+    }
+
+    let root = translations_root.to_path_buf();
+    let directories: Vec<String> = language_pairs
+        .iter()
+        .map(language_pair_directory_name)
+        .collect();
+
+    let creation_result = task::spawn_blocking(move || -> Result<(), IpcError> {
+        let mut seen = HashSet::new();
+        for dir_name in directories {
+            if !seen.insert(dir_name.clone()) {
+                continue;
+            }
+
+            let dir_path = root.join(&dir_name);
+            if let Err(error) = fs::create_dir_all(&dir_path) {
+                return Err(IpcError::Internal(format!(
+                    "Failed to create translation directory '{}': {}",
+                    dir_path.display(),
+                    error
+                )));
+            }
+        }
+
+        Ok(())
+    })
+    .await
+    .map_err(|join_err| {
+        InvokeError::from(IpcError::Internal(format!(
+            "Failed to create translation directories: {join_err}"
+        )))
+    })?;
+
+    creation_result.map_err(InvokeError::from)
+}
+
+async fn cleanup_seeded_artifacts_and_jobs(
+    db: &DbManager,
+    jobs: &[(Uuid, String)],
+    artifacts: &[Uuid],
+) {
+    for (artifact_uuid, job_type) in jobs.iter().rev() {
+        if let Err(error) = db.delete_job_record(*artifact_uuid, job_type).await {
+            log::warn!(
+                target: "ipc::projects_v2",
+                "failed to rollback job '{}': {}",
+                artifact_uuid,
+                error
+            );
+        }
+    }
+
+    for artifact_uuid in artifacts.iter().rev() {
+        if let Err(error) = db.delete_artifact_record(*artifact_uuid).await {
+            log::warn!(
+                target: "ipc::projects_v2",
+                "failed to rollback artifact '{}': {}",
+                artifact_uuid,
+                error
+            );
+        }
+    }
+}
+
+async fn prepare_conversion_plan(
+    db: &DbManager,
+    project_uuid: Uuid,
+    project_dir: &Path,
+    copied_assets: &[CopiedAssetInfo],
+    language_pairs: &[ProjectLanguagePairDto],
+) -> Result<Option<ConversionPlanDto>, InvokeError> {
+    if language_pairs.is_empty() {
+        return Ok(None);
+    }
+
+    let translations_root = project_dir.join("Translations");
+    create_language_pair_directories(&translations_root, language_pairs).await?;
+
+    let processable_assets: Vec<&CopiedAssetInfo> = copied_assets
+        .iter()
+        .filter(|asset| matches!(asset.role, ProjectAssetRoleDto::Processable))
+        .collect();
+
+    if processable_assets.is_empty() {
+        return Ok(Some(ConversionPlanDto {
+            project_uuid: project_uuid.to_string(),
+            tasks: Vec::new(),
+        }));
+    }
+
+    let mut tasks = Vec::new();
+    let mut created_artifacts = Vec::new();
+    let mut created_jobs = Vec::new();
+
+    for asset in processable_assets {
+        let source_path = asset.absolute_path.to_string_lossy().into_owned();
+        let stored_rel_path = Path::new(&asset.stored_rel_path);
+        let file_stem = stored_rel_path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .map(str::to_owned)
+            .unwrap_or_else(|| "artifact".to_string());
+
+        for pair in language_pairs {
+            let language_dir = language_pair_directory_name(pair);
+            let output_rel_path = Path::new("Translations")
+                .join(&language_dir)
+                .join(format!("{file_stem}.xlf"));
+            let output_rel_path_str = output_rel_path.to_string_lossy().into_owned();
+            let artifact_uuid = Uuid::new_v4();
+            let job_type = "xliff_conversion".to_string();
+
+            let artifact_args = NewArtifactArgs {
+                artifact_uuid,
+                project_uuid,
+                file_uuid: asset.file_uuid,
+                artifact_type: "xliff".into(),
+                size_bytes: None,
+                segment_count: None,
+                token_count: None,
+                status: "PENDING".into(),
+            };
+
+            if let Err(error) = db.upsert_artifact_record(artifact_args).await {
+                cleanup_seeded_artifacts_and_jobs(db, &created_jobs, &created_artifacts).await;
+                return Err(IpcError::from(error).into());
+            }
+            created_artifacts.push(artifact_uuid);
+
+            let job_args = NewJobArgs {
+                artifact_uuid,
+                job_type: job_type.clone(),
+                project_uuid,
+                job_status: "pending".into(),
+                error_log: None,
+            };
+
+            if let Err(error) = db.upsert_job_record(job_args).await {
+                cleanup_seeded_artifacts_and_jobs(db, &created_jobs, &created_artifacts).await;
+                return Err(IpcError::from(error).into());
+            }
+            created_jobs.push((artifact_uuid, job_type.clone()));
+
+            tasks.push(ConversionTaskDto {
+                draft_id: asset.draft_id.clone(),
+                file_uuid: Some(asset.file_uuid.to_string()),
+                artifact_uuid: Some(artifact_uuid.to_string()),
+                job_type: Some(job_type.clone()),
+                source_lang: pair.source_lang.clone(),
+                target_lang: pair.target_lang.clone(),
+                source_path: source_path.clone(),
+                xliff_rel_path: output_rel_path_str.clone(),
+            });
+        }
+    }
+
+    log::debug!(
+        target: "ipc::projects_v2",
+        "Prepared {} conversion tasks for project {}",
+        tasks.len(),
+        project_uuid
+    );
+
+    Ok(Some(ConversionPlanDto {
+        project_uuid: project_uuid.to_string(),
+        tasks,
+    }))
 }
 
 fn map_asset_role_to_file_info_type(role: ProjectAssetRoleDto) -> String {

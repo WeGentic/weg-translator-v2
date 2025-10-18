@@ -116,7 +116,7 @@
 
 ### Task 1
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Detailed description (scope/goals)**: Align wizard state, validation logic, and backend expectations into a single project-creation payload contract with clear error semantics.
 **Feature required (optional)**: F-002
 **Purpose/Outcome**: Ensure front-end can assemble a canonical payload while surfacing validation feedback prior to heavy operations.
@@ -238,7 +238,7 @@
 
 #### Step 2.7
 
-**Status**: IN PROGRESS
+**Status**: COMPLETED
 **Description**: Create language pair translation subdirectories and seed conversion job records.
 **Codebase touched**: src-tauri/src/ipc/commands/projects_v2.rs, src-tauri/src/db/operations/projects_v2.rs, src-tauri/src/db/operations/jobs_v2.rs
 **Sample snippets (optional)**: ...
@@ -246,11 +246,11 @@
 **How to**: Add helper to join sanitized locales; call `jobs_v2::upsert_job` with status `pending`.
 **Check**: Directory tree exists; job table contains entries for each processable file/pair combination.
 **Gate (Exit Criteria)**: Translation directories ready and jobs persisted for downstream conversion.
-**Notes**: TODO — scaffolding not yet implemented; awaiting next step integration.
+**Notes**: `create_project_with_assets_v2` now prepares translation subdirectories and seeds pending conversion artifacts/jobs for each processable file and language pair.
 
 #### Step 2.8
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Finalize command response with bundle summary and ensure rollback/cleanup on any failure path.
 **Codebase touched**: src-tauri/src/ipc/commands/projects_v2.rs
 **Sample snippets (optional)**: ...
@@ -258,6 +258,7 @@
 **How to**: Use custom struct implementing `Drop` to remove directories if `commit` not reached.
 **Check**: Manual panic during file copy leaves no directories or DB rows.
 **Gate (Exit Criteria)**: Command guarantees atomicity and returns enriched payload for UI.
+**Notes**: Progress/complete events now stream to the frontend and the scaffold guard still rolls back on any failure path before commit.
 
 ### Task 3
 
@@ -268,7 +269,7 @@
 
 #### Step 3.1
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Update IPC adapters to call new command and return structured response with project + conversion plan summary.
 **Codebase touched**: src/core/ipc/db/projects.ts, src/core/ipc/client.ts
 **Sample snippets (optional)**: ...
@@ -279,7 +280,7 @@
 
 #### Step 3.2
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Integrate progress handling in wizard using `WizardFeedbackOverlay`, including streaming updates via Tauri events.
 **Codebase touched**: src/modules/projects/components/wizard-v2/CreateProjectWizardV2.tsx, src/modules/projects/components/wizard-v2/components/WizardFeedbackOverlay.tsx
 **Sample snippets (optional)**: ...
@@ -290,7 +291,7 @@
 
 #### Step 3.3
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Handle finalize resolution—clear wizard state, close dialog, refresh project list, and toast success.
 **Codebase touched**: src/modules/projects/components/wizard-v2/CreateProjectWizardV2.tsx
 **Sample snippets (optional)**: ...
@@ -301,7 +302,7 @@
 
 #### Step 3.4
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Render detailed error information from backend (fs/db/conversion) with retry affordances.
 **Codebase touched**: src/modules/projects/components/wizard-v2/CreateProjectWizardV2.tsx, src/shared/ui/toast
 **Sample snippets (optional)**: ...
@@ -319,7 +320,7 @@
 
 #### Step 4.1
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Derive conversion plan from backend response, including absolute input/output paths and language pairs.
 **Codebase touched**: src/core/ipc/client.ts, src/modules/projects/components/wizard-v2/CreateProjectWizardV2.tsx
 **Sample snippets (optional)**: ...
@@ -330,7 +331,7 @@
 
 #### Step 4.2
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Run sequential (or configured parallel) conversions using `convertStream` with progress callbacks updating overlay.
 **Codebase touched**: src/modules/projects/components/wizard-v2/CreateProjectWizardV2.tsx, src/core/ipc/openxliff.ts
 **Sample snippets (optional)**: ...
@@ -341,7 +342,7 @@
 
 #### Step 4.3
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Validate generated XLFs and update conversion/job status in database.
 **Codebase touched**: src/core/ipc/openxliff.ts, src/core/ipc/client.ts, src-tauri/src/ipc/commands/jobs_v2.rs (if required)
 **Sample snippets (optional)**: ...
@@ -352,7 +353,7 @@
 
 #### Step 4.4
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Persist metadata for produced XLF/JLIFF artifacts and enqueue further processing if needed.
 **Codebase touched**: src-tauri/src/db/operations/artifacts_v2.rs, src-core/ipc/client.ts
 **Sample snippets (optional)**: ...
@@ -370,7 +371,7 @@
 
 #### Step 5.1
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Add frontend unit/integration tests for payload builder, error mapping, and finalize flow.
 **Codebase touched**: src/modules/projects/components/wizard-v2/__tests__ (new), vitest config
 **Sample snippets (optional)**: ...

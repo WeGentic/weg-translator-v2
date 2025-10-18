@@ -1,6 +1,5 @@
 //! Core database manager responsible for owning the SQLite pool.
 use std::fs;
-use std::io::ErrorKind;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -71,25 +70,6 @@ impl DbManager {
         performance: DatabasePerformanceConfig,
     ) -> Result<SqlitePool, sqlx::Error> {
         let db_path = base_dir.join(SQLITE_DB_FILE);
-        match fs::remove_file(&db_path) {
-            Ok(()) => {
-                log::info!(
-                    target: "db::manager",
-                    "removed existing database at {} before bootstrap",
-                    db_path.display()
-                );
-            }
-            Err(error) if error.kind() == ErrorKind::NotFound => {
-                log::debug!(
-                    target: "db::manager",
-                    "no existing database found at {}, starting fresh",
-                    db_path.display()
-                );
-            }
-            Err(error) => {
-                return Err(sqlx::Error::Io(error));
-            }
-        }
         let mut connect_options = SqliteConnectOptions::new()
             .filename(&db_path)
             .create_if_missing(true);

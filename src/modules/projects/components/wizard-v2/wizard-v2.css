@@ -1432,6 +1432,8 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 .wizard-v2-feedback-actions {
   display: flex;
   justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .wizard-v2-feedback-button {

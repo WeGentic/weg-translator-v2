@@ -4,9 +4,11 @@
  */
 export const PROJECT_VIEW_PREFIX = "project:" as const;
 export const EDITOR_VIEW_PREFIX = "editor:" as const;
+export const CLIENT_VIEW_PREFIX = "client:" as const;
 
 export type ProjectViewKey = `${typeof PROJECT_VIEW_PREFIX}${string}`;
 export type EditorViewKey = `${typeof EDITOR_VIEW_PREFIX}${string}`;
+export type ClientViewKey = `${typeof CLIENT_VIEW_PREFIX}${string}`;
 
 /**
  * Union of all supported content panes for the main workspace area.
@@ -19,7 +21,8 @@ export type MainView =
   | "settings"
   | "editor"
   | ProjectViewKey
-  | EditorViewKey;
+  | EditorViewKey
+  | ClientViewKey;
 
 /**
  * Creates a stable sidebar key for a project overview tab.
@@ -47,4 +50,18 @@ export function toEditorViewKey(projectId: string): EditorViewKey {
  */
 export function parseEditorProjectIdFromKey(key: string): string | null {
   return key.startsWith(EDITOR_VIEW_PREFIX) ? key.slice(EDITOR_VIEW_PREFIX.length) : null;
+}
+
+/**
+ * Creates a stable sidebar key for a client details pane.
+ */
+export function toClientViewKey(clientId: string): ClientViewKey {
+  return `${CLIENT_VIEW_PREFIX}${clientId}`;
+}
+
+/**
+ * Extracts the client id from a client view key. Returns null if parsing fails.
+ */
+export function parseClientIdFromKey(key: string): string | null {
+  return key.startsWith(CLIENT_VIEW_PREFIX) ? key.slice(CLIENT_VIEW_PREFIX.length) : null;
 }

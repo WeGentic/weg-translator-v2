@@ -303,6 +303,10 @@ pub struct ConversionTaskDto {
     pub draft_id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub file_uuid: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artifact_uuid: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job_type: Option<String>,
     pub source_lang: String,
     pub target_lang: String,
     pub source_path: String,

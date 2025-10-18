@@ -1,35 +1,19 @@
 import { type ChangeEvent } from "react";
-import { Filter, Plus, Search, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/tooltip";
-
-import {
-  CLIENT_FILTER_OPTIONS,
-  type ClientsFilterValue,
-} from "@/modules/clients/constants";
 
 export interface ClientsToolbarProps {
   search: string;
   onSearchChange: (value: string) => void;
-  filter: ClientsFilterValue;
-  onFilterChange: (next: ClientsFilterValue) => void;
   onAddClient: () => void;
 }
 
 export function ClientsToolbar({
   search,
   onSearchChange,
-  filter,
-  onFilterChange,
   onAddClient,
 }: ClientsToolbarProps) {
   function handleSearchInputChange(event: ChangeEvent<HTMLInputElement>) {
@@ -41,11 +25,6 @@ export function ClientsToolbar({
   function handleClearSearch() {
     if (!search) return;
     onSearchChange("");
-  }
-
-  function handleFilterValueChange(nextValue: string) {
-    if (nextValue === filter) return;
-    onFilterChange(nextValue as ClientsFilterValue);
   }
 
   return (
@@ -80,33 +59,6 @@ export function ClientsToolbar({
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="hidden items-center gap-2 sm:flex">
-              <label htmlFor="clients-filter-select" className="sr-only">
-                Filter clients
-              </label>
-              <Select value={filter} onValueChange={handleFilterValueChange}>
-                <SelectTrigger
-                  id="clients-filter-select"
-                  className="h-9 w-[170px] border-border/50 bg-background/70 text-sm transition-all duration-200 hover:border-border/70 hover:bg-background/80 focus:ring-2 focus:ring-ring/60"
-                  aria-label="Filter clients"
-                >
-                  <Filter className="mr-2 h-3.5 w-3.5 opacity-70" aria-hidden="true" />
-                  <SelectValue placeholder="Filter clients" />
-                </SelectTrigger>
-                <SelectContent className="backdrop-blur-md">
-                  {CLIENT_FILTER_OPTIONS.map((option) => (
-                    <SelectItem
-                      key={option.value}
-                      value={option.value}
-                      className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold"
-                    >
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button

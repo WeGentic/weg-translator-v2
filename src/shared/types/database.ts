@@ -111,6 +111,8 @@ export interface ProjectAssetResult {
 export interface ConversionTask {
   draftId: string;
   fileUuid?: Nullable<Uuid>;
+  artifactUuid?: Nullable<Uuid>;
+  jobType?: Nullable<string>;
   sourceLang: string;
   targetLang: string;
   sourcePath: string;

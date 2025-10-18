@@ -51,6 +51,8 @@ interface ProjectAssetResultDto {
 interface ConversionTaskDto {
   draftId: string;
   fileUuid?: string | null;
+  artifactUuid?: string | null;
+  jobType?: string | null;
   sourceLang: string;
   targetLang: string;
   sourcePath: string;
@@ -394,6 +396,8 @@ function mapConversionTaskDto(task: ConversionTaskDto): ConversionTask {
   return {
     draftId: task.draftId,
     fileUuid: task.fileUuid ?? null,
+    artifactUuid: task.artifactUuid ?? null,
+    jobType: task.jobType ?? null,
     sourceLang: task.sourceLang,
     targetLang: task.targetLang,
     sourcePath: task.sourcePath,

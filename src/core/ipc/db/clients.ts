@@ -10,12 +10,14 @@ import {
 import { safeInvoke } from "../request";
 
 interface ClientDto {
-  clientUuid: string;
+  clientUuid?: string | null;
+  client_uuid?: string | null;
   name: string;
   email?: string | null;
   phone?: string | null;
   address?: string | null;
   vatNumber?: string | null;
+  vat_number?: string | null;
   note?: string | null;
 }
 
@@ -80,13 +82,19 @@ function mapUpdateClientInput(input: UpdateClientInput) {
 }
 
 function mapClientDto(dto: ClientDto): ClientRecord {
+  const clientUuid = dto.clientUuid ?? dto.client_uuid ?? null;
+  if (!clientUuid) {
+    throw new Error("[IPC] list_client_records_v2 returned a client without an id");
+  }
+  const toNullable = (value?: string | null) => value ?? null;
+
   return {
-    clientUuid: dto.clientUuid,
+    clientUuid,
     name: dto.name,
-    email: dto.email ?? null,
-    phone: dto.phone ?? null,
-    address: dto.address ?? null,
-    vatNumber: dto.vatNumber ?? null,
-    note: dto.note ?? null,
+    email: toNullable(dto.email),
+    phone: toNullable(dto.phone),
+    address: toNullable(dto.address),
+    vatNumber: toNullable(dto.vatNumber ?? dto.vat_number),
+    note: toNullable(dto.note),
   };
 }
