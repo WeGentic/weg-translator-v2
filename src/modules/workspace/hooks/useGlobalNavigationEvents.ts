@@ -21,7 +21,13 @@ export function useGlobalNavigationEvents({
       >;
       const view = custom.detail?.view;
 
-      if (view === "dashboard" || view === "projects" || view === "resource" || view === "settings") {
+      if (
+        view === "dashboard"
+        || view === "projects"
+        || view === "clients"
+        || view === "resource"
+        || view === "settings"
+      ) {
         onChangeView(view as MainView);
         return;
       }
