@@ -4,36 +4,38 @@
 
 import { Loader2, XCircle } from "lucide-react";
 
-import type { WizardFeedbackState } from "../types";
+import type { WizardFinalizeFeedback } from "../types";
 import { cn } from "@/shared/utils/class-names";
 
 interface WizardFeedbackOverlayProps {
-  state: WizardFeedbackState;
-  message: string;
+  feedback: WizardFinalizeFeedback;
   onDismiss: () => void;
 }
 
-export function WizardFeedbackOverlay({ state, message, onDismiss }: WizardFeedbackOverlayProps) {
-  if (state === "idle") {
+export function WizardFeedbackOverlay({ feedback, onDismiss }: WizardFeedbackOverlayProps) {
+  if (feedback.status === "idle") {
     return null;
   }
 
-  const isLoading = state === "loading";
+  const isProgress = feedback.status === "progress";
+  const headline = isProgress ? feedback.progress.headline : feedback.error.headline;
+  const description = isProgress ? feedback.progress.description : feedback.error.description;
+  const detail = !isProgress ? feedback.error.detail ?? feedback.error.hint : undefined;
+  const actionLabel = isProgress ? feedback.progress.actionLabel ?? "Working…" : "Close";
 
   return (
     <div className="wizard-v2-feedback-overlay" role="status" aria-live="polite">
-      <div className={cn("wizard-v2-feedback-card", isLoading && "is-loading")} data-state={state}>
+      <div className={cn("wizard-v2-feedback-card", isProgress && "is-loading")} data-state={feedback.status}>
         <div className="wizard-v2-feedback-icon" aria-hidden="true">
-          {isLoading ? <Loader2 className="h-8 w-8 animate-spin" /> : null}
-          {state === "error" ? <XCircle className="h-8 w-8" /> : null}
+          {isProgress ? <Loader2 className="h-8 w-8 animate-spin" /> : null}
+          {!isProgress ? <XCircle className="h-8 w-8" /> : null}
         </div>
-        <h3 className="wizard-v2-feedback-title">
-          {isLoading ? "Creating project" : "Something went wrong"}
-        </h3>
-        <p className="wizard-v2-feedback-message">{message}</p>
+        <h3 className="wizard-v2-feedback-title">{headline}</h3>
+        <p className="wizard-v2-feedback-message">{description}</p>
+        {detail ? <p className="wizard-v2-feedback-detail">{detail}</p> : null}
         <div className="wizard-v2-feedback-actions">
-          <button type="button" className="wizard-v2-feedback-button" onClick={onDismiss} disabled={isLoading}>
-            {isLoading ? "Creating…" : "Close"}
+          <button type="button" className="wizard-v2-feedback-button" onClick={onDismiss} disabled={isProgress}>
+            {actionLabel}
           </button>
         </div>
       </div>

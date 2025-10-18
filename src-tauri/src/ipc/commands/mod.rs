@@ -30,9 +30,9 @@ pub use jobs_v2::{
     delete_job_record_v2, list_jobs_for_project_v2, update_job_status_v2, upsert_job_record_v2,
 };
 pub use projects_v2::{
-    attach_project_file_v2, create_project_bundle_v2, delete_project_bundle_v2,
-    detach_project_file_v2, get_project_bundle_v2, list_project_records_v2,
-    update_project_bundle_v2,
+    attach_project_file_v2, create_project_bundle_v2, create_project_with_assets_v2,
+    delete_project_bundle_v2, detach_project_file_v2, get_project_bundle_v2,
+    list_project_records_v2, update_project_bundle_v2,
 };
 pub use users_v2::{
     create_user_profile_v2, delete_user_profile_v2, get_user_profile_v2, list_user_profiles_v2,

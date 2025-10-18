@@ -91,6 +91,37 @@ export interface FileLanguagePair {
   targetLang: string;
 }
 
+export type ProjectAssetRole = "processable" | "reference" | "instructions" | "image";
+
+export interface ProjectAssetDescriptor {
+  draftId: string;
+  name: string;
+  extension: string;
+  role: ProjectAssetRole;
+  path: string;
+}
+
+export interface ProjectAssetResult {
+  draftId: string;
+  fileUuid?: Nullable<Uuid>;
+  storedRelPath?: Nullable<string>;
+  role: ProjectAssetRole;
+}
+
+export interface ConversionTask {
+  draftId: string;
+  fileUuid?: Nullable<Uuid>;
+  sourceLang: string;
+  targetLang: string;
+  sourcePath: string;
+  xliffRelPath: string;
+}
+
+export interface ConversionPlan {
+  projectUuid: Uuid;
+  tasks: ConversionTask[];
+}
+
 export interface ProjectRecord {
   projectUuid: Uuid;
   projectName: string;
@@ -157,6 +188,13 @@ export interface ProjectBundle {
   jobs: JobRecord[];
 }
 
+export interface CreateProjectWithAssetsResponse {
+  project: ProjectBundle;
+  projectDir: string;
+  assets: ProjectAssetResult[];
+  conversionPlan?: ConversionPlan;
+}
+
 export interface CreateProjectInput {
   projectUuid?: Uuid;
   projectName: string;
@@ -167,6 +205,19 @@ export interface CreateProjectInput {
   notes?: OptionalNullable<string>;
   subjects?: ProjectSubject[];
   languagePairs: ProjectLanguagePair[];
+}
+
+export interface CreateProjectWithAssetsInput {
+  projectName: string;
+  projectFolderName: string;
+  projectStatus?: ProjectStatus;
+  userUuid: Uuid;
+  clientUuid?: OptionalNullable<Uuid>;
+  type: ProjectType;
+  notes?: OptionalNullable<string>;
+  subjects?: ProjectSubject[];
+  languagePairs: ProjectLanguagePair[];
+  assets: ProjectAssetDescriptor[];
 }
 
 export interface UpdateProjectInput {

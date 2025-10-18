@@ -60,12 +60,6 @@ export interface DragDropEventPayload {
  */
 export type FileWithPath = File & { path?: string };
 
-/**
- * Lightweight state machine used to surface progress or errors while the
- * project creation request is in flight.
- */
-export type WizardFeedbackState = "idle" | "loading" | "error";
-
 export interface WizardFinalizeFileDescriptor {
   id: string;
   name: string;
@@ -94,3 +88,38 @@ export interface WizardFinalizeValidationIssue {
 export type WizardFinalizeBuildResult =
   | { success: true; payload: WizardFinalizePayload }
   | { success: false; issue: WizardFinalizeValidationIssue };
+
+export type WizardFinalizePhase =
+  | "validating-input"
+  | "creating-project-record"
+  | "preparing-folders"
+  | "copying-assets"
+  | "registering-database"
+  | "planning-conversions";
+
+export type WizardFinalizeErrorCategory =
+  | "validation"
+  | "filesystem"
+  | "database"
+  | "conversion"
+  | "unknown";
+
+export interface WizardFinalizeProgressDescriptor {
+  phase: WizardFinalizePhase;
+  headline: string;
+  description: string;
+  actionLabel?: string;
+}
+
+export interface WizardFinalizeErrorDescriptor {
+  category: WizardFinalizeErrorCategory;
+  headline: string;
+  description: string;
+  detail?: string;
+  hint?: string;
+}
+
+export type WizardFinalizeFeedback =
+  | { status: "idle" }
+  | { status: "progress"; progress: WizardFinalizeProgressDescriptor }
+  | { status: "error"; error: WizardFinalizeErrorDescriptor };

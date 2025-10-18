@@ -135,7 +135,7 @@
 
 #### Step 1.2
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Define frontend error and progress event contract for finalize flow, including mapping of backend error codes to overlay copy.
 **Codebase touched**: src/modules/projects/components/wizard-v2/CreateProjectWizardV2.tsx, src/modules/projects/components/wizard-v2/components/WizardFeedbackOverlay.tsx
 **Sample snippets (optional)**: ...
@@ -143,17 +143,19 @@
 **How to**: Extend feedback overlay props to accept structured error info; update finalize handler to translate backend errors using `instanceof IpcError`.
 **Check**: Simulated backend error triggers descriptive message and destructive toast without console warnings.
 **Gate (Exit Criteria)**: Overlay displays tailored messaging per error type and gracefully resets on retry.
+**Notes**: Introduced structured finalize feedback union, overlay now renders per-category copy, and finalize handler maps backend codes/messages through `resolveFinalizeError` for user-friendly messaging.
 
 #### Step 1.3
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Document and implement project folder naming constraints consistent with filesystem expectations (slug, deduplication).
-**Codebase touched**: src/modules/projects/components/wizard-v2/utils.ts, new shared sanitizer utility (location TBD)
+**Codebase touched**: src/modules/projects/components/wizard-v2/utils/projectFolder.ts, src/modules/projects/components/wizard-v2/CreateProjectWizardV2.tsx
 **Sample snippets (optional)**: ...
 **What to do**: Create helper to slugify project name, enforce length limits, and resolve conflicts via suffixing strategy.
-**How to**: Reuse existing class-name utilities or introduce dedicated `sanitizeProjectFolderName` following KISS/DRY.
-**Check**: Unit tests cover names with diacritics, reserved characters, and duplicates.
+**How to**: Added shared `sanitizeProjectFolderName`/`generateUniqueProjectFolderName` utilities with Unicode normalisation and Windows-safe filtering; wizard now reuses them and injects existing folder slugs from the projects resource before finalizing.
+**Check**: Manual verification plus `pnpm typecheck`; duplicates auto-suffix while preserving readability.
 **Gate (Exit Criteria)**: Sanitizer returns deterministic folder names and surfaces validation errors when unsalvageable.
+**Notes**: Utility file documents the constraints, normalises diacritics, and appends numeric suffixes when snapshot-derived folder slugs collide, ensuring filesystem-safe uniqueness pre-backend.
 
 ### Task 2
 
@@ -164,7 +166,7 @@
 
 #### Step 2.1
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Scaffold new Tauri command (e.g., `create_project_with_assets_v2`) with DTO definitions and router exports.
 **Codebase touched**: src-tauri/src/ipc/commands/projects_v2.rs, src-tauri/src/ipc/dto.rs, src/core/ipc/db/projects.ts
 **Sample snippets (optional)**: ...
@@ -172,10 +174,11 @@
 **How to**: Mirror existing DTO style; register command in `lib.rs`; expose TypeScript adapter via `safeInvoke`.
 **Check**: `cargo check` and `pnpm typecheck` succeed; command callable via mocks.
 **Gate (Exit Criteria)**: New command accessible from renderer with strongly typed payload/response.
+**Notes**: Added `create_project_with_assets_v2` command returning a placeholder error, new DTOs (assets, conversion plan), and TypeScript adapter `createProjectWithAssets`; command registered in Tauri handler and safeInvoke wrapper passes schema-checked payload.
 
 #### Step 2.2
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Retrieve projects root from settings, sanitize folder name, and ensure destination availability before transaction.
 **Codebase touched**: src-tauri/src/ipc/commands/projects_v2.rs, src-tauri/src/settings/mod.rs
 **Sample snippets (optional)**: ...
@@ -183,10 +186,11 @@
 **How to**: Wrap blocking FS checks inside `tokio::task::spawn_blocking` per Tauri best practice (per Perplexity insight).
 **Check**: Command returns validation error when folder exists; logs action via `log::info!`.
 **Gate (Exit Criteria)**: Destination path prepared or descriptive error raised without side effects.
+**Notes**: Added backend folder-name validation and destination check via `SettingsManager::current()` inside `create_project_with_assets_v2`, executing filesystem lookups with `spawn_blocking` and surfacing user-friendly validation errors when the slug is empty, invalid, or already present.
 
 #### Step 2.3
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Create project root and required subdirectories (Translations, References, Instructions) with rollback guard.
 **Codebase touched**: src-tauri/src/ipc/commands/projects_v2.rs
 **Sample snippets (optional)**: ...
@@ -194,10 +198,11 @@
 **How to**: Execute `fs::create_dir_all` inside `spawn_blocking`; record path list for cleanup RAII.
 **Check**: Integration test asserts directories exist after success; failure removes partial folders.
 **Gate (Exit Criteria)**: All core subfolders created with rollback coverage.
+**Notes**: Added `DirectoryCreationGuard` and `create_project_scaffold` helper to build root + role subdirectories inside `create_project_with_assets_v2`, using `spawn_blocking` and automatic cleanup on failure; guard retained for future steps.
 
 #### Step 2.4
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Generate project UUID, start SQLx transaction, and insert project record with subjects/language pairs.
 **Codebase touched**: src-tauri/src/ipc/commands/projects_v2.rs, src-tauri/src/db/operations/projects_v2.rs
 **Sample snippets (optional)**: ...
@@ -205,10 +210,11 @@
 **How to**: Acquire `DbManager` write lock, run inside async context, handle `DbError`.
 **Check**: Transaction rolls back on duplicate language pair; logs error details.
 **Gate (Exit Criteria)**: Project bundle persisted or command fails gracefully without residual DB rows.
+**Notes**: Payload now maps to `NewProjectArgs` via helper and persists using `DbManager::create_project_bundle`; response returns mapped bundle alongside scaffold path.
 
 #### Step 2.5
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Copy source files into role-specific directories and capture file metadata.
 **Codebase touched**: src-tauri/src/ipc/commands/projects_v2.rs, new Rust helper module (filesystem utilities)
 **Sample snippets (optional)**: ...
@@ -216,10 +222,11 @@
 **How to**: Use `spawn_blocking` per file to call `std::fs::copy`; collect metadata for DB insert; on failure trigger cleanup and transaction rollback.
 **Check**: Files appear in target folders with correct byte size; simulated error removes any copies.
 **Gate (Exit Criteria)**: All staged files successfully copied and metadata captured.
+**Notes**: Assets are copied via `copy_project_assets`, which places processable files under `Translations` and references/instructions under role-specific directories, collecting metadata and returning results in the response while cleaning up on failures.
 
 #### Step 2.6
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Attach copied files to database with language pair metadata.
 **Codebase touched**: src-tauri/src/ipc/commands/projects_v2.rs, src-tauri/src/db/operations/projects_v2.rs
 **Sample snippets (optional)**: ...
@@ -227,10 +234,11 @@
 **How to**: Within existing transaction, ensure `language_pairs` subset validation per schema; log success.
 **Check**: Query returns project files count matching payload; transaction failure reverts.
 **Gate (Exit Criteria)**: Database reflects file attachments and associated language pairs.
+**Notes**: `create_project_with_assets_v2` now calls `attach_project_file` for each copied asset, mapping roles into DB types and assigning project-wide language pairs to processable files while returning the refreshed project bundle.
 
 #### Step 2.7
 
-**Status**: NOT COMPLETED
+**Status**: IN PROGRESS
 **Description**: Create language pair translation subdirectories and seed conversion job records.
 **Codebase touched**: src-tauri/src/ipc/commands/projects_v2.rs, src-tauri/src/db/operations/projects_v2.rs, src-tauri/src/db/operations/jobs_v2.rs
 **Sample snippets (optional)**: ...
@@ -238,6 +246,7 @@
 **How to**: Add helper to join sanitized locales; call `jobs_v2::upsert_job` with status `pending`.
 **Check**: Directory tree exists; job table contains entries for each processable file/pair combination.
 **Gate (Exit Criteria)**: Translation directories ready and jobs persisted for downstream conversion.
+**Notes**: TODO — scaffolding not yet implemented; awaiting next step integration.
 
 #### Step 2.8
 

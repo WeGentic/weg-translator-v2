@@ -7,7 +7,7 @@
 
 import { ArrowLeft, ArrowRight, Loader2, RotateCcw } from "lucide-react";
 
-import type { WizardFeedbackState, WizardStep } from "../types";
+import type { WizardStep } from "../types";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 
 interface WizardFooterProps {
@@ -20,7 +20,7 @@ interface WizardFooterProps {
   finalizeDisabled: boolean;
   finalizeReason: string | null;
   onFinalize: () => void;
-  feedbackState: WizardFeedbackState;
+  finalizeBusy: boolean;
   submissionPending: boolean;
 }
 
@@ -34,7 +34,7 @@ export function WizardFooter({
   finalizeDisabled,
   finalizeReason,
   onFinalize,
-  feedbackState,
+  finalizeBusy,
   submissionPending,
 }: WizardFooterProps) {
   if (step === "details") {
@@ -109,10 +109,10 @@ export function WizardFooter({
           type="button"
           className="wizard-v2-action wizard-v2-action--next"
           onClick={onFinalize}
-          disabled={submissionPending || feedbackState === "loading"}
+          disabled={submissionPending || finalizeBusy}
         >
-          <span>{submissionPending || feedbackState === "loading" ? "Finalizing…" : "Finalize"}</span>
-          {submissionPending || feedbackState === "loading" ? (
+          <span>{submissionPending || finalizeBusy ? "Finalizing…" : "Finalize"}</span>
+          {submissionPending || finalizeBusy ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
