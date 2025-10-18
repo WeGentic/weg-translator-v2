@@ -6,7 +6,7 @@ pub mod state;
 
 pub use commands::{
     attach_project_file_v2, clear_translation_history, create_client_record_v2,
-    create_project_bundle_v2, create_user_profile_v2, delete_artifact_record_v2,
+    create_project_bundle_v2, create_project_with_assets_v2, create_user_profile_v2, delete_artifact_record_v2,
     delete_client_record_v2, delete_job_record_v2, delete_project_bundle_v2,
     delete_user_profile_v2, detach_project_file_v2, fail_translation, get_app_settings,
     get_client_record_v2, get_project_bundle_v2, get_translation_job, get_user_profile_v2,

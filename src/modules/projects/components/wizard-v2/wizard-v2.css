@@ -1414,6 +1414,13 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   color: color-mix(in oklab, var(--color-tr-muted-foreground) 60%, var(--color-tr-sidebar-primary) 12%);
 }
 
+.wizard-v2-feedback-detail {
+  margin-top: 0.5rem;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: color-mix(in oklab, var(--color-tr-muted-foreground) 72%, var(--color-tr-sidebar-primary) 18%);
+}
+
 .wizard-v2-feedback-card[data-state="success"] .wizard-v2-feedback-message {
   color: color-mix(in oklab, var(--color-tr-success) 45%, var(--color-tr-sidebar-primary) 12%);
 }

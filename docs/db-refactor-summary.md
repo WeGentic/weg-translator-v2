@@ -1,11 +1,5 @@
 # SQLite Refactor Summary
 
-_Last updated: 2025-02-14_
-
-This document captures the post-refactor database landscape for the Weg Translator application. The legacy project-centric schema and IPC flows have been superseded by the v2 schema described below. All new development must target these constructs.
-
----
-
 ## 1. Schema Overview
 
 | Domain | Tables / Views | Notes |
@@ -60,24 +54,3 @@ All multi-table mutations are wrapped in transactions (see `projects_v2::create_
 
 - `src-tauri/tests/db_manager_v2.rs` — exercises `DbManager` CRUD flows, ensuring trigger/constraint behaviour.
 - `src/modules/projects/components/wizard-v2/utils/__tests__/languagePairs.test.ts` — validates client-side language pair builder.
-
-Runbook:
-```bash
-# Backend
-cargo test db_manager_v2 --tests
-
-# Frontend
-pnpm test src/modules/projects/components/wizard-v2/utils/__tests__/languagePairs.test.ts
-pnpm typecheck
-pnpm lint
-```
-
----
-
-## 5. Cleanup Checklist
-
-- [x] Remove legacy schema documentation.
-- [x] Route project list/delete to v2 commands.
-- [x] Validate language pair requirements before IPC invocation.
-- [ ] (Follow-up) Replace legacy `create_project_with_files` flow with v2 project/file APIs.
-- [ ] (Follow-up) Deprecate `ProjectService` and the remaining legacy operations once renderer migration is complete.

@@ -267,6 +267,88 @@ fn default_project_status() -> String {
     "active".to_string()
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ProjectAssetRoleDto {
+    Processable,
+    Reference,
+    Instructions,
+    Image,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectAssetDescriptorDto {
+    pub draft_id: String,
+    pub name: String,
+    pub extension: String,
+    pub role: ProjectAssetRoleDto,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectAssetResultDto {
+    pub draft_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_uuid: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stored_rel_path: Option<String>,
+    pub role: ProjectAssetRoleDto,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConversionTaskDto {
+    pub draft_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_uuid: Option<String>,
+    pub source_lang: String,
+    pub target_lang: String,
+    pub source_path: String,
+    pub xliff_rel_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConversionPlanDto {
+    pub project_uuid: String,
+    #[serde(default)]
+    pub tasks: Vec<ConversionTaskDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateProjectWithAssetsPayload {
+    pub project_name: String,
+    pub project_folder_name: String,
+    #[serde(default = "default_project_status")]
+    pub project_status: String,
+    pub user_uuid: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_uuid: Option<String>,
+    pub r#type: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notes: Option<String>,
+    #[serde(default)]
+    pub subjects: Vec<String>,
+    #[serde(default)]
+    pub language_pairs: Vec<ProjectLanguagePairDto>,
+    #[serde(default)]
+    pub assets: Vec<ProjectAssetDescriptorDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateProjectWithAssetsResponseDto {
+    pub project: ProjectBundleV2Dto,
+    pub project_dir: String,
+    #[serde(default)]
+    pub assets: Vec<ProjectAssetResultDto>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conversion_plan: Option<ConversionPlanDto>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateProjectPayload {
@@ -289,7 +371,7 @@ pub struct UpdateProjectPayload {
     pub language_pairs: Option<Vec<ProjectLanguagePairDto>>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectRecordV2Dto {
     pub project_uuid: String,
@@ -305,7 +387,7 @@ pub struct ProjectRecordV2Dto {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileInfoV2Dto {
     pub file_uuid: String,
@@ -321,7 +403,7 @@ pub struct FileInfoV2Dto {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectFileLinkDto {
     pub project_uuid: String,
@@ -331,7 +413,7 @@ pub struct ProjectFileLinkDto {
     pub r#type: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ArtifactV2Dto {
     pub artifact_uuid: String,
@@ -347,7 +429,7 @@ pub struct ArtifactV2Dto {
     pub status: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JobV2Dto {
     pub artifact_uuid: String,
@@ -358,7 +440,7 @@ pub struct JobV2Dto {
     pub error_log: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectFileBundleV2Dto {
     pub file: ProjectFileLinkDto,
@@ -367,7 +449,7 @@ pub struct ProjectFileBundleV2Dto {
     pub artifacts: Vec<ArtifactV2Dto>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectBundleV2Dto {
     pub project: ProjectRecordV2Dto,

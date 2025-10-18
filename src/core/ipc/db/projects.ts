@@ -8,8 +8,15 @@
 import {
   AttachProjectFileInput,
   CreateProjectInput,
+  CreateProjectWithAssetsInput,
+  CreateProjectWithAssetsResponse,
   FileLanguagePair,
   ProjectBundle,
+  ProjectAssetDescriptor,
+  ProjectAssetResult,
+  ProjectAssetRole,
+  ConversionPlan,
+  ConversionTask,
   ProjectFileBundle,
   ProjectFileLink,
   ProjectLanguagePair,
@@ -24,6 +31,36 @@ import { safeInvoke } from "../request";
 
 type ProjectLanguagePairDto = ProjectLanguagePair;
 type FileLanguagePairDto = FileLanguagePair;
+type ProjectAssetRoleDto = ProjectAssetRole;
+
+interface ProjectAssetDescriptorDto {
+  draftId: string;
+  name: string;
+  extension: string;
+  role: ProjectAssetRoleDto;
+  path: string;
+}
+
+interface ProjectAssetResultDto {
+  draftId: string;
+  fileUuid?: string | null;
+  storedRelPath?: string | null;
+  role: ProjectAssetRoleDto;
+}
+
+interface ConversionTaskDto {
+  draftId: string;
+  fileUuid?: string | null;
+  sourceLang: string;
+  targetLang: string;
+  sourcePath: string;
+  xliffRelPath: string;
+}
+
+interface ConversionPlanDto {
+  projectUuid: string;
+  tasks: ConversionTaskDto[];
+}
 
 interface ProjectRecordDto {
   projectUuid: string;
@@ -60,7 +97,28 @@ interface ProjectBundleDto {
   jobs: JobDto[];
 }
 
+interface CreateProjectWithAssetsPayloadDto {
+  projectName: string;
+  projectFolderName: string;
+  projectStatus: string;
+  userUuid: string;
+  clientUuid?: string | null;
+  type: string;
+  notes?: string | null;
+  subjects: string[];
+  languagePairs: ProjectLanguagePairDto[];
+  assets: ProjectAssetDescriptorDto[];
+}
+
+interface CreateProjectWithAssetsResponseDto {
+  project: ProjectBundleDto;
+  projectDir: string;
+  assets: ProjectAssetResultDto[];
+  conversionPlan?: ConversionPlanDto;
+}
+
 const COMMAND = {
+  createWithAssets: "create_project_with_assets_v2",
   create: "create_project_bundle_v2",
   update: "update_project_bundle_v2",
   remove: "delete_project_bundle_v2",
@@ -88,6 +146,23 @@ export async function createProjectBundle(
   const payload = mapCreateProjectInput(input);
   const dto = await safeInvoke<ProjectBundleDto>(COMMAND.create, { payload });
   return mapProjectBundleDto(dto);
+}
+
+export async function createProjectWithAssets(
+  input: CreateProjectWithAssetsInput,
+): Promise<CreateProjectWithAssetsResponse> {
+  if (!input.userUuid) {
+    throw new Error("createProjectWithAssets requires userUuid");
+  }
+  if (input.languagePairs.length === 0) {
+    throw new Error("createProjectWithAssets requires at least one language pair");
+  }
+
+  const payload = mapCreateProjectWithAssetsInput(input);
+  const dto = await safeInvoke<CreateProjectWithAssetsResponseDto>(COMMAND.createWithAssets, {
+    payload,
+  });
+  return mapCreateProjectWithAssetsResponse(dto);
 }
 
 /**
@@ -160,6 +235,23 @@ function mapCreateProjectInput(input: CreateProjectInput) {
   };
 }
 
+function mapCreateProjectWithAssetsInput(
+  input: CreateProjectWithAssetsInput,
+): CreateProjectWithAssetsPayloadDto {
+  return {
+    projectName: input.projectName,
+    projectFolderName: input.projectFolderName,
+    projectStatus: input.projectStatus ?? "active",
+    userUuid: input.userUuid,
+    clientUuid: input.clientUuid ?? undefined,
+    type: input.type,
+    notes: input.notes ?? undefined,
+    subjects: input.subjects ?? [],
+    languagePairs: input.languagePairs.map(mapProjectLanguagePairInput),
+    assets: input.assets.map(mapProjectAssetDescriptorInput),
+  };
+}
+
 function mapUpdateProjectInput(input: UpdateProjectInput) {
   return {
     projectUuid: input.projectUuid,
@@ -197,6 +289,17 @@ function mapProjectBundleDto(dto: ProjectBundleDto): ProjectBundle {
     languagePairs: dto.languagePairs.map(mapProjectLanguagePairDto),
     files: dto.files.map(mapProjectFileBundleDto),
     jobs: dto.jobs.map(mapJobDto),
+  };
+}
+
+function mapCreateProjectWithAssetsResponse(
+  dto: CreateProjectWithAssetsResponseDto,
+): CreateProjectWithAssetsResponse {
+  return {
+    project: mapProjectBundleDto(dto.project),
+    projectDir: dto.projectDir,
+    assets: dto.assets.map(mapProjectAssetResultDto),
+    conversionPlan: dto.conversionPlan ? mapConversionPlanDto(dto.conversionPlan) : undefined,
   };
 }
 
@@ -256,6 +359,45 @@ function mapProjectLanguagePairDto(pair: ProjectLanguagePairDto): ProjectLanguag
   return {
     sourceLang: pair.sourceLang,
     targetLang: pair.targetLang,
+  };
+}
+
+function mapProjectAssetDescriptorInput(
+  asset: ProjectAssetDescriptor,
+): ProjectAssetDescriptorDto {
+  return {
+    draftId: asset.draftId,
+    name: asset.name,
+    extension: asset.extension,
+    role: asset.role,
+    path: asset.path,
+  };
+}
+
+function mapProjectAssetResultDto(asset: ProjectAssetResultDto): ProjectAssetResult {
+  return {
+    draftId: asset.draftId,
+    fileUuid: asset.fileUuid ?? null,
+    storedRelPath: asset.storedRelPath ?? null,
+    role: asset.role,
+  };
+}
+
+function mapConversionPlanDto(plan: ConversionPlanDto): ConversionPlan {
+  return {
+    projectUuid: plan.projectUuid,
+    tasks: plan.tasks.map(mapConversionTaskDto),
+  };
+}
+
+function mapConversionTaskDto(task: ConversionTaskDto): ConversionTask {
+  return {
+    draftId: task.draftId,
+    fileUuid: task.fileUuid ?? null,
+    sourceLang: task.sourceLang,
+    targetLang: task.targetLang,
+    sourcePath: task.sourcePath,
+    xliffRelPath: task.xliffRelPath,
   };
 }
 
