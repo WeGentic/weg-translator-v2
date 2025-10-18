@@ -14,6 +14,7 @@ export type EditorViewKey = `${typeof EDITOR_VIEW_PREFIX}${string}`;
 export type MainView =
   | "dashboard"
   | "projects"
+  | "clients"
   | "resource"
   | "settings"
   | "editor"

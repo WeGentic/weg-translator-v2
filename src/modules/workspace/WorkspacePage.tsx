@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { TbFolders } from "react-icons/tb";
 import { FiSettings, FiEdit3 } from "react-icons/fi";
-import { LayoutDashboard, Database } from "lucide-react";
+import { LayoutDashboard, Database, UsersRound } from "lucide-react";
 
 import { BlankBackground, useLayoutStoreApi } from "@/app/shell";
 import { type MenuItem } from "@/app/shell/main_elements";
@@ -18,11 +18,13 @@ import type { ProjectListItem } from "@/core/ipc";
 import { DashboardView } from "@/modules/dashboard";
 import { ResourcesView } from "@/modules/resources";
 import { ProjectManagerRoute as ProjectManagerV2View } from "@/modules/projects";
+import { ClientsView } from "@/modules/clients";
 
 const FIXED_MENU_ITEMS: MenuItem[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "projects", label: "Projects", icon: TbFolders },
   { key: "resource", label: "Resources", icon: Database },
+  { key: "clients", label: "Clients", icon: UsersRound },
   { key: "editor", label: "Editor", icon: FiEdit3 },
   { key: "settings", label: "Settings", icon: FiSettings },
 ];
@@ -88,7 +90,11 @@ export function WorkspacePage({ initialView = "projects" }: WorkspacePageProps) 
       return <DashboardView />;
     }
     if (mainView === "projects") {
-        return <ProjectManagerV2View onOpenProject={handleProjectOpen} />;
+      return <ProjectManagerV2View onOpenProject={handleProjectOpen} />;
+    }
+
+    if (mainView === "clients") {
+      return <ClientsView />;
     }
 
     if (mainView === "resource") {

@@ -44,6 +44,10 @@ vi.mock("@/modules/settings", () => ({
   EnhancedAppSettingsPanel: () => <div data-testid="settings-panel" />,
 }));
 
+vi.mock("@/modules/clients", () => ({
+  ClientsView: () => <div data-testid="clients-view" />,
+}));
+
 describe("WorkspacePage", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -69,5 +73,25 @@ describe("WorkspacePage", () => {
     expect(await screen.findByText(/editor redesign in progress/i)).toBeInTheDocument();
     expect(screen.getByText(/^Idle$/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /close editor/i })).toBeInTheDocument();
+  });
+
+  it("switches to clients view when navigation event requests it", async () => {
+    render(
+      <ToastProvider>
+        <MainLayout.Root config={TEST_LAYOUT_CONFIG}>
+          <WorkspacePage />
+        </MainLayout.Root>
+      </ToastProvider>,
+    );
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent("app:navigate", {
+          detail: { view: "clients" },
+        }),
+      );
+    });
+
+    expect(await screen.findByTestId("clients-view")).toBeInTheDocument();
   });
 });

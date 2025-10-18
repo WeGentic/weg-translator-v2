@@ -1,0 +1,85 @@
+'use no memo';
+
+import { useMemo, useState } from "react";
+import { getCoreRowModel, getSortedRowModel, useReactTable, type SortingState } from "@tanstack/react-table";
+
+import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
+import type { ClientRecord } from "@/shared/types/database";
+
+import type { ClientsFilterValue } from "@/modules/clients/constants";
+import { ClientsTable } from "./components/ClientsTable";
+import { DEFAULT_SORT_COLUMN_ID, buildClientColumns, toClientRow } from "./components/columns";
+
+export interface ClientsContentProps {
+  clients: ClientRecord[];
+  search: string;
+  filter: ClientsFilterValue;
+  isLoading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
+}
+
+const DEFAULT_SORTING: SortingState = [{ id: DEFAULT_SORT_COLUMN_ID, desc: false }];
+
+export function ClientsContent({
+  clients,
+  search,
+  filter,
+  isLoading = false,
+  error = null,
+  onRetry,
+}: ClientsContentProps) {
+  const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
+
+  const clientRows = useMemo(() => clients.map(toClientRow), [clients]);
+
+  const columns = useMemo(() => buildClientColumns(), []);
+  const trimmedSearch = search.trim();
+
+  const table = useReactTable({
+    data: clientRows,
+    columns,
+    state: {
+      sorting,
+    },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
+  const tableRows = table.getRowModel().rows;
+
+  return (
+    <main className="flex-1 min-h-0 overflow-hidden bg-tr-white p-6" aria-label="Clients main content">
+      {error ? (
+        <div className="mb-4">
+          <Alert variant="destructive">
+            <AlertTitle>Unable to load clients</AlertTitle>
+            <AlertDescription>
+              {error}
+              {onRetry ? (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="ml-3 inline-flex items-center text-sm font-medium text-[var(--color-tr-primary-blue)] underline-offset-2 hover:underline"
+                >
+                  Try again
+                </button>
+              ) : null}
+            </AlertDescription>
+          </Alert>
+        </div>
+      ) : null}
+
+      <div className="clients-content-region flex min-h-0 flex-1 flex-col">
+        <ClientsTable
+          table={table}
+          rows={tableRows}
+          searchTerm={trimmedSearch}
+          activeFilter={filter}
+          isLoading={isLoading}
+        />
+      </div>
+    </main>
+  );
+}

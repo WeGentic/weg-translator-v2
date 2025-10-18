@@ -1,4 +1,342 @@
-   0.267252500s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator/src-tauri) target="db_manager_v2"}: cargo::core::compiler::fingerprint: fingerprint dirty for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator/src-tauri)/Check { test: true }/TargetInner { kind: "test", name: "db_manager_v2", benched: false, ..: with_path("/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator/src-tauri/tests/db_manager_v2.rs", Edition2024) }
-   0.267555916s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator/src-tauri) target="db_manager_v2"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(Stale)
-    Checking weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator/src-tauri)
-error: could not compile `weg-translator` (test "db_manager_v2") due to 1 previous error
+    Blocking waiting for file lock on build directory
+  14.632095625s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="weg_translator_lib"}: cargo::core::compiler::fingerprint: fingerprint error for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)/Check { test: false }/TargetInner { ..: lib_target("weg_translator_lib", ["staticlib", "cdylib", "rlib"], "/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/src/lib.rs", Edition2024) }
+  14.632652792s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="weg_translator_lib"}: cargo::core::compiler::fingerprint:     err: failed to read `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/.fingerprint/weg-translator-ca34ae48f9f29db0/lib-weg_translator_lib`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+  14.758565959s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint error for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/build.rs", Edition2024) }
+  14.758580042s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="build-script-build"}: cargo::core::compiler::fingerprint:     err: failed to read `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/.fingerprint/weg-translator-ed709fc03b382370/run-build-script-build-script-build`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::custom_build::build_work
+   6: cargo::core::compiler::compile
+   7: cargo::core::compiler::compile
+   8: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   9: cargo::ops::cargo_compile::compile_ws
+  10: cargo::ops::cargo_compile::compile_with_exec
+  11: cargo::ops::cargo_compile::compile
+  12: cargo::commands::check::exec
+  13: <cargo::cli::Exec>::exec
+  14: cargo::main
+  15: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  16: std::rt::lang_start::<()>::{closure#0}
+  17: std::rt::lang_start_internal
+  18: _main
+  14.760342542s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="weg_translator_lib"}: cargo::core::compiler::fingerprint: fingerprint error for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)/Check { test: true }/TargetInner { ..: lib_target("weg_translator_lib", ["staticlib", "cdylib", "rlib"], "/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/src/lib.rs", Edition2024) }
+  14.760357709s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="weg_translator_lib"}: cargo::core::compiler::fingerprint:     err: failed to read `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/.fingerprint/weg-translator-142a57f337e21e92/test-lib-weg_translator_lib`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+  14.762659875s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="seed-demo-project"}: cargo::core::compiler::fingerprint: fingerprint error for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)/Check { test: false }/TargetInner { name: "seed-demo-project", doc: true, ..: with_path("/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/src/bin/seed_demo_project.rs", Edition2024) }
+  14.762666334s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="seed-demo-project"}: cargo::core::compiler::fingerprint:     err: failed to read `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/.fingerprint/weg-translator-6447a3c43e167349/bin-seed-demo-project`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+  14.764051084s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="seed-demo-project"}: cargo::core::compiler::fingerprint: fingerprint error for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)/Check { test: true }/TargetInner { name: "seed-demo-project", doc: true, ..: with_path("/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/src/bin/seed_demo_project.rs", Edition2024) }
+  14.764058834s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="seed-demo-project"}: cargo::core::compiler::fingerprint:     err: failed to read `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/.fingerprint/weg-translator-68f61ced1abebd2b/test-bin-seed-demo-project`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+  14.765558042s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="weg-translator"}: cargo::core::compiler::fingerprint: fingerprint error for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)/Check { test: false }/TargetInner { name: "weg-translator", doc: true, ..: with_path("/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/src/main.rs", Edition2024) }
+  14.765568917s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="weg-translator"}: cargo::core::compiler::fingerprint:     err: failed to read `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/.fingerprint/weg-translator-fc0fe40fb67057b9/bin-weg-translator`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+  14.766563417s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="weg-translator"}: cargo::core::compiler::fingerprint: fingerprint error for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)/Check { test: true }/TargetInner { name: "weg-translator", doc: true, ..: with_path("/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/src/main.rs", Edition2024) }
+  14.766570459s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="weg-translator"}: cargo::core::compiler::fingerprint:     err: failed to read `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/.fingerprint/weg-translator-266f0b09dba5c77f/test-bin-weg-translator`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+  14.767555042s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="conversion_plan"}: cargo::core::compiler::fingerprint: fingerprint error for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)/Check { test: true }/TargetInner { kind: "test", name: "conversion_plan", benched: false, ..: with_path("/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/tests/conversion_plan.rs", Edition2024) }
+  14.767563209s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="conversion_plan"}: cargo::core::compiler::fingerprint:     err: failed to read `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/.fingerprint/weg-translator-f9e88436f7d8795d/test-integration-test-conversion_plan`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+  14.768543459s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="db_integration"}: cargo::core::compiler::fingerprint: fingerprint error for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)/Check { test: true }/TargetInner { kind: "test", name: "db_integration", benched: false, ..: with_path("/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/tests/db_integration.rs", Edition2024) }
+  14.768550250s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="db_integration"}: cargo::core::compiler::fingerprint:     err: failed to read `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/.fingerprint/weg-translator-a36690d42fdf6316/test-integration-test-db_integration`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+  14.769509875s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="db_manager_v2"}: cargo::core::compiler::fingerprint: fingerprint error for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)/Check { test: true }/TargetInner { kind: "test", name: "db_manager_v2", benched: false, ..: with_path("/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/tests/db_manager_v2.rs", Edition2024) }
+  14.769514834s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="db_manager_v2"}: cargo::core::compiler::fingerprint:     err: failed to read `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/.fingerprint/weg-translator-f93574e70b22c90b/test-integration-test-db_manager_v2`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+  14.770458917s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="ipc_artifacts"}: cargo::core::compiler::fingerprint: fingerprint error for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)/Check { test: true }/TargetInner { kind: "test", name: "ipc_artifacts", benched: false, ..: with_path("/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/tests/ipc_artifacts.rs", Edition2024) }
+  14.770464750s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="ipc_artifacts"}: cargo::core::compiler::fingerprint:     err: failed to read `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/.fingerprint/weg-translator-f9f81b3385ceac68/test-integration-test-ipc_artifacts`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+  14.771391459s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="project_conversions"}: cargo::core::compiler::fingerprint: fingerprint error for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)/Check { test: true }/TargetInner { kind: "test", name: "project_conversions", benched: false, ..: with_path("/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/tests/project_conversions.rs", Edition2024) }
+  14.771397417s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="project_conversions"}: cargo::core::compiler::fingerprint:     err: failed to read `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/.fingerprint/weg-translator-053facfdc3246e24/test-integration-test-project_conversions`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+  14.772311000s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="schema_migrations"}: cargo::core::compiler::fingerprint: fingerprint error for weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)/Check { test: true }/TargetInner { kind: "test", name: "schema_migrations", benched: false, ..: with_path("/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/tests/schema_migrations.rs", Edition2024) }
+  14.772317125s  INFO prepare_target{force=false package_id=weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri) target="schema_migrations"}: cargo::core::compiler::fingerprint:     err: failed to read `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/.fingerprint/weg-translator-e3915635d1803b0c/test-integration-test-schema_migrations`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: std::backtrace::Backtrace::create
+   1: cargo_util::paths::read_bytes
+   2: cargo_util::paths::read
+   3: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   4: cargo::core::compiler::fingerprint::prepare_target
+   5: cargo::core::compiler::compile
+   6: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   7: cargo::ops::cargo_compile::compile_ws
+   8: cargo::ops::cargo_compile::compile_with_exec
+   9: cargo::ops::cargo_compile::compile
+  10: cargo::commands::check::exec
+  11: <cargo::cli::Exec>::exec
+  12: cargo::main
+  13: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  14: std::rt::lang_start::<()>::{closure#0}
+  15: std::rt::lang_start_internal
+  16: _main
+   Compiling weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)
+error: failed to run custom build command for `weg-translator v0.1.0 (/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri)`
+note: To improve backtraces for build dependencies, set the CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable to enable debug information generation.
+
+Caused by:
+  process didn't exit successfully: `/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/build/weg-translator-299f00f0a3d27bd8/build-script-build` (exit status: 1)
+  --- stdout
+  cargo:rerun-if-env-changed=TAURI_CONFIG
+  cargo:rustc-check-cfg=cfg(desktop)
+  cargo:rustc-cfg=desktop
+  cargo:rustc-check-cfg=cfg(mobile)
+  cargo:rerun-if-changed=/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/tauri.conf.json
+  cargo:rustc-env=TAURI_ANDROID_PACKAGE_NAME_APP_NAME=weg_translator
+  cargo:rustc-env=TAURI_ANDROID_PACKAGE_NAME_PREFIX=com_brg
+  cargo:rustc-check-cfg=cfg(dev)
+  cargo:rustc-cfg=dev
+  cargo:PERMISSION_FILES_PATH=/Volumes/SSD_1_ext/CODING/WeGentic/Weg-Translator-Tauri/weg-translator.worktrees/clientdatagrid/src-tauri/target/debug/build/weg-translator-ed709fc03b382370/out/app-manifest/__app__-permission-files
+  cargo:rerun-if-changed=capabilities
+  cargo:rerun-if-env-changed=REMOVE_UNUSED_COMMANDS
+  cargo:rustc-env=TAURI_ENV_TARGET_TRIPLE=aarch64-apple-darwin
+  cargo:rerun-if-changed=sidecars/openxliff/bin/convert.sh-aarch64-apple-darwin
+  cargo:rerun-if-changed=sidecars/openxliff/bin/merge.sh-aarch64-apple-darwin
+  cargo:rerun-if-changed=sidecars/openxliff/bin/xliffchecker.sh-aarch64-apple-darwin
+  cargo:rerun-if-changed=sidecars/openxliff/bin/convert.cmd-aarch64-apple-darwin
+  cargo:rerun-if-changed=sidecars/openxliff/bin/merge.cmd-aarch64-apple-darwin
+  cargo:rerun-if-changed=sidecars/openxliff/bin/xliffchecker.cmd-aarch64-apple-darwin
+  resource path `resources/jre` doesn't exist

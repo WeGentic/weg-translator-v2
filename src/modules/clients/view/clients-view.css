@@ -1,0 +1,80 @@
+.clients-content-region {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-bottom: 1rem;
+}
+
+.clients-table-zone {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--color-tr-border);
+  background: linear-gradient(180deg, var(--color-tr-sidebar) 0%, var(--color-tr-white) 55%);
+  box-shadow: 0 18px 48px -28px rgba(17, 24, 39, 0.32);
+}
+
+.clients-table-zone table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 100%;
+}
+
+.clients-table-zone thead th {
+  background: var(--color-tr-muted);
+  background: linear-gradient(
+    90deg,
+    var(--color-tr-muted) 0%,
+    color-mix(in oklch, var(--color-tr-accent) 45%, transparent) 100%
+  );
+  border-bottom: 1px solid var(--color-tr-border);
+  border-bottom-color: color-mix(in oklch, var(--color-tr-border) 80%, transparent);
+}
+
+.clients-table-zone tbody tr {
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.clients-table-zone tbody tr:hover {
+  background-color: var(--color-tr-accent);
+  background-color: color-mix(in oklch, var(--color-tr-accent) 20%, transparent);
+  box-shadow: inset 0 0 0 1px var(--color-tr-border);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-tr-border) 70%, transparent);
+}
+
+.clients-table-zone tbody tr:focus-within {
+  outline: 2px solid var(--color-tr-ring);
+  outline-offset: -2px;
+}
+
+.clients-table-skeleton {
+  min-height: 18rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--color-tr-muted) 0%, var(--color-tr-sidebar) 100%);
+}
+
+.clients-table-skeleton .animate-pulse {
+  background: color-mix(in oklch, var(--color-tr-muted) 75%, transparent);
+}
+
+@media (max-width: 1024px) {
+  .clients-content-region {
+    gap: 1rem;
+    padding-inline: 0.5rem;
+  }
+
+  .clients-table-zone {
+    border-radius: 0.75rem;
+  }
+
+  .clients-table-zone thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+}
