@@ -11,6 +11,9 @@ export type ProjectRow = {
   status: ProjectStatus;
   activityStatus: ProjectActivityStatus;
   fileCount: number;
+  subjects: string[];
+  primarySubject: string | null;
+  clientName: string | null;
   created: DateParts;
   updated: DateParts;
 };

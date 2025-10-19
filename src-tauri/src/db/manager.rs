@@ -18,8 +18,8 @@ use super::schema::initialise_schema;
 use super::types::{
     ArtifactRecord, ClientRecord, JobRecord, NewArtifactArgs, NewClientArgs, NewFileInfoArgs,
     NewJobArgs, NewProjectArgs, NewProjectFileArgs, NewUserArgs, ProjectBundle, ProjectFileBundle,
-    ProjectRecord, UpdateArtifactStatusArgs, UpdateClientArgs, UpdateJobStatusArgs,
-    UpdateProjectArgs, UpdateUserArgs, UserProfile,
+    ProjectListRecord, ProjectRecord, UpdateArtifactStatusArgs, UpdateClientArgs,
+    UpdateJobStatusArgs, UpdateProjectArgs, UpdateUserArgs, UserProfile,
 };
 
 /// Central entry-point for all database interactions. Wraps the SQLite pool and synchronises writes.
@@ -224,7 +224,7 @@ impl DbManager {
     }
 
     /// Lists project records.
-    pub async fn list_project_records(&self) -> DbResult<Vec<ProjectRecord>> {
+    pub async fn list_project_records(&self) -> DbResult<Vec<ProjectListRecord>> {
         let pool = self.pool().await;
         projects_v2::list_projects(&pool).await
     }

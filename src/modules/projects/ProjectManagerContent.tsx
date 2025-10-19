@@ -10,6 +10,7 @@ import { ProjectManagerFooter } from "./components/ProjectManagerFooter";
 import { ProjectsTableGrid } from "./components/datagrid/ProjectsTableGrid";
 import { buildColumns, DEFAULT_SORT_COLUMN_ID } from "./components/datagrid/columns";
 import type { ProjectManagerContentProps, ProjectRow } from "./state/types";
+import { resolveProjectSubjectLabel } from "./constants";
 
 type ExtendedProps = ProjectManagerContentProps & {
   sorting?: SortingState;
@@ -23,14 +24,22 @@ function toProjectRow(item: ProjectManagerContentProps["items"][number]): Projec
 } {
   const created = formatDateParts(item.createdAt);
   const updated = formatDateParts(item.updatedAt);
+  const status = (item.status ?? "READY").toUpperCase();
+  const subjects = Array.isArray(item.subjects) ? item.subjects : [];
+  const primarySubjectValue = subjects[0] ?? null;
+  const primarySubject = resolveProjectSubjectLabel(primarySubjectValue);
+  const clientName = item.clientName ?? null;
   return {
     id: item.projectId,
     name: item.name,
     slug: item.slug,
     projectType: item.projectType,
-    status: item.status,
+    status,
     activityStatus: item.activityStatus ?? "pending",
     fileCount: item.fileCount ?? 0,
+    subjects,
+    primarySubject,
+    clientName,
     created,
     updated,
     createdRaw: Date.parse(item.createdAt),

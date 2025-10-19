@@ -57,11 +57,13 @@ function buildProject(overrides: Partial<ProjectListItem> = {}): ProjectListItem
     name: overrides.name ?? "Sample Project",
     slug: overrides.slug ?? "sample-project",
     projectType: overrides.projectType ?? "translation",
-    status: overrides.status ?? "active",
+    status: overrides.status ?? "READY",
     activityStatus: overrides.activityStatus ?? "pending",
     fileCount: overrides.fileCount ?? 2,
+    subjects: overrides.subjects ?? ["marketing"],
     createdAt: overrides.createdAt ?? now,
     updatedAt: overrides.updatedAt ?? now,
+    clientName: overrides.clientName ?? null,
   } satisfies ProjectListItem;
 }
 

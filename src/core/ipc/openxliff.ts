@@ -299,6 +299,9 @@ export async function convert(opts: {
   if (opts.version === '2.0') args.push('-2.0')
   if (opts.version === '2.1') args.push('-2.1')
   if (opts.version === '2.2') args.push('-2.2')
+  if (import.meta.env.DEV) {
+    console.debug('[openxliff] convertStream args', args)
+  }
   return run('convert', args)
 }
 

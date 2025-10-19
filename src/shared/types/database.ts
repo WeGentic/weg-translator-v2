@@ -132,8 +132,11 @@ export interface ProjectRecord {
   projectStatus: ProjectStatus;
   userUuid: Uuid;
   clientUuid?: Nullable<Uuid>;
+  clientName?: Nullable<string>;
   type: ProjectType;
   notes?: Nullable<string>;
+  subjects?: string[];
+  fileCount?: number;
 }
 
 export type ProjectListItem = ProjectRecord;

@@ -4,7 +4,15 @@ mod jliff;
 mod settings;
 
 pub mod ipc_test {
+    pub use crate::ipc::commands::projects_v2::{
+        create_project_with_assets_impl, create_project_with_assets_v2, test_support,
+    };
     pub use crate::ipc::commands::with_project_file_lock;
+    pub use crate::ipc::dto::{
+        CreateProjectWithAssetsPayload, ProjectAssetDescriptorDto, ProjectAssetRoleDto,
+        ProjectLanguagePairDto,
+    };
+    pub use crate::settings::SettingsManager;
 }
 pub use crate::db::types::schema::{
     FileLanguagePairInput, NewClientArgs, NewFileInfoArgs, NewProjectArgs, NewProjectFileArgs,
@@ -12,10 +20,11 @@ pub use crate::db::types::schema::{
     UpdateProjectArgs,
 };
 pub use crate::db::{
-    ArtifactKind, ArtifactStatus, DbError, DbManager, DatabasePerformanceConfig, FileTargetStatus,
-    NewProject, NewProjectFile, NewTranslationRecord, PersistedTranslationOutput, ProjectFileConversionRequest,
-    ProjectFileConversionStatus, ProjectFileImportStatus, ProjectFileRole, ProjectFileStorageState,
-    ProjectLifecycleStatus, ProjectStatus, ProjectType, initialise_schema,
+    ArtifactKind, ArtifactStatus, DatabasePerformanceConfig, DbError, DbManager, FileTargetStatus,
+    NewProject, NewProjectFile, NewTranslationRecord, PersistedTranslationOutput,
+    ProjectFileConversionRequest, ProjectFileConversionStatus, ProjectFileImportStatus,
+    ProjectFileRole, ProjectFileStorageState, ProjectLifecycleStatus, ProjectStatus, ProjectType,
+    initialise_schema,
 };
 pub use crate::ipc::dto::{
     PipelineJobSummary, TranslationHistoryRecord, TranslationRequest, TranslationStage,
@@ -25,17 +34,18 @@ pub use crate::jliff::{ConversionOptions, GeneratedArtifact, convert_xliff};
 use crate::db::JobState;
 use ipc::{
     TranslationState, attach_project_file_v2, clear_translation_history, create_client_record_v2,
-    create_project_bundle_v2, create_project_with_assets_v2, create_user_profile_v2, delete_artifact_record_v2,
-    delete_client_record_v2, delete_job_record_v2, delete_project_bundle_v2,
-    delete_user_profile_v2, detach_project_file_v2, fail_translation, get_app_settings,
-    get_client_record_v2, get_project_bundle_v2, get_translation_job, get_user_profile_v2,
-    health_check, list_active_jobs, list_artifacts_for_file_v2, list_client_records_v2,
-    list_jobs_for_project_v2, list_project_records_v2, list_translation_history,
-    list_user_profiles_v2, path_exists, start_translation, update_app_folder,
-    update_artifact_status_v2, update_auto_convert_on_open, update_client_record_v2,
-    update_default_languages, update_job_status_v2, update_max_parallel_conversions,
-    update_notifications, update_project_bundle_v2, update_theme, update_ui_language,
-    update_user_profile_v2, update_xliff_version, upsert_artifact_record_v2, upsert_job_record_v2,
+    create_project_bundle_v2, create_project_with_assets_v2, create_user_profile_v2,
+    delete_artifact_record_v2, delete_client_record_v2, delete_job_record_v2,
+    delete_project_bundle_v2, delete_user_profile_v2, detach_project_file_v2, fail_translation,
+    get_app_settings, get_client_record_v2, get_project_bundle_v2, get_translation_job,
+    get_user_profile_v2, health_check, list_active_jobs, list_artifacts_for_file_v2,
+    list_client_records_v2, list_jobs_for_project_v2, list_project_records_v2,
+    list_translation_history, list_user_profiles_v2, path_exists, start_translation,
+    update_app_folder, update_artifact_status_v2, update_auto_convert_on_open,
+    update_client_record_v2, update_default_languages, update_job_status_v2,
+    update_max_parallel_conversions, update_notifications, update_project_bundle_v2, update_theme,
+    update_ui_language, update_user_profile_v2, update_xliff_version, upsert_artifact_record_v2,
+    upsert_job_record_v2,
 };
 use log::LevelFilter;
 use log::kv::VisitSource;

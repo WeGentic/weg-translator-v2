@@ -27,6 +27,7 @@ import type {
   CreateProjectWithAssetsResponse,
   ProjectBundle,
 } from "@/shared/types/database";
+import { useAuth } from "@/app/providers";
 import { Dialog, DialogClose, DialogContent } from "@/shared/ui/dialog";
 import { useToast } from "@/shared/ui/use-toast";
 import { cn } from "@/shared/utils/class-names";
@@ -63,6 +64,8 @@ import { generateUniqueProjectFolderName, sanitizeProjectFolderName } from "./ut
 import { getProjectsResourceSnapshot, refreshProjectsResource } from "../../data/projectsResource";
 
 import "./wizard-v2.css";
+
+const XLIFF_TARGET_VERSION: "2.0" = "2.0";
 
 const FINALIZE_PHASE_COPY: Record<WizardFinalizePhase, WizardFinalizeProgressDescriptor> = {
   "validating-input": {
@@ -585,7 +588,7 @@ interface FinalizeState {
 
 export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: CreateProjectWizardV2Props) {
   const { toast } = useToast();
-  const LOCAL_OWNER_USER_ID = "local-user";
+  const { user: authenticatedUser } = useAuth();
   const [submissionPending, startSubmission] = useTransition();
   const [projectName, setProjectName] = useState("");
   const [clientName, setClientName] = useState("");
@@ -617,9 +620,10 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
   const conversionPlanRef = useRef<WizardConversionPlan | null>(null);
 
   const runConversionPlan = useCallback(
-    async (plan: WizardConversionPlan) => {
+    async (plan: WizardConversionPlan): Promise<string[]> => {
+      const validationWarnings: string[] = [];
       if (plan.tasks.length === 0) {
-        return;
+        return validationWarnings;
       }
 
       const total = plan.tasks.length;
@@ -682,6 +686,9 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
             srcLang: task.sourceLanguage,
             tgtLang: task.targetLanguage,
             xliff: task.outputAbsPath,
+            version: XLIFF_TARGET_VERSION,
+            embed: true,
+            paragraph: true,
           },
           {
             onStdout: (line) => {
@@ -747,12 +754,13 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
           const detail = detailCandidate && detailCandidate.trim().length > 0 ? detailCandidate.trim() : undefined;
 
           await markJobStatus("failed", detail ?? message);
-
-          throw {
-            code: "VALIDATION_FAILED",
+          validationWarnings.push(detail ?? message);
+          console.warn("[wizard] xliff validation warning", {
+            task: task.draftId,
             message,
             detail,
-          } satisfies BackendErrorShape;
+          });
+          continue;
         }
 
         await markJobStatus("completed");
@@ -765,6 +773,8 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
           "Conversions completed successfully.",
         ),
       );
+
+      return validationWarnings;
     },
     [setFeedback],
   );
@@ -970,6 +980,19 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
       return;
     }
 
+    const activeUserId = authenticatedUser?.id ?? null;
+
+    if (!activeUserId) {
+      const message = "You need to be signed in to create a project.";
+      setFeedback(createErrorFeedback("validation", message));
+      toast({
+        variant: "destructive",
+        title: "Authentication required",
+        description: message,
+      });
+      return;
+    }
+
     const snapshot = getProjectsResourceSnapshot();
     const existingFolderNames = Array.from(
       new Set(
@@ -982,7 +1005,7 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
     const finalizeResult = buildWizardFinalizePayload({
       projectName,
       projectType: DEFAULT_PROJECT_TYPE,
-      userUuid: LOCAL_OWNER_USER_ID,
+      userUuid: activeUserId,
       clientUuid: selectedClientUuid ?? null,
       projectField,
       notes,
@@ -1010,6 +1033,7 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
       setFeedback(createProgressFeedback("validating-input"));
 
       let unlistenProgress: UnlistenFn | null = null;
+      let conversionWarnings: string[] = [];
 
       try {
         try {
@@ -1064,7 +1088,7 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
         }
 
         if (conversionPlan.tasks.length > 0) {
-          await runConversionPlan(conversionPlan);
+          conversionWarnings = await runConversionPlan(conversionPlan);
         }
 
         onProjectCreated?.(response.project);
@@ -1078,6 +1102,13 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
           title: "Project created",
           description: `${payload.projectName} has been created and initial conversions completed.`,
         });
+        if (conversionWarnings.length > 0) {
+          toast({
+            variant: "destructive",
+            title: "XLIFF validation warnings",
+            description: conversionWarnings.join("\n"),
+          });
+        }
         handleClear();
         onOpenChange(false);
       } catch (error) {
@@ -1117,6 +1148,7 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
     sourceLanguage,
     targetLanguages,
     files,
+    authenticatedUser,
     setFeedback,
     startSubmission,
     runConversionPlan,

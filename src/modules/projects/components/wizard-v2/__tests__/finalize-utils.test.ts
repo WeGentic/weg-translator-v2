@@ -10,11 +10,13 @@ import {
 
 import type { CreateProjectWithAssetsResponse } from "@/shared/types/database";
 
+const USER_UUID = "00000000-0000-0000-0000-000000000001";
+
 describe("buildWizardFinalizePayload", () => {
   const baseParams = {
     projectName: " Example Project ",
     projectType: "translation" as const,
-    userUuid: "local-user",
+    userUuid: USER_UUID,
     clientUuid: null,
     projectField: "Legal",
     notes: "Some notes",
@@ -61,7 +63,7 @@ describe("buildCreateProjectWithAssetsInput", () => {
     const finalizeResult = buildWizardFinalizePayload({
       projectName: "Demo",
       projectType: "translation",
-      userUuid: "local-user",
+      userUuid: USER_UUID,
       clientUuid: null,
       projectField: "Legal",
       notes: "",
@@ -109,7 +111,7 @@ describe("mapConversionPlanFromResponse", () => {
         creationDate: "now",
         updateDate: "now",
         projectStatus: "active",
-        userUuid: "local-user",
+        userUuid: USER_UUID,
         clientUuid: null,
         type: "translation",
         notes: null,

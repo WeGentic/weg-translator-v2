@@ -1,0 +1,19 @@
+export const PROJECT_SUBJECT_OPTIONS = [
+  { value: "marketing", label: "Marketing & Creative" },
+  { value: "legal", label: "Legal" },
+  { value: "technical", label: "Technical" },
+  { value: "medical", label: "Medical" },
+  { value: "finance", label: "Finance" },
+  { value: "software", label: "Software & IT" },
+] as const;
+
+const SUBJECT_LABEL_LOOKUP = new Map(
+  PROJECT_SUBJECT_OPTIONS.map((option) => [option.value, option.label]),
+);
+
+export function resolveProjectSubjectLabel(subject: string | null | undefined): string | null {
+  if (!subject) {
+    return null;
+  }
+  return SUBJECT_LABEL_LOOKUP.get(subject) ?? subject;
+}

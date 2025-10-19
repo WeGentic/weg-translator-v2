@@ -5,6 +5,8 @@ import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/tooltip";
 import { cn } from "@/shared/utils/class-names";
+import "@/app/shell/sidebar-two-content/css/sidebar-two-focused-project.css";
+
 import { BatchDeleteConfirmDialog } from "./BatchDeleteConfirmDialog";
 
 /**
@@ -177,29 +179,34 @@ export function ProjectsBatchActionsPanel({
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
           Selected Projects
         </h3>
-        <div className="flex-1 overflow-y-auto">
-          <ul className="space-y-1.5 pr-2">
+        <div className="flex-1 overflow-y-auto pr-1.5">
+          <ul className="space-y-2">
             {selectedProjectIds.map((projectId, index) => {
-              const name = selectedProjectNames[index];
+              const name = selectedProjectNames[index] ?? "Untitled project";
+              const isInteractive = Boolean(onOpenProject);
+
               return (
-                <li
-                  key={projectId}
-                  onClick={() => onOpenProject?.(projectId)}
-                  className={cn(
-                    "flex items-start gap-2 px-2 py-1.5 rounded-md text-sm",
-                    "bg-secondary/5 hover:bg-secondary/10 transition-colors",
-                    "border border-secondary/20",
-                    onOpenProject && "cursor-pointer hover:shadow-sm"
-                  )}
-                >
-                  {/* Index number */}
-                  <span className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-secondary/20 text-[10px] font-bold text-secondary-foreground">
-                    {index + 1}
-                  </span>
-                  {/* Project name */}
-                  <span className="flex-1 font-medium text-foreground leading-5 break-words">
-                    {name}
-                  </span>
+                <li key={projectId} className="sidebar-two-focused-project">
+                  <button
+                    type="button"
+                    className={cn(
+                      "sidebar-two-focused-project__main",
+                      isInteractive && "sidebar-two-focused-project__main--interactive",
+                    )}
+                    onClick={() => {
+                      if (isInteractive) {
+                        onOpenProject?.(projectId);
+                      }
+                    }}
+                    disabled={!isInteractive}
+                    aria-label={`Open ${name}`}
+                  >
+                    <span className="sidebar-two-focused-project__rail" aria-hidden="true" />
+                    <span className="sidebar-two-focused-project__sequence">{index + 1}</span>
+                    <span className="sidebar-two-focused-project__label" title={name}>
+                      {name}
+                    </span>
+                  </button>
                 </li>
               );
             })}

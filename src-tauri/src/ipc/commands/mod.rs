@@ -1,7 +1,7 @@
 mod artifacts_v2;
 mod clients_v2;
 mod jobs_v2;
-mod projects_v2;
+pub mod projects_v2;
 mod settings;
 mod shared;
 mod translations;

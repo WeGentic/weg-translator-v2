@@ -104,3 +104,17 @@
 - Added `finalize-utils.test.ts` covering payload assembly, error classification, conversion plan mapping, and user-facing task descriptions.
 - Tests rely on exported helpers from `CreateProjectWizardV2`, ensuring validation logic stays regressed; executed with Vitest.
 - Verification: `pnpm test src/modules/projects/components/wizard-v2/__tests__/finalize-utils.test.ts`.
+
+## Step 5.2 (Command rollback tests)
+- Extracted the project creation pipeline into `create_project_with_assets_impl` so the command can be exercised with both Wry and `MockRuntime` handles; wired rollback guards to guarantee database cleanup on every early exit.
+- Augmented `rollback_project_creation` and error branches inside `create_project_with_assets_impl` to delete project rows when asset copy, attachment, or conversion planning fail.
+- Registered Tauri's `test` feature in `Cargo.toml`, expanded `ipc_test` exports, and introduced `build_settings_manager` for repeatable test scaffolds.
+- Authored `command_rollback_removes_db_entries_on_copy_failure` in `tests/project_creation_rollback.rs`, using `tauri::test::mock_app` to simulate the command and asserting both filesystem and SQLite state are restored.
+- Verification: `cargo test command_rollback_removes_db_entries_on_copy_failure`.
+
+## Step 5.4 (User profile synchronization)
+- Hooked `AuthProvider` into the user IPC adapters so every Supabase session ensures a matching SQLite user profile, creating or updating the record with deterministic owner roles.
+- Added guarded logging around the sync to capture creation/update failures without breaking the UI, and memoized the last synced UUID to prevent redundant IPC calls.
+- Updated the wizard to consume the authenticated user's UUID, blocking finalize attempts when no user is present and surfacing an actionable toast.
+- Refreshed finalize utility tests to expect real UUID values, aligning with the backend validation rules.
+- Verification: `pnpm typecheck`.

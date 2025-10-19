@@ -23,15 +23,6 @@ export const EDITABLE_FILE_ROLE_OPTIONS: ReadonlyArray<{
   { value: "instructions", label: FILE_ROLE_LABELS.instructions },
 ] as const;
 
-export const PROJECT_FIELDS = [
-  { value: "marketing", label: "Marketing & Creative" },
-  { value: "legal", label: "Legal" },
-  { value: "technical", label: "Technical" },
-  { value: "medical", label: "Medical" },
-  { value: "finance", label: "Finance" },
-  { value: "software", label: "Software & IT" },
-] as const;
-
 /**
  * Extensions used to infer the default "image" role for newly added files.
  * The list is normalised to uppercase to simplify lookups.

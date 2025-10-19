@@ -12,7 +12,7 @@
   --wizard-control-height: 40px;
   position: relative;
   display: grid;
-  gap: 12px;
+  gap: 4px;
   width: 100%;
   height: 100%;
   padding: clamp(18px, 3vw, 22px);
@@ -45,7 +45,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 6px;
 }
 
 .wizard-v2-header::after {
@@ -104,7 +104,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .wizard-v2-autocomplete-menu {
@@ -136,7 +136,7 @@
   gap: 2px;
   border-radius: 8px;
   border: 1px solid transparent;
-  padding: 8px 10px;
+  padding: 6px 8px;
   text-align: left;
   font-size: 0.82rem;
   background: color-mix(in oklab, var(--color-tr-primary-blue) 25%, transparent);
@@ -172,7 +172,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: color-mix(in oklab, var(--color-tr-muted-foreground) 80%, var(--color-tr-sidebar-primary) 15%);
 }
 
@@ -364,7 +364,7 @@
 
 .wizard-v2-combobox-trigger--compact {
   padding-block: 6px;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
 }
 
 .wizard-v2-combobox--compact {
@@ -380,7 +380,7 @@
 
 .wizard-v2-combobox-placeholder {
   color: color-mix(in oklab, var(--color-tr-muted-foreground) 70%, var(--color-tr-sidebar-primary) 15%);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
 }
 
 .wizard-v2-combobox-value {
@@ -403,7 +403,7 @@
   backdrop-filter: blur(24px) saturate(140%);
   padding: 14px;
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .wizard-v2-combobox-search {
@@ -428,10 +428,10 @@
   display: grid;
   max-height: 240px;
   overflow-y: auto;
-  gap: 6px;
+  gap: 4px;
   overscroll-behavior: contain;
   padding-top: 4px;
-  padding-right: 4px;
+  padding-right: 6px;
 }
 
 .wizard-v2-option {
@@ -464,7 +464,7 @@
   align-items: center;
   gap: 10px;
   text-align: left;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
 }
 
 .wizard-v2-option--tight {
@@ -472,7 +472,7 @@
 }
 
 .wizard-v2-option-flag {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   line-height: 1;
 }
 
@@ -507,7 +507,7 @@
 .wizard-v2-language-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   border-radius: 12px;
   padding: clamp(12px, 2.8vw, 16px);
   border: 1px solid color-mix(in oklab, var(--color-tr-border) 45%, transparent);
@@ -532,7 +532,7 @@
   align-items: center;
   justify-content: center;
   min-width: 22px;
-  padding: 0 6px;
+  padding: 0 4px;
   border-radius: 10px;
   background: color-mix(in oklab, var(--color-tr-primary-blue) 94%, transparent);
   color: color-mix(in oklab, var(--color-tr-secondary) 95%, var(--color-tr-antiwhite) 5%);
@@ -558,7 +558,7 @@
 .wizard-v2-chip-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   padding: 3px 5px;
   min-height: 28px;
 }
@@ -646,7 +646,7 @@
   border: 1px solid var(--color-tr-primary-blue);
   background: color-mix(in oklab, var(--color-tr-primary-blue) 50%, transparent);
   color: var(--color-tr-anti-primary);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 600;
   padding: 7px 0;
   transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
@@ -682,7 +682,7 @@
   min-height: calc(var(--wizard-control-height) - 4px);
   padding: 0 18px;
   border-radius: 10px;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -787,7 +787,7 @@
   --wizard-control-height: 40px;
   position: relative;
   display: grid;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
   height: 100%;
 }
@@ -796,7 +796,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 6px;
   border: 1px dashed color-mix(in oklab, var(--color-tr-border) 45%, transparent);
   border-radius: 10px;
   background: color-mix(in oklab, var(--color-tr-muted) 82%, transparent);
@@ -1168,7 +1168,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 }
 
 .wizard-v2-file-row td {
-  padding: 8px 10px;
+  padding: 6px 8px;
   font-size: 0.72rem;
 }
 
@@ -1393,7 +1393,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 }
 
 .wizard-v2-feedback-title {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1502,7 +1502,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   max-width: 700px;
   width: min(560px, calc(100vw - 32px));
   max-height: min(85vh, 700px);
-  gap: 12px;
+  gap: 6px;
   width: 100%;
   height: 100%;
   padding: clamp(18px, 3vw, 22px);
@@ -1533,7 +1533,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 .wizard-v2-client-body {
   min-height: 0;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 2px;
 }
 
 .wizard-v2-client-grid {
@@ -1556,11 +1556,295 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 }
 
 .wizard-v2-client-label {
-  font-size: 0.74rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.85rem;
   font-weight: 600;
-  color: color-mix(in oklab, var(--color-tr-primary) 85%, var(--color-tr-antiwhite) 12%);
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: color-mix(in oklab, var(--color-tr-primary) 72%, var(--color-tr-antiwhite) 18%);
+}
+
+.wizard-v2-client-field-error {
+  margin: 2px 2px 0;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: color-mix(in oklab, var(--color-tr-destructive) 70%, var(--color-tr-antiwhite) 15%);
+}
+
+.wizard-v2-client-phone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.wizard-v2-phone-trigger {
+  flex: 0 0 104px;
+  height: 36px;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 4px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklab, var(--color-tr-border) 78%, transparent);
+  background: color-mix(in oklab, var(--color-tr-input) 90%, transparent);
+  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 42%, var(--color-tr-antiwhite) 15%);
+  transition: border-color 140ms ease, background-color 140ms ease;
+  cursor: pointer;
+  text-align: center;
+}
+
+.wizard-v2-phone-trigger:hover {
+  border-color: color-mix(in oklab, var(--color-tr-border) 90%, transparent);
+  background: color-mix(in oklab, var(--color-tr-input) 75%, var(--color-tr-accent) 25%);
+}
+
+.wizard-v2-phone-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-tr-ring) 55%, transparent);
+}
+
+.wizard-v2-phone-trigger--disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.wizard-v2-phone-trigger-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.05;
+  min-width: 0;
+}
+
+.wizard-v2-phone-trigger-code {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.wizard-v2-phone-trigger-name {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  color: color-mix(in oklab, var(--color-tr-muted-foreground) 82%, var(--color-tr-sidebar-primary) 18%);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wizard-v2-phone-popover {
+  width: 188px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: color-mix(in oklab, var(--color-tr-sidebar) 92%, var(--color-tr-muted) 8%);
+  border-radius: 16px;
+  border: 1px solid color-mix(in oklab, var(--color-tr-border) 70%, transparent);
+  padding: 12px;
+}
+
+.wizard-v2-phone-search input {
+  height: 36px;
+  font-size: 0.85rem;
+}
+
+.wizard-v2-phone-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.wizard-v2-phone-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 40%, var(--color-tr-antiwhite) 12%);
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+  cursor: pointer;
+}
+
+.wizard-v2-phone-option:hover,
+.wizard-v2-phone-option:focus-visible {
+  background: color-mix(in oklab, var(--color-tr-accent) 28%, var(--color-tr-muted) 72%);
+  border-color: color-mix(in oklab, var(--color-tr-accent) 40%, transparent);
+}
+
+.wizard-v2-phone-option--active {
+  background: color-mix(in oklab, var(--color-tr-accent) 40%, var(--color-tr-muted) 60%);
+  border-color: color-mix(in oklab, var(--color-tr-accent) 55%, transparent);
+  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 45%, var(--color-tr-antiwhite) 15%);
+}
+
+.wizard-v2-phone-field {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.wizard-v2-phone-prefix {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in oklab, var(--color-tr-border) 78%, transparent);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  background: color-mix(in oklab, var(--color-tr-input) 90%, transparent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 48%, var(--color-tr-antiwhite) 18%);
+  min-width: 46px;
+}
+
+.wizard-v2-client-phone-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-left: none !important;
+}
+
+.wizard-v2-phone-option-flag {
+  font-size: 1.1rem;
+}
+
+.wizard-v2-phone-option-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.wizard-v2-phone-option-name {
+  flex: 1 1 auto;
+  font-size: 0.76rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wizard-v2-phone-option-code {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--color-tr-muted-foreground) 65%, var(--color-tr-sidebar-primary) 25%);
+  flex-shrink: 0;
+}
+
+.wizard-v2-phone-empty {
+  margin: 0;
+  padding: 12px 6px;
+  font-size: 0.8rem;
+  color: color-mix(in oklab, var(--color-tr-muted-foreground) 75%, var(--color-tr-sidebar-primary) 15%);
+  text-align: center;
+}
+
+.wizard-v2-client-phone-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.wizard-v2-client-autocomplete {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wizard-v2-client-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 260px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in oklab, var(--color-tr-border) 65%, transparent);
+  background: color-mix(in oklab, var(--color-tr-sidebar) 85%, var(--color-tr-white) 15%);
+  box-shadow:
+    0 18px 40px -24px color-mix(in oklab, black 55%, transparent),
+    0 1px 0 0 color-mix(in oklab, white 18%, transparent) inset;
+  overflow-y: auto;
+}
+
+.wizard-v2-client-suggestion {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: color-mix(in oklab, var(--color-tr-sidebar-foreground) 85%, var(--color-tr-antiwhite) 10%);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+.wizard-v2-client-suggestion:hover,
+.wizard-v2-client-suggestion:focus-visible,
+.wizard-v2-client-suggestion--active {
+  background: color-mix(in oklab, var(--color-tr-accent) 25%, var(--color-tr-muted) 75%);
+  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 20%, var(--color-tr-antiwhite) 15%);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-tr-ring) 35%, transparent) inset;
+}
+
+.wizard-v2-client-suggestion:focus-visible {
+  outline: none;
+}
+
+.wizard-v2-client-suggestion-primary {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.wizard-v2-client-suggestion-secondary {
+  font-size: 0.74rem;
+  color: color-mix(in oklab, var(--color-tr-muted-foreground) 85%, var(--color-tr-sidebar-primary) 15%);
+}
+
+.wizard-v2-client-suggestion-status {
+  padding: 8px 10px;
+  font-size: 0.74rem;
+  color: color-mix(in oklab, var(--color-tr-muted-foreground) 85%, var(--color-tr-sidebar-primary) 10%);
+}
+
+.wizard-v2-client-suggestion-error {
+  padding: 8px 10px;
+  font-size: 0.75rem;
+  border-top: 1px solid color-mix(in oklab, var(--color-tr-border) 40%, transparent);
+  color: color-mix(in oklab, var(--color-tr-destructive) 65%, var(--color-tr-antiwhite) 10%);
 }
 
 .wizard-v2-client-footer {
@@ -1584,6 +1868,19 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   .wizard-v2-client-field--address,
   .wizard-v2-client-field--notes {
     grid-column: span 1;
+  }
+
+  .wizard-v2-client-phone {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wizard-v2-phone-trigger {
+    width: 100%;
+  }
+
+  .wizard-v2-phone-trigger {
+    width: 100%;
   }
 }
 .wizard-v2-close {

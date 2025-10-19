@@ -72,8 +72,11 @@ interface ProjectRecordDto {
   projectStatus: string;
   userUuid: string;
   clientUuid?: string | null;
+  clientName?: string | null;
   type: string;
   notes?: string | null;
+  subjects?: string[];
+  fileCount?: number | null;
 }
 
 type FileInfoDto = FileInfoRecord;
@@ -314,8 +317,11 @@ function mapProjectRecordDto(dto: ProjectRecordDto): ProjectRecord {
     projectStatus: dto.projectStatus,
     userUuid: dto.userUuid,
     clientUuid: dto.clientUuid ?? null,
+    clientName: dto.clientName ?? null,
     type: dto.type,
     notes: dto.notes ?? null,
+    subjects: dto.subjects ?? [],
+    fileCount: dto.fileCount ?? 0,
   };
 }
 

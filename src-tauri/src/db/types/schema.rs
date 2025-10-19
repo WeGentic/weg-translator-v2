@@ -5,7 +5,7 @@
 //! queries and assembling aggregates.
 
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{FromRow, types::Json};
 use uuid::Uuid;
 
 /// Row representation of the `users` table.
@@ -57,6 +57,23 @@ pub struct ProjectRecord {
     pub client_uuid: Option<Uuid>,
     pub r#type: String,
     pub notes: Option<String>,
+}
+
+/// Summary row used when listing projects with aggregate metadata.
+#[derive(Debug, Clone, PartialEq, Eq, FromRow)]
+pub struct ProjectListRecord {
+    pub project_uuid: Uuid,
+    pub project_name: String,
+    pub creation_date: String,
+    pub update_date: String,
+    pub project_status: String,
+    pub user_uuid: Uuid,
+    pub client_uuid: Option<Uuid>,
+    pub client_name: Option<String>,
+    pub r#type: String,
+    pub notes: Option<String>,
+    pub subjects: Json<Vec<String>>,
+    pub file_count: i64,
 }
 
 /// Row representation of `project_subjects`.

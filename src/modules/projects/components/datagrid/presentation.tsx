@@ -1,7 +1,4 @@
-import { Database, Languages } from "lucide-react";
-import type { ComponentType } from "react";
-
-import type { ProjectStatus, ProjectType } from "../../state/types";
+import type { ProjectStatus } from "../../state/types";
 
 export type ProgressStatus = "pending" | "running" | "completed" | "failed";
 
@@ -10,19 +7,12 @@ export type StatusPresentation = {
   tone: "default" | "muted" | "destructive";
 };
 
-export type TypePresentation = {
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-};
-
 export const STATUS_PRESENTATION: Record<ProjectStatus, StatusPresentation> = {
-  active: { label: "Active", tone: "default" },
-  archived: { label: "Archived", tone: "muted" },
-};
-
-export const TYPE_PRESENTATION: Record<ProjectType, TypePresentation> = {
-  translation: { label: "Translation", icon: Languages },
-  rag: { label: "RAG", icon: Database },
+  ready: { label: "Ready", tone: "default" },
+  in_progress: { label: "In Progress", tone: "default" },
+  completed: { label: "Completed", tone: "default" },
+  on_hold: { label: "On Hold", tone: "muted" },
+  cancelled: { label: "Cancelled", tone: "destructive" },
 };
 
 export function StatusBadge({ tone, label }: StatusPresentation) {
@@ -49,3 +39,22 @@ export const PROGRESS_PRESENTATION: Record<ProgressStatus, StatusPresentation> =
   completed: { label: "Completed", tone: "default" },
   failed: { label: "Failed", tone: "destructive" },
 };
+
+export function resolveProjectStatusPresentation(status: string | null | undefined): StatusPresentation {
+  if (!status) {
+    return STATUS_PRESENTATION.ready;
+  }
+
+  const normalized = status.toLowerCase() as ProjectStatus;
+  if (normalized in STATUS_PRESENTATION) {
+    return STATUS_PRESENTATION[normalized];
+  }
+
+  const label = status
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+  return { label, tone: "muted" };
+}

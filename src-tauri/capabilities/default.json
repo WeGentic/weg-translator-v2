@@ -199,6 +199,17 @@
           ]
         },
         {
+          "name": "sidecars/openxliff/bin/convert.sh",
+          "sidecar": true,
+          "args": [
+            "-file", { "validator": "^[^-].+" },
+            "-srcLang", { "validator": "^[^-].+" },
+            "-tgtLang", { "validator": "^[^-].+" },
+            "-xliff", { "validator": "^[^-].+" },
+            { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" }
+          ]
+        },
+        {
           "name": "sidecars/openxliff/bin/merge.sh",
           "sidecar": true,
           "args": [
@@ -247,6 +258,17 @@
             "-ignoresvg",
             { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" },
             { "validator": "^[^-].+" }
+          ]
+        },
+        {
+          "name": "sidecars/openxliff/bin/convert.cmd",
+          "sidecar": true,
+          "args": [
+            "-file", { "validator": "^[^-].+" },
+            "-srcLang", { "validator": "^[^-].+" },
+            "-tgtLang", { "validator": "^[^-].+" },
+            "-xliff", { "validator": "^[^-].+" },
+            { "validator": "^-2\\.0$|^-2\\.1$|^-2\\.2$" }
           ]
         },
         {

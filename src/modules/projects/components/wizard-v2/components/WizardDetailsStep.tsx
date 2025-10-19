@@ -15,7 +15,6 @@ import {
 import { Check, ChevronDown, Plus, Search, X } from "lucide-react";
 
 import { COMMON_LANGUAGES } from "../../wizard/utils/languages";
-import { PROJECT_FIELDS } from "../constants";
 import type { EnhancedLanguageOption } from "../types";
 import { createLanguageMap } from "../utils";
 import { cn } from "@/shared/utils/class-names";
@@ -27,6 +26,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 import type { ClientRecord } from "@/shared/types/database";
 
 import { WizardClientField } from "./WizardClientField";
+import { PROJECT_SUBJECT_OPTIONS, resolveProjectSubjectLabel } from "../../../constants";
 
 interface WizardDetailsStepProps {
   projectName: string;
@@ -73,12 +73,6 @@ export function WizardDetailsStep({
 }: WizardDetailsStepProps) {
   const languageMap = useMemo<Map<string, EnhancedLanguageOption>>(() => {
     return createLanguageMap(COMMON_LANGUAGES);
-  }, []);
-
-  const projectFieldMap = useMemo(() => {
-    return new Map<string, (typeof PROJECT_FIELDS)[number]>(
-      PROJECT_FIELDS.map((option) => [option.value, option]),
-    );
   }, []);
 
   const [sourceSearch, setSourceSearch] = useState("");
@@ -130,14 +124,9 @@ export function WizardDetailsStep({
     return <span className="wizard-v2-chip-text">{code.toUpperCase()}</span>;
   }, []);
 
-  const renderProjectFieldLabel = useCallback(
-    (value: string) => {
-      if (!value) return null;
-      const option = projectFieldMap.get(value);
-      return option?.label ?? null;
-    },
-    [projectFieldMap],
-  );
+  const renderProjectFieldLabel = useCallback((value: string) => {
+    return resolveProjectSubjectLabel(value);
+  }, []);
 
   const handleClientValueChange = useCallback(
     (value: string) => {
@@ -369,7 +358,7 @@ export function WizardDetailsStep({
             </PopoverTrigger>
             <PopoverContent align="start" className="wizard-v2-combobox wizard-v2-combobox--compact">
               <div role="listbox" className="wizard-v2-option-list" aria-label="Project field options">
-                {PROJECT_FIELDS.map((option) => {
+                {PROJECT_SUBJECT_OPTIONS.map((option) => {
                   const isSelected = option.value === projectField;
                   return (
                     <button

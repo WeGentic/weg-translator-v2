@@ -3,7 +3,7 @@ use tempfile::tempdir;
 use uuid::Uuid;
 
 use weg_translator_lib::{
-    DbError, DbManager, DatabasePerformanceConfig, FileLanguagePairInput, NewClientArgs,
+    DatabasePerformanceConfig, DbError, DbManager, FileLanguagePairInput, NewClientArgs,
     NewFileInfoArgs, NewProjectArgs, NewProjectFileArgs, NewUserArgs, PermissionOverrideInput,
     ProjectLanguagePairInput, ProjectSubjectInput, UpdateProjectArgs, initialise_schema,
 };

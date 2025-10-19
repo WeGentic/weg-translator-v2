@@ -68,11 +68,13 @@ function makeProject(partial: Partial<ProjectListItem> = {}): ProjectListItem {
     name: partial.name ?? `Project ${projectSequence}`,
     slug: partial.slug ?? `project-${projectSequence}`,
     projectType: partial.projectType ?? "translation",
-    status: partial.status ?? "active",
+    status: partial.status ?? "READY",
     activityStatus: partial.activityStatus ?? "running",
     fileCount: partial.fileCount ?? 1,
+    subjects: partial.subjects ?? ["marketing"],
     createdAt: partial.createdAt ?? now,
     updatedAt: partial.updatedAt ?? now,
+    clientName: partial.clientName ?? null,
   };
 }
 

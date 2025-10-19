@@ -2,6 +2,79 @@
 
 ## 1. Schema Overview
 
+Project
+  - Project_uuid
+  - Project_name
+  - Creation_date
+  - Update_date
+  - Project_status [READY, IN_PROGRESS, COMPLETED, ON_HOLD, CANCELLED]
+  - Project_files (see Project Files TABLE) (can be empty at some points)
+  - User (see User TABLE)
+  - Client (see Client TABLE) (optional)
+  - Subjects (list) (optional)
+  - Project_Language_pairs (list) (at least one entry)
+  - Type
+  - Jobs (see Jobs TABLE) (can be empty at some points) (optional)
+  - Artifacts (see Artifacts TABLE) (can be empty at some points) (optional)
+  - Notes (optional)
+
+Client
+  - Client_uuid
+  - Client_name
+  - Client_email (optional)
+  - Client_phone (optional)
+  - Client_address (optional)
+  - Client_vat (optional)
+  - Client_note (optional)
+  
+Project Files
+  - Project_uuid
+  - File_uuid
+  - Filename
+  - File info (see File info TABLE)
+  - File_Language_pair (can be <= Project_Language_pair)
+  - Stored_at
+  - Type
+
+File Info
+  - File_uuid
+  - Ext
+  - Type
+  - Size
+  - Count
+  - Token
+  - Notes (optional)
+  
+User
+  - User_uuid
+  - Username
+  - Email
+  - Phone (optional)
+  - Address (optional)
+  - Role (list) (optional)
+  - Permission_override (list) (optional)
+
+Artifacts
+  - Project_uuid
+  - File_uuid
+  - Artifact_uuid
+  - Artifact_type
+  - Size
+  - Count (optional)
+  - Token (optional)
+  - Status
+
+Jobs
+  - Artifact_uuid
+  - Project_uuid
+  - Job_type
+  - Job_status
+  - Error_log (optional)
+  
+  
+
+
+
 | Domain | Tables / Views | Notes |
 | --- | --- | --- |
 | Users & Permissions | `users`, `user_roles`, `user_permission_overrides` | UUID primary keys. Permission overrides represent explicit allow/deny decisions (`is_allowed` flag). |

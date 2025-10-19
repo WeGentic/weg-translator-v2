@@ -9,11 +9,12 @@ const UPDATED_WITHIN_THRESHOLDS: Record<DatePreset, number | null> = {
   "30d": 30 * 24 * 60 * 60 * 1000,
 };
 
-const SEARCHABLE_FIELDS: Array<keyof Pick<ProjectListItem, "name" | "slug" | "projectType" | "status">> = [
+const SEARCHABLE_FIELDS: Array<keyof Pick<ProjectListItem, "name" | "slug" | "projectType" | "status" | "subjects">> = [
   "name",
   "slug",
   "projectType",
   "status",
+  "subjects",
 ];
 
 function withinUpdatedThreshold(item: ProjectListItem, thresholdMs: number | null, now: number): boolean {

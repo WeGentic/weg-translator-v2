@@ -1,35 +1,44 @@
+use serde_json::json;
 use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use serde_json::json;
 use tauri::ipc::InvokeError;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Runtime, State};
 use tokio::task;
 use uuid::Uuid;
 
 use crate::db::DbManager;
 use crate::db::types::{
-    FileInfoRecord, FileLanguagePairInput, NewArtifactArgs, NewFileInfoArgs, NewJobArgs, NewProjectArgs,
-    NewProjectFileArgs, ProjectBundle, ProjectFileBundle, ProjectLanguagePairInput, ProjectRecord,
-    ProjectSubjectInput, UpdateProjectArgs,
+    FileInfoRecord, FileLanguagePairInput, NewArtifactArgs, NewFileInfoArgs, NewJobArgs,
+    NewProjectArgs, NewProjectFileArgs, ProjectBundle, ProjectFileBundle, ProjectLanguagePairInput,
+    ProjectListRecord, ProjectRecord, ProjectSubjectInput, UpdateProjectArgs,
 };
 use crate::ipc::dto::{
-    ArtifactV2Dto, AttachProjectFilePayload, ConversionPlanDto, ConversionTaskDto, CreateProjectPayload,
-    CreateProjectWithAssetsPayload, CreateProjectWithAssetsResponseDto, FileInfoV2Dto,
-    FileLanguagePairDto, JobV2Dto, ProjectAssetDescriptorDto, ProjectAssetResultDto,
+    ArtifactV2Dto, AttachProjectFilePayload, ConversionPlanDto, ConversionTaskDto,
+    CreateProjectPayload, CreateProjectWithAssetsPayload, CreateProjectWithAssetsResponseDto,
+    FileInfoV2Dto, FileLanguagePairDto, JobV2Dto, ProjectAssetDescriptorDto, ProjectAssetResultDto,
     ProjectAssetRoleDto, ProjectBundleV2Dto, ProjectFileBundleV2Dto, ProjectFileLinkDto,
     ProjectLanguagePairDto, ProjectRecordV2Dto, UpdateProjectPayload,
 };
+use crate::ipc::error::{IpcError, IpcResult};
 use crate::ipc::events::{PROJECT_CREATE_COMPLETE, PROJECT_CREATE_PROGRESS};
 use crate::settings::SettingsManager;
-use crate::ipc::error::{IpcError, IpcResult};
 
 #[tauri::command]
 pub async fn create_project_with_assets_v2(
     app: AppHandle,
     db: State<'_, DbManager>,
     settings: State<'_, SettingsManager>,
+    payload: CreateProjectWithAssetsPayload,
+) -> IpcResult<CreateProjectWithAssetsResponseDto> {
+    create_project_with_assets_impl(app, db.inner(), settings.inner(), payload).await
+}
+
+pub async fn create_project_with_assets_impl<R: Runtime>(
+    app: AppHandle<R>,
+    db: &DbManager,
+    settings: &SettingsManager,
     payload: CreateProjectWithAssetsPayload,
 ) -> IpcResult<CreateProjectWithAssetsResponseDto> {
     log::info!(
@@ -85,7 +94,13 @@ pub async fn create_project_with_assets_v2(
         Some("Copying project files."),
     );
 
-    let copied_assets = copy_project_assets(&destination, &payload.assets).await?;
+    let copied_assets = match copy_project_assets(&destination, &payload.assets).await {
+        Ok(assets) => assets,
+        Err(error) => {
+            rollback_project_creation(db, project_uuid).await;
+            return Err(error);
+        }
+    };
 
     let file_cleanup_targets: Vec<PathBuf> = copied_assets
         .iter()
@@ -132,6 +147,7 @@ pub async fn create_project_with_assets_v2(
 
     if let Some(error) = attachment_error {
         cleanup_files(&file_cleanup_targets);
+        rollback_project_creation(db, project_uuid).await;
         return Err(error.into());
     }
 
@@ -151,22 +167,38 @@ pub async fn create_project_with_assets_v2(
         Some("Planning conversion jobs."),
     );
 
-    let conversion_plan = prepare_conversion_plan(
-        &db,
+    let conversion_plan = match prepare_conversion_plan(
+        db,
         project_uuid,
         &destination,
         &copied_assets,
         &payload.language_pairs,
     )
-    .await?;
+    .await
+    {
+        Ok(plan) => plan,
+        Err(error) => {
+            cleanup_files(&file_cleanup_targets);
+            rollback_project_creation(db, project_uuid).await;
+            return Err(error);
+        }
+    };
 
-    let refreshed_bundle = db
-        .get_project_bundle(project_uuid)
-        .await
-        .map_err(IpcError::from)?
-        .ok_or_else(|| {
-            IpcError::Internal("Project bundle not found after attachments.".into())
-        })?;
+    let refreshed_bundle = match db.get_project_bundle(project_uuid).await {
+        Ok(Some(bundle)) => bundle,
+        Ok(None) => {
+            cleanup_files(&file_cleanup_targets);
+            rollback_project_creation(db, project_uuid).await;
+            return Err(
+                IpcError::Internal("Project bundle not found after attachments.".into()).into(),
+            );
+        }
+        Err(error) => {
+            cleanup_files(&file_cleanup_targets);
+            rollback_project_creation(db, project_uuid).await;
+            return Err(IpcError::from(error).into());
+        }
+    };
 
     let asset_results: Vec<ProjectAssetResultDto> = copied_assets
         .iter()
@@ -250,7 +282,7 @@ pub async fn list_project_records_v2(
     db: State<'_, DbManager>,
 ) -> IpcResult<Vec<ProjectRecordV2Dto>> {
     let records = db.list_project_records().await.map_err(IpcError::from)?;
-    Ok(records.into_iter().map(map_project_record).collect())
+    Ok(records.into_iter().map(map_project_list_record).collect())
 }
 
 #[tauri::command]
@@ -332,10 +364,9 @@ fn map_new_project_args_from_assets_payload(
     payload: &CreateProjectWithAssetsPayload,
 ) -> Result<NewProjectArgs, InvokeError> {
     if payload.language_pairs.is_empty() {
-        return Err(IpcError::Validation(
-            "project must include at least one language pair".into(),
-        )
-        .into());
+        return Err(
+            IpcError::Validation("project must include at least one language pair".into()).into(),
+        );
     }
 
     let user_uuid = parse_uuid(&payload.user_uuid, "userUuid")?;
@@ -520,8 +551,8 @@ fn cleanup_files(paths: &[PathBuf]) {
     }
 }
 
-fn emit_progress_event(
-    app: &AppHandle,
+fn emit_progress_event<R: Runtime>(
+    app: &AppHandle<R>,
     folder_name: &str,
     project_uuid: Option<Uuid>,
     phase: &str,
@@ -542,8 +573,8 @@ fn emit_progress_event(
     }
 }
 
-fn emit_completion_event(
-    app: &AppHandle,
+fn emit_completion_event<R: Runtime>(
+    app: &AppHandle<R>,
     folder_name: &str,
     project_uuid: Uuid,
     task_count: usize,
@@ -658,6 +689,17 @@ async fn cleanup_seeded_artifacts_and_jobs(
                 error
             );
         }
+    }
+}
+
+async fn rollback_project_creation(db: &DbManager, project_uuid: Uuid) {
+    if let Err(error) = db.delete_project_bundle(project_uuid).await {
+        log::warn!(
+            target: "ipc::projects_v2",
+            "Failed to rollback project '{}' after finalize error: {}",
+            project_uuid,
+            error
+        );
     }
 }
 
@@ -931,8 +973,28 @@ fn map_project_record(record: ProjectRecord) -> ProjectRecordV2Dto {
         project_status: record.project_status,
         user_uuid: record.user_uuid.to_string(),
         client_uuid: record.client_uuid.map(|id| id.to_string()),
+        client_name: None,
         r#type: record.r#type,
         notes: record.notes,
+        subjects: None,
+        file_count: None,
+    }
+}
+
+fn map_project_list_record(record: ProjectListRecord) -> ProjectRecordV2Dto {
+    ProjectRecordV2Dto {
+        project_uuid: record.project_uuid.to_string(),
+        project_name: record.project_name,
+        creation_date: record.creation_date,
+        update_date: record.update_date,
+        project_status: record.project_status,
+        user_uuid: record.user_uuid.to_string(),
+        client_uuid: record.client_uuid.map(|id| id.to_string()),
+        client_name: record.client_name,
+        r#type: record.r#type,
+        notes: record.notes,
+        subjects: Some(record.subjects.0),
+        file_count: Some(record.file_count),
     }
 }
 
@@ -1050,9 +1112,10 @@ fn validate_project_folder_name(name: &str) -> Result<&str, InvokeError> {
     }
 
     if trimmed.contains('/') || trimmed.contains('\\') {
-        return Err(
-            IpcError::Validation("projectFolderName must not contain path separators.".into()).into(),
-        );
+        return Err(IpcError::Validation(
+            "projectFolderName must not contain path separators.".into(),
+        )
+        .into());
     }
 
     const INVALID_CHARS: [char; 8] = ['<', '>', ':', '"', '|', '?', '*', '\''];
@@ -1060,9 +1123,10 @@ fn validate_project_folder_name(name: &str) -> Result<&str, InvokeError> {
         .chars()
         .any(|ch| ch.is_control() || INVALID_CHARS.contains(&ch) || ch.is_whitespace())
     {
-        return Err(
-            IpcError::Validation("projectFolderName contains unsupported characters.".into()).into(),
-        );
+        return Err(IpcError::Validation(
+            "projectFolderName contains unsupported characters.".into(),
+        )
+        .into());
     }
 
     Ok(trimmed)
@@ -1089,12 +1153,10 @@ async fn ensure_destination_available(path: PathBuf, folder_name: &str) -> Resul
     })?;
 
     if exists {
-        return Err(
-            IpcError::Validation(format!(
-                "A project folder named '{slug}' already exists. Choose a different name."
-            ))
-            .into(),
-        );
+        return Err(IpcError::Validation(format!(
+            "A project folder named '{slug}' already exists. Choose a different name."
+        ))
+        .into());
     }
 
     Ok(())
@@ -1189,5 +1251,68 @@ impl Drop for DirectoryCreationGuard {
         }
 
         cleanup_created(&self.created);
+    }
+}
+
+#[allow(dead_code)]
+pub mod test_support {
+    use super::*;
+    use crate::settings::{AppSettings, SettingsManager};
+
+    #[allow(dead_code)]
+    pub struct TestDirectoryGuard(DirectoryCreationGuard);
+
+    impl TestDirectoryGuard {
+        #[allow(dead_code)]
+        pub fn project_root(&self) -> &Path {
+            self.0.root()
+        }
+
+        #[allow(dead_code)]
+        pub fn commit(self) {
+            self.0.commit();
+        }
+    }
+
+    #[allow(dead_code)]
+    pub async fn create_scaffold(root: PathBuf) -> Result<TestDirectoryGuard, InvokeError> {
+        create_project_scaffold(root).await.map(TestDirectoryGuard)
+    }
+
+    #[allow(dead_code)]
+    pub async fn copy_assets(
+        project_root: &Path,
+        assets: &[ProjectAssetDescriptorDto],
+    ) -> Result<Vec<String>, InvokeError> {
+        copy_project_assets(project_root, assets)
+            .await
+            .map(|copied| {
+                copied
+                    .into_iter()
+                    .map(|info| info.stored_rel_path.clone())
+                    .collect()
+            })
+    }
+
+    #[allow(dead_code)]
+    pub fn build_settings_manager(app_folder: PathBuf) -> SettingsManager {
+        let settings_path = app_folder.join("settings.yaml");
+
+        let settings = AppSettings {
+            app_folder: app_folder.clone(),
+            auto_convert_on_open: true,
+            theme: "auto".into(),
+            ui_language: "en".into(),
+            default_source_language: "en-US".into(),
+            default_target_language: "es-ES".into(),
+            default_xliff_version: "2.1".into(),
+            show_notifications: true,
+            enable_sound_notifications: false,
+            max_parallel_conversions: 4,
+            database_journal_mode: "WAL".into(),
+            database_synchronous: "NORMAL".into(),
+        };
+
+        SettingsManager::new(settings_path, settings)
     }
 }

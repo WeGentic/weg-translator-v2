@@ -159,7 +159,7 @@
 
 ### Task 2
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Detailed description (scope/goals)**: Implement a Rust-side orchestration command that performs filesystem setup, database writes, and rollback with structured logging.
 **Feature required (optional)**: F-001, F-003
 **Purpose/Outcome**: Guarantee atomic project creation respecting requirements A-002 through A-008 with resilient error handling.
@@ -382,14 +382,14 @@
 
 #### Step 5.2
 
-**Status**: NOT COMPLETED
+**Status**: COMPLETED
 **Description**: Implement Rust integration tests covering command rollback scenarios and filesystem cleanup.
-**Codebase touched**: src-tauri/tests (new file), src-tauri/Cargo.toml (test module registration)
-**Sample snippets (optional)**: ...
+**Codebase touched**: src-tauri/src/ipc/commands/projects_v2.rs, src-tauri/tests/project_creation_rollback.rs, src-tauri/Cargo.toml, src-tauri/src/lib.rs
+**Sample snippets (optional)**: Added generic `create_project_with_assets_impl` helper (wrapping the command) plus `rollback_project_creation` compensation calls across failure paths; introduced mock-driven integration test exercising missing-source rollback.
 **What to do**: Write async test using tempdir verifying failure during copy leaves no directories and no DB rows.
-**How to**: Use `tempfile::TempDir`, spawn blocking to simulate failure injection.
-**Check**: `cargo test create_project_with_assets` passes; logs show structured errors.
-**Gate (Exit Criteria)**: Tests confirm atomicity guarantees.
+**How to**: Reused `tempfile::TempDir`, `tauri::test::mock_app`, and `create_project_with_assets_impl` to drive the pipeline and assert filesystem/database cleanup.
+**Check**: `cargo test command_rollback_removes_db_entries_on_copy_failure` passes; logs show structured errors.
+**Gate (Exit Criteria)**: Tests confirm atomicity guarantees with documented rollback coverage.
 
 #### Step 5.3
 
@@ -401,3 +401,14 @@
 **How to**: Update command to emit JSON logs; share QA steps with team.
 **Check**: Manual run adheres to checklist; logs visible in dev console.
 **Gate (Exit Criteria)**: QA artefacts ready and logging present for observability.
+
+#### Step 5.4
+
+**Status**: COMPLETED
+**Description**: Ensure authenticated Supabase users are mirrored in the local SQLite users table so project creation receives a valid UUID.
+**Codebase touched**: src/app/providers/auth/AuthProvider.tsx, src/core/ipc/db/users.ts (consumer), src/modules/projects/components/wizard-v2/CreateProjectWizardV2.tsx, src/modules/projects/components/wizard-v2/__tests__/finalize-utils.test.ts.
+**Sample snippets (optional)**: Added `ensureDomainUserProfile` effect in `AuthProvider` and swapped wizard finalize logic to use `useAuth`.
+**What to do**: On auth session changes, upsert the user profile via IPC; wire the wizard to consume the authenticated user's UUID instead of the `local-user` placeholder.
+**How to**: Reuse `getUserProfile`/`createUserProfile` helpers with Supabase IDs, handle logging and loading states, and update tests to reflect UUID usage.
+**Check**: Login flow inserts/updates the local user as needed and project creation succeeds without `invalid userUuid`.
+**Gate (Exit Criteria)**: Wizard finalize payload carries a real UUID and backend validation passes.

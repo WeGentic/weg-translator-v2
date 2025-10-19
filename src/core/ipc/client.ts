@@ -235,18 +235,20 @@ function slugify(input: string) {
 }
 
 function mapProjectRecordToListItem(record: ProjectRecord): ProjectListItem {
-  const normalizedStatus = record.projectStatus?.toLowerCase() ?? undefined;
+  const normalizedProjectStatus = record.projectStatus?.toUpperCase() ?? "READY";
   return {
     projectId: record.projectUuid,
     name: record.projectName,
     slug: slugify(record.projectName || record.projectUuid),
     projectType: record.type,
-    status: record.projectStatus,
-    activityStatus: normalizedStatus,
-    fileCount: undefined,
+    status: normalizedProjectStatus,
+    activityStatus: "pending",
+    fileCount: record.fileCount ?? 0,
+    subjects: record.subjects ?? [],
     createdAt: record.creationDate,
     updatedAt: record.updateDate,
     clientId: record.clientUuid ?? null,
+    clientName: record.clientName ?? null,
     notes: record.notes ?? null,
   };
 }

@@ -128,6 +128,7 @@ export interface ProjectListItem {
   createdAt: string;
   updatedAt: string;
   clientId?: string | null;
+  clientName?: string | null;
   notes?: string | null;
 }
 

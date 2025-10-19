@@ -386,9 +386,15 @@ pub struct ProjectRecordV2Dto {
     pub user_uuid: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_uuid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_name: Option<String>,
     pub r#type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subjects: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_count: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

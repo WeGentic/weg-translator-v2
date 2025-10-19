@@ -5,23 +5,8 @@ import { ChevronDown, ChevronUp, Trash2, FolderOpen } from "lucide-react";
 
 import { IconTooltipButton } from "@/shared/icons";
 import { Checkbox } from "@/shared/ui/checkbox";
-import type { ProjectRow, ProjectType } from "../../state/types";
-import { PROGRESS_PRESENTATION, StatusBadge, TYPE_PRESENTATION, type ProgressStatus } from "./presentation";
-
-// Custom compact date formatter for MM/DD/YY HH:mm
-function formatCompactDate(dateString: string): string {
-  try {
-    const date = new Date(dateString);
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const year = String(date.getFullYear()).slice(2);
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${month}/${day}/${year} ${hours}:${minutes}`;
-  } catch {
-    return 'Invalid Date';
-  }
-}
+import type { ProjectRow } from "../../state/types";
+import { StatusBadge, resolveProjectStatusPresentation } from "./presentation";
 
 // Column priority levels for responsive design
 export const COLUMN_PRIORITIES = {
@@ -51,6 +36,29 @@ function SortIndicator({ state }: { state: false | "asc" | "desc" }) {
   if (state === "asc") return <ChevronUp className="ml-1 h-3.5 w-3.5 opacity-70" aria-hidden />;
   if (state === "desc") return <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" aria-hidden />;
   return null;
+}
+
+function formatDateTimeParts(dateString: string | undefined) {
+  if (!dateString) {
+    return { dateLabel: "—", timeLabel: "—" };
+  }
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return { dateLabel: "—", timeLabel: "—" };
+  }
+
+  const dateLabel = date.toLocaleDateString(undefined, {
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  const timeLabel = date.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return { dateLabel, timeLabel };
 }
 
 export function buildColumns(
@@ -148,14 +156,24 @@ export function buildColumns(
           </button>
         );
       },
-      cell: ({ getValue }) => {
+      cell: ({ getValue, row }) => {
         const value = getValue<string>();
+        const clientName = row.original.clientName ? row.original.clientName : null;
+        const clientLabel = clientName && clientName.trim().length > 0 ? clientName : "N.A.";
         return (
-          <div
-            className="min-w-0 max-w-full truncate text-[12px] font-normal leading-5 text-foreground"
-            title={value}
-          >
-            {value}
+          <div className="min-w-0 max-w-full">
+            <div
+              className="truncate text-[12px] font-semibold leading-5 text-foreground"
+              title={value}
+            >
+              {value}
+            </div>
+            <div
+              className="truncate text-[10px] font-normal text-muted-foreground"
+              title={clientLabel}
+            >
+              Client: {clientLabel}
+            </div>
           </div>
         );
       },
@@ -168,9 +186,9 @@ export function buildColumns(
       } satisfies ProjectsColumnMeta,
     }),
 
-    // Project Type - Always visible
-    columnHelper.accessor("projectType", {
-      id: "projectType",
+    // Primary Subject - Always visible
+    columnHelper.accessor("primarySubject", {
+      id: "subject",
       header: ({ column }) => {
         const sorted = column.getIsSorted();
         return (
@@ -180,7 +198,7 @@ export function buildColumns(
             className="group inline-flex select-none items-center gap-1 text-[12px] font-medium text-foreground transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 hover:text-foreground/80"
             aria-sort={sorted === false ? "none" : sorted === "asc" ? "ascending" : "descending"}
           >
-            Type
+            Subject
             <span className="transition-transform duration-200 group-hover:scale-110">
               <SortIndicator state={sorted} />
             </span>
@@ -188,22 +206,21 @@ export function buildColumns(
         );
       },
       cell: ({ getValue }) => {
-        const type = getValue<ProjectType>();
-        const meta = TYPE_PRESENTATION[type];
-        const Icon = meta.icon;
+        const subject = getValue<string | null>();
         return (
-          <span className="inline-flex items-center gap-1.5 text-[12px] font-normal text-foreground transition-colors duration-200 hover:text-foreground/80">
-            <Icon className="h-4 w-4 text-muted-foreground/80 transition-colors duration-200" aria-hidden />
-            <span className="whitespace-nowrap text-foreground">{meta.label}</span>
-          </span>
+          <div
+            className="min-w-0 max-w-full truncate text-[12px] font-normal leading-5 text-foreground"
+            title={subject ?? undefined}
+          >
+            {subject ?? "—"}
+          </div>
         );
       },
       enableSorting: true,
       meta: {
         priority: COLUMN_PRIORITIES.ALWAYS,
-        // Type column with fixed width
-        headerClassName: "w-32 text-left normal-case relative vertical-separator-partial",
-        cellClassName: "w-32 text-left relative vertical-separator-partial",
+        headerClassName: "text-left normal-case relative vertical-separator-partial",
+        cellClassName: "text-left relative vertical-separator-partial",
       } satisfies ProjectsColumnMeta,
     }),
 
@@ -266,14 +283,19 @@ export function buildColumns(
       },
       cell: ({ row }) => {
         const rawItem = handlers.rawItems?.find(item => item.projectId === row.original.id);
-        const createdAt = rawItem?.createdAt || '';
-        const displayText = formatCompactDate(createdAt);
-        const fullDate = createdAt ? new Date(createdAt).toLocaleString() : '';
+        const createdAt = rawItem?.createdAt ?? "";
+        const { dateLabel, timeLabel } = formatDateTimeParts(createdAt);
         return (
-          <div className="flex justify-center">
-            <time className="text-[10px] font-normal text-foreground/80 transition-colors duration-200 hover:text-foreground" title={fullDate}>
-              {displayText}
-            </time>
+          <div className="flex flex-col items-center text-center leading-tight">
+            <span
+              className="text-[10px] font-normal text-foreground/80 transition-colors duration-200 hover:text-foreground"
+              title={createdAt}
+            >
+              {dateLabel}
+            </span>
+            <span className="text-[10px] font-normal text-muted-foreground/80">
+              {timeLabel}
+            </span>
           </div>
         );
       },
@@ -315,14 +337,19 @@ export function buildColumns(
       },
       cell: ({ row }) => {
         const rawItem = handlers.rawItems?.find(item => item.projectId === row.original.id);
-        const updatedAt = rawItem?.updatedAt || '';
-        const displayText = formatCompactDate(updatedAt);
-        const fullDate = updatedAt ? new Date(updatedAt).toLocaleString() : '';
+        const updatedAt = rawItem?.updatedAt ?? "";
+        const { dateLabel, timeLabel } = formatDateTimeParts(updatedAt);
         return (
-          <div className="flex justify-center">
-            <time className="text-[10px] font-normal text-foreground/80 transition-colors duration-200 hover:text-foreground" title={fullDate}>
-              {displayText}
-            </time>
+          <div className="flex flex-col items-center text-center leading-tight">
+            <span
+              className="text-[10px] font-normal text-foreground/80 transition-colors duration-200 hover:text-foreground"
+              title={updatedAt}
+            >
+              {dateLabel}
+            </span>
+            <span className="text-[10px] font-normal text-muted-foreground/80">
+              {timeLabel}
+            </span>
           </div>
         );
       },
@@ -344,14 +371,15 @@ export function buildColumns(
     }),
 
     // Status - Always visible
-    columnHelper.accessor("activityStatus", {
-      id: "activityStatus",
+    columnHelper.accessor("status", {
+      id: "status",
       header: () => <span className="text-[12px] font-medium text-foreground">Status</span>,
       cell: ({ getValue }) => {
-        const meta = PROGRESS_PRESENTATION[getValue<ProgressStatus>()];
+        const status = getValue<string | null>();
+        const presentation = resolveProjectStatusPresentation(status);
         return (
           <div className="transition-transform duration-200 hover:scale-105">
-            <StatusBadge {...meta} />
+            <StatusBadge {...presentation} />
           </div>
         );
       },

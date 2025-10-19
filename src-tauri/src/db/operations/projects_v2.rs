@@ -7,8 +7,8 @@ use crate::db::error::{DbError, DbResult};
 use crate::db::types::{
     FileInfoRecord, FileLanguagePairInput, FileLanguagePairRecord, NewFileInfoArgs, NewProjectArgs,
     NewProjectFileArgs, ProjectBundle, ProjectFileBundle, ProjectFileRecord,
-    ProjectLanguagePairInput, ProjectLanguagePairRecord, ProjectRecord, ProjectSubjectInput,
-    ProjectSubjectRecord, UpdateProjectArgs,
+    ProjectLanguagePairInput, ProjectLanguagePairRecord, ProjectListRecord, ProjectRecord,
+    ProjectSubjectInput, ProjectSubjectRecord, UpdateProjectArgs,
 };
 
 /// Creates a project with associated subjects and language pairs.
@@ -165,10 +165,38 @@ pub async fn get_project(pool: &SqlitePool, project_uuid: Uuid) -> DbResult<Opti
     Ok(bundle)
 }
 
-/// Lists project records without eager loading relations.
-pub async fn list_projects(pool: &SqlitePool) -> DbResult<Vec<ProjectRecord>> {
-    let rows: Vec<ProjectRecord> = sqlx::query_as(
-        "SELECT * FROM projects ORDER BY creation_date DESC, project_name COLLATE NOCASE ASC",
+/// Lists project records without eager loading relations while including derived aggregates.
+pub async fn list_projects(pool: &SqlitePool) -> DbResult<Vec<ProjectListRecord>> {
+    let rows: Vec<ProjectListRecord> = sqlx::query_as(
+        r#"
+        SELECT
+            p.project_uuid,
+            p.project_name,
+            p.creation_date,
+            p.update_date,
+            p.project_status,
+            p.user_uuid,
+            p.client_uuid,
+            c.name AS client_name,
+            p.type,
+            p.notes,
+            COALESCE(
+                (
+                    SELECT json_group_array(subject)
+                    FROM project_subjects ps
+                    WHERE ps.project_uuid = p.project_uuid
+                ),
+                json('[]')
+            ) AS subjects,
+            (
+                SELECT COUNT(*)
+                FROM project_files pf
+                WHERE pf.project_uuid = p.project_uuid
+            ) AS file_count
+        FROM projects p
+        LEFT JOIN clients c ON c.client_uuid = p.client_uuid
+        ORDER BY p.creation_date DESC, p.project_name COLLATE NOCASE ASC
+        "#,
     )
     .fetch_all(pool)
     .await?;
