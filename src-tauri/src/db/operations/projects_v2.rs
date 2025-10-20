@@ -1,14 +1,18 @@
 //! Project operations aligned with the new schema.
 
+use std::collections::HashSet;
+
 use sqlx::{QueryBuilder, Sqlite, SqlitePool, Transaction};
 use uuid::Uuid;
 
 use crate::db::error::{DbError, DbResult};
 use crate::db::types::{
     FileInfoRecord, FileLanguagePairInput, FileLanguagePairRecord, NewFileInfoArgs, NewProjectArgs,
-    NewProjectFileArgs, ProjectBundle, ProjectFileBundle, ProjectFileRecord,
-    ProjectLanguagePairInput, ProjectLanguagePairRecord, ProjectListRecord, ProjectRecord,
-    ProjectSubjectInput, ProjectSubjectRecord, UpdateProjectArgs,
+    NewProjectFileArgs, ProjectBundle, ProjectConversionStats, ProjectFileBundle,
+    ProjectFileRecord, ProjectFileTotals, ProjectJobStats, ProjectLanguagePairInput,
+    ProjectLanguagePairRecord, ProjectListRecord, ProjectProgressStats, ProjectRecord,
+    ProjectStatistics, ProjectSubjectInput, ProjectSubjectRecord, ProjectWarningStats,
+    UpdateProjectArgs,
 };
 
 /// Creates a project with associated subjects and language pairs.
@@ -165,6 +169,20 @@ pub async fn get_project(pool: &SqlitePool, project_uuid: Uuid) -> DbResult<Opti
     Ok(bundle)
 }
 
+/// Computes aggregate statistics for a project.
+pub async fn get_project_statistics(
+    pool: &SqlitePool,
+    project_uuid: Uuid,
+) -> DbResult<Option<ProjectStatistics>> {
+    let mut tx = pool.begin().await?;
+    let bundle = fetch_project_bundle(&mut tx, project_uuid).await?;
+    tx.commit().await?;
+    Ok(match bundle {
+        Some(bundle) => Some(compute_project_statistics(&bundle)),
+        None => None,
+    })
+}
+
 /// Lists project records without eager loading relations while including derived aggregates.
 pub async fn list_projects(pool: &SqlitePool) -> DbResult<Vec<ProjectListRecord>> {
     let rows: Vec<ProjectListRecord> = sqlx::query_as(
@@ -292,6 +310,86 @@ pub async fn detach_project_file(
 
     tx.commit().await?;
     Ok(())
+}
+
+/// Updates the semantic role/type for an attached project file.
+pub async fn update_project_file_role(
+    pool: &SqlitePool,
+    project_uuid: Uuid,
+    file_uuid: Uuid,
+    next_role: &str,
+) -> DbResult<ProjectFileBundle> {
+    const VALID_ROLES: &[&str] = &["processable", "reference", "instructions", "image"];
+
+    let normalized = next_role.trim().to_lowercase();
+    if !VALID_ROLES.contains(&normalized.as_str()) {
+        return Err(DbError::ConstraintViolation("invalid project file role"));
+    }
+
+    let mut tx = pool.begin().await?;
+    let Some(_existing) = fetch_file_bundle(&mut tx, project_uuid, file_uuid).await? else {
+        return Err(sqlx::Error::RowNotFound.into());
+    };
+
+    sqlx::query("UPDATE project_files SET type = ?1 WHERE project_uuid = ?2 AND file_uuid = ?3")
+        .bind(&normalized)
+        .bind(project_uuid)
+        .bind(file_uuid)
+        .execute(&mut *tx)
+        .await?;
+
+    sqlx::query("UPDATE file_info SET type = ?1 WHERE file_uuid = ?2")
+        .bind(&normalized)
+        .bind(file_uuid)
+        .execute(&mut *tx)
+        .await?;
+
+    if normalized == "processable" {
+        let project_pairs = sqlx::query_as::<_, ProjectLanguagePairRecord>(
+            "SELECT * FROM project_language_pairs WHERE project_uuid = ?1 ORDER BY source_lang, target_lang",
+        )
+        .bind(project_uuid)
+        .fetch_all(tx.as_mut())
+        .await?;
+
+        if project_pairs.is_empty() {
+            return Err(DbError::ConstraintViolation(
+                "processable files require project language pairs",
+            ));
+        }
+
+        let inputs: Vec<FileLanguagePairInput> = project_pairs
+            .into_iter()
+            .map(|pair| FileLanguagePairInput {
+                source_lang: pair.source_lang,
+                target_lang: pair.target_lang,
+            })
+            .collect();
+
+        replace_file_language_pairs(&mut tx, project_uuid, file_uuid, &inputs).await?;
+    } else {
+        sqlx::query("DELETE FROM file_language_pairs WHERE project_uuid = ?1 AND file_uuid = ?2")
+            .bind(project_uuid)
+            .bind(file_uuid)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query("DELETE FROM artifacts WHERE project_uuid = ?1 AND file_uuid = ?2")
+            .bind(project_uuid)
+            .bind(file_uuid)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    sqlx::query("UPDATE projects SET update_date = update_date WHERE project_uuid = ?1")
+        .bind(project_uuid)
+        .execute(&mut *tx)
+        .await?;
+
+    let updated = fetch_file_bundle(&mut tx, project_uuid, file_uuid).await?;
+    tx.commit().await?;
+
+    updated.ok_or_else(|| sqlx::Error::RowNotFound.into())
 }
 
 async fn insert_subjects(
@@ -488,6 +586,132 @@ async fn fetch_file_bundle(
         language_pairs,
         artifacts,
     }))
+}
+
+fn compute_project_statistics(bundle: &ProjectBundle) -> ProjectStatistics {
+    let mut totals = ProjectFileTotals {
+        total: 0,
+        processable: 0,
+        reference: 0,
+        instructions: 0,
+        image: 0,
+        other: 0,
+    };
+
+    let mut conversions = ProjectConversionStats {
+        total: 0,
+        completed: 0,
+        failed: 0,
+        pending: 0,
+        running: 0,
+        other: 0,
+        segments: 0,
+        tokens: 0,
+    };
+
+    let mut jobs = ProjectJobStats {
+        total: 0,
+        completed: 0,
+        failed: 0,
+        pending: 0,
+        running: 0,
+        other: 0,
+    };
+
+    let mut warnings = ProjectWarningStats {
+        total: 0,
+        failed_artifacts: 0,
+        failed_jobs: 0,
+    };
+
+    let mut files_ready: HashSet<Uuid> = HashSet::new();
+    let mut files_with_errors: HashSet<Uuid> = HashSet::new();
+
+    for file in &bundle.files {
+        totals.total += 1;
+        let role = file.link.r#type.to_lowercase();
+        match role.as_str() {
+            "processable" | "source" | "xliff" | "translation" => totals.processable += 1,
+            "reference" => totals.reference += 1,
+            "instructions" | "instruction" => totals.instructions += 1,
+            "image" => totals.image += 1,
+            _ => totals.other += 1,
+        }
+
+        for artifact in &file.artifacts {
+            conversions.total += 1;
+            let status = artifact.status.to_lowercase();
+            match status.as_str() {
+                "completed" => {
+                    conversions.completed += 1;
+                    files_ready.insert(file.link.file_uuid);
+                }
+                "failed" => {
+                    conversions.failed += 1;
+                    files_with_errors.insert(file.link.file_uuid);
+                    warnings.failed_artifacts += 1;
+                }
+                "pending" => conversions.pending += 1,
+                "running" => conversions.running += 1,
+                _ => conversions.other += 1,
+            }
+
+            if let Some(segments) = artifact.segment_count {
+                if segments > 0 {
+                    conversions.segments += segments;
+                }
+            }
+            if let Some(tokens) = artifact.token_count {
+                if tokens > 0 {
+                    conversions.tokens += tokens;
+                }
+            }
+        }
+    }
+
+    for job in &bundle.jobs {
+        jobs.total += 1;
+        let status = job.job_status.to_lowercase();
+        match status.as_str() {
+            "completed" => jobs.completed += 1,
+            "failed" => {
+                jobs.failed += 1;
+                warnings.failed_jobs += 1;
+            }
+            "pending" => jobs.pending += 1,
+            "running" => jobs.running += 1,
+            _ => jobs.other += 1,
+        }
+    }
+
+    warnings.total = warnings.failed_artifacts + warnings.failed_jobs;
+
+    let processable_files = totals.processable;
+    let files_ready_count = files_ready.len() as i64;
+    let files_with_errors_count = files_with_errors.len() as i64;
+    let percent_complete = if processable_files > 0 {
+        ((files_ready_count as f32 / processable_files as f32) * 100.0).clamp(0.0, 100.0)
+    } else {
+        0.0
+    };
+
+    ProjectStatistics {
+        totals,
+        conversions,
+        jobs,
+        progress: ProjectProgressStats {
+            processable_files,
+            files_ready: files_ready_count,
+            files_with_errors: files_with_errors_count,
+            percent_complete,
+        },
+        warnings,
+        last_activity: if bundle.project.update_date.is_empty() {
+            None
+        } else {
+            Some(bundle.project.update_date.clone())
+        },
+    }
 }
 
 #[cfg(test)]
@@ -727,6 +951,222 @@ mod tests {
             subjects,
             vec!["initial".to_string()],
             "original subjects should remain after rollback"
+        );
+    }
+
+    #[tokio::test]
+    async fn project_statistics_reflects_artifacts_and_jobs() {
+        let pool = test_pool().await;
+        let user_uuid = Uuid::new_v4();
+        seed_user(&pool, user_uuid).await;
+
+        let project_uuid = Uuid::new_v4();
+        create_project(
+            &pool,
+            NewProjectArgs {
+                project_uuid,
+                project_name: "Stats project".into(),
+                project_status: "active".into(),
+                user_uuid,
+                client_uuid: None,
+                r#type: "standard".into(),
+                notes: None,
+                subjects: vec![],
+                language_pairs: vec![ProjectLanguagePairInput {
+                    source_lang: "en".into(),
+                    target_lang: "fr".into(),
+                }],
+            },
+        )
+        .await
+        .expect("expected project creation to succeed");
+
+        // Processable file with successful conversion
+        let processable_file = Uuid::new_v4();
+        attach_project_file(
+            &pool,
+            NewFileInfoArgs {
+                file_uuid: processable_file,
+                ext: "docx".into(),
+                r#type: "processable".into(),
+                size_bytes: Some(2_048),
+                segment_count: Some(120),
+                token_count: Some(3_400),
+                notes: None,
+            },
+            NewProjectFileArgs {
+                project_uuid,
+                file_uuid: processable_file,
+                filename: "ready.docx".into(),
+                stored_at: "ready.docx".into(),
+                r#type: "processable".into(),
+                language_pairs: vec![FileLanguagePairInput {
+                    source_lang: "en".into(),
+                    target_lang: "fr".into(),
+                }],
+            },
+        )
+        .await
+        .expect("expected processable file attach to succeed");
+
+        let completed_artifact = Uuid::new_v4();
+        sqlx::query(
+            r#"
+            INSERT INTO artifacts (
+                artifact_uuid, project_uuid, file_uuid, artifact_type,
+                size_bytes, segment_count, token_count, status
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'completed')
+            "#,
+        )
+        .bind(completed_artifact)
+        .bind(project_uuid)
+        .bind(processable_file)
+        .bind("xliff")
+        .bind(Some(4096_i64))
+        .bind(Some(120_i64))
+        .bind(Some(3400_i64))
+        .execute(&pool)
+        .await
+        .expect("expected artifact insert");
+
+        sqlx::query(
+            r#"
+            INSERT INTO jobs (
+                artifact_uuid, job_type, project_uuid, job_status, error_log
+            ) VALUES (?1, 'convert', ?2, 'completed', NULL)
+            "#,
+        )
+        .bind(completed_artifact)
+        .bind(project_uuid)
+        .execute(&pool)
+        .await
+        .expect("expected completed job insert");
+
+        // Processable file with failed conversion/job
+        let failing_file = Uuid::new_v4();
+        attach_project_file(
+            &pool,
+            NewFileInfoArgs {
+                file_uuid: failing_file,
+                ext: "pdf".into(),
+                r#type: "processable".into(),
+                size_bytes: Some(5_120),
+                segment_count: Some(10),
+                token_count: Some(900),
+                notes: None,
+            },
+            NewProjectFileArgs {
+                project_uuid,
+                file_uuid: failing_file,
+                filename: "broken.pdf".into(),
+                stored_at: "broken.pdf".into(),
+                r#type: "processable".into(),
+                language_pairs: vec![FileLanguagePairInput {
+                    source_lang: "en".into(),
+                    target_lang: "fr".into(),
+                }],
+            },
+        )
+        .await
+        .expect("expected failing file attach to succeed");
+
+        let failed_artifact = Uuid::new_v4();
+        sqlx::query(
+            r#"
+            INSERT INTO artifacts (
+                artifact_uuid, project_uuid, file_uuid, artifact_type,
+                size_bytes, segment_count, token_count, status
+            ) VALUES (?1, ?2, ?3, ?4, NULL, NULL, NULL, 'failed')
+            "#,
+        )
+        .bind(failed_artifact)
+        .bind(project_uuid)
+        .bind(failing_file)
+        .bind("xliff")
+        .execute(&pool)
+        .await
+        .expect("expected failed artifact insert");
+
+        sqlx::query(
+            r#"
+            INSERT INTO jobs (
+                artifact_uuid, job_type, project_uuid, job_status, error_log
+            ) VALUES (?1, 'convert', ?2, 'failed', 'conversion pipeline error')
+            "#,
+        )
+        .bind(failed_artifact)
+        .bind(project_uuid)
+        .execute(&pool)
+        .await
+        .expect("expected failed job insert");
+
+        // Reference file without conversions
+        let reference_file = Uuid::new_v4();
+        attach_project_file(
+            &pool,
+            NewFileInfoArgs {
+                file_uuid: reference_file,
+                ext: "pdf".into(),
+                r#type: "reference".into(),
+                size_bytes: Some(1_024),
+                segment_count: None,
+                token_count: None,
+                notes: None,
+            },
+            NewProjectFileArgs {
+                project_uuid,
+                file_uuid: reference_file,
+                filename: "brand.pdf".into(),
+                stored_at: "brand.pdf".into(),
+                r#type: "reference".into(),
+                language_pairs: vec![],
+            },
+        )
+        .await
+        .expect("expected reference file attach to succeed");
+
+        let stats = get_project_statistics(&pool, project_uuid)
+            .await
+            .expect("expected stats query to succeed")
+            .expect("expected statistics to be present");
+
+        assert_eq!(stats.totals.total, 3);
+        assert_eq!(stats.totals.processable, 2);
+        assert_eq!(stats.totals.reference, 1);
+        assert_eq!(stats.totals.instructions, 0);
+        assert_eq!(stats.totals.image, 0);
+
+        assert_eq!(stats.conversions.total, 2);
+        assert_eq!(stats.conversions.completed, 1);
+        assert_eq!(stats.conversions.failed, 1);
+        assert_eq!(stats.conversions.pending, 0);
+        assert_eq!(stats.conversions.running, 0);
+        assert_eq!(stats.conversions.other, 0);
+        assert_eq!(stats.conversions.segments, 120);
+        assert_eq!(stats.conversions.tokens, 3_400);
+
+        assert_eq!(stats.jobs.total, 2);
+        assert_eq!(stats.jobs.completed, 1);
+        assert_eq!(stats.jobs.failed, 1);
+        assert_eq!(stats.jobs.pending, 0);
+        assert_eq!(stats.jobs.running, 0);
+        assert_eq!(stats.jobs.other, 0);
+
+        assert_eq!(stats.progress.processable_files, 2);
+        assert_eq!(stats.progress.files_ready, 1);
+        assert_eq!(stats.progress.files_with_errors, 1);
+        assert!(
+            (stats.progress.percent_complete - 50.0).abs() < f32::EPSILON,
+            "expected 50% progress, got {}",
+            stats.progress.percent_complete
+        );
+
+        assert_eq!(stats.warnings.failed_artifacts, 1);
+        assert_eq!(stats.warnings.failed_jobs, 1);
+        assert_eq!(stats.warnings.total, 2);
+        assert!(
+            stats.last_activity.is_some(),
+            "expected last_activity to be set"
         );
     }
 }

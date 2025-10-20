@@ -5,6 +5,7 @@ import "./css/new-project-button.css";
 
 import { useEffect, useRef, useState } from "react";
 import type { SortingState } from "@tanstack/react-table";
+import { useNavigate } from "@tanstack/react-router";
 
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { useToast } from "@/shared/ui/use-toast";
@@ -18,6 +19,7 @@ import { ProjectManagerContent } from "./ProjectManagerContent";
 import { EmptyProjectsState } from "./components/EmptyProjectsState";
 import { CreateProjectWizardV2 } from "./components/wizard-v2/CreateProjectWizardV2";
 import { DeleteProjectDialog } from "./components/DeleteProjectDialog";
+import { ProjectWorkspaceLayout } from "./layout/ProjectWorkspaceLayout";
 import { useSidebarTwoContentSync } from "./state/useSidebarTwoContentSync";
 import {
   createDefaultTableControlsState,
@@ -63,6 +65,7 @@ export function ProjectManagerView({ onOpenProject, onCreateProject }: ProjectMa
   const refreshProjectsRef = useRef<RefreshProjectsFn>(() => Promise.resolve());
 
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   async function refreshProjects({ showSpinner }: RefreshOptions = {}) {
     if (showSpinner) {
@@ -108,7 +111,21 @@ export function ProjectManagerView({ onOpenProject, onCreateProject }: ProjectMa
   }
 
   function handleOpenProjectById(projectId: string) {
-    if (!onOpenProject) return;
+    if (!projectId) {
+      return;
+    }
+
+    navigate({
+      to: "/projects/$projectId",
+      params: { projectId },
+    }).catch((error) => {
+      console.error(`Failed to navigate to project ${projectId}`, error);
+    });
+
+    if (!onOpenProject) {
+      return;
+    }
+
     const project = projects.find((item) => item.projectId === projectId);
     if (project) {
       onOpenProject(project);
@@ -194,67 +211,66 @@ export function ProjectManagerView({ onOpenProject, onCreateProject }: ProjectMa
 
   const showEmptyState = !isLoading && projects.length === 0 && error == null;
 
-  return (
-    <section
-      className="mainview-container flex flex-1 min-h-0 flex-col"
-      aria-labelledby="ProjectManager-heading"
-      id="ProjectManager-view"
-      role="region"
-    >
-      <div className="flex flex-1 min-h-0 flex-col">
-        <ProjectManagerHeader onCreateProject={handleCreateProjectClick} />
+  const alerts = error ? (
+    <div className="px-4 pb-2">
+      <Alert variant="destructive">
+        <AlertTitle>Could not load projects</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    </div>
+  ) : null;
 
-        <div className="projects-table-toolbar-zone">
-          <ProjectManagerToolbar
-            search={controls.search}
-            onSearchChange={handleSearchChange}
-            filters={controls.filters}
-            onFiltersChange={handleFiltersChange}
-          />
-        </div>
+  const mainContent = isLoading ? (
+    <ProjectsTableSkeleton />
+  ) : showEmptyState ? (
+    <EmptyProjectsState onCreate={handleCreateProjectClick} />
+  ) : (
+    <ProjectManagerContent
+      items={visibleProjects}
+      onOpenProject={handleOpenProjectById}
+      onRequestDelete={handleRequestDelete}
+      selectedRows={selectedRows}
+      onRowSelectionChange={setSelectedRows}
+      sorting={sorting}
+      onSortingChange={setSorting}
+      search={controls.search}
+    />
+  );
 
-        {error ? (
-          <div className="px-4 pb-2">
-            <Alert variant="destructive">
-              <AlertTitle>Could not load projects</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          </div>
-        ) : null}
-
-        <div className="flex flex-1 min-h-0">
-          {isLoading ? (
-            <ProjectsTableSkeleton />
-          ) : showEmptyState ? (
-            <EmptyProjectsState onCreate={handleCreateProjectClick} />
-          ) : (
-            <ProjectManagerContent
-              items={visibleProjects}
-              onOpenProject={handleOpenProjectById}
-              onRequestDelete={handleRequestDelete}
-              selectedRows={selectedRows}
-              onRowSelectionChange={setSelectedRows}
-              sorting={sorting}
-              onSortingChange={setSorting}
-              search={controls.search}
-            />
-          )}
-        </div>
-      </div>
-
+  const dialogs = (
+    <>
       <CreateProjectWizardV2
         open={isWizardOpen}
         onOpenChange={setWizardOpen}
         onProjectCreated={handleProjectCreated}
       />
-
       <DeleteProjectDialog
         open={deleteDialogOpen}
         onOpenChange={handleDeleteDialogOpenChange}
         target={deleteTarget}
         onAfterDelete={handleAfterDelete}
       />
-    </section>
+    </>
+  );
+
+  return (
+    <ProjectWorkspaceLayout
+      id="ProjectManager-view"
+      ariaLabelledBy="ProjectManager-heading"
+      header={<ProjectManagerHeader onCreateProject={handleCreateProjectClick} />}
+      toolbar={
+        <ProjectManagerToolbar
+          search={controls.search}
+          onSearchChange={handleSearchChange}
+          filters={controls.filters}
+          onFiltersChange={handleFiltersChange}
+        />
+      }
+      alerts={alerts}
+      afterContent={dialogs}
+    >
+      {mainContent}
+    </ProjectWorkspaceLayout>
   );
 }
 

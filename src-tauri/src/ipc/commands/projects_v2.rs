@@ -11,18 +11,25 @@ use uuid::Uuid;
 use crate::db::DbManager;
 use crate::db::types::{
     FileInfoRecord, FileLanguagePairInput, NewArtifactArgs, NewFileInfoArgs, NewJobArgs,
-    NewProjectArgs, NewProjectFileArgs, ProjectBundle, ProjectFileBundle, ProjectLanguagePairInput,
-    ProjectListRecord, ProjectRecord, ProjectSubjectInput, UpdateProjectArgs,
+    NewProjectArgs, NewProjectFileArgs, ProjectBundle, ProjectConversionStats, ProjectFileBundle,
+    ProjectFileTotals, ProjectJobStats, ProjectLanguagePairInput, ProjectListRecord,
+    ProjectProgressStats, ProjectRecord, ProjectStatistics, ProjectSubjectInput,
+    ProjectWarningStats, UpdateArtifactStatusArgs, UpdateProjectArgs,
 };
 use crate::ipc::dto::{
     ArtifactV2Dto, AttachProjectFilePayload, ConversionPlanDto, ConversionTaskDto,
-    CreateProjectPayload, CreateProjectWithAssetsPayload, CreateProjectWithAssetsResponseDto,
-    FileInfoV2Dto, FileLanguagePairDto, JobV2Dto, ProjectAssetDescriptorDto, ProjectAssetResultDto,
-    ProjectAssetRoleDto, ProjectBundleV2Dto, ProjectFileBundleV2Dto, ProjectFileLinkDto,
-    ProjectLanguagePairDto, ProjectRecordV2Dto, UpdateProjectPayload,
+    ConvertXliffToJliffPayload, CreateProjectPayload, CreateProjectWithAssetsPayload,
+    CreateProjectWithAssetsResponseDto, EnsureConversionPlanPayload, FileInfoV2Dto,
+    FileIntegrityAlertDto, FileLanguagePairDto, JliffConversionResultDto, JobV2Dto,
+    ProjectAssetDescriptorDto, ProjectAssetResultDto, ProjectAssetRoleDto, ProjectBundleV2Dto,
+    ProjectConversionStatsDto, ProjectFileBundleV2Dto, ProjectFileLinkDto, ProjectFileTotalsDto,
+    ProjectJobStatsDto, ProjectLanguagePairDto, ProjectProgressStatsDto, ProjectRecordV2Dto,
+    ProjectStatisticsDto, ProjectWarningStatsDto, UpdateConversionStatusPayload,
+    UpdateProjectPayload,
 };
 use crate::ipc::error::{IpcError, IpcResult};
 use crate::ipc::events::{PROJECT_CREATE_COMPLETE, PROJECT_CREATE_PROGRESS};
+use crate::jliff::{ConversionOptions, convert_xliff};
 use crate::settings::SettingsManager;
 
 #[tauri::command]
@@ -278,6 +285,19 @@ pub async fn get_project_bundle_v2(
 }
 
 #[tauri::command]
+pub async fn get_project_statistics_v2(
+    db: State<'_, DbManager>,
+    project_uuid: String,
+) -> IpcResult<Option<ProjectStatisticsDto>> {
+    let uuid = parse_uuid(&project_uuid, "projectUuid")?;
+    let stats = db
+        .get_project_statistics(uuid)
+        .await
+        .map_err(IpcError::from)?;
+    Ok(stats.map(map_project_statistics))
+}
+
+#[tauri::command]
 pub async fn list_project_records_v2(
     db: State<'_, DbManager>,
 ) -> IpcResult<Vec<ProjectRecordV2Dto>> {
@@ -311,6 +331,281 @@ pub async fn detach_project_file_v2(
         .await
         .map_err(IpcError::from)?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn ensure_project_conversions_plan_v2(
+    db: State<'_, DbManager>,
+    settings: State<'_, SettingsManager>,
+    payload: EnsureConversionPlanPayload,
+) -> IpcResult<ConversionPlanDto> {
+    let project_uuid = parse_uuid(&payload.project_uuid, "projectUuid")?;
+    let filter_ids: Option<HashSet<Uuid>> = payload
+        .file_uuids
+        .as_ref()
+        .map(|ids| {
+            let mut parsed = HashSet::with_capacity(ids.len());
+            for id in ids {
+                let uuid = parse_uuid(id, "fileUuid")?;
+                parsed.insert(uuid);
+            }
+            Ok::<_, IpcError>(parsed)
+        })
+        .transpose()?;
+
+    let bundle = db
+        .get_project_bundle(project_uuid)
+        .await
+        .map_err(IpcError::from)?
+        .ok_or_else(|| IpcError::Validation(format!("Project '{}' not found", project_uuid)))?;
+
+    let settings_snapshot = settings.current().await;
+    let projects_root = settings_snapshot.projects_dir();
+    let project_root = locate_project_root(&projects_root, project_uuid, &bundle).await?;
+    let default_version = settings_snapshot.default_xliff_version.clone();
+
+    let mut tasks: Vec<ConversionTaskDto> = Vec::new();
+    let mut alerts: Vec<FileIntegrityAlertDto> = Vec::new();
+
+    for file_bundle in &bundle.files {
+        if !file_bundle.link.r#type.eq_ignore_ascii_case("processable") {
+            continue;
+        }
+
+        if let Some(filters) = filter_ids.as_ref() {
+            if !filters.contains(&file_bundle.link.file_uuid) {
+                continue;
+            }
+        }
+
+        let input_rel = Path::new(&file_bundle.link.stored_at);
+        let input_abs = project_root.join(input_rel);
+
+        if !input_abs.is_file() {
+            alerts.push(FileIntegrityAlertDto {
+                file_uuid: file_bundle.link.file_uuid.to_string(),
+                file_name: file_bundle.link.filename.clone(),
+                expected_hash: None,
+                actual_hash: None,
+            });
+            continue;
+        }
+
+        let artifact_uuid =
+            ensure_conversion_artifact(db.inner(), project_uuid, file_bundle.link.file_uuid)
+                .await?;
+
+        db.update_artifact_status(UpdateArtifactStatusArgs {
+            artifact_uuid,
+            status: "PENDING".into(),
+            size_bytes: None,
+            segment_count: None,
+            token_count: None,
+        })
+        .await
+        .map_err(IpcError::from)?;
+
+        ensure_conversion_job(db.inner(), project_uuid, artifact_uuid, "pending", None).await?;
+
+        let file_pairs: Vec<ProjectLanguagePairDto> = if !file_bundle.language_pairs.is_empty() {
+            file_bundle
+                .language_pairs
+                .iter()
+                .map(|pair| ProjectLanguagePairDto {
+                    source_lang: pair.source_lang.clone(),
+                    target_lang: pair.target_lang.clone(),
+                })
+                .collect()
+        } else {
+            bundle
+                .language_pairs
+                .iter()
+                .map(|pair| ProjectLanguagePairDto {
+                    source_lang: pair.source_lang.clone(),
+                    target_lang: pair.target_lang.clone(),
+                })
+                .collect()
+        };
+
+        if file_pairs.is_empty() {
+            alerts.push(FileIntegrityAlertDto {
+                file_uuid: file_bundle.link.file_uuid.to_string(),
+                file_name: file_bundle.link.filename.clone(),
+                expected_hash: None,
+                actual_hash: None,
+            });
+            continue;
+        }
+
+        let file_stem = Path::new(&file_bundle.link.filename)
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .map(str::to_owned)
+            .unwrap_or_else(|| "artifact".to_string());
+
+        let source_path_str = input_abs.to_string_lossy().into_owned();
+
+        for pair in file_pairs {
+            let language_dir = language_pair_directory_name(&pair);
+            let output_rel_path = Path::new("Translations")
+                .join(&language_dir)
+                .join(format!("{file_stem}.xlf"));
+            let output_abs_path = project_root.join(&output_rel_path);
+
+            if let Some(parent) = output_abs_path.parent() {
+                if let Err(error) = tokio::fs::create_dir_all(parent).await {
+                    return Err(IpcError::Internal(format!(
+                        "Failed to prepare output directory '{}': {}",
+                        parent.display(),
+                        error
+                    ))
+                    .into());
+                }
+            }
+
+            let output_rel_path_str = output_rel_path.to_string_lossy().into_owned();
+            let output_abs_path_str = output_abs_path.to_string_lossy().into_owned();
+
+            tasks.push(ConversionTaskDto {
+                draft_id: file_bundle.link.file_uuid.to_string(),
+                file_uuid: Some(file_bundle.link.file_uuid.to_string()),
+                artifact_uuid: Some(artifact_uuid.to_string()),
+                job_type: Some("xliff_conversion".into()),
+                source_lang: pair.source_lang.clone(),
+                target_lang: pair.target_lang.clone(),
+                source_path: source_path_str.clone(),
+                xliff_rel_path: output_rel_path_str,
+                xliff_abs_path: Some(output_abs_path_str),
+                version: Some(default_version.clone()),
+                paragraph: Some(true),
+                embed: Some(true),
+            });
+        }
+    }
+
+    Ok(ConversionPlanDto {
+        project_uuid: project_uuid.to_string(),
+        tasks,
+        integrity_alerts: alerts,
+    })
+}
+
+#[tauri::command]
+pub async fn update_conversion_status_v2(
+    db: State<'_, DbManager>,
+    payload: UpdateConversionStatusPayload,
+) -> IpcResult<ArtifactV2Dto> {
+    let artifact_uuid = parse_uuid(&payload.artifact_uuid, "artifactUuid")?;
+    let status_upper = payload.status.to_uppercase();
+    let job_status = payload.status.to_lowercase();
+
+    let updated = db
+        .update_artifact_status(UpdateArtifactStatusArgs {
+            artifact_uuid,
+            status: status_upper,
+            size_bytes: payload.size_bytes,
+            segment_count: payload.segment_count,
+            token_count: payload.token_count,
+        })
+        .await
+        .map_err(IpcError::from)?
+        .ok_or_else(|| IpcError::Validation("artifact not found for conversion update".into()))?;
+
+    let error_log = if job_status == "failed" {
+        payload.error_message.clone()
+    } else {
+        None
+    };
+
+    ensure_conversion_job(
+        db.inner(),
+        updated.project_uuid,
+        artifact_uuid,
+        &job_status,
+        error_log,
+    )
+    .await?;
+
+    Ok(map_artifact_record(updated))
+}
+
+#[tauri::command]
+pub async fn convert_xliff_to_jliff_v2(
+    db: State<'_, DbManager>,
+    settings: State<'_, SettingsManager>,
+    payload: ConvertXliffToJliffPayload,
+) -> IpcResult<JliffConversionResultDto> {
+    let project_uuid = parse_uuid(&payload.project_uuid, "projectUuid")?;
+    let conversion_uuid = parse_uuid(&payload.conversion_id, "conversionId")?;
+    let xliff_path = PathBuf::from(&payload.xliff_abs_path);
+    let xliff_dir = xliff_path.parent().ok_or_else(|| {
+        IpcError::Validation("xliffAbsPath must reference a file within a directory".into())
+    })?;
+
+    let bundle = db
+        .get_project_bundle(project_uuid)
+        .await
+        .map_err(IpcError::from)?
+        .ok_or_else(|| IpcError::Validation(format!("Project '{}' not found", project_uuid)))?;
+
+    let settings_snapshot = settings.current().await;
+    let projects_root = settings_snapshot.projects_dir();
+    let project_root = locate_project_root(&projects_root, project_uuid, &bundle).await?;
+
+    let mut options = ConversionOptions::new(
+        xliff_path.clone(),
+        xliff_dir.to_path_buf(),
+        bundle.project.project_name.clone(),
+        project_uuid.to_string(),
+        payload
+            .operator
+            .clone()
+            .unwrap_or_else(|| "operator".into()),
+    );
+
+    options.file_prefix = Some(conversion_uuid.to_string());
+
+    if let Some(schema_path) = payload.schema_abs_path.as_ref() {
+        options.schema_path = Some(PathBuf::from(schema_path));
+    }
+
+    let generated = convert_xliff(&options).map_err(|err| IpcError::Internal(err.to_string()))?;
+
+    let primary = generated.into_iter().next().ok_or_else(|| {
+        IpcError::Internal("No artifacts generated from XLIFF conversion.".into())
+    })?;
+
+    let jliff_abs_path = primary.jliff_path.to_string_lossy().into_owned();
+    let tag_map_abs_path = primary.tag_map_path.to_string_lossy().into_owned();
+    let jliff_rel_path = relative_to_project(&primary.jliff_path, &project_root)?;
+    let tag_map_rel_path = relative_to_project(&primary.tag_map_path, &project_root)?;
+
+    Ok(JliffConversionResultDto {
+        file_id: primary.file_id,
+        jliff_abs_path,
+        jliff_rel_path,
+        tag_map_abs_path,
+        tag_map_rel_path,
+    })
+}
+
+#[tauri::command]
+pub async fn update_project_file_role_v2(
+    db: State<'_, DbManager>,
+    project_uuid: String,
+    file_uuid: String,
+    next_role: String,
+) -> IpcResult<ProjectFileBundleV2Dto> {
+    let project_uuid = parse_uuid(&project_uuid, "projectUuid")?;
+    let file_uuid = parse_uuid(&file_uuid, "fileUuid")?;
+    let normalized_role = normalize_project_file_role(&next_role)?;
+
+    let bundle = db
+        .update_project_file_role(project_uuid, file_uuid, &normalized_role)
+        .await
+        .map_err(IpcError::from)?;
+
+    Ok(map_project_file_bundle(bundle))
 }
 
 fn map_new_project_args(payload: CreateProjectPayload) -> Result<NewProjectArgs, IpcError> {
@@ -726,6 +1021,7 @@ async fn prepare_conversion_plan(
         return Ok(Some(ConversionPlanDto {
             project_uuid: project_uuid.to_string(),
             tasks: Vec::new(),
+            integrity_alerts: Vec::new(),
         }));
     }
 
@@ -748,6 +1044,8 @@ async fn prepare_conversion_plan(
                 .join(&language_dir)
                 .join(format!("{file_stem}.xlf"));
             let output_rel_path_str = output_rel_path.to_string_lossy().into_owned();
+            let output_abs_path = project_dir.join(&output_rel_path);
+            let output_abs_path_str = output_abs_path.to_string_lossy().into_owned();
             let artifact_uuid = Uuid::new_v4();
             let job_type = "xliff_conversion".to_string();
 
@@ -791,6 +1089,10 @@ async fn prepare_conversion_plan(
                 target_lang: pair.target_lang.clone(),
                 source_path: source_path.clone(),
                 xliff_rel_path: output_rel_path_str.clone(),
+                xliff_abs_path: Some(output_abs_path_str.clone()),
+                version: None,
+                paragraph: Some(true),
+                embed: Some(true),
             });
         }
     }
@@ -805,7 +1107,137 @@ async fn prepare_conversion_plan(
     Ok(Some(ConversionPlanDto {
         project_uuid: project_uuid.to_string(),
         tasks,
+        integrity_alerts: Vec::new(),
     }))
+}
+
+async fn locate_project_root(
+    projects_root: &Path,
+    project_uuid: Uuid,
+    bundle: &ProjectBundle,
+) -> Result<PathBuf, IpcError> {
+    let candidate = projects_root.join(project_uuid.to_string());
+    if tokio::fs::metadata(&candidate).await.is_ok() {
+        return Ok(candidate);
+    }
+
+    let stored_paths: Vec<PathBuf> = bundle
+        .files
+        .iter()
+        .map(|file| PathBuf::from(&file.link.stored_at))
+        .collect();
+
+    if stored_paths.is_empty() {
+        return Err(IpcError::Internal(format!(
+            "Unable to resolve project directory for {} (no file records)",
+            project_uuid
+        )));
+    }
+
+    let root = projects_root.to_path_buf();
+    let located = task::spawn_blocking(move || -> Result<Option<PathBuf>, io::Error> {
+        for entry in fs::read_dir(&root)? {
+            let entry = entry?;
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+
+            for rel in &stored_paths {
+                if path.join(rel).exists() {
+                    return Ok(Some(path));
+                }
+            }
+        }
+        Ok(None)
+    })
+    .await
+    .map_err(|err| {
+        IpcError::Internal(format!(
+            "Failed to scan projects directory '{}': {}",
+            projects_root.display(),
+            err
+        ))
+    })?
+    .map_err(|err| {
+        IpcError::Internal(format!(
+            "Unable to enumerate projects directory '{}': {}",
+            projects_root.display(),
+            err
+        ))
+    })?;
+
+    located.ok_or_else(|| {
+        IpcError::Internal(format!(
+            "Unable to resolve filesystem root for project {} under {}",
+            project_uuid,
+            projects_root.display()
+        ))
+    })
+}
+
+async fn ensure_conversion_artifact(
+    db: &DbManager,
+    project_uuid: Uuid,
+    file_uuid: Uuid,
+) -> Result<Uuid, IpcError> {
+    let artifacts = db
+        .list_artifacts_for_file(project_uuid, file_uuid)
+        .await
+        .map_err(IpcError::from)?;
+
+    if let Some(existing) = artifacts
+        .into_iter()
+        .find(|artifact| artifact.artifact_type.eq_ignore_ascii_case("xliff"))
+    {
+        return Ok(existing.artifact_uuid);
+    }
+
+    let artifact_uuid = Uuid::new_v4();
+    db.upsert_artifact_record(NewArtifactArgs {
+        artifact_uuid,
+        project_uuid,
+        file_uuid,
+        artifact_type: "xliff".into(),
+        size_bytes: None,
+        segment_count: None,
+        token_count: None,
+        status: "PENDING".into(),
+    })
+    .await
+    .map_err(IpcError::from)?;
+
+    Ok(artifact_uuid)
+}
+
+async fn ensure_conversion_job(
+    db: &DbManager,
+    project_uuid: Uuid,
+    artifact_uuid: Uuid,
+    job_status: &str,
+    error_log: Option<String>,
+) -> Result<(), IpcError> {
+    db.upsert_job_record(NewJobArgs {
+        artifact_uuid,
+        job_type: "xliff_conversion".into(),
+        project_uuid,
+        job_status: job_status.to_string(),
+        error_log,
+    })
+    .await
+    .map_err(IpcError::from)?;
+    Ok(())
+}
+
+fn relative_to_project(path: &Path, project_root: &Path) -> Result<String, IpcError> {
+    let relative = path.strip_prefix(project_root).map_err(|_| {
+        IpcError::Internal(format!(
+            "Failed to compute relative path for '{}' against '{}'",
+            path.display(),
+            project_root.display()
+        ))
+    })?;
+    Ok(relative.to_string_lossy().into_owned())
 }
 
 fn map_asset_role_to_file_info_type(role: ProjectAssetRoleDto) -> String {
@@ -940,6 +1372,49 @@ fn map_new_project_file_args(
             .map(map_file_language_pair_input)
             .collect(),
     })
+}
+
+fn map_project_statistics(stats: ProjectStatistics) -> ProjectStatisticsDto {
+    ProjectStatisticsDto {
+        totals: ProjectFileTotalsDto {
+            total: stats.totals.total,
+            processable: stats.totals.processable,
+            reference: stats.totals.reference,
+            instructions: stats.totals.instructions,
+            image: stats.totals.image,
+            other: stats.totals.other,
+        },
+        conversions: ProjectConversionStatsDto {
+            total: stats.conversions.total,
+            completed: stats.conversions.completed,
+            failed: stats.conversions.failed,
+            pending: stats.conversions.pending,
+            running: stats.conversions.running,
+            other: stats.conversions.other,
+            segments: stats.conversions.segments,
+            tokens: stats.conversions.tokens,
+        },
+        jobs: ProjectJobStatsDto {
+            total: stats.jobs.total,
+            completed: stats.jobs.completed,
+            failed: stats.jobs.failed,
+            pending: stats.jobs.pending,
+            running: stats.jobs.running,
+            other: stats.jobs.other,
+        },
+        progress: ProjectProgressStatsDto {
+            processable_files: stats.progress.processable_files,
+            files_ready: stats.progress.files_ready,
+            files_with_errors: stats.progress.files_with_errors,
+            percent_complete: stats.progress.percent_complete,
+        },
+        warnings: ProjectWarningStatsDto {
+            total: stats.warnings.total,
+            failed_artifacts: stats.warnings.failed_artifacts,
+            failed_jobs: stats.warnings.failed_jobs,
+        },
+        last_activity: stats.last_activity,
+    }
 }
 
 fn map_project_bundle(bundle: ProjectBundle) -> ProjectBundleV2Dto {
@@ -1095,6 +1570,16 @@ fn map_job_record(record: crate::db::types::JobRecord) -> JobV2Dto {
 fn parse_uuid(value: &str, field: &str) -> Result<Uuid, IpcError> {
     Uuid::parse_str(value)
         .map_err(|_| IpcError::Validation(format!("invalid {field}: expected UUID, got '{value}'")))
+}
+
+fn normalize_project_file_role(value: &str) -> Result<String, IpcError> {
+    let normalized = value.trim().to_lowercase();
+    match normalized.as_str() {
+        "processable" | "reference" | "instructions" | "image" => Ok(normalized),
+        _ => Err(IpcError::Validation(format!(
+            "Unsupported project file role '{value}'"
+        ))),
+    }
 }
 
 fn validate_project_folder_name(name: &str) -> Result<&str, InvokeError> {

@@ -13,8 +13,17 @@ import type {
   UpdateJliffSegmentResult,
 } from "./types";
 import { safeInvoke } from "./request";
-import { listProjectRecords, deleteProjectBundle } from "./db/projects";
-import type { ProjectRecord } from "@/shared/types/database";
+import type { ProjectStatistics } from "@/shared/types/statistics";
+import {
+  listProjectRecords,
+  deleteProjectBundle,
+  ensureProjectConversionPlanDto,
+  updateConversionStatusDto,
+  convertXliffToJliffDto,
+  fetchProjectStatistics,
+} from "./db/projects";
+import type { ConversionPlan, ProjectFileBundle, ProjectRecord } from "@/shared/types/database";
+import type { ProjectFileRoleValue } from "@/types/project-files";
 
 export async function healthCheck() {
   return safeInvoke<AppHealthReport>("health_check");
@@ -127,6 +136,10 @@ export function getProjectDetails(projectId: string): Promise<ProjectDetails> {
   );
 }
 
+export function getProjectStatistics(projectId: string): Promise<ProjectStatistics | null> {
+  return fetchProjectStatistics(projectId);
+}
+
 export function addFilesToProject(
   projectId: string,
   files: string[],
@@ -146,12 +159,24 @@ export function removeProjectFile(projectId: string, projectFileId: string): Pro
   );
 }
 
-export function ensureProjectConversionsPlan(
+export function updateProjectFileRole(
   projectId: string,
+  projectFileId: string,
+  nextRole: ProjectFileRoleValue,
+): Promise<ProjectFileBundle> {
+  return safeInvoke<ProjectFileBundle>("update_project_file_role_v2", {
+    project_uuid: projectId,
+    file_uuid: projectFileId,
+    next_role: nextRole,
+  });
+}
+
+export async function ensureProjectConversionsPlan(
+  projectId: string,
+  fileIds: string[] = [],
 ): Promise<EnsureConversionsPlan> {
-  return Promise.reject(
-    new Error(`TODO: Rebuild conversion planning against the new schema (project=${projectId})`),
-  );
+  const plan = await ensureProjectConversionPlanDto(projectId, fileIds);
+  return mapConversionPlanToEnsurePlan(plan);
 }
 
 export interface ConversionValidationSummary {
@@ -162,24 +187,29 @@ export interface ConversionValidationSummary {
   schemaPath?: string;
 }
 
-export function updateConversionStatus(
+export async function updateConversionStatus(
   conversionId: string,
   status: "pending" | "running" | "completed" | "failed",
-  payload?: {
+  payload: {
     xliffRelPath?: string;
+    xliffAbsPath?: string;
     jliffRelPath?: string;
     tagMapRelPath?: string;
     errorMessage?: string;
     validation?: ConversionValidationSummary;
-  },
+  } = {},
 ) {
-  return Promise.reject(
-    new Error(
-      `TODO: Persist conversion status updates using the new schema (conversion=${conversionId}, status=${status}, payload=${JSON.stringify(
-        payload ?? {},
-      )})`,
-    ),
-  );
+  return updateConversionStatusDto({
+    artifactUuid: conversionId,
+    status,
+    xliffRelPath: payload.xliffRelPath,
+    xliffAbsPath: payload.xliffAbsPath,
+    jliffRelPath: payload.jliffRelPath,
+    tagMapRelPath: payload.tagMapRelPath,
+    errorMessage: payload.errorMessage,
+    validationMessage: payload.validation?.message,
+    validator: payload.validation?.validator,
+  });
 }
 
 export interface ConvertXliffToJliffArgs {
@@ -193,11 +223,49 @@ export interface ConvertXliffToJliffArgs {
 export function convertXliffToJliff(
   args: ConvertXliffToJliffArgs,
 ): Promise<JliffConversionResult> {
-  return Promise.reject(
-    new Error(
-      `TODO: Reintroduce JLIFF conversion with v2 IPC (project=${args.projectId}, conversion=${args.conversionId})`,
-    ),
-  );
+  return convertXliffToJliffDto({
+    projectUuid: args.projectId,
+    conversionId: args.conversionId,
+    xliffAbsPath: args.xliffAbsPath,
+    operator: args.operator,
+    schemaAbsPath: args.schemaAbsPath,
+  }).then((dto) => ({
+    fileId: dto.fileId,
+    jliffAbsPath: dto.jliffAbsPath,
+    jliffRelPath: dto.jliffRelPath,
+    tagMapAbsPath: dto.tagMapAbsPath,
+    tagMapRelPath: dto.tagMapRelPath,
+  }));
+}
+
+function mapConversionPlanToEnsurePlan(plan: ConversionPlan): EnsureConversionsPlan {
+  const primary = plan.tasks[0];
+  const defaultVersion = primary?.version ?? "2.1";
+
+  return {
+    projectId: plan.projectUuid,
+    srcLang: primary?.sourceLang ?? "",
+    tgtLang: primary?.targetLang ?? "",
+    version: primary?.version ?? defaultVersion,
+    tasks: plan.tasks.map((task) => ({
+      conversionId: task.artifactUuid ?? task.draftId,
+      projectFileId: task.fileUuid ?? task.draftId,
+      inputAbsPath: task.sourcePath,
+      outputAbsPath: task.xliffAbsPath ?? task.xliffRelPath,
+      outputRelPath: task.xliffRelPath,
+      srcLang: task.sourceLang,
+      tgtLang: task.targetLang,
+      version: task.version ?? defaultVersion,
+      paragraph: task.paragraph ?? true,
+      embed: task.embed ?? true,
+    })),
+    integrityAlerts: plan.integrityAlerts.map((alert) => ({
+      fileId: alert.fileUuid,
+      fileName: alert.fileName,
+      expectedHash: alert.expectedHash ?? "",
+      actualHash: alert.actualHash ?? "",
+    })),
+  };
 }
 
 export function readProjectArtifact(projectId: string, relPath: string): Promise<string> {

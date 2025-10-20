@@ -17,6 +17,7 @@ import {
   ProjectAssetRole,
   ConversionPlan,
   ConversionTask,
+  FileIntegrityAlert,
   ProjectFileBundle,
   ProjectFileLink,
   ProjectLanguagePair,
@@ -26,12 +27,36 @@ import {
   ArtifactRecord,
   JobRecord,
 } from "@/shared/types/database";
+import { ProjectStatistics } from "@/shared/types/statistics";
 
 import { safeInvoke } from "../request";
 
 type ProjectLanguagePairDto = ProjectLanguagePair;
 type FileLanguagePairDto = FileLanguagePair;
 type ProjectAssetRoleDto = ProjectAssetRole;
+
+export interface UpdateConversionStatusInput {
+  artifactUuid: string;
+  status: string;
+  sizeBytes?: number;
+  segmentCount?: number;
+  tokenCount?: number;
+  xliffRelPath?: string;
+  xliffAbsPath?: string;
+  jliffRelPath?: string;
+  tagMapRelPath?: string;
+  errorMessage?: string;
+  validationMessage?: string;
+  validator?: string;
+}
+
+export interface ConvertXliffToJliffInput {
+  projectUuid: string;
+  conversionId: string;
+  xliffAbsPath: string;
+  operator?: string;
+  schemaAbsPath?: string;
+  }
 
 interface ProjectAssetDescriptorDto {
   draftId: string;
@@ -57,11 +82,110 @@ interface ConversionTaskDto {
   targetLang: string;
   sourcePath: string;
   xliffRelPath: string;
+  xliffAbsPath?: string | null;
+  version?: string | null;
+  paragraph?: boolean | null;
+  embed?: boolean | null;
 }
 
 interface ConversionPlanDto {
   projectUuid: string;
   tasks: ConversionTaskDto[];
+  integrityAlerts: FileIntegrityAlertDto[];
+}
+
+interface FileIntegrityAlertDto {
+  fileUuid: string;
+  fileName: string;
+  expectedHash?: string | null;
+  actualHash?: string | null;
+}
+
+interface ProjectFileTotalsDto {
+  total: number;
+  processable: number;
+  reference: number;
+  instructions: number;
+  image: number;
+  other: number;
+}
+
+interface ProjectConversionStatsDto {
+  total: number;
+  completed: number;
+  failed: number;
+  pending: number;
+  running: number;
+  other: number;
+  segments: number;
+  tokens: number;
+}
+
+interface ProjectJobStatsDto {
+  total: number;
+  completed: number;
+  failed: number;
+  pending: number;
+  running: number;
+  other: number;
+}
+
+interface ProjectProgressStatsDto {
+  processableFiles: number;
+  filesReady: number;
+  filesWithErrors: number;
+  percentComplete: number;
+}
+
+interface ProjectWarningStatsDto {
+  total: number;
+  failedArtifacts: number;
+  failedJobs: number;
+}
+
+interface ProjectStatisticsDto {
+  totals: ProjectFileTotalsDto;
+  conversions: ProjectConversionStatsDto;
+  jobs: ProjectJobStatsDto;
+  progress: ProjectProgressStatsDto;
+  warnings: ProjectWarningStatsDto;
+  lastActivity?: string | null;
+}
+
+interface EnsureConversionPlanPayloadDto {
+  projectUuid: string;
+  fileUuids?: string[] | null;
+}
+
+interface UpdateConversionStatusPayloadDto {
+  artifactUuid: string;
+  status: string;
+  sizeBytes?: number | null;
+  segmentCount?: number | null;
+  tokenCount?: number | null;
+  xliffRelPath?: string | null;
+  xliffAbsPath?: string | null;
+  jliffRelPath?: string | null;
+  tagMapRelPath?: string | null;
+  errorMessage?: string | null;
+  validationMessage?: string | null;
+  validator?: string | null;
+}
+
+interface ConvertXliffToJliffPayloadDto {
+  projectUuid: string;
+  conversionId: string;
+  xliffAbsPath: string;
+  operator?: string | null;
+  schemaAbsPath?: string | null;
+}
+
+interface JliffConversionResultDto {
+  fileId: string;
+  jliffAbsPath: string;
+  jliffRelPath: string;
+  tagMapAbsPath: string;
+  tagMapRelPath: string;
 }
 
 interface ProjectRecordDto {
@@ -131,6 +255,10 @@ const COMMAND = {
   list: "list_project_records_v2",
   attach: "attach_project_file_v2",
   detach: "detach_project_file_v2",
+  ensureConversions: "ensure_project_conversions_plan_v2",
+  updateConversionStatus: "update_conversion_status_v2",
+  convertXliffToJliff: "convert_xliff_to_jliff_v2",
+  stats: "get_project_statistics_v2",
 } as const;
 
 /**
@@ -204,6 +332,14 @@ export async function getProjectBundle(projectUuid: string): Promise<ProjectBund
   return dto ? mapProjectBundleDto(dto) : null;
 }
 
+export async function fetchProjectStatistics(projectUuid: string): Promise<ProjectStatistics | null> {
+  const dto = await safeInvoke<ProjectStatisticsDto | null>(COMMAND.stats, {
+    project_uuid: projectUuid,
+    projectUuid,
+  });
+  return dto ? mapProjectStatisticsDto(dto) : null;
+}
+
 export async function listProjectRecords(): Promise<ProjectRecord[]> {
   const dtos = await safeInvoke<ProjectRecordDto[]>(COMMAND.list);
   return dtos.map(mapProjectRecordDto);
@@ -226,6 +362,53 @@ export async function detachProjectFile(projectUuid: string, fileUuid: string): 
   });
 }
 
+export async function ensureProjectConversionPlanDto(
+  projectUuid: string,
+  fileUuids: string[] = [],
+): Promise<ConversionPlan> {
+  const payload: EnsureConversionPlanPayloadDto = {
+    projectUuid,
+    fileUuids: fileUuids.length > 0 ? fileUuids : undefined,
+  };
+  const dto = await safeInvoke<ConversionPlanDto>(COMMAND.ensureConversions, { payload });
+  return mapConversionPlanDto(dto);
+}
+
+export async function updateConversionStatusDto(
+  input: UpdateConversionStatusInput,
+): Promise<ArtifactRecord> {
+  const payload: UpdateConversionStatusPayloadDto = {
+    artifactUuid: input.artifactUuid,
+    status: input.status,
+    sizeBytes: input.sizeBytes,
+    segmentCount: input.segmentCount,
+    tokenCount: input.tokenCount,
+    xliffRelPath: input.xliffRelPath,
+    xliffAbsPath: input.xliffAbsPath,
+    jliffRelPath: input.jliffRelPath,
+    tagMapRelPath: input.tagMapRelPath,
+    errorMessage: input.errorMessage,
+    validationMessage: input.validationMessage,
+    validator: input.validator,
+  };
+  const dto = await safeInvoke<ArtifactDto>(COMMAND.updateConversionStatus, { payload });
+  return mapArtifactDto(dto);
+}
+
+export async function convertXliffToJliffDto(
+  input: ConvertXliffToJliffInput,
+): Promise<JliffConversionResultDto> {
+  const payload: ConvertXliffToJliffPayloadDto = {
+    projectUuid: input.projectUuid,
+    conversionId: input.conversionId,
+    xliffAbsPath: input.xliffAbsPath,
+    operator: input.operator ?? undefined,
+    schemaAbsPath: input.schemaAbsPath ?? undefined,
+  };
+
+  return safeInvoke<JliffConversionResultDto>(COMMAND.convertXliffToJliff, { payload });
+}
+
 function mapCreateProjectInput(input: CreateProjectInput) {
   return {
     projectUuid: input.projectUuid,
@@ -237,6 +420,49 @@ function mapCreateProjectInput(input: CreateProjectInput) {
     notes: input.notes ?? undefined,
     subjects: input.subjects ?? [],
     languagePairs: input.languagePairs.map(mapProjectLanguagePairInput),
+  };
+}
+
+function mapProjectStatisticsDto(dto: ProjectStatisticsDto): ProjectStatistics {
+  return {
+    totals: {
+      total: dto.totals.total,
+      processable: dto.totals.processable,
+      reference: dto.totals.reference,
+      instructions: dto.totals.instructions,
+      image: dto.totals.image,
+      other: dto.totals.other,
+    },
+    conversions: {
+      total: dto.conversions.total,
+      completed: dto.conversions.completed,
+      failed: dto.conversions.failed,
+      pending: dto.conversions.pending,
+      running: dto.conversions.running,
+      other: dto.conversions.other,
+      segments: dto.conversions.segments,
+      tokens: dto.conversions.tokens,
+    },
+    jobs: {
+      total: dto.jobs.total,
+      completed: dto.jobs.completed,
+      failed: dto.jobs.failed,
+      pending: dto.jobs.pending,
+      running: dto.jobs.running,
+      other: dto.jobs.other,
+    },
+    progress: {
+      processableFiles: dto.progress.processableFiles,
+      filesReady: dto.progress.filesReady,
+      filesWithErrors: dto.progress.filesWithErrors,
+      percentComplete: dto.progress.percentComplete,
+    },
+    warnings: {
+      total: dto.warnings.total,
+      failedArtifacts: dto.warnings.failedArtifacts,
+      failedJobs: dto.warnings.failedJobs,
+    },
+    lastActivity: dto.lastActivity ?? null,
   };
 }
 
@@ -395,6 +621,7 @@ function mapConversionPlanDto(plan: ConversionPlanDto): ConversionPlan {
   return {
     projectUuid: plan.projectUuid,
     tasks: plan.tasks.map(mapConversionTaskDto),
+    integrityAlerts: (plan.integrityAlerts ?? []).map(mapIntegrityAlertDto),
   };
 }
 
@@ -408,6 +635,19 @@ function mapConversionTaskDto(task: ConversionTaskDto): ConversionTask {
     targetLang: task.targetLang,
     sourcePath: task.sourcePath,
     xliffRelPath: task.xliffRelPath,
+    xliffAbsPath: task.xliffAbsPath ?? null,
+    version: task.version ?? null,
+    paragraph: task.paragraph ?? null,
+    embed: task.embed ?? null,
+  };
+}
+
+function mapIntegrityAlertDto(alert: FileIntegrityAlertDto): FileIntegrityAlert {
+  return {
+    fileUuid: alert.fileUuid,
+    fileName: alert.fileName,
+    expectedHash: alert.expectedHash ?? null,
+    actualHash: alert.actualHash ?? null,
   };
 }
 

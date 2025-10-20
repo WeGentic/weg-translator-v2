@@ -117,11 +117,23 @@ export interface ConversionTask {
   targetLang: string;
   sourcePath: string;
   xliffRelPath: string;
+  xliffAbsPath?: Nullable<string>;
+  version?: Nullable<string>;
+  paragraph?: Nullable<boolean>;
+  embed?: Nullable<boolean>;
 }
 
 export interface ConversionPlan {
   projectUuid: Uuid;
   tasks: ConversionTask[];
+  integrityAlerts: FileIntegrityAlert[];
+}
+
+export interface FileIntegrityAlert {
+  fileUuid: Uuid;
+  fileName: string;
+  expectedHash?: Nullable<string>;
+  actualHash?: Nullable<string>;
 }
 
 export interface ProjectRecord {

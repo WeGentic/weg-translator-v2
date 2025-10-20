@@ -311,6 +311,14 @@ pub struct ConversionTaskDto {
     pub target_lang: String,
     pub source_path: String,
     pub xliff_rel_path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub xliff_abs_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paragraph: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub embed: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -319,6 +327,76 @@ pub struct ConversionPlanDto {
     pub project_uuid: String,
     #[serde(default)]
     pub tasks: Vec<ConversionTaskDto>,
+    #[serde(default)]
+    pub integrity_alerts: Vec<FileIntegrityAlertDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileIntegrityAlertDto {
+    pub file_uuid: String,
+    pub file_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_hash: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub actual_hash: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EnsureConversionPlanPayload {
+    pub project_uuid: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_uuids: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateConversionStatusPayload {
+    pub artifact_uuid: String,
+    pub status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub segment_count: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_count: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub xliff_rel_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub xliff_abs_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub jliff_rel_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag_map_rel_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validation_message: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub validator: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConvertXliffToJliffPayload {
+    pub project_uuid: String,
+    pub conversion_id: String,
+    pub xliff_abs_path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub operator: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub schema_abs_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JliffConversionResultDto {
+    pub file_id: String,
+    pub jliff_abs_path: String,
+    pub jliff_rel_path: String,
+    pub tag_map_abs_path: String,
+    pub tag_map_rel_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -467,6 +545,70 @@ pub struct ProjectBundleV2Dto {
     pub language_pairs: Vec<ProjectLanguagePairDto>,
     pub files: Vec<ProjectFileBundleV2Dto>,
     pub jobs: Vec<JobV2Dto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectFileTotalsDto {
+    pub total: i64,
+    pub processable: i64,
+    pub reference: i64,
+    pub instructions: i64,
+    pub image: i64,
+    pub other: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectConversionStatsDto {
+    pub total: i64,
+    pub completed: i64,
+    pub failed: i64,
+    pub pending: i64,
+    pub running: i64,
+    pub other: i64,
+    pub segments: i64,
+    pub tokens: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectJobStatsDto {
+    pub total: i64,
+    pub completed: i64,
+    pub failed: i64,
+    pub pending: i64,
+    pub running: i64,
+    pub other: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectProgressStatsDto {
+    pub processable_files: i64,
+    pub files_ready: i64,
+    pub files_with_errors: i64,
+    pub percent_complete: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectWarningStatsDto {
+    pub total: i64,
+    pub failed_artifacts: i64,
+    pub failed_jobs: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectStatisticsDto {
+    pub totals: ProjectFileTotalsDto,
+    pub conversions: ProjectConversionStatsDto,
+    pub jobs: ProjectJobStatsDto,
+    pub progress: ProjectProgressStatsDto,
+    pub warnings: ProjectWarningStatsDto,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_activity: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -718,46 +860,4 @@ pub struct ProjectDetailsDto {
     pub default_tgt_lang: Option<String>,
     pub root_path: String,
     pub files: Vec<ProjectFileWithConversionsDto>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AddFilesResponseDto {
-    pub inserted: Vec<ProjectFileDto>,
-    pub inserted_count: usize,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EnsureConversionsTaskDto {
-    pub conversion_id: String,
-    pub project_file_id: String,
-    pub input_abs_path: String,
-    pub output_abs_path: String,
-    pub src_lang: String,
-    pub tgt_lang: String,
-    pub version: String,
-    pub paragraph: bool,
-    pub embed: bool,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FileIntegrityAlertDto {
-    pub file_id: String,
-    pub file_name: String,
-    pub expected_hash: String,
-    pub actual_hash: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EnsureConversionsPlanDto {
-    pub project_id: String,
-    pub src_lang: String,
-    pub tgt_lang: String,
-    pub version: String,
-    pub tasks: Vec<EnsureConversionsTaskDto>,
-    #[serde(default)]
-    pub integrity_alerts: Vec<FileIntegrityAlertDto>,
 }

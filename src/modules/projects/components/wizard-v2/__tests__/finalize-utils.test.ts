@@ -137,6 +137,7 @@ describe("mapConversionPlanFromResponse", () => {
           xliffRelPath: "Translations/en_fr/test.xlf",
         },
       ],
+      integrityAlerts: [],
     },
   };
 

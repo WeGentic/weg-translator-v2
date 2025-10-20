@@ -18,8 +18,8 @@ use super::schema::initialise_schema;
 use super::types::{
     ArtifactRecord, ClientRecord, JobRecord, NewArtifactArgs, NewClientArgs, NewFileInfoArgs,
     NewJobArgs, NewProjectArgs, NewProjectFileArgs, NewUserArgs, ProjectBundle, ProjectFileBundle,
-    ProjectListRecord, ProjectRecord, UpdateArtifactStatusArgs, UpdateClientArgs,
-    UpdateJobStatusArgs, UpdateProjectArgs, UpdateUserArgs, UserProfile,
+    ProjectListRecord, ProjectRecord, ProjectStatistics, UpdateArtifactStatusArgs,
+    UpdateClientArgs, UpdateJobStatusArgs, UpdateProjectArgs, UpdateUserArgs, UserProfile,
 };
 
 /// Central entry-point for all database interactions. Wraps the SQLite pool and synchronises writes.
@@ -223,6 +223,15 @@ impl DbManager {
         projects_v2::get_project(&pool, project_uuid).await
     }
 
+    /// Retrieves aggregate statistics for a project.
+    pub async fn get_project_statistics(
+        &self,
+        project_uuid: Uuid,
+    ) -> DbResult<Option<ProjectStatistics>> {
+        let pool = self.pool().await;
+        projects_v2::get_project_statistics(&pool, project_uuid).await
+    }
+
     /// Lists project records.
     pub async fn list_project_records(&self) -> DbResult<Vec<ProjectListRecord>> {
         let pool = self.pool().await;
@@ -245,6 +254,18 @@ impl DbManager {
         let _guard = self.write_lock.lock().await;
         let pool = self.pool().await;
         projects_v2::detach_project_file(&pool, project_uuid, file_uuid).await
+    }
+
+    /// Updates the stored role/type for an attached project file.
+    pub async fn update_project_file_role(
+        &self,
+        project_uuid: Uuid,
+        file_uuid: Uuid,
+        next_role: &str,
+    ) -> DbResult<ProjectFileBundle> {
+        let _guard = self.write_lock.lock().await;
+        let pool = self.pool().await;
+        projects_v2::update_project_file_role(&pool, project_uuid, file_uuid, next_role).await
     }
 
     /// Upserts an artifact record.

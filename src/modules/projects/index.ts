@@ -5,5 +5,8 @@ export { ProjectManagerContent } from "./ProjectManagerContent";
 export { ProjectsPanel } from "./ProjectsPanel";
 export { ProjectManagerHeader } from "./ProjectManagerHeader";
 export { ProjectManagerToolbar } from "./ProjectManagerToolbar";
+export { ProjectOverviewRoute } from "./ProjectOverviewRoute";
+export { useProjectOverviewContext } from "./routes/project-overview-context";
+export { ProjectWorkspaceLayout } from "./layout/ProjectWorkspaceLayout";
 export * from "./state";
 export * from "./ui/tools";

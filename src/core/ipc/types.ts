@@ -130,6 +130,7 @@ export interface ProjectListItem {
   clientId?: string | null;
   clientName?: string | null;
   notes?: string | null;
+  subjects?: string[];
 }
 
 export interface AppSettings {
@@ -230,6 +231,7 @@ export interface EnsureConversionsTask {
   projectFileId: string;
   inputAbsPath: string;
   outputAbsPath: string;
+  outputRelPath?: string;
   srcLang: string;
   tgtLang: string;
   version: string;

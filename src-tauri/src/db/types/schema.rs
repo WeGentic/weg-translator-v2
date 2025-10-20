@@ -172,6 +172,69 @@ pub struct ProjectBundle {
     pub jobs: Vec<JobRecord>,
 }
 
+/// Aggregated counts for project files grouped by semantic role.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProjectFileTotals {
+    pub total: i64,
+    pub processable: i64,
+    pub reference: i64,
+    pub instructions: i64,
+    pub image: i64,
+    pub other: i64,
+}
+
+/// Aggregated counts for conversion artifacts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProjectConversionStats {
+    pub total: i64,
+    pub completed: i64,
+    pub failed: i64,
+    pub pending: i64,
+    pub running: i64,
+    pub other: i64,
+    pub segments: i64,
+    pub tokens: i64,
+}
+
+/// Aggregated counts for translation jobs.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProjectJobStats {
+    pub total: i64,
+    pub completed: i64,
+    pub failed: i64,
+    pub pending: i64,
+    pub running: i64,
+    pub other: i64,
+}
+
+/// Progress metrics derived from conversion state.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProjectProgressStats {
+    pub processable_files: i64,
+    pub files_ready: i64,
+    pub files_with_errors: i64,
+    pub percent_complete: f32,
+}
+
+/// Warning and error tallies for the project.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProjectWarningStats {
+    pub total: i64,
+    pub failed_artifacts: i64,
+    pub failed_jobs: i64,
+}
+
+/// Snapshot of aggregate statistics for a project.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProjectStatistics {
+    pub totals: ProjectFileTotals,
+    pub conversions: ProjectConversionStats,
+    pub jobs: ProjectJobStats,
+    pub progress: ProjectProgressStats,
+    pub warnings: ProjectWarningStats,
+    pub last_activity: Option<String>,
+}
+
 /// Input describing a permission override change.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PermissionOverrideInput {
