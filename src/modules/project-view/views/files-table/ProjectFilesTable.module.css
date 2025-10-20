@@ -1,0 +1,21 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.placeholder {
+  padding: 2rem 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px dashed var(--color-tr-border);
+  background-color: var(--color-tr-muted);
+  color: var(--color-tr-muted-foreground);
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-tr-primary-blue);
+}

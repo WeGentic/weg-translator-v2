@@ -1,4 +1,4 @@
-@import "../../../../src/modules/projects/css/dropdowns.css";
+@import "../../../../src/modules/project-manager/css/dropdowns.css";
 
 :root {
   --projects-table-header-height: 48px;

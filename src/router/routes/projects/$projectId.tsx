@@ -1,25 +1,27 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { ProjectOverviewRoute } from "@/modules/projects";
-import type { ProjectOverviewContextValue } from "@/modules/projects/routes/project-overview-context";
+import {
+  ProjectViewRoute,
+  type ProjectViewContextValue,
+} from "@/modules/project-view";
 import type { ProjectListItem } from "@/core/ipc";
 import { getProjectBundle, getProjectStatistics } from "@/core/ipc";
 import type { ProjectBundle, ProjectRecord } from "@/shared/types/database";
 import type { ProjectStatistics } from "@/shared/types/statistics";
 
 export const Route = createFileRoute("/projects/$projectId")({
-  loader: async ({ params }) => loadProjectOverview(params.projectId),
-  pendingComponent: ProjectOverviewPending,
-  errorComponent: ProjectOverviewError,
-  component: ProjectOverviewRouteLoader,
+  loader: async ({ params }) => loadProjectView(params.projectId),
+  pendingComponent: ProjectViewPending,
+  errorComponent: ProjectViewError,
+  component: ProjectViewRouteLoader,
 });
 
-function ProjectOverviewRouteLoader() {
+function ProjectViewRouteLoader() {
   const data = Route.useLoaderData();
-  return <ProjectOverviewRoute {...data} />;
+  return <ProjectViewRoute {...data} />;
 }
 
-function ProjectOverviewPending() {
+function ProjectViewPending() {
   return (
     <div className="flex min-h-full flex-1 flex-col bg-background">
       <div className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
@@ -29,7 +31,7 @@ function ProjectOverviewPending() {
   );
 }
 
-function ProjectOverviewError({ error }: { error: unknown }) {
+function ProjectViewError({ error }: { error: unknown }) {
   const message =
     error instanceof Error && error.message.length > 0
       ? error.message
@@ -46,7 +48,7 @@ function ProjectOverviewError({ error }: { error: unknown }) {
   );
 }
 
-async function loadProjectOverview(projectId: string): Promise<ProjectOverviewContextValue> {
+async function loadProjectView(projectId: string): Promise<ProjectViewContextValue> {
   if (!projectId || typeof projectId !== "string") {
     throw redirect({ to: "/", search: { reason: "missingProjectId" } });
   }
@@ -60,7 +62,7 @@ async function loadProjectOverview(projectId: string): Promise<ProjectOverviewCo
   try {
     statistics = await getProjectStatistics(projectId);
   } catch (error) {
-    console.warn("[project-overview] statistics fetch failed", error);
+    console.warn("[project-view] statistics fetch failed", error);
   }
 
   const summary = mapProjectRecordToListItem(bundle.project, bundle);

@@ -10,14 +10,13 @@ import { useGlobalNavigationEvents } from "@/modules/workspace/hooks";
 import { useWorkspaceShell } from "@/modules/workspace/state";
 import { parseClientIdFromKey, toProjectViewKey, type MainView } from "@/app/state/main-view";
 import { EditorPanel, EditorPlaceholder } from "@/modules/editor";
-import { ProjectOverview } from "@/modules/projects/ui/overview/ProjectOverview";
-import { ProjectOverviewPlaceholder } from "@/modules/projects/ui/overview/ProjectOverviewPlaceholder";
+import { ProjectView, ProjectViewPlaceholder } from "@/modules/project-view";
 import { EnhancedAppSettingsPanel } from "@/modules/settings";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
 import type { ProjectListItem } from "@/core/ipc";
 import { DashboardView } from "@/modules/dashboard";
 import { ResourcesView } from "@/modules/resources";
-import { ProjectManagerRoute as ProjectManagerV2View } from "@/modules/projects";
+import { ProjectManagerRoute } from "@/modules/project-manager";
 import { ClientsView } from "@/modules/clients";
 import { ClientDetailsView } from "@/modules/clients/view/ClientDetailsView";
 
@@ -91,7 +90,7 @@ export function WorkspacePage({ initialView = "projects" }: WorkspacePageProps) 
       return <DashboardView />;
     }
     if (mainView === "projects") {
-      return <ProjectManagerV2View onOpenProject={handleProjectOpen} />;
+      return <ProjectManagerRoute onOpenProject={handleProjectOpen} />;
     }
 
     if (mainView === "clients") {
@@ -145,9 +144,9 @@ export function WorkspacePage({ initialView = "projects" }: WorkspacePageProps) 
 
     if (currentProjectId) {
       if (activeProject) {
-        return <ProjectOverview projectSummary={activeProject} />;
+        return <ProjectView projectSummary={activeProject} />;
       }
-      return <ProjectOverviewPlaceholder project={activeProject} />;
+      return <ProjectViewPlaceholder project={activeProject} />;
     }
 
     return (

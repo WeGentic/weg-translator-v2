@@ -4,7 +4,7 @@ import { useAppHealth } from "@/app/hooks/useAppHealth";
 import { useGlobalNavigationEvents } from "@/modules/workspace/hooks";
 import { useWorkspaceShell } from "@/modules/workspace/state";
 import { CollapsedFooterBar, WorkspaceFooter } from "@/app/shell/main_elements";
-import { ProjectsPanel } from "@/modules/projects/ProjectsPanel";
+import { ProjectsPanel } from "@/modules/project-manager/ProjectsPanel";
 import { EnhancedAppSettingsPanel } from "@/modules/settings";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
 import type { ProjectListItem } from "@/core/ipc";
@@ -21,7 +21,7 @@ export function LegacyApp() {
   const {
     mainView,
     setMainView,
-    openProjectOverviews,
+    openProjectViews,
     openProjectEditors,
     handleOpenProject,
     handleCloseOverview,
@@ -43,10 +43,10 @@ export function LegacyApp() {
   });
 
   useEffect(() => {
-    void openProjectOverviews;
+    void openProjectViews;
     void openProjectEditors;
     void handleCloseOverview;
-  }, [openProjectOverviews, openProjectEditors, handleCloseOverview]);
+  }, [openProjectViews, openProjectEditors, handleCloseOverview]);
 
   const handleProjectOpen = (project: ProjectListItem) => {
     handleOpenProject(project);

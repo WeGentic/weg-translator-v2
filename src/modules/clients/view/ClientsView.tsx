@@ -4,9 +4,9 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   WizardNewClientDialog,
   type WizardNewClientFormValues,
-} from "@/modules/projects/components/wizard-v2/components/WizardNewClientDialog";
+} from "@/modules/project-manager/components/wizard-v2/components/WizardNewClientDialog";
 import "@/shared/styles/main-view.css";
-import "@/modules/projects/css/data-table.css";
+import "@/modules/project-manager/css/data-table.css";
 import "./clients-view.css";
 
 import { createClientRecord } from "@/core/ipc/db/clients";

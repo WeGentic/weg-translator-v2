@@ -1,0 +1,52 @@
+/* ProjectView Layout Variables and Styles */
+
+@import "./dropdowns.css";
+
+:root {
+  /* Table Layout Dimensions */
+  --projectoverview-table-header-height: 54px;
+  --projectoverview-table-toolbar-height: 56px;
+
+  /* Spacing and Padding */
+  --projectoverview-table-header-padding: 0.75rem;
+  --projectoverview-table-cell-padding: 0.75rem;
+
+  /* Typography */
+  --projectoverview-table-header-font-size: 0.75rem;
+  --projectoverview-table-cell-font-size: 0.875rem;
+  --projectoverview-table-line-height: 1.5rem;
+}
+
+/**
+ * Layout Zones
+ *
+ * Three-zone layout system for the table:
+ * 1. Header Zone - Fixed height for title and actions
+ * 2. Toolbar Zone - Fixed height for search/filters
+ * 3. Main Zone - Flexible, scrollable content area
+ */
+
+.projectoverview-table-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.projectoverview-table-header-zone {
+  height: var(--projectoverview-table-header-height);
+  flex-shrink: 0;
+}
+
+.projectoverview-table-toolbar-zone {
+  height: var(--projectoverview-table-toolbar-height);
+  flex-shrink: 0;
+}
+
+.projectoverview-table-main-zone {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  /* Add smooth scrolling for better UX */
+  scroll-behavior: smooth;
+}

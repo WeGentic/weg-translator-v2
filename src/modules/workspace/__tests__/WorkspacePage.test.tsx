@@ -28,16 +28,17 @@ vi.mock("@/app/hooks/useAppHealth", () => ({
   useAppHealth: () => ({ systemError: null }),
 }));
 
-vi.mock("@/modules/projects/ProjectsPanel", () => ({
+vi.mock("@/modules/project-manager/ProjectsPanel", () => ({
   ProjectsPanel: () => <div data-testid="projects-panel" />,
 }));
 
-vi.mock("@/modules/projects/ui/overview/ProjectOverview", () => ({
-  ProjectOverview: () => <div data-testid="project-overview" />,
+vi.mock("@/modules/project-manager", () => ({
+  ProjectManagerRoute: () => <div data-testid="project-manager-route" />,
 }));
 
-vi.mock("@/modules/projects/ui/overview/ProjectOverviewPlaceholder", () => ({
-  ProjectOverviewPlaceholder: () => <div data-testid="project-overview-placeholder" />,
+vi.mock("@/modules/project-view", () => ({
+  ProjectView: () => <div data-testid="project-overview" />,
+  ProjectViewPlaceholder: () => <div data-testid="project-overview-placeholder" />,
 }));
 
 vi.mock("@/modules/settings", () => ({

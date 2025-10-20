@@ -127,7 +127,7 @@ export function useWorkspaceShell(initialView: MainView = "projects") {
     return projectCache[currentEditorProjectId] ?? null;
   }, [currentEditorProjectId, projectCache]);
 
-  const openProjectOverviews = useMemo(() => {
+  const openProjectViews = useMemo(() => {
     return openOverviewIds
       .map((id) => projectCache[id])
       .filter((project): project is ProjectListItem => Boolean(project));
@@ -144,7 +144,7 @@ export function useWorkspaceShell(initialView: MainView = "projects") {
     setMainView,
     openOverviewIds,
     openEditorIds,
-    openProjectOverviews,
+    openProjectViews,
     openProjectEditors,
     handleOpenProject,
     handleCloseOverview,

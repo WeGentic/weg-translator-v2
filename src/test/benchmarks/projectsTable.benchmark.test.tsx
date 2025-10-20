@@ -1,7 +1,7 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ProjectManagerContent } from "@/modules/projects/ProjectManagerContent";
+import { ProjectManagerContent } from "@/modules/project-manager/ProjectManagerContent";
 import type { ProjectListItem } from "@/core/ipc";
 
 const shouldRunBenchmarks = process.env.PROJECT_MANAGER_TABLE_BENCHMARK === "1";

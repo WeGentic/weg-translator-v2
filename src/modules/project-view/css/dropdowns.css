@@ -1,0 +1,208 @@
+/* ProjectView Toolbar Filter Dropdown Styles */
+
+/**
+ * Mirrors the Project Manager toolbar dropdown styling so the project view module
+ * can render filter controls with consistent visuals without importing from the manager module.
+ */
+
+/* Icon sizing */
+.projects-table-toolbar-zone .lucide-chevron-down {
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+/* Check icon - reddish color */
+.projects-table-toolbar-zone .lucide-check {
+  width: 12px;
+  height: 12px;
+  color: var(--color-tr-destructive) !important;
+}
+
+/* SelectTrigger - Normal state: just background */
+.projects-table-toolbar-zone button[role="combobox"] {
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  background: var(--color-tr-anti-primary) !important;
+  border: 1px solid transparent !important;
+  transition: all 0.2s ease;
+}
+
+/* SelectTrigger - Hover state: ring border visible */
+.projects-table-toolbar-zone button[role="combobox"]:hover {
+  border-color: var(--color-tr-ring) !important;
+}
+
+.projects-table-toolbar-zone button[role="combobox"]:hover .lucide-chevron-down {
+  opacity: 1;
+}
+
+/* SelectTrigger - Clicked/Active state: ring border fixed, darker background */
+.projects-table-toolbar-zone button[role="combobox"][data-state="open"] {
+  background: var(--color-tr-primary-blue) !important;
+  border-color: var(--color-tr-ring) !important;
+  color: var(--color-tr-anti-primary) !important;
+}
+
+/* REMOVE focus ring and outline after dropdown closes */
+.projects-table-toolbar-zone button[role="combobox"]:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  ring: none !important;
+}
+
+/* Only show focus when keyboard navigating (not after mouse click) */
+.projects-table-toolbar-zone button[role="combobox"]:focus-visible {
+  outline: 2px solid var(--color-tr-ring);
+  outline-offset: 2px;
+}
+
+/* SelectContent - dropdown menu */
+.projects-table-toolbar-zone [role="listbox"] {
+  font-size: 11px;
+  background: var(--color-tr-anti-primary) !important;
+  border: 1px solid var(--color-tr-ring) !important;
+  box-shadow: 0 4px 12px color-mix(in oklch, var(--color-tr-primary-blue) 30%, transparent);
+}
+
+/* SelectItem - individual dropdown items - OVERRIDE SHADCN DEFAULTS */
+/* Target all possible selectors to ensure override */
+.projects-table-toolbar-zone [role="option"],
+.projects-table-toolbar-zone div[role="option"],
+.projects-table-toolbar-zone [data-radix-collection-item] {
+  font-size: 11px !important;
+  line-height: 1.5 !important;
+  padding-top: 0.375rem !important;
+  padding-bottom: 0.375rem !important;
+}
+
+/* Normal state - transparent background */
+.projects-table-toolbar-zone [role="option"]:not(:focus):not([data-state="checked"]),
+.projects-table-toolbar-zone div[role="option"]:not(:focus):not([data-state="checked"]),
+.projects-table-toolbar-zone [data-radix-collection-item]:not(:focus):not([data-state="checked"]) {
+  background-color: transparent !important;
+  background: transparent !important;
+  color: var(--color-tr-navy) !important;
+}
+
+/* Hovered/Focused options - MAXIMUM CONTRAST with primary blue */
+/* Using all possible focus/hover selectors to override ShadCN */
+.projects-table-toolbar-zone [role="option"]:focus,
+.projects-table-toolbar-zone div[role="option"]:focus,
+.projects-table-toolbar-zone [data-radix-collection-item]:focus,
+.projects-table-toolbar-zone [role="option"][data-highlighted],
+.projects-table-toolbar-zone div[role="option"][data-highlighted],
+.projects-table-toolbar-zone [data-radix-collection-item][data-highlighted],
+.projects-table-toolbar-zone [role="option"]:hover,
+.projects-table-toolbar-zone div[role="option"]:hover,
+.projects-table-toolbar-zone [data-radix-collection-item]:hover {
+  background-color: var(--color-tr-primary-blue) !important;
+  background: var(--color-tr-primary-blue) !important;
+  color: var(--color-tr-anti-primary) !important;
+}
+
+/* Selected item (checked) - BRIGHT LIME GREEN with strong specificity */
+.projects-table-toolbar-zone [role="option"][data-state="checked"]:not(:focus):not([data-highlighted]),
+.projects-table-toolbar-zone div[role="option"][data-state="checked"]:not(:focus):not([data-highlighted]),
+.projects-table-toolbar-zone [data-radix-collection-item][data-state="checked"]:not(:focus):not([data-highlighted]) {
+  background-color: var(--color-tr-secondary) !important;
+  background: var(--color-tr-secondary) !important;
+  color: var(--color-tr-navy) !important;
+  font-weight: 600 !important;
+}
+
+/* Selected AND hovered - priority to hover state (primary blue) */
+.projects-table-toolbar-zone [role="option"][data-state="checked"]:focus,
+.projects-table-toolbar-zone div[role="option"][data-state="checked"]:focus,
+.projects-table-toolbar-zone [data-radix-collection-item][data-state="checked"]:focus,
+.projects-table-toolbar-zone [role="option"][data-state="checked"][data-highlighted],
+.projects-table-toolbar-zone div[role="option"][data-state="checked"][data-highlighted],
+.projects-table-toolbar-zone [data-radix-collection-item][data-state="checked"][data-highlighted],
+.projects-table-toolbar-zone [role="option"][data-state="checked"]:hover,
+.projects-table-toolbar-zone div[role="option"][data-state="checked"]:hover,
+.projects-table-toolbar-zone [data-radix-collection-item][data-state="checked"]:hover {
+  background-color: var(--color-tr-primary-blue) !important;
+  background: var(--color-tr-primary-blue) !important;
+  color: var(--color-tr-anti-primary) !important;
+  font-weight: 600 !important;
+}
+
+/* Compact "Filters" Button - Match dropdown filter styling */
+.projects-table-toolbar-zone button[aria-label="Open filters"] {
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0.01em !important;
+  background: var(--color-tr-anti-primary) !important;
+  border: 1px solid transparent !important;
+  transition: all 0.2s ease !important;
+}
+
+.projects-table-toolbar-zone button[aria-label="Open filters"]:hover {
+  border-color: var(--color-tr-ring) !important;
+}
+
+.projects-table-toolbar-zone button[aria-label="Open filters"]:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.projects-table-toolbar-zone button[aria-label="Open filters"]:focus-visible {
+  outline: 2px solid var(--color-tr-ring);
+  outline-offset: 2px;
+}
+
+/* Dark mode - Compact "Filters" Button */
+.dark .projects-table-toolbar-zone button[aria-label="Open filters"] {
+  background: var(--color-tr-primary-blue) !important;
+  color: var(--color-tr-anti-primary) !important;
+  border-color: transparent !important;
+}
+
+.dark .projects-table-toolbar-zone button[aria-label="Open filters"]:hover {
+  border-color: var(--color-tr-ring) !important;
+}
+
+/* Mobile filter popover */
+.projects-table-toolbar-zone [role="dialog"] {
+  font-size: 11px;
+}
+
+.projects-table-toolbar-zone [role="dialog"] button[role="combobox"] {
+  font-size: 11px;
+  background: var(--color-tr-anti-primary) !important;
+  border: 1px solid transparent !important;
+}
+
+.projects-table-toolbar-zone [role="dialog"] button[role="combobox"]:hover {
+  border-color: var(--color-tr-ring) !important;
+}
+
+.projects-table-toolbar-zone [role="dialog"] button[role="combobox"]:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.projects-table-toolbar-zone [role="dialog"] [role="option"],
+.projects-table-toolbar-zone [role="dialog"] div[role="option"] {
+  font-size: 11px;
+}
+
+/* Dark mode adjustments */
+.dark .projects-table-toolbar-zone button[role="combobox"] {
+  background: var(--color-tr-primary-blue) !important;
+  color: var(--color-tr-anti-primary) !important;
+  border-color: transparent !important;
+}
+
+.dark .projects-table-toolbar-zone [role="listbox"] {
+  background: var(--color-tr-primary-blue) !important;
+  color: var(--color-tr-anti-primary) !important;
+}
+
+.dark .projects-table-toolbar-zone [role="option"]:not(:focus):not([data-state="checked"]),
+.dark .projects-table-toolbar-zone div[role="option"]:not(:focus):not([data-state="checked"]),
+.dark .projects-table-toolbar-zone [data-radix-collection-item]:not(:focus):not([data-state="checked"]) {
+  color: var(--color-tr-anti-primary) !important;
+}

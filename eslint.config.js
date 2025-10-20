@@ -38,6 +38,7 @@ export default [
       'src-tauri/gen',
       'src-tauri/out',
       'vite.config.d.ts',
+      'supabase/functions/**',
     ],
   },
   {

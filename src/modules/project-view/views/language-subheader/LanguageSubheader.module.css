@@ -1,0 +1,48 @@
+/* Container aligns label + badges inline for compact header presentation. */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1rem;
+}
+
+.label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-tr-primary-blue);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+.badgesEmpty {
+  color: var(--color-tr-muted-foreground);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.badgeTone0 {
+  color: var(--color-tr-primary-blue);
+}
+
+.badgeTone1 {
+  color: var(--color-tr-success);
+}
+
+.badgeTone2 {
+  color: var(--color-tr-destructive);
+}
+
+.badgeTone3 {
+  color: var(--color-tr-accent-foreground);
+}
+
+.badgeTone4 {
+  color: var(--color-tr-navy);
+}

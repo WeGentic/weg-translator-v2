@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Upload, FileText, Plus } from "lucide-react";
 import { cn } from "@/shared/utils/class-names";
 import { useFileDrop, type UseFileDropOptions } from "@/shared/hooks/use-file-drop";
-import { PROJECT_FILE_FORMAT_ACCESSIBILITY_TEXT, PROJECT_FILE_FORMAT_GROUPS } from "@/modules/projects/config";
+import { PROJECT_FILE_FORMAT_ACCESSIBILITY_TEXT, PROJECT_FILE_FORMAT_GROUPS } from "@/modules/project-manager/config";
 import { Button } from "./button";
 
 interface DropZoneProps extends UseFileDropOptions {
