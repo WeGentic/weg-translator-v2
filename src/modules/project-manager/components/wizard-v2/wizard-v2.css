@@ -17,20 +17,22 @@
   height: 100%;
   padding: clamp(18px, 3vw, 22px);
   border-radius: 16px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 65%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 65%, transparent);
   background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-primary-blue) 50%, transparent)),
-    color-mix(in oklab, var(--color-tr-primary-blue) 70%, transparent);
-  background-color: color-mix(in oklab, var(--color-tr-white) 35%, transparent);
+    linear-gradient(135deg, color-mix(in oklab, var(--color-primary) 50%, transparent)),
+    color-mix(in oklab, var(--color-primary) 70%, transparent);
+  background-color: color-mix(in oklab, var(--color-background) 35%, transparent);
   box-shadow:
     0 32px 80px -32px color-mix(in oklab, black 45%, transparent),
     0 1px 0 0 color-mix(in oklab, white 25%, transparent) inset,
-    0 -1px 0 0 color-mix(in oklab, var(--color-tr-antiwhite) 10%, transparent) inset;
+    0 -1px 0 0 color-mix(in oklab, var(--color-antiwhite) 10%, transparent) inset;
   backdrop-filter: blur(24px) saturate(140%);
   grid-template-rows: auto minmax(0, 1fr);
   overflow: visible;
   will-change: transform, backdrop-filter;
-  transition: backdrop-filter 150ms ease, box-shadow 200ms ease;
+  transition:
+    backdrop-filter 150ms ease,
+    box-shadow 200ms ease;
 }
 
 .wizard-v2-header {
@@ -49,19 +51,18 @@
 }
 
 .wizard-v2-header::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: auto 0 -2px;
   height: 2px;
   border-radius: 999px;
-  background:
-    linear-gradient(
-      90deg,
-      color-mix(in oklab, var(--color-tr-primary-blue) 65%, transparent),
-      color-mix(in oklab, var(--color-tr-accent) 75%, transparent)
-    );
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--color-primary) 65%, transparent),
+    color-mix(in oklab, var(--color-accent) 75%, transparent)
+  );
   box-shadow:
-    0 0 12px color-mix(in oklab, var(--color-tr-accent) 30%, transparent),
+    0 0 12px color-mix(in oklab, var(--color-accent) 30%, transparent),
     0 1px 0 color-mix(in oklab, white 35%, transparent);
 }
 
@@ -70,10 +71,10 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-tr-anti-primary) 90%, var(--color-tr-antiwhite) 10%);
+  color: color-mix(in oklab, var(--color-onprimary) 90%, var(--color-antiwhite) 10%);
 }
 
-.wizard-v2-dialog > button[aria-label="Close dialog"] {
+.wizard-v2-dialog > button[aria-label='Close dialog'] {
   display: none;
 }
 
@@ -119,12 +120,11 @@
   max-height: 220px;
   overflow-y: auto;
   border-radius: 10px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 60%, transparent);
-  background:
-    var(--color-tr-anti-primary);
+  border: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  background: var(--color-onprimary);
   box-shadow:
     0 28px 60px -26px color-mix(in oklab, black 40%, transparent),
-    0 10px 28px -24px color-mix(in oklab, var(--color-tr-primary-blue) 35%, transparent);
+    0 10px 28px -24px color-mix(in oklab, var(--color-primary) 35%, transparent);
   padding: 8px;
 }
 
@@ -139,32 +139,34 @@
   padding: 6px 8px;
   text-align: left;
   font-size: 0.82rem;
-  background: color-mix(in oklab, var(--color-tr-primary-blue) 25%, transparent);
-  color: color-mix(in oklab, var(--color-tr-primary-blue) 35%, var(--color-tr-antiwhite) 15%);
-  transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease;
+  background: color-mix(in oklab, var(--color-primary) 25%, transparent);
+  color: color-mix(in oklab, var(--color-primary) 35%, var(--color-antiwhite) 15%);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    transform 150ms ease;
 }
 
 .wizard-v2-autocomplete-item.is-highlighted {
   transform: translateY(-1px);
-  border-color: color-mix(in oklab, var(--color-tr-ring) 85%, transparent);
-  background: color-mix(in oklab, var(--color-tr-secondary) 88%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 85%, transparent);
+  background: color-mix(in oklab, var(--color-secondary) 88%, transparent);
 }
 
 .wizard-v2-autocomplete-item.is-selected {
-  border-color: color-mix(in oklab, var(--color-tr-primary-blue) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-secondary) 55%, transparent);
-  color: color-mix(in oklab, var(--color-tr-anti-primary) 92%, var(--color-tr-antiwhite) 8%);
+  border-color: color-mix(in oklab, var(--color-primary) 55%, transparent);
+  background: color-mix(in oklab, var(--color-secondary) 55%, transparent);
+  color: color-mix(in oklab, var(--color-onprimary) 92%, var(--color-antiwhite) 8%);
 }
 
 .wizard-v2-autocomplete-primary {
   font-weight: 600;
-    color: color-mix(in oklab, var(--color-tr-primary-blue) 85%, var(--color-tr-sidebar-primary) 10%);
-
+  color: color-mix(in oklab, var(--color-primary) 85%, var(--color-sidebar-primary) 10%);
 }
 
 .wizard-v2-autocomplete-secondary {
   font-size: 0.72rem;
-  color: color-mix(in oklab, var(--color-tr-primary-blue) 85%, var(--color-tr-sidebar-primary) 10%);
+  color: color-mix(in oklab, var(--color-primary) 85%, var(--color-sidebar-primary) 10%);
 }
 
 .wizard-v2-autocomplete-status {
@@ -173,13 +175,13 @@
   gap: 8px;
   padding: 10px;
   font-size: 0.74rem;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 80%, var(--color-tr-sidebar-primary) 15%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 80%, var(--color-sidebar-primary) 15%);
 }
 
 .wizard-v2-autocomplete-error {
   margin: 0;
   font-size: 0.72rem;
-  color: color-mix(in oklab, var(--color-tr-destructive) 55%, var(--color-tr-antiwhite) 25%);
+  color: color-mix(in oklab, var(--color-destructive) 55%, var(--color-antiwhite) 25%);
 }
 
 .wizard-v2-client-hint {
@@ -190,13 +192,13 @@
   font-size: 0.74rem;
   font-weight: 500;
   letter-spacing: 0.01em;
-  color: color-mix(in oklab, var(--color-tr-primary-blue) 70%, var(--color-tr-antiwhite) 15%);
+  color: color-mix(in oklab, var(--color-primary) 70%, var(--color-antiwhite) 15%);
   cursor: pointer;
   transition: color 150ms ease;
 }
 
 .wizard-v2-client-hint:hover {
-  color: color-mix(in oklab, var(--color-tr-secondary) 70%, var(--color-tr-primary-blue) 20%);
+  color: color-mix(in oklab, var(--color-secondary) 70%, var(--color-primary) 20%);
   text-decoration: underline;
 }
 
@@ -221,7 +223,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: color-mix(in oklab, var(--color-tr-anti-primary) 90%, var(--color-tr-antiwhite) 10%);
+  color: color-mix(in oklab, var(--color-onprimary) 90%, var(--color-antiwhite) 10%);
 }
 
 .wizard-v2-label-darker {
@@ -230,7 +232,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.09em;
-  color: color-mix(in oklab, var(--color-tr-primary) 90%, var(--color-tr-antiwhite) 10%);
+  color: color-mix(in oklab, var(--color-primary) 90%, var(--color-antiwhite) 10%);
 }
 
 .wizard-v2-control {
@@ -241,14 +243,17 @@
 .wizard-v2-input,
 .wizard-v2-textarea {
   border-radius: 10px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-white) 70%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
+  background: color-mix(in oklab, var(--color-background) 70%, transparent);
   box-shadow:
     0 18px 36px -18px color-mix(in oklab, black 32%, transparent),
     0 1px 0 0 color-mix(in oklab, white 30%, transparent) inset;
   padding: 10px 12px;
   font-size: 0.88rem;
-  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
 }
 
 .wizard-v2-input {
@@ -258,16 +263,16 @@
 
 .wizard-v2-input:hover,
 .wizard-v2-textarea:hover {
-  border-color: color-mix(in oklab, var(--color-tr-accent) 55%, transparent);
+  border-color: color-mix(in oklab, var(--color-accent) 55%, transparent);
 }
 
 .wizard-v2-input:focus-visible,
 .wizard-v2-textarea:focus-visible {
   outline: none;
-  border-color: color-mix(in oklab, var(--color-tr-ring) 55%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 55%, transparent);
   box-shadow:
-    0 24px 42px -24px color-mix(in oklab, var(--color-tr-ring) 35%, transparent),
-    0 0 0 2px color-mix(in oklab, var(--color-tr-ring) 45%, transparent);
+    0 24px 42px -24px color-mix(in oklab, var(--color-ring) 35%, transparent),
+    0 0 0 2px color-mix(in oklab, var(--color-ring) 45%, transparent);
 }
 
 .wizard-v2-textarea {
@@ -276,15 +281,18 @@
 }
 
 .wizard-v2-input--primary {
-  background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-accent) 28%, transparent), transparent 65%)
-    color-mix(in oklab, var(--color-tr-white) 62%, transparent);
-  color: color-mix(in oklab, var(--color-tr-primary) 80%, var(--color-tr-antiwhite) 10%);
-  border-color: color-mix(in oklab, var(--color-tr-accent) 55%, transparent);
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-accent) 28%, transparent),
+      transparent 65%
+    )
+    color-mix(in oklab, var(--color-background) 62%, transparent);
+  color: color-mix(in oklab, var(--color-primary) 80%, var(--color-antiwhite) 10%);
+  border-color: color-mix(in oklab, var(--color-accent) 55%, transparent);
 }
 
 .wizard-v2-input--primary::placeholder {
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 70%, var(--color-tr-sidebar-primary) 15%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 70%, var(--color-sidebar-primary) 15%);
 }
 
 .wizard-v2-combobox-trigger {
@@ -295,15 +303,18 @@
   width: 100%;
   min-height: var(--wizard-control-height);
   border-radius: 10px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-anti-primary) 85%, transparent);
-  color: color-mix(in oklab, var(--color-tr-primary-blue) 35%, var(--color-tr-antiwhite) 20%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
+  background: color-mix(in oklab, var(--color-onprimary) 85%, transparent);
+  color: color-mix(in oklab, var(--color-primary) 35%, var(--color-antiwhite) 20%);
   padding: 8px 12px;
   font-size: 0.8rem;
   box-shadow:
     0 18px 36px -18px color-mix(in oklab, black 30%, transparent),
     0 1px 0 0 color-mix(in oklab, white 28%, transparent) inset;
-  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .wizard-v2-icon-button {
@@ -313,30 +324,34 @@
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 60%, transparent);
-  background: color-mix(in oklab, var(--color-tr-accent) 35%, transparent);
-  color: color-mix(in oklab, var(--color-tr-primary-blue) 45%, var(--color-tr-antiwhite) 25%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 35%, transparent);
+  color: color-mix(in oklab, var(--color-primary) 45%, var(--color-antiwhite) 25%);
   box-shadow:
     0 12px 24px -16px color-mix(in oklab, black 35%, transparent),
     0 1px 0 0 color-mix(in oklab, white 30%, transparent) inset;
-  transition: transform 150ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
+  transition:
+    transform 150ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease;
 }
 
 .wizard-v2-icon-button:hover {
-  background: color-mix(in oklab, var(--color-tr-accent) 55%, transparent);
-  border-color: color-mix(in oklab, var(--color-tr-ring) 55%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 55%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 55%, transparent);
   transform: translateY(-1px);
   box-shadow:
-    0 18px 28px -18px color-mix(in oklab, var(--color-tr-ring) 45%, transparent),
+    0 18px 28px -18px color-mix(in oklab, var(--color-ring) 45%, transparent),
     0 1px 0 0 color-mix(in oklab, white 38%, transparent) inset;
 }
 
 .wizard-v2-icon-button:focus-visible {
   outline: none;
-  border-color: color-mix(in oklab, var(--color-tr-ring) 60%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 60%, transparent);
   box-shadow:
-    0 0 0 3px color-mix(in oklab, var(--color-tr-ring) 35%, transparent),
-    0 18px 36px -20px color-mix(in oklab, var(--color-tr-ring) 55%, transparent);
+    0 0 0 3px color-mix(in oklab, var(--color-ring) 35%, transparent),
+    0 18px 36px -20px color-mix(in oklab, var(--color-ring) 55%, transparent);
 }
 
 .wizard-v2-icon-button svg {
@@ -344,21 +359,21 @@
 }
 
 .wizard-v2-combobox-trigger:hover {
-  border-color: color-mix(in oklab, var(--color-tr-accent) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-accent) 25%, var(--color-tr-anti-primary) 30%);
+  border-color: color-mix(in oklab, var(--color-accent) 55%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 25%, var(--color-onprimary) 30%);
 }
 
 .wizard-v2-combobox-trigger:focus-visible {
   outline: none;
-  border-color: color-mix(in oklab, var(--color-tr-ring) 50%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
   box-shadow:
-    0 24px 42px -24px color-mix(in oklab, var(--color-tr-ring) 35%, transparent),
-    0 0 0 2px color-mix(in oklab, var(--color-tr-ring) 45%, transparent);
+    0 24px 42px -24px color-mix(in oklab, var(--color-ring) 35%, transparent),
+    0 0 0 2px color-mix(in oklab, var(--color-ring) 45%, transparent);
 }
 
 .wizard-v2-combobox-trigger--ghost {
   justify-content: flex-start;
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 40%, var(--color-tr-antiwhite) 15%);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 40%, var(--color-antiwhite) 15%);
   gap: 10px;
 }
 
@@ -379,7 +394,7 @@
 }
 
 .wizard-v2-combobox-placeholder {
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 70%, var(--color-tr-sidebar-primary) 15%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 70%, var(--color-sidebar-primary) 15%);
   font-size: 0.74rem;
 }
 
@@ -393,10 +408,13 @@
 .wizard-v2-combobox {
   width: min(320px, 80vw);
   border-radius: 12px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 60%, transparent);
-  background:
-    linear-gradient(145deg, color-mix(in oklab, var(--color-tr-anti-primary) 45%, transparent), transparent 65%)
-    color-mix(in oklab, var(--color-tr-white) 60%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  background: linear-gradient(
+      145deg,
+      color-mix(in oklab, var(--color-onprimary) 45%, transparent),
+      transparent 65%
+    )
+    color-mix(in oklab, var(--color-background) 60%, transparent);
   box-shadow:
     0 32px 84px -32px color-mix(in oklab, black 40%, transparent),
     0 1px 0 0 color-mix(in oklab, white 28%, transparent) inset;
@@ -441,22 +459,25 @@
   gap: 8px;
   border-radius: 8px;
   border: 1px solid transparent;
-  background: color-mix(in oklab, var(--color-tr-anti-primary) 70%, transparent);
-  color: color-mix(in oklab, var(--color-tr-primary) 35%, var(--color-tr-antiwhite) 20%);
+  background: color-mix(in oklab, var(--color-onprimary) 70%, transparent);
+  color: color-mix(in oklab, var(--color-primary) 35%, var(--color-antiwhite) 20%);
   padding: 7px 9px;
-  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
 }
 
 .wizard-v2-option:hover {
-  border-color: color-mix(in oklab, var(--color-tr-primary) 95%, transparent);
-  background: color-mix(in oklab, var(--color-tr-primary) 18%, var(--color-tr-primary) 30%);
+  border-color: color-mix(in oklab, var(--color-primary) 95%, transparent);
+  background: color-mix(in oklab, var(--color-primary) 18%, var(--color-primary) 30%);
   transform: translateY(-1px);
 }
 
 .wizard-v2-option.is-selected {
-  border-color: color-mix(in oklab, var(--color-tr-ring) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-secondary) 30%, transparent);
-  box-shadow: 0 14px 28px -18px color-mix(in oklab, var(--color-tr-accent) 35%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 45%, transparent);
+  background: color-mix(in oklab, var(--color-secondary) 30%, transparent);
+  box-shadow: 0 14px 28px -18px color-mix(in oklab, var(--color-accent) 35%, transparent);
 }
 
 .wizard-v2-option-main {
@@ -490,7 +511,7 @@
   font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 75%, var(--color-tr-sidebar-primary) 20%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 75%, var(--color-sidebar-primary) 20%);
 }
 
 .wizard-v2-language-grid {
@@ -510,10 +531,13 @@
   gap: 8px;
   border-radius: 12px;
   padding: clamp(12px, 2.8vw, 16px);
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 45%, transparent);
-  background:
-    linear-gradient(140deg, color-mix(in oklab, var(--color-tr-anti-primary) 30%, transparent), transparent 70%)
-    color-mix(in oklab, var(--color-tr-white) 55%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 45%, transparent);
+  background: linear-gradient(
+      140deg,
+      color-mix(in oklab, var(--color-onprimary) 30%, transparent),
+      transparent 70%
+    )
+    color-mix(in oklab, var(--color-background) 55%, transparent);
   box-shadow:
     0 18px 48px -28px color-mix(in oklab, black 35%, transparent),
     0 1px 0 0 color-mix(in oklab, white 22%, transparent) inset;
@@ -534,8 +558,8 @@
   min-width: 22px;
   padding: 0 4px;
   border-radius: 10px;
-  background: color-mix(in oklab, var(--color-tr-primary-blue) 94%, transparent);
-  color: color-mix(in oklab, var(--color-tr-secondary) 95%, var(--color-tr-antiwhite) 5%);
+  background: color-mix(in oklab, var(--color-primary) 94%, transparent);
+  color: color-mix(in oklab, var(--color-secondary) 95%, var(--color-antiwhite) 5%);
   font-size: 0.7rem;
   font-weight: 600;
 }
@@ -565,7 +589,7 @@
 
 .wizard-v2-chip-placeholder {
   font-size: 0.72rem;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 70%, var(--color-tr-sidebar-primary) 15%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 70%, var(--color-sidebar-primary) 15%);
   font-style: italic;
 }
 
@@ -574,8 +598,8 @@
   align-items: center;
   gap: 4px;
   border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-white) 48%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 45%, transparent);
+  background: color-mix(in oklab, var(--color-background) 48%, transparent);
   padding: 2px 6px;
   font-size: 0.64rem;
   line-height: 1.1;
@@ -615,20 +639,23 @@
   height: 16px;
   border-radius: 999px;
   border: 1px solid transparent;
-  background: color-mix(in oklab, var(--color-tr-anti-primary) 25%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 30%, var(--color-tr-antiwhite) 20%);
-  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+  background: color-mix(in oklab, var(--color-onprimary) 25%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 30%, var(--color-antiwhite) 20%);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
 }
 
 .wizard-v2-chip-remove:hover {
-  border-color: color-mix(in oklab, var(--color-tr-accent) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-accent) 22%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 10%, black 20%);
+  border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 22%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 10%, black 20%);
 }
 
 .wizard-v2-chip-remove:focus-visible {
   outline: none;
-  border-color: color-mix(in oklab, var(--color-tr-ring) 45%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 45%, transparent);
 }
 
 .wizard-v2-chip-remove svg {
@@ -643,25 +670,28 @@
   justify-content: center;
   width: 100%;
   border-radius: 10px;
-  border: 1px solid var(--color-tr-primary-blue);
-  background: color-mix(in oklab, var(--color-tr-primary-blue) 50%, transparent);
-  color: var(--color-tr-anti-primary);
+  border: 1px solid var(--color-primary);
+  background: color-mix(in oklab, var(--color-primary) 50%, transparent);
+  color: var(--color-onprimary);
   font-size: 0.74rem;
   font-weight: 600;
   padding: 7px 0;
-  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 .wizard-v2-option-done:hover {
-  border-color: color-mix(in oklab, var(--color-tr-primary-blue) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-accent) 30%, transparent);
-  color: var(--color-tr-primary);
+  border-color: color-mix(in oklab, var(--color-primary) 45%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 30%, transparent);
+  color: var(--color-primary);
 }
 
 .wizard-v2-option-done:focus-visible {
   outline: none;
-  border-color: color-mix(in oklab, var(--color-tr-ring) 50%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-tr-ring) 35%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-ring) 35%, transparent);
 }
 
 .wizard-v2-actions {
@@ -671,7 +701,7 @@
   gap: 16px;
   padding: 14px clamp(18px, 3vw, 24px) 6px;
   margin-top: 0;
-  border-top: 1px solid color-mix(in oklab, var(--color-tr-border) 45%, transparent);
+  border-top: 1px solid color-mix(in oklab, var(--color-border) 45%, transparent);
 }
 
 .wizard-v2-action {
@@ -709,77 +739,74 @@
 }
 
 .wizard-v2-action--back {
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-sidebar-accent) 60%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 15%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
+  background: color-mix(in oklab, var(--color-sidebar-accent) 60%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 35%, var(--color-antiwhite) 15%);
   box-shadow:
     0 12px 28px -22px color-mix(in oklab, black 24%, transparent),
     0 1px 0 0 color-mix(in oklab, white 22%, transparent) inset;
 }
 
 .wizard-v2-action--back:hover {
-  border-color: color-mix(in oklab, var(--color-tr-accent) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-accent) 18%, var(--color-tr-sidebar-accent) 60%);
+  border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 18%, var(--color-sidebar-accent) 60%);
   transform: translateY(-1px);
 }
 
 .wizard-v2-action--back:focus-visible {
   outline: none;
-  border-color: color-mix(in oklab, var(--color-tr-ring) 50%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
   box-shadow:
-    0 0 0 2px color-mix(in oklab, var(--color-tr-ring) 35%, transparent),
+    0 0 0 2px color-mix(in oklab, var(--color-ring) 35%, transparent),
     0 10px 28px -22px color-mix(in oklab, black 24%, transparent);
 }
 
 .wizard-v2-action--clear {
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-sidebar-accent) 70%, transparent);
-  color: color-mix(in oklab, var(--color-tr-primary-blue) 75%, var(--color-tr-antiwhite) 10%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
+  background: color-mix(in oklab, var(--color-sidebar-accent) 70%, transparent);
+  color: color-mix(in oklab, var(--color-primary) 75%, var(--color-antiwhite) 10%);
   box-shadow:
     0 12px 28px -22px color-mix(in oklab, black 28%, transparent),
     0 1px 0 0 color-mix(in oklab, white 22%, transparent) inset;
 }
 
 .wizard-v2-action--clear:hover {
-  border-color: color-mix(in oklab, var(--color-tr-accent) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-sidebar-accent) 60%);
+  border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+  background: color-mix(in oklab, var(--color-onprimary) 75%, var(--color-sidebar-accent) 60%);
   transform: translateY(-1px);
-    color: color-mix(in oklab, var(--color-tr-destructive) 95%, var(--color-tr-antiwhite) 10%);
-
+  color: color-mix(in oklab, var(--color-destructive) 95%, var(--color-antiwhite) 10%);
 }
 
 .wizard-v2-action--clear:focus-visible {
   outline: none;
-  border-color: color-mix(in oklab, var(--color-tr-ring) 50%, transparent);
-
+  border-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
 }
 
 .wizard-v2-action--next {
-  border: 1px solid color-mix(in oklab, var(--color-tr-primary-blue) 65%, transparent);
-    background: color-mix(in oklab, var(--color-tr-primary-blue) 95%, transparent);
-  color: color-mix(in oklab, var(--color-tr-anti-primary) 80%, white 20%);
-
+  border: 1px solid color-mix(in oklab, var(--color-primary) 65%, transparent);
+  background: color-mix(in oklab, var(--color-primary) 95%, transparent);
+  color: color-mix(in oklab, var(--color-onprimary) 80%, white 20%);
 }
 
 .wizard-v2-action--next:hover:not(:disabled) {
-  border-color: color-mix(in oklab, var(--color-tr-ring) 60%, transparent);
-      background: color-mix(in oklab, var(--color-tr-primary-blue) 75%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 60%, transparent);
+  background: color-mix(in oklab, var(--color-primary) 75%, transparent);
 
   transform: translateY(-1px);
 }
 
 .wizard-v2-action--next:focus-visible {
   outline: none;
-  border-color: color-mix(in oklab, var(--color-tr-ring) 60%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 60%, transparent);
   box-shadow:
-    0 0 0 2px color-mix(in oklab, var(--color-tr-ring) 40%, transparent),
-    0 18px 42px -24px color-mix(in oklab, var(--color-tr-primary-blue) 55%, transparent);
+    0 0 0 2px color-mix(in oklab, var(--color-ring) 40%, transparent),
+    0 18px 42px -24px color-mix(in oklab, var(--color-primary) 55%, transparent);
 }
 
 .wizard-v2-action--next:disabled {
-  border-color: color-mix(in oklab, var(--color-tr-border) 40%, transparent);
-  background: color-mix(in oklab, var(--color-tr-muted) 85%, transparent);
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 60%, var(--color-tr-sidebar-primary) 15%);
+  border-color: color-mix(in oklab, var(--color-border) 40%, transparent);
+  background: color-mix(in oklab, var(--color-muted) 85%, transparent);
+  color: color-mix(in oklab, var(--color-muted-foreground) 60%, var(--color-sidebar-primary) 15%);
   box-shadow: none;
 }
 
@@ -797,9 +824,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  border: 1px dashed color-mix(in oklab, var(--color-tr-border) 45%, transparent);
+  border: 1px dashed color-mix(in oklab, var(--color-border) 45%, transparent);
   border-radius: 10px;
-  background: color-mix(in oklab, var(--color-tr-muted) 82%, transparent);
+  background: color-mix(in oklab, var(--color-muted) 82%, transparent);
   padding: 10px 12px;
 }
 
@@ -811,15 +838,15 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 30%, var(--color-tr-antiwhite) 12%);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 30%, var(--color-antiwhite) 12%);
 }
 
 .wizard-v2-feedback-dot {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: color-mix(in oklab, var(--color-tr-primary-blue) 55%, var(--color-tr-accent) 25%);
-  box-shadow: 0 0 6px color-mix(in oklab, var(--color-tr-accent) 35%, transparent);
+  background: color-mix(in oklab, var(--color-primary) 55%, var(--color-accent) 25%);
+  box-shadow: 0 0 6px color-mix(in oklab, var(--color-accent) 35%, transparent);
 }
 
 .wizard-v2-feedback-test-actions {
@@ -829,22 +856,25 @@
 }
 
 .wizard-v2-feedback-test-button {
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 40%, transparent);
-  background: color-mix(in oklab, var(--color-tr-anti-primary) 25%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 12%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 40%, transparent);
+  background: color-mix(in oklab, var(--color-onprimary) 25%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 35%, var(--color-antiwhite) 12%);
   border-radius: 999px;
   padding: 4px 10px;
   font-size: 0.65rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 .wizard-v2-feedback-test-button:hover:not(:disabled) {
-  border-color: color-mix(in oklab, var(--color-tr-accent) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-accent) 18%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 25%, var(--color-tr-antiwhite) 8%);
+  border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 18%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 25%, var(--color-antiwhite) 8%);
 }
 
 .wizard-v2-feedback-test-button:disabled {
@@ -857,20 +887,23 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding:12px 12px;
+  padding: 12px 12px;
   border-radius: 14px;
   margin-top: 12px;
   margin-bottom: 12px;
   margin-left: 20%;
   margin-right: 20%;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 15%, transparent);
-  background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-primary-blue) 28%, transparent), transparent 80%)
-    color-mix(in oklab, var(--color-tr-primary-blue) 55%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 15%, transparent);
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-primary) 28%, transparent),
+      transparent 80%
+    )
+    color-mix(in oklab, var(--color-primary) 55%, transparent);
   box-shadow:
     0 32px 80px -32px color-mix(in oklab, black 45%, transparent),
     0 1px 0 0 color-mix(in oklab, white 25%, transparent) inset,
-    0 -1px 0 0 color-mix(in oklab, var(--color-tr-antiwhite) 10%, transparent) inset;
+    0 -1px 0 0 color-mix(in oklab, var(--color-antiwhite) 10%, transparent) inset;
   backdrop-filter: blur(24px) saturate(140%);
   cursor: pointer;
   transition:
@@ -884,28 +917,34 @@
 }
 
 .wizard-v2-dropzone:hover {
-  border-color: color-mix(in oklab, var(--color-tr-accent) 50%, transparent);
-  background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-primary-blue) 10%, transparent), transparent 80%)
-    color-mix(in oklab, var(--color-tr-primary-blue) 25%, transparent);
+  border-color: color-mix(in oklab, var(--color-accent) 50%, transparent);
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-primary) 10%, transparent),
+      transparent 80%
+    )
+    color-mix(in oklab, var(--color-primary) 25%, transparent);
   transform: translateY(-1px);
 }
 
 .wizard-v2-dropzone:focus-visible {
-  border-color: color-mix(in oklab, var(--color-tr-ring) 55%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 55%, transparent);
   box-shadow:
-    0 0 0 2px color-mix(in oklab, var(--color-tr-ring) 35%, transparent),
+    0 0 0 2px color-mix(in oklab, var(--color-ring) 35%, transparent),
     0 22px 48px -28px color-mix(in oklab, black 35%, transparent);
 }
 
 .wizard-v2-dropzone.is-active,
 .wizard-v2-dropzone.is-over {
-  border-color: color-mix(in oklab, var(--color-tr-ring) 60%, transparent);
-  background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-accent) 30%, transparent), transparent 65%)
-    color-mix(in oklab, var(--color-tr-anti-primary) 28%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 60%, transparent);
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-accent) 30%, transparent),
+      transparent 65%
+    )
+    color-mix(in oklab, var(--color-onprimary) 28%, transparent);
   box-shadow:
-    0 28px 56px -26px color-mix(in oklab, var(--color-tr-accent) 38%, transparent),
+    0 28px 56px -26px color-mix(in oklab, var(--color-accent) 38%, transparent),
     0 1px 0 0 color-mix(in oklab, white 22%, transparent) inset;
 }
 
@@ -913,8 +952,11 @@
   position: absolute;
   inset: 1px;
   border-radius: inherit;
-  background:
-    radial-gradient(120% 120% at 0% 0%, color-mix(in oklab, var(--color-tr-accent) 30%, transparent), transparent 70%)
+  background: radial-gradient(
+      120% 120% at 0% 0%,
+      color-mix(in oklab, var(--color-accent) 30%, transparent),
+      transparent 70%
+    )
     no-repeat;
   opacity: 0;
   transition: opacity 180ms ease;
@@ -947,11 +989,14 @@
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
-  background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-accent) 15%, transparent), transparent 70%)
-    color-mix(in oklab, var(--color-tr-anti-primary) 35%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 32%, var(--color-tr-antiwhite) 12%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-accent) 15%, transparent),
+      transparent 70%
+    )
+    color-mix(in oklab, var(--color-onprimary) 35%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 32%, var(--color-antiwhite) 12%);
   box-shadow:
     0 18px 32px -26px color-mix(in oklab, black 32%, transparent),
     0 1px 0 0 color-mix(in oklab, white 18%, transparent) inset;
@@ -970,7 +1015,7 @@
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-tr-anti-primary) 90%, var(--color-tr-antiwhite) 10%);
+  color: color-mix(in oklab, var(--color-onprimary) 90%, var(--color-antiwhite) 10%);
   margin: 0;
 }
 
@@ -978,8 +1023,8 @@
   margin: 0;
   font-size: 0.72rem;
   line-height: 1.45;
-color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-antiwhite) 10%);
-  }
+  color: color-mix(in oklab, var(--color-onprimary) 75%, var(--color-antiwhite) 10%);
+}
 
 .wizard-v2-dropzone-actions {
   display: flex;
@@ -995,9 +1040,9 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   gap: 8px;
   padding: 6px 14px;
   border-radius: 7px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-sidebar-accent) 70%, transparent);
-  color: color-mix(in oklab, var(--color-tr-primary-blue) 75%, var(--color-tr-antiwhite) 12%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
+  background: color-mix(in oklab, var(--color-sidebar-accent) 70%, transparent);
+  color: color-mix(in oklab, var(--color-primary) 75%, var(--color-antiwhite) 12%);
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -1010,16 +1055,16 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 }
 
 .wizard-v2-dropzone-browse:hover {
-  border-color: color-mix(in oklab, var(--color-tr-accent) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-accent) 22%, var(--color-tr-sidebar-accent) 60%);
-  color: color-mix(in oklab, var(--color-tr-primary-blue) 95%, var(--color-tr-antiwhite) 8%);
+  border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 22%, var(--color-sidebar-accent) 60%);
+  color: color-mix(in oklab, var(--color-primary) 95%, var(--color-antiwhite) 8%);
   transform: translateY(-1px);
 }
 
 .wizard-v2-dropzone-browse:focus-visible {
   outline: none;
-  border-color: color-mix(in oklab, var(--color-tr-ring) 45%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-tr-ring) 30%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 45%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-ring) 30%, transparent);
 }
 
 .wizard-v2-dropzone-hint {
@@ -1029,7 +1074,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   text-align: center;
   font-size: 0.68rem;
   line-height: 1.5;
-  color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-sidebar-primary) 8%);
+  color: color-mix(in oklab, var(--color-onprimary) 75%, var(--color-sidebar-primary) 8%);
 }
 
 .wizard-v2-file-input {
@@ -1045,14 +1090,17 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 
 .wizard-v2-files-empty {
   border-radius: 12px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 15%, transparent);
-  background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-secondary) 28%, transparent), transparent 80%)
-    color-mix(in oklab, var(--color-tr-secondary) 55%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 15%, transparent);
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-secondary) 28%, transparent),
+      transparent 80%
+    )
+    color-mix(in oklab, var(--color-secondary) 55%, transparent);
   box-shadow:
     0 32px 80px -32px color-mix(in oklab, black 45%, transparent),
     0 1px 0 0 color-mix(in oklab, white 25%, transparent) inset,
-    0 -1px 0 0 color-mix(in oklab, var(--color-tr-antiwhite) 10%, transparent) inset;
+    0 -1px 0 0 color-mix(in oklab, var(--color-antiwhite) 10%, transparent) inset;
   backdrop-filter: blur(24px) saturate(140%);
   cursor: pointer;
   transition:
@@ -1081,14 +1129,17 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 
 .wizard-v2-file-table {
   border-radius: 12px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 15%, transparent);
-  background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-secondary) 28%, transparent), transparent 80%)
-    color-mix(in oklab, var(--color-tr-secondary) 55%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 15%, transparent);
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-secondary) 28%, transparent),
+      transparent 80%
+    )
+    color-mix(in oklab, var(--color-secondary) 55%, transparent);
   box-shadow:
     0 32px 80px -32px color-mix(in oklab, black 45%, transparent),
     0 1px 0 0 color-mix(in oklab, white 25%, transparent) inset,
-    0 -1px 0 0 color-mix(in oklab, var(--color-tr-antiwhite) 10%, transparent) inset;
+    0 -1px 0 0 color-mix(in oklab, var(--color-antiwhite) 10%, transparent) inset;
   backdrop-filter: blur(24px) saturate(140%);
   cursor: default;
   transition:
@@ -1104,7 +1155,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 
 .wizard-v2-file-table-header {
   padding: 8px 14px;
-  border-bottom: 1px solid color-mix(in oklab, var(--color-tr-border) 40%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border) 40%, transparent);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -1117,13 +1168,13 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 12%);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 35%, var(--color-antiwhite) 12%);
 }
 
 .wizard-v2-file-role-summary {
   font-size: 0.68rem;
   letter-spacing: 0.04em;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 60%, var(--color-tr-sidebar-primary) 12%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 60%, var(--color-sidebar-primary) 12%);
 }
 
 .wizard-v2-file-table-scroll {
@@ -1147,7 +1198,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 }
 
 .wizard-v2-file-table-scroll th {
-  border-bottom: 1px solid color-mix(in oklab, var(--color-tr-border) 35%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border) 35%, transparent);
 }
 
 .wizard-v2-file-table-scroll::-webkit-scrollbar {
@@ -1155,16 +1206,16 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 }
 
 .wizard-v2-file-table-scroll::-webkit-scrollbar-thumb {
-  background-color: color-mix(in oklab, var(--color-tr-border) 45%, transparent);
+  background-color: color-mix(in oklab, var(--color-border) 45%, transparent);
   border-radius: 999px;
 }
 
 .wizard-v2-file-row {
-  background: color-mix(in oklab, var(--color-tr-sidebar-accent) 90%, transparent);
+  background: color-mix(in oklab, var(--color-sidebar-accent) 90%, transparent);
 }
 
 .wizard-v2-file-row:nth-child(even) {
-  background: color-mix(in oklab, var(--color-tr-sidebar-accent) 80%, transparent);
+  background: color-mix(in oklab, var(--color-sidebar-accent) 80%, transparent);
 }
 
 .wizard-v2-file-row td {
@@ -1175,7 +1226,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 .wizard-v2-file-name {
   font-size: 0.76rem;
   font-weight: 500;
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 12%);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 35%, var(--color-antiwhite) 12%);
   word-break: normal;
 }
 
@@ -1189,11 +1240,11 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 
 .wizard-v2-file-type {
   font-size: 0.66rem;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 55%, var(--color-tr-sidebar-primary) 12%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 55%, var(--color-sidebar-primary) 12%);
 }
 
 .wizard-v2-type-badge {
-  --wizard-type-accent: color-mix(in oklab, var(--color-tr-ring) 65%, transparent);
+  --wizard-type-accent: color-mix(in oklab, var(--color-ring) 65%, transparent);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1202,42 +1253,62 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   font-size: 0.6rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  background: color-mix(in oklab, var(--color-tr-sidebar-accent) 96%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 82%, var(--color-tr-antiwhite) 18%);
+  background: color-mix(in oklab, var(--color-sidebar-accent) 96%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 82%, var(--color-antiwhite) 18%);
   border: 1px solid color-mix(in oklab, var(--wizard-type-accent) 55%, transparent);
   box-shadow: inset 4px 0 0 -1px color-mix(in oklab, var(--wizard-type-accent) 70%, transparent);
 }
 
 .wizard-v2-type-badge--document {
-  --wizard-type-accent: color-mix(in oklab, var(--color-tr-primary-blue) 70%, var(--color-tr-accent) 30%);
+  --wizard-type-accent: color-mix(in oklab, var(--color-primary) 70%, var(--color-accent) 30%);
 }
 
 .wizard-v2-type-badge--spreadsheet {
-  --wizard-type-accent: color-mix(in oklab, var(--color-tr-success) 75%, var(--color-tr-sidebar-primary) 25%);
+  --wizard-type-accent: color-mix(
+    in oklab,
+    var(--color-success) 75%,
+    var(--color-sidebar-primary) 25%
+  );
 }
 
 .wizard-v2-type-badge--presentation {
-  --wizard-type-accent: color-mix(in oklab, var(--color-tr-secondary) 70%, var(--color-tr-sidebar-primary) 30%);
+  --wizard-type-accent: color-mix(
+    in oklab,
+    var(--color-secondary) 70%,
+    var(--color-sidebar-primary) 30%
+  );
 }
 
 .wizard-v2-type-badge--image {
-  --wizard-type-accent: color-mix(in oklab, var(--color-tr-primary-blue) 60%, var(--color-tr-sidebar-foreground) 40%);
+  --wizard-type-accent: color-mix(
+    in oklab,
+    var(--color-primary) 60%,
+    var(--color-sidebar-foreground) 40%
+  );
 }
 
 .wizard-v2-type-badge--archive {
-  --wizard-type-accent: color-mix(in oklab, var(--color-tr-navy) 70%, var(--color-tr-anti-primary) 30%);
+  --wizard-type-accent: color-mix(in oklab, var(--color-navy) 70%, var(--color-onprimary) 30%);
 }
 
 .wizard-v2-type-badge--media {
-  --wizard-type-accent: color-mix(in oklab, var(--color-tr-destructive) 65%, var(--color-tr-sidebar-primary) 35%);
+  --wizard-type-accent: color-mix(
+    in oklab,
+    var(--color-destructive) 65%,
+    var(--color-sidebar-primary) 35%
+  );
 }
 
 .wizard-v2-type-badge--code {
-  --wizard-type-accent: color-mix(in oklab, var(--color-tr-ring) 70%, var(--color-tr-sidebar-primary) 30%);
+  --wizard-type-accent: color-mix(
+    in oklab,
+    var(--color-ring) 70%,
+    var(--color-sidebar-primary) 30%
+  );
 }
 
 .wizard-v2-type-badge--other {
-  --wizard-type-accent: color-mix(in oklab, var(--color-tr-muted-foreground) 65%, transparent);
+  --wizard-type-accent: color-mix(in oklab, var(--color-muted-foreground) 65%, transparent);
 }
 
 .wizard-v2-file-role {
@@ -1245,7 +1316,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 }
 
 .wizard-v2-role-badge {
-  --wizard-role-accent: color-mix(in oklab, var(--color-tr-primary-blue) 62%, transparent);
+  --wizard-role-accent: color-mix(in oklab, var(--color-primary) 62%, transparent);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1255,30 +1326,42 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   letter-spacing: 0.08em;
   text-transform: uppercase;
   border: 1px solid color-mix(in oklab, var(--wizard-role-accent) 55%, transparent);
-  background: color-mix(in oklab, var(--wizard-role-accent) 8%, var(--color-tr-sidebar-accent) 95%);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 82%, var(--color-tr-antiwhite) 18%);
+  background: color-mix(in oklab, var(--wizard-role-accent) 8%, var(--color-sidebar-accent) 95%);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 82%, var(--color-antiwhite) 18%);
 }
 
 .wizard-v2-role-variant--processable {
-  --wizard-role-accent: color-mix(in oklab, var(--color-tr-primary-blue) 72%, var(--color-tr-accent) 28%);
+  --wizard-role-accent: color-mix(in oklab, var(--color-primary) 72%, var(--color-accent) 28%);
 }
 
 .wizard-v2-role-variant--reference {
-  --wizard-role-accent: color-mix(in oklab, var(--color-tr-accent) 68%, var(--color-tr-sidebar-primary) 32%);
+  --wizard-role-accent: color-mix(
+    in oklab,
+    var(--color-accent) 68%,
+    var(--color-sidebar-primary) 32%
+  );
 }
 
 .wizard-v2-role-variant--instructions {
-  --wizard-role-accent: color-mix(in oklab, var(--color-tr-secondary) 72%, var(--color-tr-sidebar-primary) 28%);
+  --wizard-role-accent: color-mix(
+    in oklab,
+    var(--color-secondary) 72%,
+    var(--color-sidebar-primary) 28%
+  );
 }
 
 .wizard-v2-role-variant--image {
-  --wizard-role-accent: color-mix(in oklab, var(--color-tr-success) 70%, var(--color-tr-sidebar-primary) 30%);
+  --wizard-role-accent: color-mix(
+    in oklab,
+    var(--color-success) 70%,
+    var(--color-sidebar-primary) 30%
+  );
 }
 
 .wizard-v2-role-trigger {
   border-radius: 10px;
   border: 0.5px solid color-mix(in oklab, var(--wizard-role-accent) 45%, transparent);
-  background: color-mix(in oklab, var(--wizard-role-accent) 8%, var(--color-tr-sidebar-accent) 94%);
+  background: color-mix(in oklab, var(--wizard-role-accent) 8%, var(--color-sidebar-accent) 94%);
   padding-inline: 6px;
   font-size: 0.64rem;
   text-transform: uppercase;
@@ -1292,29 +1375,29 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   --tw-ring-shadow: 0 0 #0000 !important;
   --tw-ring-offset-shadow: 0 0 #0000 !important;
   box-shadow: none !important;
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 80%, var(--color-tr-antiwhite) 20%);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 80%, var(--color-antiwhite) 20%);
 }
 
 .wizard-v2-role-trigger:focus-visible,
-.wizard-v2-role-trigger[data-state="open"] {
+.wizard-v2-role-trigger[data-state='open'] {
   border-color: color-mix(in oklab, var(--wizard-role-accent) 65%, transparent);
-  background: color-mix(in oklab, var(--wizard-role-accent) 12%, var(--color-tr-sidebar-accent) 92%);
+  background: color-mix(in oklab, var(--wizard-role-accent) 12%, var(--color-sidebar-accent) 92%);
 }
 
 .wizard-v2-role-menu {
-  background: color-mix(in oklab, var(--color-tr-sidebar-accent) 97%, transparent);
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 40%, transparent);
+  background: color-mix(in oklab, var(--color-sidebar-accent) 97%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 40%, transparent);
 }
 
 .wizard-v2-role-item {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 70%, var(--color-tr-antiwhite) 30%);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 70%, var(--color-antiwhite) 30%);
 }
 
-.wizard-v2-role-item[data-state="checked"] {
-  background: color-mix(in oklab, var(--color-tr-accent) 12%, var(--color-tr-sidebar-accent) 90%);
+.wizard-v2-role-item[data-state='checked'] {
+  background: color-mix(in oklab, var(--color-accent) 12%, var(--color-sidebar-accent) 90%);
 }
 
 .wizard-v2-feedback-overlay {
@@ -1322,7 +1405,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   inset: 0;
   display: grid;
   place-items: center;
-  background: color-mix(in oklab, var(--color-tr-anti-primary) 65%, transparent 35%);
+  background: color-mix(in oklab, var(--color-onprimary) 65%, transparent 35%);
   backdrop-filter: blur(12px) saturate(140%);
   z-index: 30;
   padding: 24px;
@@ -1333,10 +1416,13 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   gap: 16px;
   padding: 20px 24px;
   border-radius: 12px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
-  background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-white) 92%, transparent), transparent 70%)
-    color-mix(in oklab, var(--color-tr-anti-primary) 22%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-background) 92%, transparent),
+      transparent 70%
+    )
+    color-mix(in oklab, var(--color-onprimary) 22%, transparent);
   box-shadow:
     0 28px 60px -32px color-mix(in oklab, black 45%, transparent),
     0 1px 0 0 color-mix(in oklab, white 28%, transparent) inset;
@@ -1345,21 +1431,30 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 }
 
 .wizard-v2-feedback-card.is-loading {
-  background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-primary-blue) 18%, transparent), transparent 70%)
-    color-mix(in oklab, var(--color-tr-anti-primary) 18%, transparent);
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-primary) 18%, transparent),
+      transparent 70%
+    )
+    color-mix(in oklab, var(--color-onprimary) 18%, transparent);
 }
 
-.wizard-v2-feedback-card[data-state="success"]:not(.is-loading) {
-  background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-success) 16%, transparent), transparent 70%)
-    color-mix(in oklab, var(--color-tr-anti-primary) 20%, transparent);
+.wizard-v2-feedback-card[data-state='success']:not(.is-loading) {
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-success) 16%, transparent),
+      transparent 70%
+    )
+    color-mix(in oklab, var(--color-onprimary) 20%, transparent);
 }
 
-.wizard-v2-feedback-card[data-state="error"]:not(.is-loading) {
-  background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-destructive) 28%, transparent), transparent 70%)
-    color-mix(in oklab, var(--color-tr-anti-primary) 22%, transparent);
+.wizard-v2-feedback-card[data-state='error']:not(.is-loading) {
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-destructive) 28%, transparent),
+      transparent 70%
+    )
+    color-mix(in oklab, var(--color-onprimary) 22%, transparent);
 }
 
 .wizard-v2-feedback-icon {
@@ -1369,27 +1464,27 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   height: 52px;
   margin: 0 auto;
   border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 45%, transparent);
-  background: color-mix(in oklab, var(--color-tr-white) 75%, transparent);
-  color: color-mix(in oklab, var(--color-tr-primary-blue) 55%, var(--color-tr-accent) 25%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 45%, transparent);
+  background: color-mix(in oklab, var(--color-background) 75%, transparent);
+  color: color-mix(in oklab, var(--color-primary) 55%, var(--color-accent) 25%);
 }
 
 .wizard-v2-feedback-card.is-loading .wizard-v2-feedback-icon {
-  color: color-mix(in oklab, var(--color-tr-primary-blue) 60%, var(--color-tr-accent) 35%);
+  color: color-mix(in oklab, var(--color-primary) 60%, var(--color-accent) 35%);
 }
 
-.wizard-v2-feedback-card:not(.is-loading)[data-state="success"] .wizard-v2-feedback-icon,
-.wizard-v2-feedback-card:not(.is-loading)[data-state="success"] .wizard-v2-feedback-icon svg {
-  color: color-mix(in oklab, var(--color-tr-success) 55%, transparent);
+.wizard-v2-feedback-card:not(.is-loading)[data-state='success'] .wizard-v2-feedback-icon,
+.wizard-v2-feedback-card:not(.is-loading)[data-state='success'] .wizard-v2-feedback-icon svg {
+  color: color-mix(in oklab, var(--color-success) 55%, transparent);
 }
 
 .wizard-v2-feedback-card.is-loading .wizard-v2-feedback-icon svg {
   color: currentColor;
 }
 
-.wizard-v2-feedback-card:not(.is-loading)[data-state="error"] .wizard-v2-feedback-icon,
-.wizard-v2-feedback-card:not(.is-loading)[data-state="error"] .wizard-v2-feedback-icon svg {
-  color: color-mix(in oklab, var(--color-tr-destructive) 60%, transparent);
+.wizard-v2-feedback-card:not(.is-loading)[data-state='error'] .wizard-v2-feedback-icon,
+.wizard-v2-feedback-card:not(.is-loading)[data-state='error'] .wizard-v2-feedback-icon svg {
+  color: color-mix(in oklab, var(--color-destructive) 60%, transparent);
 }
 
 .wizard-v2-feedback-title {
@@ -1397,36 +1492,36 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 15%);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 35%, var(--color-antiwhite) 15%);
 }
 
-.wizard-v2-feedback-card[data-state="success"] .wizard-v2-feedback-title {
-  color: color-mix(in oklab, var(--color-tr-success) 55%, transparent);
+.wizard-v2-feedback-card[data-state='success'] .wizard-v2-feedback-title {
+  color: color-mix(in oklab, var(--color-success) 55%, transparent);
 }
 
-.wizard-v2-feedback-card[data-state="error"] .wizard-v2-feedback-title {
-  color: color-mix(in oklab, var(--color-tr-destructive) 60%, transparent);
+.wizard-v2-feedback-card[data-state='error'] .wizard-v2-feedback-title {
+  color: color-mix(in oklab, var(--color-destructive) 60%, transparent);
 }
 
 .wizard-v2-feedback-message {
   font-size: 0.78rem;
   line-height: 1.5;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 60%, var(--color-tr-sidebar-primary) 12%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 60%, var(--color-sidebar-primary) 12%);
 }
 
 .wizard-v2-feedback-detail {
   margin-top: 0.5rem;
   font-size: 0.74rem;
   line-height: 1.5;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 72%, var(--color-tr-sidebar-primary) 18%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 72%, var(--color-sidebar-primary) 18%);
 }
 
-.wizard-v2-feedback-card[data-state="success"] .wizard-v2-feedback-message {
-  color: color-mix(in oklab, var(--color-tr-success) 45%, var(--color-tr-sidebar-primary) 12%);
+.wizard-v2-feedback-card[data-state='success'] .wizard-v2-feedback-message {
+  color: color-mix(in oklab, var(--color-success) 45%, var(--color-sidebar-primary) 12%);
 }
 
-.wizard-v2-feedback-card[data-state="error"] .wizard-v2-feedback-message {
-  color: color-mix(in oklab, var(--color-tr-destructive) 55%, var(--color-tr-sidebar-primary) 10%);
+.wizard-v2-feedback-card[data-state='error'] .wizard-v2-feedback-message {
+  color: color-mix(in oklab, var(--color-destructive) 55%, var(--color-sidebar-primary) 10%);
 }
 
 .wizard-v2-feedback-actions {
@@ -1438,9 +1533,9 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 
 .wizard-v2-feedback-button {
   border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-accent) 24%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 12%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 24%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 35%, var(--color-antiwhite) 12%);
   font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -1454,13 +1549,11 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 }
 
 .wizard-v2-feedback-button:hover {
-  border-color: color-mix(in oklab, var(--color-tr-ring) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-ring) 35%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 55%, transparent);
+  background: color-mix(in oklab, var(--color-ring) 35%, transparent);
   color: color-mix(in oklab, white 85%, transparent);
   transform: translateY(-1px);
 }
-
-
 
 .wizard-v2-file-actions {
   display: flex;
@@ -1477,7 +1570,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   border-radius: 999px;
   border: 1px solid transparent;
   background: transparent;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 60%, var(--color-tr-sidebar-primary) 12%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 60%, var(--color-sidebar-primary) 12%);
   transition:
     background-color 150ms ease,
     border-color 150ms ease,
@@ -1486,16 +1579,16 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 }
 
 .wizard-v2-file-remove:hover {
-  border-color: color-mix(in oklab, var(--color-tr-destructive) 35%, transparent);
-  background: color-mix(in oklab, var(--color-tr-destructive) 20%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 8%, var(--color-tr-antiwhite) 5%);
+  border-color: color-mix(in oklab, var(--color-destructive) 35%, transparent);
+  background: color-mix(in oklab, var(--color-destructive) 20%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 8%, var(--color-antiwhite) 5%);
   transform: translateY(-1px);
 }
 
 .wizard-v2-file-remove:focus-visible {
   outline: none;
-  border-color: color-mix(in oklab, var(--color-tr-ring) 45%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-tr-ring) 30%, transparent);
+  border-color: color-mix(in oklab, var(--color-ring) 45%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-ring) 30%, transparent);
 }
 
 .wizard-v2-client-dialog {
@@ -1507,20 +1600,22 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   height: 100%;
   padding: clamp(18px, 3vw, 22px);
   border-radius: 16px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 65%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 65%, transparent);
   background:
-    linear-gradient(135deg, color-mix(in oklab, var(--color-tr-secondary) 50%, transparent)),
-    color-mix(in oklab, var(--color-tr-primary-blue) 70%, transparent);
-  background-color: color-mix(in oklab, var(--color-tr-white) 35%, transparent);
+    linear-gradient(135deg, color-mix(in oklab, var(--color-secondary) 50%, transparent)),
+    color-mix(in oklab, var(--color-primary) 70%, transparent);
+  background-color: color-mix(in oklab, var(--color-background) 35%, transparent);
   box-shadow:
     0 32px 80px -32px color-mix(in oklab, black 45%, transparent),
     0 1px 0 0 color-mix(in oklab, white 25%, transparent) inset,
-    0 -1px 0 0 color-mix(in oklab, var(--color-tr-antiwhite) 10%, transparent) inset;
+    0 -1px 0 0 color-mix(in oklab, var(--color-antiwhite) 10%, transparent) inset;
   backdrop-filter: blur(24px) saturate(140%);
   grid-template-rows: auto minmax(0, 1fr);
   overflow: visible;
   will-change: transform, backdrop-filter;
-  transition: backdrop-filter 150ms ease, box-shadow 200ms ease;
+  transition:
+    backdrop-filter 150ms ease,
+    box-shadow 200ms ease;
 }
 
 .wizard-v2-client-form {
@@ -1560,14 +1655,14 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   font-weight: 600;
   letter-spacing: 0.01em;
   text-transform: none;
-  color: color-mix(in oklab, var(--color-tr-primary) 72%, var(--color-tr-antiwhite) 18%);
+  color: color-mix(in oklab, var(--color-primary) 72%, var(--color-antiwhite) 18%);
 }
 
 .wizard-v2-client-field-error {
   margin: 2px 2px 0;
   font-size: 0.75rem;
   line-height: 1.3;
-  color: color-mix(in oklab, var(--color-tr-destructive) 70%, var(--color-tr-antiwhite) 15%);
+  color: color-mix(in oklab, var(--color-destructive) 70%, var(--color-antiwhite) 15%);
 }
 
 .wizard-v2-client-phone {
@@ -1598,22 +1693,24 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   gap: 2px;
   padding: 4px 4px;
   border-radius: 8px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 78%, transparent);
-  background: color-mix(in oklab, var(--color-tr-input) 90%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 42%, var(--color-tr-antiwhite) 15%);
-  transition: border-color 140ms ease, background-color 140ms ease;
+  border: 1px solid color-mix(in oklab, var(--color-border) 78%, transparent);
+  background: color-mix(in oklab, var(--color-input) 90%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 42%, var(--color-antiwhite) 15%);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
   cursor: pointer;
   text-align: center;
 }
 
 .wizard-v2-phone-trigger:hover {
-  border-color: color-mix(in oklab, var(--color-tr-border) 90%, transparent);
-  background: color-mix(in oklab, var(--color-tr-input) 75%, var(--color-tr-accent) 25%);
+  border-color: color-mix(in oklab, var(--color-border) 90%, transparent);
+  background: color-mix(in oklab, var(--color-input) 75%, var(--color-accent) 25%);
 }
 
 .wizard-v2-phone-trigger:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-tr-ring) 55%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-ring) 55%, transparent);
 }
 
 .wizard-v2-phone-trigger--disabled {
@@ -1639,7 +1736,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 .wizard-v2-phone-trigger-name {
   flex: 0 0 auto;
   font-size: 0.72rem;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 82%, var(--color-tr-sidebar-primary) 18%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 82%, var(--color-sidebar-primary) 18%);
   text-align: center;
   max-width: 100%;
   overflow: hidden;
@@ -1652,9 +1749,9 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: color-mix(in oklab, var(--color-tr-sidebar) 92%, var(--color-tr-muted) 8%);
+  background: color-mix(in oklab, var(--color-sidebar) 92%, var(--color-muted) 8%);
   border-radius: 16px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 70%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 70%, transparent);
   padding: 12px;
 }
 
@@ -1682,21 +1779,24 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   padding: 8px 10px;
   background: transparent;
   border: 1px solid transparent;
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 40%, var(--color-tr-antiwhite) 12%);
-  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+  color: color-mix(in oklab, var(--color-sidebar-primary) 40%, var(--color-antiwhite) 12%);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
   cursor: pointer;
 }
 
 .wizard-v2-phone-option:hover,
 .wizard-v2-phone-option:focus-visible {
-  background: color-mix(in oklab, var(--color-tr-accent) 28%, var(--color-tr-muted) 72%);
-  border-color: color-mix(in oklab, var(--color-tr-accent) 40%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 28%, var(--color-muted) 72%);
+  border-color: color-mix(in oklab, var(--color-accent) 40%, transparent);
 }
 
 .wizard-v2-phone-option--active {
-  background: color-mix(in oklab, var(--color-tr-accent) 40%, var(--color-tr-muted) 60%);
-  border-color: color-mix(in oklab, var(--color-tr-accent) 55%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 45%, var(--color-tr-antiwhite) 15%);
+  background: color-mix(in oklab, var(--color-accent) 40%, var(--color-muted) 60%);
+  border-color: color-mix(in oklab, var(--color-accent) 55%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 45%, var(--color-antiwhite) 15%);
 }
 
 .wizard-v2-phone-field {
@@ -1712,13 +1812,13 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   justify-content: center;
   height: 36px;
   padding: 0 6px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 78%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 78%, transparent);
   border-right: none;
   border-radius: 8px 0 0 8px;
-  background: color-mix(in oklab, var(--color-tr-input) 90%, transparent);
+  background: color-mix(in oklab, var(--color-input) 90%, transparent);
   font-size: 0.78rem;
   font-weight: 600;
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 48%, var(--color-tr-antiwhite) 18%);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 48%, var(--color-antiwhite) 18%);
   min-width: 46px;
 }
 
@@ -1753,7 +1853,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 .wizard-v2-phone-option-code {
   font-size: 0.78rem;
   font-weight: 600;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 65%, var(--color-tr-sidebar-primary) 25%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 65%, var(--color-sidebar-primary) 25%);
   flex-shrink: 0;
 }
 
@@ -1761,7 +1861,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   margin: 0;
   padding: 12px 6px;
   font-size: 0.8rem;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 75%, var(--color-tr-sidebar-primary) 15%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 75%, var(--color-sidebar-primary) 15%);
   text-align: center;
 }
 
@@ -1789,8 +1889,8 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   max-height: 260px;
   padding: 6px;
   border-radius: 12px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 65%, transparent);
-  background: color-mix(in oklab, var(--color-tr-sidebar) 85%, var(--color-tr-white) 15%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 65%, transparent);
+  background: color-mix(in oklab, var(--color-sidebar) 85%, var(--color-background) 15%);
   box-shadow:
     0 18px 40px -24px color-mix(in oklab, black 55%, transparent),
     0 1px 0 0 color-mix(in oklab, white 18%, transparent) inset;
@@ -1806,18 +1906,21 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: color-mix(in oklab, var(--color-tr-sidebar-foreground) 85%, var(--color-tr-antiwhite) 10%);
+  color: color-mix(in oklab, var(--color-sidebar-foreground) 85%, var(--color-antiwhite) 10%);
   text-align: left;
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .wizard-v2-client-suggestion:hover,
 .wizard-v2-client-suggestion:focus-visible,
 .wizard-v2-client-suggestion--active {
-  background: color-mix(in oklab, var(--color-tr-accent) 25%, var(--color-tr-muted) 75%);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 20%, var(--color-tr-antiwhite) 15%);
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-tr-ring) 35%, transparent) inset;
+  background: color-mix(in oklab, var(--color-accent) 25%, var(--color-muted) 75%);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 20%, var(--color-antiwhite) 15%);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-ring) 35%, transparent) inset;
 }
 
 .wizard-v2-client-suggestion:focus-visible {
@@ -1831,20 +1934,20 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 
 .wizard-v2-client-suggestion-secondary {
   font-size: 0.74rem;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 85%, var(--color-tr-sidebar-primary) 15%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 85%, var(--color-sidebar-primary) 15%);
 }
 
 .wizard-v2-client-suggestion-status {
   padding: 8px 10px;
   font-size: 0.74rem;
-  color: color-mix(in oklab, var(--color-tr-muted-foreground) 85%, var(--color-tr-sidebar-primary) 10%);
+  color: color-mix(in oklab, var(--color-muted-foreground) 85%, var(--color-sidebar-primary) 10%);
 }
 
 .wizard-v2-client-suggestion-error {
   padding: 8px 10px;
   font-size: 0.75rem;
-  border-top: 1px solid color-mix(in oklab, var(--color-tr-border) 40%, transparent);
-  color: color-mix(in oklab, var(--color-tr-destructive) 65%, var(--color-tr-antiwhite) 10%);
+  border-top: 1px solid color-mix(in oklab, var(--color-border) 40%, transparent);
+  color: color-mix(in oklab, var(--color-destructive) 65%, var(--color-antiwhite) 10%);
 }
 
 .wizard-v2-client-footer {
@@ -1857,7 +1960,7 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 .wizard-v2-client-error {
   margin: 0;
   font-size: 0.78rem;
-  color: color-mix(in oklab, var(--color-tr-destructive) 55%, var(--color-tr-antiwhite) 15%);
+  color: color-mix(in oklab, var(--color-destructive) 55%, var(--color-antiwhite) 15%);
 }
 
 @media (max-width: 720px) {
@@ -1890,28 +1993,32 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
   width: 36px;
   height: 36px;
   border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--color-tr-border) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-white) 45%, transparent);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 35%, var(--color-tr-antiwhite) 25%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
+  background: color-mix(in oklab, var(--color-background) 45%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 35%, var(--color-antiwhite) 25%);
   box-shadow:
     0 8px 18px -8px color-mix(in oklab, black 25%, transparent),
     0 1px 0 0 color-mix(in oklab, white 28%, transparent) inset;
-  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease, color 150ms ease;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease,
+    color 150ms ease;
 }
 
 .wizard-v2-close:hover {
-  border-color: color-mix(in oklab, var(--color-tr-accent) 55%, transparent);
-  background: color-mix(in oklab, var(--color-tr-accent) 25%, var(--color-tr-white) 30%);
-  color: color-mix(in oklab, var(--color-tr-sidebar-primary) 15%, black 10%);
+  border-color: color-mix(in oklab, var(--color-accent) 55%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 25%, var(--color-background) 30%);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 15%, black 10%);
   box-shadow:
-    0 10px 22px -10px color-mix(in oklab, var(--color-tr-accent) 40%, transparent),
+    0 10px 22px -10px color-mix(in oklab, var(--color-accent) 40%, transparent),
     0 1px 0 0 color-mix(in oklab, white 32%, transparent) inset;
 }
 
 .wizard-v2-close:focus-visible {
   outline: none;
   box-shadow:
-    0 0 0 2px color-mix(in oklab, var(--color-tr-ring) 55%, transparent),
+    0 0 0 2px color-mix(in oklab, var(--color-ring) 55%, transparent),
     0 8px 18px -8px color-mix(in oklab, black 25%, transparent);
 }
 
@@ -1924,35 +2031,35 @@ color: color-mix(in oklab, var(--color-tr-anti-primary) 75%, var(--color-tr-anti
 }
 
 .wizard-v2-modal::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: -6px;
   border-radius: inherit;
-  border: 1px solid color-mix(in oklab, var(--color-tr-accent) 20%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-accent) 20%, transparent);
   opacity: 0.65;
   pointer-events: none;
 }
 
 @supports not (backdrop-filter: blur(1px)) {
   .wizard-v2-modal {
-    background-color: color-mix(in oklab, var(--color-tr-white) 92%, transparent);
+    background-color: color-mix(in oklab, var(--color-background) 92%, transparent);
     background-image: none;
   }
 
   .wizard-v2-close {
-    background: var(--color-tr-white);
+    background: var(--color-background);
   }
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .wizard-v2-modal {
     backdrop-filter: none;
-    background-color: color-mix(in oklab, var(--color-tr-white) 95%, transparent);
+    background-color: color-mix(in oklab, var(--color-background) 95%, transparent);
     box-shadow: 0 24px 60px -28px color-mix(in oklab, black 40%, transparent);
   }
 
   .wizard-v2-header::after {
-    background: color-mix(in oklab, var(--color-tr-border) 65%, transparent);
+    background: color-mix(in oklab, var(--color-border) 65%, transparent);
     box-shadow: none;
   }
   .wizard-v2-combobox {

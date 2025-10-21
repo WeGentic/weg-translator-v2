@@ -80,7 +80,7 @@ export function buildColumns(
      * - Cell: Individual row checkbox
      * - Width: Fixed at 48px (w-12) for consistent alignment
      * - Styling: Centered content with vertical separator
-     * - Theme: Uses --color-tr-ring for border (defined in checkbox component)
+     * - Theme: Uses --color-ring for border (defined in checkbox component)
      *
      * Always visible regardless of breakpoint.
      */

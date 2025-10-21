@@ -1,0 +1,61 @@
+/* Modern Glassmorphic Button Styles */
+
+/* Base Glassmorphic Add Button */
+.add-button {
+  position: relative;
+  padding: 0.2rem
+  font-size: 0.8rem;
+  font-weight: 200;
+  color: var(--color-orioles-orange-50);
+  background-color: var(--color-victorian-peacock-950);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Hover State */
+.add-button:hover:not(:disabled) {
+  background:var(--color-victorian-peacock-700);
+  transform: translateY(-2px);
+}
+
+/* Active/Pressed State */
+.add-button:active:not(:disabled),
+.add-button.active {
+  background: var(--color-secondary);
+  
+  transform: translateY(0);
+
+}
+
+/* Disabled State */
+.add-button:disabled {
+  background: var(--color-neverything-300);
+  cursor: not-allowed;
+  text-shadow: none;
+}
+
+/* Disabled Hover State - prevents any hover effects */
+.add-button:disabled:hover {
+  transform: none;
+  background: var(--color-neverything-400);
+
+}
+
+/* Focus State (accessibility - keyboard navigation) */
+.add-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+}
+
+/* Usage Example:
+ * 
+ * <button class="glass-button">Click Me</button>
+ * <button class="glass-button" disabled>Disabled</button>
+ * 
+ * Works best on colorful gradient backgrounds.
+ * Recommended background:
+ * background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+ */

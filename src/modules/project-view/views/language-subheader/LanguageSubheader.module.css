@@ -9,7 +9,7 @@
 .label {
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--color-tr-primary-blue);
+  color: var(--color-primary);
 }
 
 .badges {
@@ -22,27 +22,27 @@
 }
 
 .badgesEmpty {
-  color: var(--color-tr-muted-foreground);
+  color: var(--color-muted-foreground);
   font-size: 0.9rem;
   font-style: italic;
 }
 
 .badgeTone0 {
-  color: var(--color-tr-primary-blue);
+  color: var(--color-primary);
 }
 
 .badgeTone1 {
-  color: var(--color-tr-success);
+  color: var(--color-success);
 }
 
 .badgeTone2 {
-  color: var(--color-tr-destructive);
+  color: var(--color-destructive);
 }
 
 .badgeTone3 {
-  color: var(--color-tr-accent-foreground);
+  color: var(--color-accent-foreground);
 }
 
 .badgeTone4 {
-  color: var(--color-tr-navy);
+  color: var(--color-navy);
 }

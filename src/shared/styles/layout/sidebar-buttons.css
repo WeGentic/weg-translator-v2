@@ -27,38 +27,9 @@
    ============================================ */
 
 .sidebar-one__button {
-  /* Light mode color palette */
-  --btn-surface: color-mix(in oklch, var(--background) 92%, transparent);
-  --btn-border-outer: color-mix(in oklch, var(--border) 70%, transparent);
-  --btn-border-inner: color-mix(in oklch, var(--border) 40%, transparent);
-  --btn-shadow: color-mix(in oklch, var(--color-tr-ring) 12%, transparent);
-  --btn-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 25%, transparent);
-  --btn-icon: var(--color-tr-anti-primary);
-
-  /* Active state colors */
-  --btn-active-surface: color-mix(in oklch, var(--color-tr-accent) 18%, var(--background) 82%);
-  --btn-active-border: color-mix(in oklch, var(--color-tr-accent) 55%, transparent);
-  --btn-active-glow: color-mix(in oklch, var(--color-tr-accent) 25%, transparent);
-  --btn-active-icon: color-mix(in oklch, var(--color-tr-accent) 85%, var(--foreground) 15%);
-
   /* Hover enhancement multipliers (applied via color-mix percentages) */
   --btn-hover-lift: -2px;
   --btn-hover-scale: 1.02;
-}
-
-.dark .sidebar-one__button {
-  /* Dark mode color adjustments */
-  --btn-surface: color-mix(in oklch, var(--color-tr-primary-blue) 35%, transparent);
-  --btn-border-outer: color-mix(in oklch, var(--border) 45%, transparent);
-  --btn-border-inner: color-mix(in oklch, var(--border) 25%, transparent);
-  --btn-shadow: color-mix(in oklch, var(--color-tr-primary-blue) 30%, transparent);
-  --btn-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 18%, transparent);
-  --btn-icon: var(--color-tr-anti-primary);
-
-  --btn-active-surface: color-mix(in oklch, var(--color-tr-accent) 22%, var(--color-tr-primary-blue) 15%);
-  --btn-active-border: color-mix(in oklch, var(--color-tr-accent) 65%, transparent);
-  --btn-active-glow: color-mix(in oklch, var(--color-tr-accent) 32%, transparent);
-  --btn-active-icon: color-mix(in oklch, var(--color-tr-accent) 90%, var(--color-tr-anti-primary) 10%);
 }
 
 /* ============================================
@@ -66,11 +37,12 @@
    ============================================ */
 
 .sidebar-one__button {
-  width: 2rem;     /* 40px - slightly reduced size */
+  width: 2rem; /* 40px - slightly reduced size */
   height: 2rem;
   padding: 0;
   margin: 0;
-  background: transparent;
+
+  color: var(--color-orioles-orange-100);
   border: none;
   display: flex;
   align-items: center;
@@ -96,7 +68,7 @@
  * - NO borders
  * - NO shadows
  * - NO container effects
- * - ONLY naked icon visible with --color-tr-anti-primary color
+ * - ONLY naked icon visible with --color-onprimary color
  */
 .sidebar-one__button-container {
   width: 100%;
@@ -108,7 +80,7 @@
   border-radius: 0.5rem;
 
   /* No background - transparent */
-  background: transparent;
+  background: var(--transparent);
 
   /* No backdrop filter */
   backdrop-filter: none;
@@ -118,7 +90,6 @@
   box-shadow: none;
 
   /* Icon color - only thing visible */
-  color: var(--btn-icon);
 
   /* Smooth transitions for all state changes */
   transition:
@@ -153,23 +124,27 @@
   /* Subtle glassmorphic background appears on hover */
   background: linear-gradient(
     135deg,
-    var(--btn-surface) 0%,
-    color-mix(in oklch, var(--btn-surface) 80%, transparent) 100%
+    var(--color-victorian-peacock-950) 0%,
+    color-mix(in oklch, var(--color-victorian-peacock-950) 80%, transparent) 100%
   );
   backdrop-filter: blur(8px) saturate(1.1);
   -webkit-backdrop-filter: blur(8px) saturate(1.1);
 
   /* Subtle shadows and borders on hover */
   box-shadow:
-    0 0 0 0.5px color-mix(in oklch, var(--btn-border-outer) 120%, transparent),
-    inset 0 0 0 1px color-mix(in oklch, var(--btn-border-inner) 130%, transparent),
-    0 5px 10px color-mix(in oklch, var(--btn-shadow) 140%, transparent),
-    inset 0 1px 3px color-mix(in oklch, var(--btn-highlight) 130%, transparent),
-    /* Subtle outer glow */
-    0 0 12px color-mix(in oklch, var(--btn-border-outer) 30%, transparent);
+    0 0 0 0.5px color-mix(in oklch, var(--color-victorian-peacock-950) 120%, transparent),
+    inset 0 0 0 1px color-mix(in oklch, var(--color-victorian-peacock-200) 130%, transparent),
+    0 5px 10px color-mix(in oklch, var(--color-victorian-peacock-950) 140%, transparent),
+    inset 0 1px 3px color-mix(in oklch, var(--color-victorian-peacock-200) 130%, transparent),
+    /* Subtle outer glow */ 0 0 12px
+      color-mix(in oklch, var(--color-victorian-peacock-950) 30%, transparent);
 
   /* Brighter icon */
-  color: color-mix(in oklch, var(--btn-icon) 130%, var(--foreground) 20%);
+  color: color-mix(
+    in oklch,
+    var(--color-orioles-orange-600) 130%,
+    var(--color-orioles-orange-800) 20%
+  );
 }
 
 /* ============================================
@@ -190,27 +165,27 @@
   /* Active background with accent color */
   background: linear-gradient(
     135deg,
-    var(--color-tr-secondary) 0%,
-    color-mix(in oklch, var(--btn-active-surface) 85%, transparent) 100%
+    var(--color-secondary) 0%,
+    color-mix(in oklch, var(--color-orioles-orange-300) 85%, transparent) 100%
   );
 
   /* Thin border on the button itself */
-  border: 0.5px solid var(--btn-active-border);
+  border: 0.5px solid var(--color-orioles-orange-300);
 
   /* Outline with gap (offset creates the gap) */
-  outline: 0.5px solid var(--btn-active-border);
+  outline: 0.5px solid var(--color-orioles-orange-300);
   outline-offset: 2px;
 
   /* Active state with neumorphic inset and glow */
   box-shadow:
     /* Neumorphic inset shadows (pressed effect) */
-    inset 2px 2px 4px color-mix(in oklch, var(--btn-shadow) 80%, transparent),
-    inset -1px -1px 3px color-mix(in oklch, var(--btn-highlight) 60%, transparent),
-    /* Subtle outer glow */
-    0 0 12px color-mix(in oklch, var(--btn-active-glow) 60%, transparent);
+    inset 2px 2px 4px color-mix(in oklch, var(--color-orioles-orange-500) 80%, transparent),
+    inset -1px -1px 3px color-mix(in oklch, var(--color-orioles-orange-300) 60%, transparent),
+    /* Subtle outer glow */ 0 0 12px
+      color-mix(in oklch, var(--color-orioles-orange-800) 60%, transparent);
 
   /* Accent colored icon */
-  color: var(--color-tr-ring);
+  color: var(--color-victorian-peacock-950);
 
   /* No scale, using inset shadow for active appearance */
   transform: translateZ(0);
@@ -234,21 +209,18 @@
   transform: translateY(-1px) translateZ(0);
 
   /* Brighter border */
-  border-color: color-mix(in oklch, var(--btn-active-border) 130%, transparent);
+  border-color: color-mix(in oklch, var(--color-orioles-orange-300) 130%, transparent);
 
   /* Brighter outline */
-  outline-color: color-mix(in oklch, var(--btn-active-border) 130%, transparent);
+  outline-color: color-mix(in oklch, var(--color-orioles-orange-300) 130%, transparent);
 
   /* Enhanced active state with stronger glow */
   box-shadow:
     /* Slightly reduced neumorphic inset on hover */
-    inset 1.5px 1.5px 3px color-mix(in oklch, var(--btn-shadow) 70%, transparent),
-    inset -1px -1px 3px color-mix(in oklch, var(--btn-highlight) 70%, transparent),
-    /* Stronger outer glow */
-    0 0 18px color-mix(in oklch, var(--btn-active-glow) 90%, transparent);
-
-  /* Brighter icon */
-  color: color-mix(in oklch, var(--btn-active-icon) 115%, var(--color-tr-anti-primary) 5%);
+    inset 1.5px 1.5px 3px color-mix(in oklch, var(--color-orioles-orange-500) 70%, transparent),
+    inset -1px -1px 3px color-mix(in oklch, var(--color-orioles-orange-300) 70%, transparent),
+    /* Stronger outer glow */ 0 0 18px
+      color-mix(in oklch, var(--color-orioles-orange-800) 90%, transparent);
 }
 
 /* ============================================
@@ -276,11 +248,11 @@
   /* Muted appearance */
   background: color-mix(in oklch, var(--btn-surface) 60%, transparent);
   box-shadow:
-    0 0 0 0.5px color-mix(in oklch, var(--btn-border-outer) 50%, transparent),
-    inset 0 0 0 1px color-mix(in oklch, var(--btn-border-inner) 40%, transparent);
+    0 0 0 0.5px color-mix(in oklch, var(--color-orioles-orange-50) 50%, transparent),
+    inset 0 0 0 1px color-mix(in oklch, var(--color-orioles-orange-50) 40%, transparent);
 
   /* Very muted icon */
-  color: color-mix(in oklch, var(--btn-icon) 50%, transparent);
+  color: color-mix(in oklch, var(--color-orioles-orange-50) 50%, transparent);
 
   /* No transforms */
   transform: none;
@@ -291,8 +263,8 @@
 .sidebar-one__button--disabled:hover .sidebar-one__button-container {
   transform: none;
   box-shadow:
-    0 0 0 0.5px color-mix(in oklch, var(--btn-border-outer) 50%, transparent),
-    inset 0 0 0 1px color-mix(in oklch, var(--btn-border-inner) 40%, transparent);
+    0 0 0 0.5px color-mix(in oklch, var(--color-orioles-orange-50) 50%, transparent),
+    inset 0 0 0 1px color-mix(in oklch, var(--color-orioles-orange-50) 40%, transparent);
 }
 
 /* ============================================
@@ -305,7 +277,7 @@
 .sidebar-one__button-container svg {
   transition: inherit;
   color: inherit;
-  width: 1.125rem;   /* 18px - slightly smaller */
+  width: 1.125rem; /* 18px - slightly smaller */
   height: 1.125rem;
 }
 
@@ -343,7 +315,7 @@
 
 /* Active buttons get subtle press effect */
 .sidebar-one__button--active:active .sidebar-one__button-container {
-  transform: scale(1.0) translateZ(0);
+  transform: scale(1) translateZ(0);
 }
 
 /* ============================================
@@ -393,7 +365,8 @@
 /* Enhanced hover state for reopen button - more attention-grabbing */
 .sidebar-one__button--reopen:hover .sidebar-one__button-container {
   /* Extra lift compared to regular buttons */
-  transform: translateY(calc(var(--btn-hover-lift) * 1.2)) scale(calc(var(--btn-hover-scale) * 1.02)) translateZ(0);
+  transform: translateY(calc(var(--btn-hover-lift) * 1.2))
+    scale(calc(var(--btn-hover-scale) * 1.02)) translateZ(0);
 
   /* More pronounced glassmorphic effect */
   background: linear-gradient(
@@ -408,18 +381,17 @@
     inset 0 0 0 1px color-mix(in oklch, var(--btn-border-inner) 150%, transparent),
     0 6px 14px color-mix(in oklch, var(--btn-shadow) 160%, transparent),
     inset 0 1px 3px color-mix(in oklch, var(--btn-highlight) 150%, transparent),
-    /* Enhanced outer glow */
-    0 0 18px color-mix(in oklch, var(--color-tr-accent) 40%, transparent),
-    /* Subtle pulsing glow */
-    0 0 24px color-mix(in oklch, var(--color-tr-accent) 25%, transparent);
+    /* Enhanced outer glow */ 0 0 18px color-mix(in oklch, var(--color-accent) 40%, transparent),
+    /* Subtle pulsing glow */ 0 0 24px color-mix(in oklch, var(--color-accent) 25%, transparent);
 
   /* Brighter icon with accent color hint */
-  color: color-mix(in oklch, var(--btn-icon) 140%, var(--color-tr-accent) 10%);
+  color: color-mix(in oklch, var(--btn-icon) 140%, var(--color-accent) 10%);
 }
 
 /* Subtle pulse animation to draw attention (optional - can be enabled) */
 @keyframes reopenButtonPulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow:
       0 0 0 0.5px color-mix(in oklch, var(--btn-border-outer) 120%, transparent),
       inset 0 0 0 1px color-mix(in oklch, var(--btn-border-inner) 130%, transparent),
@@ -433,7 +405,7 @@
       inset 0 0 0 1px color-mix(in oklch, var(--btn-border-inner) 150%, transparent),
       0 6px 12px color-mix(in oklch, var(--btn-shadow) 160%, transparent),
       inset 0 1px 3px color-mix(in oklch, var(--btn-highlight) 150%, transparent),
-      0 0 16px color-mix(in oklch, var(--color-tr-accent) 35%, transparent);
+      0 0 16px color-mix(in oklch, var(--color-accent) 35%, transparent);
   }
 }
 

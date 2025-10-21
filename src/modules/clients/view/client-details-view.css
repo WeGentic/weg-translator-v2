@@ -7,8 +7,8 @@
 
 .client-details-toolbar {
   padding: 0;
-  background: color-mix(in oklch, var(--color-tr-muted) 45%, transparent);
-  border-bottom: 1px solid color-mix(in oklch, var(--color-tr-border) 65%, transparent);
+  background: color-mix(in oklch, var(--color-muted) 45%, transparent);
+  border-bottom: 1px solid color-mix(in oklch, var(--color-border) 65%, transparent);
 }
 
 .client-details-toolbar__placeholder {
@@ -25,7 +25,7 @@
   overflow-y: auto;
   background: linear-gradient(
     180deg,
-    color-mix(in oklch, var(--color-tr-muted) 35%, transparent) 0%,
+    color-mix(in oklch, var(--color-muted) 35%, transparent) 0%,
     transparent 60%
   );
 }
@@ -35,14 +35,14 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.85rem;
-  color: var(--color-tr-primary-blue);
+  color: var(--color-primary);
 }
 
 .client-details-view__loading-spinner {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 2px solid var(--color-tr-primary-blue);
+  border: 2px solid var(--color-primary);
   border-top-color: transparent;
   animation: client-details-spin 0.8s linear infinite;
 }
@@ -59,11 +59,11 @@
 }
 
 .client-details-view__card {
-  border-color: color-mix(in oklch, var(--color-tr-border) 70%, transparent);
-  background: color-mix(in oklch, var(--color-tr-white) 92%, transparent);
+  border-color: color-mix(in oklch, var(--color-border) 70%, transparent);
+  background: color-mix(in oklch, var(--color-background) 92%, transparent);
   box-shadow:
     0 18px 30px -20px rgb(35 40 70 / 0.35),
-    inset 0 1px 0 0 color-mix(in oklch, var(--color-tr-white) 85%, transparent);
+    inset 0 1px 0 0 color-mix(in oklch, var(--color-background) 85%, transparent);
 }
 
 .client-details-view__card-title {
@@ -71,7 +71,7 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 1.05rem;
-  color: var(--color-tr-primary-blue);
+  color: var(--color-primary);
 }
 
 .client-details-view__grid {
@@ -90,8 +90,8 @@
   width: 28px;
   height: 28px;
   border-radius: 0.5rem;
-  background-color: color-mix(in oklch, var(--color-tr-accent) 60%, transparent);
-  color: var(--color-tr-primary-blue);
+  background-color: color-mix(in oklch, var(--color-accent) 60%, transparent);
+  color: var(--color-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -108,23 +108,23 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-tr-muted-foreground);
+  color: var(--color-muted-foreground);
 }
 
 .client-details-view__row-value {
   font-size: 0.9rem;
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
   word-break: break-word;
 }
 
 .client-details-view__value-placeholder {
-  color: color-mix(in oklch, var(--color-tr-muted-foreground) 70%, transparent);
+  color: color-mix(in oklch, var(--color-muted-foreground) 70%, transparent);
 }
 
 .client-details-footer {
   height: 44px;
-  border-top: 1px solid color-mix(in oklch, var(--color-tr-border) 60%, transparent);
-  background: color-mix(in oklch, var(--color-tr-muted) 40%, transparent);
+  border-top: 1px solid color-mix(in oklch, var(--color-border) 60%, transparent);
+  background: color-mix(in oklch, var(--color-muted) 40%, transparent);
 }
 
 @keyframes client-details-spin {

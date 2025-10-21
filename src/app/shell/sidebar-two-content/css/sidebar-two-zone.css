@@ -44,7 +44,7 @@
   font-weight: 600;
   line-height: 1rem;
   letter-spacing: 0.025em;
-  color: color-mix(in oklch, var(--color-tr-anti-primary) 90%, transparent);
+  color: color-mix(in oklch, var(--color-onprimary) 90%, transparent);
 
   /* Spacing */
   padding-bottom: 0.5rem;

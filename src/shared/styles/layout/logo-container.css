@@ -10,19 +10,20 @@
   position: relative;
   border-radius: 1.5rem;
   /* Even whiter in light mode */
-  background-color: rgba(255, 255, 255, 0.5);
+  background-color: var(--color-victorian-peacock-400);
   /* Stronger backdrop effect */
   backdrop-filter: blur(30px) saturate(200%) contrast(100%) brightness(130%);
   -webkit-backdrop-filter: blur(30px) saturate(200%) contrast(100%) brightness(130%);
   /* Thin external border with outline effect */
-  border: 1px solid rgba(255, 255, 255, 0.3);
+
   box-shadow: 
     /* Minimal light extension from top-left */
     -0.5px -0.5px 1px rgba(255, 255, 255, 0.1),
-    /* Minimal shadow extension to bottom-right */
-    0.5px 0.5px 1px rgba(0, 0, 0, 0.02);
+    /* Minimal shadow extension to bottom-right */ 0.5px 0.5px 1px rgba(0, 0, 0, 0.02);
   /* Smooth transitions for height changes and other properties */
-  transition: all 0.3s ease, height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    all 0.3s ease,
+    height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
   position: relative;
   width: 42px;
@@ -33,19 +34,15 @@
   padding: 0.3rem;
   border-radius: 8px;
   isolation: isolate;
-
-  
 }
 
-
 .logo-container::before {
-
 }
 
 /* Hover state - enhanced depth and glow */
 .logo-container:hover {
   /* Barely enhanced shadow on hover */
-  box-shadow: 
+  box-shadow:
     -0.75px -0.75px 1.5px rgba(255, 255, 255, 0.15),
     0.75px 0.75px 1.5px rgba(0, 0, 0, 0.03);
   /* Slightly stronger border on hover */
@@ -65,18 +62,14 @@
   box-shadow:
     /* Outer border - thin crisp edge */
     0 0 0 0.5px var(--logo-border-outer),
-    /* Gap between borders */
-    0 0 0 1.5px color-mix(in oklch, var(--background) 95%, transparent),
-    /* Inner border - thin crisp edge */
-    0 0 0 2px var(--logo-border-inner),
-    /* Inverted shadows for pressed effect */
-    inset 0 3px 6px var(--logo-shadow-soft),
+    /* Gap between borders */ 0 0 0 1.5px color-mix(in oklch, var(--background) 95%, transparent),
+    /* Inner border - thin crisp edge */ 0 0 0 2px var(--logo-border-inner),
+    /* Inverted shadows for pressed effect */ inset 0 3px 6px var(--logo-shadow-soft),
     inset 0 1px 2px color-mix(in oklch, var(--logo-highlight) 60%, transparent);
 }
 
 /* Dark mode adjustments */
 .dark .logo-container {
-  
 }
 
 .dark .logo-container::before {
@@ -84,11 +77,9 @@
 }
 
 .dark .logo-container:hover {
-  
 }
 
 .dark .logo-container:hover::before {
-  
 }
 
 /* Ensure image is properly contained */

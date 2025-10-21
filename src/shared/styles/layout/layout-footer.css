@@ -4,11 +4,11 @@
 @layer components {
   .layout-footer {
     /* Glassmorphic footer with actual transparency over content */
-    --footer-glass-base: color-mix(in oklch, var(--color-tr-primary-blue) 15%, transparent);
-    --footer-glass-tint: color-mix(in oklch, var(--color-tr-white) 8%, transparent);
-    --footer-border: color-mix(in oklch, var(--color-tr-anti-primary) 25%, transparent);
-    --footer-shadow: color-mix(in oklch, var(--color-tr-primary-blue) 18%, transparent);
-    --footer-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 35%, transparent);
+    --footer-glass-base: color-mix(in oklch, var(--color-primary) 15%, transparent);
+    --footer-glass-tint: color-mix(in oklch, var(--color-background) 8%, transparent);
+    --footer-border: color-mix(in oklch, var(--color-onprimary) 25%, transparent);
+    --footer-shadow: color-mix(in oklch, var(--color-primary) 18%, transparent);
+    --footer-highlight: color-mix(in oklch, var(--color-onprimary) 35%, transparent);
 
     position: fixed;
     bottom: 0;
@@ -37,8 +37,7 @@
     outline: none !important;
     box-shadow: none !important;
 
-    transition:
-      background 0.3s ease;
+    transition: background 0.3s ease;
   }
 
   .layout-footer::before,

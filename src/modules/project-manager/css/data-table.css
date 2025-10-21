@@ -1,6 +1,6 @@
 /* ProjectsDataTable Layout Variables and Styles */
 
-@import "./dropdowns.css";
+@import './dropdowns.css';
 
 /**
  * CSS Custom Properties for ProjectsDataTable
@@ -71,18 +71,18 @@
 }
 
 .projects-table-main-zone::-webkit-scrollbar-track {
-  background: var(--color-tr-muted);
+  background: var(--color-muted);
   border-radius: 4px;
 }
 
 .projects-table-main-zone::-webkit-scrollbar-thumb {
-  background: var(--color-tr-primary-blue);
+  background: var(--color-primary);
   border-radius: 4px;
   transition: background 0.2s ease;
 }
 
 .projects-table-main-zone::-webkit-scrollbar-thumb:hover {
-  background: var(--color-tr-accent);
+  background: var(--color-accent);
 }
 
 /**
@@ -119,12 +119,12 @@
 
 /* Actions column background for even rows */
 .projects-table-main-zone tbody tr:nth-child(even) td.sticky {
-  background: var(--color-tr-white);
+  background: var(--color-background);
 }
 
 /* Actions column background for odd rows */
 .projects-table-main-zone tbody tr:nth-child(odd) td.sticky {
-  background: var(--color-tr-muted);
+  background: var(--color-muted);
 }
 
 /* Actions column background on hover */
@@ -133,12 +133,12 @@
 }
 
 /* Actions column background for selected rows */
-.projects-table-main-zone tbody tr[aria-selected="true"] td.sticky {
-  background: var(--color-tr-primary-blue);
+.projects-table-main-zone tbody tr[aria-selected='true'] td.sticky {
+  background: var(--color-primary);
 }
 
 /* Actions column header background */
 .projects-table-main-zone thead th.sticky {
-  background: var(--color-tr-muted);
+  background: var(--color-muted);
   box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
 }

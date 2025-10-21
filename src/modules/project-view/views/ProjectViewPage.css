@@ -4,7 +4,7 @@
   min-height: 0;
   flex-direction: column;
   gap: 1.5rem;
-  
+
   overflow-y: auto;
 }
 
@@ -19,9 +19,14 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  border: 1px solid var(--color-tr-border);
+  border: 1px solid var(--color-border);
   border-radius: 1rem;
-  background: linear-gradient(135deg, var(--color-tr-muted) 0%, var(--color-tr-accent) 40%, var(--color-tr-muted) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-muted) 0%,
+    var(--color-accent) 40%,
+    var(--color-muted) 100%
+  );
   padding: 1.75rem;
   box-shadow: 0 24px 48px -32px rgba(12, 25, 43, 0.25);
 }
@@ -30,7 +35,7 @@
   font-size: 1.75rem;
   line-height: 1.2;
   font-weight: 600;
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
 }
 
 .project-overview__hero-badges {
@@ -43,7 +48,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  color: var(--color-tr-muted-foreground);
+  color: var(--color-muted-foreground);
   font-size: 0.85rem;
 }
 
@@ -61,8 +66,8 @@
 
 .project-overview__stat-card {
   border-radius: 0.9rem;
-  border: 1px solid var(--color-tr-border);
-  background: linear-gradient(135deg, var(--color-tr-sidebar) 0%, var(--color-tr-anti-primary) 100%);
+  border: 1px solid var(--color-border);
+  background: linear-gradient(135deg, var(--color-sidebar) 0%, var(--color-onprimary) 100%);
   padding: 1.25rem;
   box-shadow: 0 18px 36px -24px rgba(12, 25, 43, 0.35);
   display: flex;
@@ -73,7 +78,7 @@
 .project-overview__stat-card strong {
   font-size: 2rem;
   font-weight: 600;
-  color: var(--color-tr-primary-blue);
+  color: var(--color-primary);
 }
 
 .project-overview__stat-card span {
@@ -85,8 +90,8 @@
 
 .project-overview__section {
   border-radius: 1rem;
-  border: 1px dashed var(--color-tr-border);
-  background-color: var(--color-tr-muted);
+  border: 1px dashed var(--color-border);
+  background-color: var(--color-muted);
   padding: 1.75rem;
   display: flex;
   flex-direction: column;
@@ -96,7 +101,7 @@
 .project-overview__section h2 {
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
 }
 
 .project-overview__section p {
@@ -117,9 +122,9 @@
   align-items: center;
   justify-content: center;
   border-radius: 0.9rem;
-  border: 1px solid var(--color-tr-border);
-  background-color: var(--color-tr-muted);
-  color: var(--color-tr-muted-foreground);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-muted);
+  color: var(--color-muted-foreground);
   font-size: 0.95rem;
   padding: 1.5rem;
 }
@@ -129,8 +134,8 @@
   flex-direction: column;
   gap: 1.25rem;
   border-radius: 1rem;
-  border: 1px solid var(--color-tr-border);
-  background-color: var(--color-tr-sidebar);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-sidebar);
   padding: 1.75rem;
   box-shadow: 0 18px 36px -28px rgba(12, 25, 43, 0.22);
 }
@@ -142,8 +147,8 @@
   justify-content: space-between;
   gap: 1rem;
   border-radius: 1rem;
-  border: 1px solid var(--color-tr-border);
-  background-color: var(--color-tr-sidebar);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-sidebar);
   padding: 1.25rem 1.5rem;
   box-shadow: 0 18px 36px -28px rgba(12, 25, 43, 0.2);
 }
@@ -176,7 +181,7 @@
 .project-overview__grouping-toggle {
   display: inline-flex;
   border-radius: 999px;
-  background-color: color-mix(in srgb, var(--color-tr-muted) 88%, transparent);
+  background-color: color-mix(in srgb, var(--color-muted) 88%, transparent);
   padding: 0.15rem;
 }
 
@@ -186,8 +191,8 @@
 
 .project-overview__table-wrapper {
   border-radius: 0.9rem;
-  border: 1px solid var(--color-tr-border);
-  background-color: var(--color-tr-muted);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-muted);
   overflow: hidden;
 }
 
@@ -239,13 +244,13 @@
   align-items: center;
   gap: 0.35rem;
   font-weight: 600;
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
   transition: color 0.2s ease;
 }
 
 .project-overview__file-link:hover,
 .project-overview__file-link:focus-visible {
-  color: var(--color-tr-primary-blue);
+  color: var(--color-primary);
 }
 
 .project-overview__file-link--disabled {
@@ -260,8 +265,8 @@
 
 .project-overview__group {
   border-radius: 0.9rem;
-  border: 1px solid var(--color-tr-border);
-  background-color: var(--color-tr-muted);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-muted);
   padding: 1.25rem;
   box-shadow: 0 12px 24px -18px rgba(12, 25, 43, 0.25);
 }
@@ -278,7 +283,7 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
 }
 
 .project-overview__group-list {
@@ -296,13 +301,13 @@
   background-color: transparent;
   border: none;
   text-align: left;
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
   font-weight: 500;
 }
 
 .project-overview__group-link:hover,
 .project-overview__group-link:focus-visible {
-  color: var(--color-tr-primary-blue);
+  color: var(--color-primary);
 }
 
 .project-overview__group-link--disabled {
@@ -329,8 +334,8 @@
   flex-direction: column;
   gap: 1rem;
   border-radius: 1rem;
-  border: 1px solid var(--color-tr-border);
-  background-color: var(--color-tr-sidebar);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-sidebar);
   padding: 1.5rem;
   box-shadow: 0 18px 36px -32px rgba(12, 25, 43, 0.18);
 }
@@ -347,7 +352,7 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
 }
 
 .project-overview__resources-header p {
@@ -358,8 +363,12 @@
 
 .project-overview__analytics {
   border-radius: 1rem;
-  border: 1px solid var(--color-tr-border);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--color-tr-muted) 85%, transparent) 0%, var(--color-tr-anti-primary) 100%);
+  border: 1px solid var(--color-border);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-muted) 85%, transparent) 0%,
+    var(--color-onprimary) 100%
+  );
   padding: 1.75rem;
   box-shadow: 0 20px 40px -34px rgba(12, 25, 43, 0.3);
   display: flex;
@@ -378,20 +387,20 @@
   margin: 0 0 0.25rem;
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
 }
 
 .project-overview__analytics-header p {
   margin: 0;
   font-size: 0.9rem;
-  color: color-mix(in srgb, var(--color-tr-sidebar-foreground) 65%, transparent);
+  color: color-mix(in srgb, var(--color-sidebar-foreground) 65%, transparent);
 }
 
 .project-overview__analytics-updated {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: color-mix(in srgb, var(--color-tr-sidebar-foreground) 55%, transparent);
+  color: color-mix(in srgb, var(--color-sidebar-foreground) 55%, transparent);
 }
 
 .project-overview__analytics-grid {
@@ -407,8 +416,8 @@
 
 .project-overview__analytics-card {
   border-radius: 1rem;
-  border: 1px solid color-mix(in srgb, var(--color-tr-border) 70%, transparent);
-  background-color: color-mix(in srgb, var(--color-tr-sidebar) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  background-color: color-mix(in srgb, var(--color-sidebar) 92%, transparent);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -417,11 +426,19 @@
 }
 
 .project-overview__analytics-card--progress {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--color-tr-accent) 70%, transparent) 0%, var(--color-tr-muted) 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-accent) 70%, transparent) 0%,
+    var(--color-muted) 100%
+  );
 }
 
 .project-overview__analytics-card--warnings {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--color-tr-destructive) 35%, transparent) 0%, color-mix(in srgb, var(--color-tr-sidebar) 90%, transparent) 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-destructive) 35%, transparent) 0%,
+    color-mix(in srgb, var(--color-sidebar) 90%, transparent) 100%
+  );
 }
 
 .project-overview__analytics-card-heading {
@@ -434,11 +451,11 @@
 .project-overview__analytics-card-heading strong {
   font-size: 1.75rem;
   font-weight: 600;
-  color: var(--color-tr-primary-blue);
+  color: var(--color-primary);
 }
 
 .project-overview__analytics-card--warnings .project-overview__analytics-card-heading strong {
-  color: var(--color-tr-destructive-foreground);
+  color: var(--color-destructive-foreground);
 }
 
 .project-overview__analytics-card-title {
@@ -447,7 +464,7 @@
   gap: 0.5rem;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -456,7 +473,7 @@
   position: relative;
   height: 0.75rem;
   border-radius: 999px;
-  background-color: color-mix(in srgb, var(--color-tr-muted) 75%, transparent);
+  background-color: color-mix(in srgb, var(--color-muted) 75%, transparent);
   overflow: hidden;
 }
 
@@ -465,14 +482,14 @@
   inset: 0;
   width: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--color-tr-primary-blue) 0%, var(--color-tr-success) 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-success) 100%);
   transition: width 320ms ease;
 }
 
 .project-overview__analytics-meta {
   margin: 0;
   font-size: 0.9rem;
-  color: color-mix(in srgb, var(--color-tr-sidebar-foreground) 70%, transparent);
+  color: color-mix(in srgb, var(--color-sidebar-foreground) 70%, transparent);
 }
 
 .project-overview__analytics-pills {
@@ -488,18 +505,18 @@
   font-size: 0.75rem;
   padding: 0.35rem 0.65rem;
   border-radius: 999px;
-  background-color: color-mix(in srgb, var(--color-tr-muted) 70%, transparent);
-  color: var(--color-tr-sidebar-foreground);
+  background-color: color-mix(in srgb, var(--color-muted) 70%, transparent);
+  color: var(--color-sidebar-foreground);
   font-weight: 500;
 }
 
 .project-overview__analytics-pill--success {
-  background-color: color-mix(in srgb, var(--color-tr-success) 35%, transparent);
+  background-color: color-mix(in srgb, var(--color-success) 35%, transparent);
 }
 
 .project-overview__analytics-pill--warning {
-  background-color: color-mix(in srgb, var(--color-tr-destructive) 35%, transparent);
-  color: var(--color-tr-destructive-foreground);
+  background-color: color-mix(in srgb, var(--color-destructive) 35%, transparent);
+  color: var(--color-destructive-foreground);
 }
 
 .project-overview__analytics-metrics {
@@ -516,27 +533,27 @@
 }
 
 .project-overview__analytics-metrics dt {
-  color: color-mix(in srgb, var(--color-tr-sidebar-foreground) 70%, transparent);
+  color: color-mix(in srgb, var(--color-sidebar-foreground) 70%, transparent);
 }
 
 .project-overview__analytics-metrics dd {
   margin: 0;
   font-weight: 600;
-  color: var(--color-tr-primary-blue);
+  color: var(--color-primary);
 }
 
 .project-overview__analytics-card--warnings .project-overview__analytics-metrics dd {
-  color: var(--color-tr-destructive-foreground);
+  color: var(--color-destructive-foreground);
 }
 
 .project-overview__analytics-metrics--compact dd {
-  color: color-mix(in srgb, var(--color-tr-sidebar-foreground) 85%, transparent);
+  color: color-mix(in srgb, var(--color-sidebar-foreground) 85%, transparent);
 }
 
 .project-overview__analytics-footnote {
   margin: 0;
   font-size: 0.8rem;
-  color: color-mix(in srgb, var(--color-tr-sidebar-foreground) 60%, transparent);
+  color: color-mix(in srgb, var(--color-sidebar-foreground) 60%, transparent);
 }
 
 .project-overview__analytics-roles {
@@ -544,18 +561,22 @@
   flex-wrap: wrap;
   gap: 0.35rem 0.75rem;
   font-size: 0.78rem;
-  color: color-mix(in srgb, var(--color-tr-sidebar-foreground) 70%, transparent);
+  color: color-mix(in srgb, var(--color-sidebar-foreground) 70%, transparent);
 }
 
 .project-overview__analytics--empty {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--color-tr-muted) 90%, transparent) 0%, var(--color-tr-sidebar) 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-muted) 90%, transparent) 0%,
+    var(--color-sidebar) 100%
+  );
 }
 
 .project-overview__analytics-empty {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  color: color-mix(in srgb, var(--color-tr-sidebar-foreground) 70%, transparent);
+  color: color-mix(in srgb, var(--color-sidebar-foreground) 70%, transparent);
 }
 
 .project-overview__analytics-empty-title {
@@ -579,8 +600,8 @@
   flex-direction: column;
   gap: 0.75rem;
   border-radius: 0.85rem;
-  border: 1px solid var(--color-tr-border);
-  background-color: var(--color-tr-muted);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-muted);
   padding: 1.25rem;
   box-shadow: 0 12px 24px -20px rgba(12, 25, 43, 0.25);
 }
@@ -595,7 +616,7 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
 }
 
 .project-overview__resource-meta {
@@ -622,7 +643,7 @@
 .project-overview__resource-body dd {
   margin: 0.1rem 0 0;
   font-size: 0.9rem;
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
 }
 
 .project-overview__resource-languages {
@@ -642,8 +663,8 @@
 .project-overview__resources-empty {
   padding: 1.5rem;
   border-radius: 0.75rem;
-  border: 1px solid var(--color-tr-border);
-  background-color: var(--color-tr-muted);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-muted);
   color: rgba(37, 47, 64, 0.7);
   font-size: 0.95rem;
   text-align: center;
@@ -686,8 +707,8 @@
   flex-direction: column;
   gap: 1.25rem;
   border-radius: 1rem;
-  border: 1px solid var(--color-tr-border);
-  background-color: var(--color-tr-sidebar);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-sidebar);
   padding: 1.75rem;
   box-shadow: 0 18px 36px -28px rgba(12, 25, 43, 0.22);
 }
@@ -704,7 +725,7 @@
   margin: 0;
   font-size: 1.2rem;
   font-weight: 600;
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
 }
 
 .project-overview__files-header p {
@@ -733,8 +754,8 @@
 
 .project-overview__table-wrapper {
   border-radius: 0.9rem;
-  border: 1px solid var(--color-tr-border);
-  background-color: var(--color-tr-muted);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-muted);
   overflow: hidden;
 }
 

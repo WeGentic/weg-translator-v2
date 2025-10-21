@@ -20,15 +20,15 @@ export function ClientsTable({ table, rows, searchTerm, isLoading = false }: Cli
   const columns = table.getVisibleLeafColumns();
 
   return (
-    <div className="projects-table-main-zone clients-table-main-zone">
+    <div className="clients-table-main-zone">
       <Table aria-label="Clients table" className="table-fixed text-[14px] leading-6 text-foreground">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow
               key={headerGroup.id}
               className={cn(
-                "border-b-2 border-[var(--color-tr-border)]",
-                "bg-gradient-to-r from-[var(--color-tr-muted)]/20 via-[var(--color-tr-muted)]/10 to-transparent",
+                "border-b-2 border-[var(--color-border)]",
+                "bg-gradient-to-r from-[var(--color-muted)]/20 via-[var(--color-muted)]/10 to-transparent",
                 "backdrop-blur-sm",
                 "shadow-sm",
               )}
@@ -38,7 +38,7 @@ export function ClientsTable({ table, rows, searchTerm, isLoading = false }: Cli
                   key={header.id}
                   className={cn(
                     "px-3 py-3 text-[12px] font-semibold normal-case",
-                    "text-[var(--color-tr-primary-blue)]",
+                    "text-[var(--color-primary)]",
                     (header.column.columnDef.meta as ColumnMetaShape | undefined)?.headerClassName,
                   )}
                 >
@@ -61,10 +61,10 @@ export function ClientsTable({ table, rows, searchTerm, isLoading = false }: Cli
                 key={row.id}
                 className={cn(
                   "group border-b transition-all duration-200 table-row-enter filter-transition",
-                  "border-[var(--color-tr-border)]/40",
-                  index % 2 === 0 ? "bg-[var(--color-tr-white)]/50" : "bg-[var(--color-tr-muted)]/15",
-                  "hover:bg-gradient-to-r hover:from-[var(--color-tr-accent)]/8 hover:via-[var(--color-tr-muted)]/15 hover:to-transparent",
-                  "hover:shadow-md hover:shadow-[var(--color-tr-primary-blue)]/5",
+                  "border-[var(--color-border)]/40",
+                  index % 2 === 0 ? "bg-[var(--color-background)]/50" : "bg-[var(--color-muted)]/15",
+                  "hover:bg-gradient-to-r hover:from-[var(--color-accent)]/8 hover:via-[var(--color-muted)]/15 hover:to-transparent",
+                  "hover:shadow-md hover:shadow-[var(--color-primary)]/5",
                   "hover:scale-[1.001] hover:z-10",
                 )}
                 style={{ animationDelay: `${index * 35}ms` }}
@@ -74,7 +74,7 @@ export function ClientsTable({ table, rows, searchTerm, isLoading = false }: Cli
                     key={cell.id}
                     className={cn(
                       "px-3 py-2 text-[12px] font-normal transition-colors duration-200",
-                      "text-[var(--color-tr-navy)]/90",
+                      "text-[var(--color-navy)]/90",
                       (cell.column.columnDef.meta as ColumnMetaShape | undefined)?.cellClassName,
                     )}
                   >
@@ -95,7 +95,7 @@ function ClientsTableEmptyState({ searchTerm }: { searchTerm: string }) {
 
   return (
     <div className="flex flex-col items-center gap-2 transition-all duration-500 ease-in-out">
-      <div className="h-8 w-8 rounded-full bg-[var(--color-tr-muted)]/40 flex items-center justify-center">
+      <div className="h-8 w-8 rounded-full bg-[var(--color-muted)]/40 flex items-center justify-center">
         <svg className="h-4 w-4 text-muted-foreground/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
             strokeLinecap="round"

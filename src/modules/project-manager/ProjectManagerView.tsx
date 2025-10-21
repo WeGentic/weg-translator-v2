@@ -297,7 +297,7 @@ function ProjectsSelectionFooter({
     <div className="flex flex-1 items-center justify-between px-4">
       <div className="flex flex-1 items-center gap-3">
         <div className="flex items-center gap-3">
-          <span className="inline-flex h-8 min-w-[32px] items-center justify-center rounded-full bg-[var(--color-tr-primary-blue)] px-3 text-sm font-semibold text-[var(--color-tr-anti-primary)]">
+          <span className="inline-flex h-8 min-w-[32px] items-center justify-center rounded-full bg-[var(--color-primary)] px-3 text-sm font-semibold text-[var(--color-onprimary)]">
             {selectedProjects.length}
           </span>
           <div className="flex flex-col gap-1">
@@ -321,7 +321,7 @@ function ProjectsSelectionFooter({
           onClick={() => {
             void onDeleteSelection(selectedIds);
           }}
-          className="inline-flex h-8 items-center justify-center rounded-md bg-[var(--color-tr-destructive)] px-3 text-sm font-semibold text-[var(--color-tr-destructive-foreground)] transition-all duration-200 hover:saturate-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-tr-destructive)] focus-visible:ring-offset-2"
+          className="inline-flex h-8 items-center justify-center rounded-md bg-[var(--color-destructive)] px-3 text-sm font-semibold text-[var(--color-destructive-foreground)] transition-all duration-200 hover:saturate-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-destructive)] focus-visible:ring-offset-2"
         >
           Delete
         </button>

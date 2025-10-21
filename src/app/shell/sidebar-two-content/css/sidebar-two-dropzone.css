@@ -20,7 +20,7 @@
   padding: 1rem;
 
   /* Appearance */
-  border: 1px dashed color-mix(in oklch, var(--color-tr-anti-primary) 25%, transparent);
+  border: 1px dashed color-mix(in oklch, var(--color-onprimary) 25%, transparent);
   border-radius: 0.375rem;
   background-color: transparent;
 
@@ -37,16 +37,16 @@
 
 /* Hover State */
 .sidebar-two-dropzone:hover {
-  border-color: color-mix(in oklch, var(--color-tr-anti-primary) 50%, transparent);
-  background-color: color-mix(in oklch, var(--color-tr-secondary) 60%, transparent);
-  color: var(--color-tr-primary);
+  border-color: color-mix(in oklch, var(--color-onprimary) 50%, transparent);
+  background-color: color-mix(in oklch, var(--color-secondary) 60%, transparent);
+  color: var(--color-primary);
 }
 
 /* Active/Dragging Over State */
 .sidebar-two-dropzone--dragging,
 .sidebar-two-dropzone:active {
-  border-color: var(--color-tr-primary);
-  background-color: color-mix(in oklch, var(--color-tr-primary) 5%, transparent);
+  border-color: var(--color-primary);
+  background-color: color-mix(in oklch, var(--color-primary) 5%, transparent);
   border-style: solid;
   transform: scale(1.02);
 }
@@ -61,12 +61,12 @@
 .sidebar-two-dropzone--disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  border-color: color-mix(in oklch, var(--color-tr-anti-primary) 15%, transparent);
+  border-color: color-mix(in oklch, var(--color-onprimary) 15%, transparent);
   background-color: color-mix(in oklch, var(--color-muted) 20%, transparent);
 }
 
 .sidebar-two-dropzone--disabled:hover {
-  border-color: color-mix(in oklch, var(--color-tr-anti-primary) 15%, transparent);
+  border-color: color-mix(in oklch, var(--color-onprimary) 15%, transparent);
   background-color: color-mix(in oklch, var(--color-muted) 20%, transparent);
   transform: none;
 }
@@ -75,18 +75,18 @@
 .sidebar-two-dropzone__icon {
   width: 1.5rem;
   height: 1.5rem;
-  color: color-mix(in oklch, var(--color-tr-anti-primary) 60%, transparent);
+  color: color-mix(in oklch, var(--color-onprimary) 60%, transparent);
   flex-shrink: 0;
   transition: all 0.2s ease-in-out;
 }
 
 .sidebar-two-dropzone:hover .sidebar-two-dropzone__icon {
-  color: var(--color-tr-anti-primary);
+  color: var(--color-onprimary);
   transform: translateY(-2px);
 }
 
 .sidebar-two-dropzone--dragging .sidebar-two-dropzone__icon {
-  color: var(--color-tr-primary);
+  color: var(--color-primary);
   transform: scale(1.1);
 }
 
@@ -94,31 +94,31 @@
 .sidebar-two-dropzone__text {
   font-size: 0.75rem;
   line-height: 1rem;
-  color: color-mix(in oklch, var(--color-tr-anti-primary) 60%, transparent);
+  color: color-mix(in oklch, var(--color-onprimary) 60%, transparent);
   transition: all 0.2s ease-in-out;
 }
 
 .sidebar-two-dropzone__text--primary {
   font-weight: 500;
-  color: var(--color-tr-anti-primary);
+  color: var(--color-onprimary);
 }
 
 /* Hover effect triggered by parent */
 .sidebar-two-dropzone:hover .sidebar-two-dropzone__text--primary {
   font-weight: 700;
-  color: var(--color-tr-primary);
+  color: var(--color-primary);
 }
 
 .sidebar-two-dropzone__text--secondary {
   margin-top: 0.25rem;
   font-weight: 400;
-  color: color-mix(in oklch, var(--color-tr-anti-primary) 50%, transparent);
+  color: color-mix(in oklch, var(--color-onprimary) 50%, transparent);
 }
 
 /* Hover effect triggered by parent */
 .sidebar-two-dropzone:hover .sidebar-two-dropzone__text--secondary {
   font-weight: 700;
-  color: color-mix(in oklch, var(--color-tr-primary) 50%, transparent);
+  color: color-mix(in oklch, var(--color-primary) 50%, transparent);
 }
 
 /* Dropzone with File Count */
@@ -131,8 +131,8 @@
   padding: 0 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
-  background-color: var(--color-tr-primary);
-  color: var(--color-tr-anti-primary);
+  background-color: var(--color-primary);
+  color: var(--color-onprimary);
   border-radius: 9999px;
   margin-top: 0.5rem;
 }
@@ -207,7 +207,7 @@
   width: 100%;
   margin-top: 0.5rem;
   padding-top: 0.5rem;
-  border-top: 1px solid color-mix(in oklch, var(--color-tr-anti-primary) 15%, transparent);
+  border-top: 1px solid color-mix(in oklch, var(--color-onprimary) 15%, transparent);
 }
 
 .sidebar-two-dropzone__preview-item {
@@ -218,14 +218,14 @@
   background-color: color-mix(in oklch, var(--color-white) 10%, transparent);
   border-radius: 0.25rem;
   font-size: 0.75rem;
-  color: var(--color-tr-anti-primary);
+  color: var(--color-onprimary);
 }
 
 .sidebar-two-dropzone__preview-item-icon {
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
-  color: var(--color-tr-primary);
+  color: var(--color-primary);
 }
 
 .sidebar-two-dropzone__preview-item-name {
@@ -240,7 +240,7 @@
   height: 1rem;
   flex-shrink: 0;
   cursor: pointer;
-  color: color-mix(in oklch, var(--color-tr-anti-primary) 50%, transparent);
+  color: color-mix(in oklch, var(--color-onprimary) 50%, transparent);
   transition: color 0.15s ease-in-out;
 }
 
@@ -275,15 +275,15 @@
 /* Dark Mode Adjustments */
 @media (prefers-color-scheme: dark) {
   .sidebar-two-dropzone {
-    border-color: color-mix(in oklch, var(--color-tr-anti-primary) 20%, transparent);
+    border-color: color-mix(in oklch, var(--color-onprimary) 20%, transparent);
   }
 
   .sidebar-two-dropzone:hover {
-    border-color: color-mix(in oklch, var(--color-tr-anti-primary) 40%, transparent);
+    border-color: color-mix(in oklch, var(--color-onprimary) 40%, transparent);
   }
 
   .sidebar-two-dropzone--dragging {
-    background-color: color-mix(in oklch, var(--color-tr-primary) 10%, transparent);
+    background-color: color-mix(in oklch, var(--color-primary) 10%, transparent);
   }
 }
 

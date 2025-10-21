@@ -7,9 +7,9 @@
 .placeholder {
   padding: 2rem 1.5rem;
   border-radius: 0.75rem;
-  border: 1px dashed var(--color-tr-border);
-  background-color: var(--color-tr-muted);
-  color: var(--color-tr-muted-foreground);
+  border: 1px dashed var(--color-border);
+  background-color: var(--color-muted);
+  color: var(--color-muted-foreground);
   text-align: center;
   font-size: 0.95rem;
 }
@@ -17,5 +17,5 @@
 .label {
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--color-tr-primary-blue);
+  color: var(--color-primary);
 }

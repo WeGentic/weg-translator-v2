@@ -1,4 +1,4 @@
-@import "../../../../src/modules/project-manager/css/dropdowns.css";
+@import '../../../../src/modules/project-manager/css/dropdowns.css';
 
 :root {
   --projects-table-header-height: 48px;
@@ -28,18 +28,18 @@
 }
 
 .projects-table-main-zone::-webkit-scrollbar-track {
-  background: var(--color-tr-muted);
+  background: var(--color-muted);
   border-radius: 4px;
 }
 
 .projects-table-main-zone::-webkit-scrollbar-thumb {
-  background: var(--color-tr-primary-blue);
+  background: var(--color-primary);
   border-radius: 4px;
   transition: background 0.2s ease;
 }
 
 .projects-table-main-zone::-webkit-scrollbar-thumb:hover {
-  background: var(--color-tr-accent);
+  background: var(--color-accent);
 }
 
 .projects-table-main-zone tfoot {

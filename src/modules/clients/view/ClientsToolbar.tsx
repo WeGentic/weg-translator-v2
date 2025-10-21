@@ -4,6 +4,7 @@ import { Plus, Search, X } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/tooltip";
+import "@/shared/styles/buttons.css";
 
 export interface ClientsToolbarProps {
   search: string;
@@ -50,7 +51,7 @@ export function ClientsToolbar({
               <button
                 type="button"
                 onClick={handleClearSearch}
-                className="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground/60 transition-all duration-200 hover:bg-[var(--color-tr-muted)]/30 hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--color-tr-ring)] focus-visible:outline-offset-2"
+                className="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground/60 transition-all duration-200 hover:bg-[var(--color-muted)]/30 hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--color-ring)] focus-visible:outline-offset-2"
                 aria-label="Clear search"
               >
                 <X className="h-3 w-3" />
@@ -64,7 +65,7 @@ export function ClientsToolbar({
                 <Button
                   type="button"
                   size="sm"
-                  className="h-9 px-3 font-medium"
+                  className="add-button"
                   onClick={onAddClient}
                   aria-label="Add new client"
                 >

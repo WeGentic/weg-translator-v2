@@ -49,7 +49,7 @@ export function ProjectViewContent({
   onRemoveFile,
   onAddFiles: _onAddFiles,
   isBusy = false,
-  onChangeRole,
+  onChangeRole: _onChangeRole,
   statistics: _statistics = null,
 }: ProjectViewContentProps) {
   const layoutHeadingId = providedHeadingId ?? "ProjectView-heading";
@@ -72,7 +72,6 @@ export function ProjectViewContent({
         onRegenerateFile={onRegenerateFile}
         onRegenerateSelection={onRegenerateFiles}
         onRemoveFile={onRemoveFile}
-        onChangeRole={onChangeRole}
       />
     </section>
   );

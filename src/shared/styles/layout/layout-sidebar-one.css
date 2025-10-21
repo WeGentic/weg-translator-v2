@@ -2,48 +2,20 @@
 @reference "../../../App.css";
 
 .sidebar-one {
-  --sidebar-surface: color-mix(in oklch, var(--color-tr-primary) 84%, var(--card) 16%);
-  --sidebar-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 62%, transparent);
-  --sidebar-shadow: color-mix(in oklch, var(--color-tr-ring) 40%, transparent);
-  --sidebar-border-soft: color-mix(in oklch, var(--border) 70%, transparent);
-  --sidebar-border-strong: color-mix(in oklch, var(--color-tr-anti-primary) 55%, transparent);
-  --sidebar-glass-base: color-mix(in oklch, var(--background) 65%, transparent);
-  --sidebar-glass-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 55%, transparent);
-  --sidebar-glass-shadow: color-mix(in oklch, var(--color-tr-ring) 42%, transparent);
-  --sidebar-glow-soft: color-mix(in oklch, var(--color-tr-accent) 28%, transparent);
-  --sidebar-glow-strong: color-mix(in oklch, var(--color-tr-accent) 52%, var(--color-tr-primary-blue) 18%);
-  --sidebar-ink: var(--foreground);
-  --sidebar-ink-strong: color-mix(in oklch, var(--foreground) 92%, var(--color-tr-anti-primary) 8%);
-  --sidebar-icon-accent: color-mix(in oklch, var(--color-tr-accent) 70%, var(--color-tr-primary-blue) 30%);
-  --sidebar-divider: color-mix(in oklch, var(--border) 50%, transparent);
+  --gradient-sidebar-surface: linear-gradient(
+    to right,
+    var(--color-victorian-peacock-700) 0%,
+    var(--color-victorian-peacock-800) 100%
+  );
 
   display: flex;
   flex-direction: column;
-  background: var(--color-tr-primary-blue);
-  border-right: 0.5px solid color-mix(in oklch, var(--color-tr-muted-foreground) 40%, transparent);
-  box-shadow: 2px 0 18px color-mix(in oklch, var(--sidebar-shadow) 12%, transparent);
+  background: var(--gradient-sidebar-surface);
+  border-right: 0.5px solid color-mix(in oklch, var(--color-victorian-peacock-200) 40%, transparent);
+  box-shadow: 2px 0 18px color-mix(in oklch, var(--color-victorian-peacock-800) 12%, transparent);
   z-index: 40;
   overflow: hidden;
   isolation: isolate;
-}
-
-.dark .sidebar-one {
-  --sidebar-surface: color-mix(in oklch, var(--color-tr-background) 72%, var(--card) 28%);
-  --sidebar-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 48%, transparent);
-  --sidebar-shadow: color-mix(in oklch, var(--color-tr-primary-blue) 50%, transparent);
-  --sidebar-border-soft: color-mix(in oklch, var(--border) 42%, transparent);
-  --sidebar-border-strong: color-mix(in oklch, var(--color-tr-anti-primary) 38%, transparent);
-  --sidebar-glass-base: color-mix(in oklch, var(--color-tr-primary-blue) 45%, transparent);
-  --sidebar-glass-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 48%, transparent);
-  --sidebar-glass-shadow: color-mix(in oklch, var(--color-tr-primary-blue) 55%, transparent);
-  --sidebar-glow-soft: color-mix(in oklch, var(--color-tr-accent) 22%, transparent);
-  --sidebar-glow-strong: color-mix(in oklch, var(--color-tr-accent) 38%, var(--color-tr-primary-blue) 20%);
-  --sidebar-ink: var(--color-tr-anti-primary);
-  --sidebar-ink-strong: color-mix(in oklch, var(--color-tr-anti-primary) 92%, var(--color-tr-antiwhite) 8%);
-  --sidebar-icon-accent: color-mix(in oklch, var(--color-tr-accent) 76%, var(--color-tr-anti-primary) 24%);
-  --sidebar-divider: color-mix(in oklch, var(--border) 28%, transparent);
-
-  box-shadow: 2px 0 20px color-mix(in oklch, var(--sidebar-shadow) 20%, transparent);
 }
 
 .sidebar-one__gradient {
@@ -80,12 +52,12 @@
   width: calc(100% - 1.5rem);
   height: 0.5px;
   margin: 0.5rem 0.75rem;
-  background: color-mix(in oklch, var(--color-tr-muted-foreground) 28%, transparent);
+  background: color-mix(in oklch, var(--color-victorian-peacock-100) 28%, transparent);
   opacity: 0.85;
 }
 
 .dark .sidebar-one__divider-subtle {
-  background: color-mix(in oklch, var(--border) 32%, transparent);
+  background: color-mix(in oklch, var(--color-victorian-peacock-100) 32%, transparent);
   opacity: 0.75;
 }
 
@@ -106,7 +78,7 @@
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--color-tr-anti-primary);
+  color: var(--color-onprimary);
   transition: color 0.2s ease;
 }
 
@@ -132,8 +104,8 @@
   border-radius: 10px;
   background: linear-gradient(
     135deg,
-    color-mix(in oklch, var(--color-tr-accent) 12%, transparent) 0%,
-    color-mix(in oklch, var(--color-tr-accent) 8%, transparent) 100%
+    color-mix(in oklch, var(--color-accent) 12%, transparent) 0%,
+    color-mix(in oklch, var(--color-accent) 8%, transparent) 100%
   );
   backdrop-filter: blur(8px) saturate(1.15);
   -webkit-backdrop-filter: blur(8px) saturate(1.15);
@@ -148,8 +120,8 @@
 .dark .sidebar-one__quick-action-card {
   background: linear-gradient(
     135deg,
-    color-mix(in oklch, var(--color-tr-accent) 10%, transparent) 0%,
-    color-mix(in oklch, var(--color-tr-primary-blue) 12%, transparent) 100%
+    color-mix(in oklch, var(--color-accent) 10%, transparent) 0%,
+    color-mix(in oklch, var(--color-primary) 12%, transparent) 100%
   );
   border: 0.5px solid color-mix(in oklch, var(--sidebar-border-soft) 35%, transparent);
   box-shadow:
@@ -161,8 +133,8 @@
 .sidebar-one__quick-action-card:hover {
   background: linear-gradient(
     135deg,
-    color-mix(in oklch, var(--color-tr-accent) 16%, transparent) 0%,
-    color-mix(in oklch, var(--color-tr-primary-blue) 12%, transparent) 100%
+    color-mix(in oklch, var(--color-accent) 16%, transparent) 0%,
+    color-mix(in oklch, var(--color-primary) 12%, transparent) 100%
   );
   box-shadow:
     0 0 0 0.5px color-mix(in oklch, var(--sidebar-border-strong) 40%, transparent),
@@ -174,8 +146,8 @@
 .dark .sidebar-one__quick-action-card:hover {
   background: linear-gradient(
     135deg,
-    color-mix(in oklch, var(--color-tr-accent) 14%, transparent) 0%,
-    color-mix(in oklch, var(--color-tr-primary-blue) 16%, transparent) 100%
+    color-mix(in oklch, var(--color-accent) 14%, transparent) 0%,
+    color-mix(in oklch, var(--color-primary) 16%, transparent) 100%
   );
 }
 
@@ -203,8 +175,8 @@
   border-radius: 50%;
   background: linear-gradient(
     135deg,
-    color-mix(in oklch, var(--color-tr-secondary) 65%, var(--sidebar-glass-base) 35%) 0%,
-    color-mix(in oklch, var(--color-tr-secondary) 50%, var(--sidebar-glass-highlight) 50%) 100%
+    color-mix(in oklch, var(--color-secondary) 65%, var(--color-orioles-orange-400) 35%) 0%,
+    color-mix(in oklch, var(--color-secondary) 50%, var(--color-orioles-orange-400) 50%) 100%
   );
   backdrop-filter: blur(10px) saturate(1.2);
   -webkit-backdrop-filter: blur(10px) saturate(1.2);
@@ -214,7 +186,11 @@
     0 4px 10px color-mix(in oklch, var(--sidebar-shadow) 18%, transparent),
     inset 0 1px 0 color-mix(in oklch, var(--sidebar-highlight) 38%, transparent);
   color: var(--sidebar-ink);
-  transition: transform 0.28s ease, box-shadow 0.28s ease, color 0.28s ease, background 0.28s ease;
+  transition:
+    transform 0.28s ease,
+    box-shadow 0.28s ease,
+    color 0.28s ease,
+    background 0.28s ease;
 }
 
 .sidebar-one__quick-action-button:hover .sidebar-one__quick-action-button-container {
@@ -222,8 +198,8 @@
   color: var(--sidebar-ink-strong);
   background: linear-gradient(
     135deg,
-    color-mix(in oklch, var(--color-tr-secondary) 72%, var(--sidebar-glass-base) 28%) 0%,
-    color-mix(in oklch, var(--color-tr-secondary) 58%, var(--sidebar-glass-highlight) 42%) 100%
+    color-mix(in oklch, var(--color-secondary) 72%, var(--color-orioles-orange-800) 28%) 0%,
+    color-mix(in oklch, var(--color-secondary) 58%, var(--color-orioles-orange-800) 42%) 100%
   );
   box-shadow:
     0 0 0 0.5px color-mix(in oklch, var(--sidebar-border-soft) 85%, transparent),
@@ -263,49 +239,16 @@
   width: 100%;
 }
 
-.sidebar-one__logo-container {
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.3rem;
-  border-radius: 0.3rem;
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklch, var(--sidebar-glass-base) 78%, transparent) 0%,
-    color-mix(in oklch, var(--sidebar-glass-highlight) 65%, transparent) 100%
-  );
-  backdrop-filter: blur(16px) saturate(1.2);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
-  box-shadow:
-    0 0 0 1px color-mix(in oklch, var(--sidebar-border-soft) 80%, transparent),
-    inset 0 0 0 1px color-mix(in oklch, var(--sidebar-border-strong) 60%, transparent),
-    0 10px 22px color-mix(in oklch, var(--sidebar-shadow) 28%, transparent),
-    inset 0 1px 0 color-mix(in oklch, var(--sidebar-highlight) 58%, transparent);
-  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
-}
-
-.sidebar-one__logo-container:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 0 1px color-mix(in oklch, var(--sidebar-border-soft) 100%, transparent),
-    inset 0 0 0 1px color-mix(in oklch, var(--sidebar-border-strong) 75%, transparent),
-    0 12px 26px color-mix(in oklch, var(--sidebar-shadow) 32%, transparent),
-    inset 0 1px 0 color-mix(in oklch, var(--sidebar-highlight) 70%, transparent),
-    0 0 26px color-mix(in oklch, var(--sidebar-glow-soft) 45%, transparent);
-}
-
 .sidebar-one__logo-divider {
   width: 100%;
   height: 0.5px;
   margin: 0;
   padding: 0;
-  background: color-mix(in oklch, var(--color-tr-muted-foreground) 40%, transparent);
+  background: color-mix(in oklch, var(--color-victorian-peacock-200) 40%, transparent);
 }
 
 .dark .sidebar-one__logo-divider {
-  background: color-mix(in oklch, var(--border) 40%, transparent);
+  background: color-mix(in oklch, var(--color-victorian-peacock-200) 40%, transparent);
 }
 
 .sidebar-one__divider {
@@ -333,12 +276,12 @@
   width: calc(100% - 0.5rem);
   height: 0.5px;
   margin: 0.25rem 0.25rem;
-  background: color-mix(in oklch, var(--color-tr-muted-foreground) 28%, transparent);
+  background: color-mix(in oklch, var(--color-victorian-peacock-200) 40%, transparent);
   opacity: 0.85;
 }
 
 .dark .sidebar-one__nav-divider {
-  background: color-mix(in oklch, var(--border) 32%, transparent);
+  background: color-mix(in oklch, var(--color-victorian-peacock-200) 50%, transparent);
   opacity: 0.75;
 }
 
@@ -378,7 +321,11 @@
     0 6px 12px color-mix(in oklch, var(--sidebar-shadow) 20%, transparent),
     inset 0 1px 0 color-mix(in oklch, var(--sidebar-highlight) 42%, transparent);
   color: var(--sidebar-ink);
-  transition: transform 0.28s ease, box-shadow 0.28s ease, color 0.28s ease, background 0.28s ease;
+  transition:
+    transform 0.28s ease,
+    box-shadow 0.28s ease,
+    color 0.28s ease,
+    background 0.28s ease;
 }
 
 .sidebar-one__button:hover .sidebar-one__button-container {

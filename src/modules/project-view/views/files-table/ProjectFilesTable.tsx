@@ -13,8 +13,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 import { cn } from "@/shared/utils/class-names";
 
-import styles from "./ProjectFilesTable.module.css";
-
 export type ProjectFilesTableProps = {
   files: ProjectFileBundle[];
   filters: AssetFilters;
@@ -25,7 +23,6 @@ export type ProjectFilesTableProps = {
   onRegenerateFile?: (fileUuid: string) => void | Promise<void>;
   onRegenerateSelection?: (fileUuids: string[]) => void | Promise<void>;
   onRemoveFile?: (fileUuid: string) => void;
-  onChangeRole?: (fileUuid: string, nextRole: ProjectFileRoleValue, storedRelPath: string) => void;
 };
 
 type FileRow = {
@@ -49,7 +46,6 @@ export function ProjectFilesTable({
   onRegenerateFile,
   onRegenerateSelection,
   onRemoveFile,
-  onChangeRole: _onChangeRole,
 }: ProjectFilesTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -140,7 +136,7 @@ export function ProjectFilesTable({
   if (grouping === "role") {
     return (
       <section aria-label="Project files grouped by role" className="space-y-2">
-        <h2 className="text-xs font-semibold text-foreground">Project files</h2>
+        <h2 className="pl-2 text-sm font-semibold text-foreground">Project files</h2>
         <GroupedFilesView rows={filteredRows} onOpenFile={onOpenFile} isBusy={isBusy} roleOptions={roleOptions} />
       </section>
     );
@@ -148,10 +144,10 @@ export function ProjectFilesTable({
 
   return (
     <section aria-label="Project files" className="space-y-2">
-      <h2 className={`${styles.label} pl-4 pb-4 text-foreground`}>Project files</h2>
+      <h2 className="pl-2 text-sm font-semibold text-foreground">Project files</h2>
 
       {selectedCount > 0 ? (
-        <div className="flex items-center justify-between rounded border border-border/50 bg-muted/10 px-2 py-1 text-[11px] text-foreground">
+        <div className="flex items-center justify-between rounded border border-border/50 bg-muted/10 px-3 py-1.5 text-[11px] text-foreground">
           <span>
             {selectedCount} file{selectedCount === 1 ? "" : "s"} selected
           </span>
@@ -160,7 +156,7 @@ export function ProjectFilesTable({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-[11px]"
+              className="h-7 px-3 text-[11px]"
               onClick={clearSelection}
             >
               Clear
@@ -169,7 +165,7 @@ export function ProjectFilesTable({
               type="button"
               variant="outline"
               size="sm"
-              className="h-6 px-2 text-[11px]"
+              className="h-7 px-3 text-[11px]"
               onClick={handleBulkRegenerate}
               disabled={!onRegenerateSelection || isBusy}
             >
@@ -183,7 +179,6 @@ export function ProjectFilesTable({
         rows={filteredRows}
         sorting={sorting}
         onSortingChange={setSorting}
-        roleOptions={roleOptions}
         onOpenFile={onOpenFile}
         onRegenerateFile={onRegenerateFile}
         selectedIds={effectiveSelectedIds}
@@ -206,7 +201,6 @@ type PlainTableProps = {
   onOpenFile?: (fileUuid: string) => void;
   onRegenerateFile?: (fileUuid: string) => void | Promise<void>;
   onRemoveFile?: (fileUuid: string) => void;
-  roleOptions: ReadonlyArray<{ value: ProjectFileRoleValue; label: string }>;
   isBusy: boolean;
   selectedIds: Set<string>;
   isAllSelected: boolean;
@@ -223,7 +217,6 @@ function PlainTable({
   onOpenFile,
   onRegenerateFile,
   onRemoveFile,
-  roleOptions,
   isBusy,
   selectedIds,
   isAllSelected,
@@ -242,7 +235,7 @@ function PlainTable({
             checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
             onCheckedChange={(value) => onToggleAll(value !== false)}
             disabled={selectionDisabled || isBusy || rows.length === 0}
-            className="translate-y-[1px]"
+            className="h-3.5 w-3.5 translate-y-[1px] border border-border/40"
           />
         ),
         cell: ({ row }) => {
@@ -253,7 +246,7 @@ function PlainTable({
               checked={isSelected}
               onCheckedChange={(value) => onToggleRow(row.original.id, value === true)}
               disabled={selectionDisabled || isBusy}
-              className="translate-y-[1px]"
+              className="h-3.5 w-3.5 translate-y-[1px] border border-border/40"
             />
           );
         },
@@ -305,40 +298,14 @@ function PlainTable({
           </button>
         ),
         cell: ({ row }) => {
-          const currentRole = row.original.roleValue;
-          const disabled = isBusy || !onChangeRole;
-          return (
-            <Select
-              value={currentRole}
-              disabled={disabled}
-              onValueChange={(value) => {
-                if (!onChangeRole) return;
-                if (value === currentRole) return;
-                onChangeRole(row.original.id, value as ProjectFileRoleValue, row.original.storedRelPath);
-              }}
-            >
-              <SelectTrigger
-                className="w-[150px] justify-between text-[12px]"
-                aria-label={`Change file role for ${row.original.name}`}
-              >
-                <SelectValue placeholder={row.original.roleLabel} />
-              </SelectTrigger>
-              <SelectContent>
-                {roleOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          );
+          return <span className="text-[12px] text-foreground">{row.original.roleLabel}</span>;
         },
       },
       {
         accessorKey: "languages",
         header: () => <span className="text-[12px] font-medium text-foreground normal-case">Language pairs</span>,
         cell: ({ row }) => (
-          <div className="flex flex-wrap gap-x-2 gap-y-[2px] text-[10px] leading-4 text-muted-foreground">
+          <div className="flex flex-col gap-[2px] text-[10px] leading-4 text-muted-foreground">
             {row.original.languages.length > 0 ? (
               row.original.languages.map((lang) => <span key={lang}>{lang}</span>)
             ) : (
@@ -418,7 +385,6 @@ function PlainTable({
       onRemoveFile,
       onToggleAll,
       onToggleRow,
-      roleOptions,
       rows,
       selectedIds,
       selectionDisabled,
@@ -440,13 +406,13 @@ function PlainTable({
   return (
     <div>
       <Table className="w-full border-collapse text-[13px]">
-        <TableHeader className="bg-transparent">
+        <TableHeader className="bg-muted/40">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="border-b border-border/40">
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  className="h-8 px-2 py-1 text-left text-[12px] font-medium text-foreground normal-case tracking-normal"
+                  className="h-11 px-4 py-3 text-left text-[12px] font-semibold text-foreground normal-case tracking-normal"
                 >
                   {header.isPlaceholder
                     ? null
@@ -459,7 +425,7 @@ function PlainTable({
         <TableBody>
           {table.getRowModel().rows.length === 0 ? (
             <TableRow className="border-none">
-              <TableCell colSpan={columns.length} className="px-2 py-2 text-center text-[12px] text-muted-foreground">
+              <TableCell colSpan={columns.length} className="px-4 py-3 text-center text-[12px] text-muted-foreground">
                 No files match the current filters.
               </TableCell>
             </TableRow>
@@ -473,7 +439,7 @@ function PlainTable({
                 )}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="px-2 py-1 align-middle text-[12px] text-foreground">
+                  <TableCell key={cell.id} className="px-4 py-3 align-middle text-left text-[12px] text-foreground">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
@@ -526,7 +492,7 @@ function GroupedFilesView({ rows, onOpenFile, isBusy, roleOptions }: GroupedFile
                 >
                   <div className="flex flex-col">
                     <span className="font-medium">{entry.name}</span>
-                    <div className="flex flex-wrap gap-x-2 gap-y-[2px] text-[10px] text-muted-foreground">
+                    <div className="flex flex-col gap-[2px] text-[10px] text-muted-foreground">
                       {entry.languages.length > 0 ? entry.languages.map((lang) => <span key={lang}>{lang}</span>) : <span>—</span>}
                     </div>
                   </div>

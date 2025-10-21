@@ -15,7 +15,8 @@
 }
 
 @keyframes gradient-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -33,7 +34,6 @@
     transform: rotate(360deg);
   }
 }
-
 
 /* Enhanced table animations for smooth interactions */
 @keyframes fadeInUp {
@@ -70,7 +70,8 @@
 }
 
 @keyframes pulse-subtle {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -164,27 +165,27 @@
 
   /* Direct color utilities */
   .bg-cream {
-    background-color: var(--color-tr-white);
+    background-color: var(--color-background);
   }
 
   .bg-cream-dark {
-    background-color: var(--color-tr-anti-primary);
+    background-color: var(--color-onprimary);
   }
 
   .bg-deep-blue {
-    background-color: var(--color-tr-primary-blue);
+    background-color: var(--color-primary);
   }
 
   .bg-blue-light {
-    background-color: var(--color-tr-secondary);
+    background-color: var(--color-secondary);
   }
 
   .bg-orange {
-    background-color: var(--color-tr-accent);
+    background-color: var(--color-accent);
   }
 
   .bg-navy {
-    background-color: var(--color-tr-navy);
+    background-color: var(--color-navy);
   }
 
   .bg-tr-background {
@@ -221,19 +222,19 @@
 
   /* Text color utilities */
   .text-cream {
-    color: var(--color-tr-white);
+    color: var(--color-background);
   }
 
   .text-deep-blue {
-    color: var(--color-tr-primary-blue);
+    color: var(--color-primary);
   }
 
   .text-orange {
-    color: var(--color-tr-accent);
+    color: var(--color-accent);
   }
 
   .text-navy {
-    color: var(--color-tr-navy);
+    color: var(--color-navy);
   }
 
   .text-tr-foreground {
@@ -278,15 +279,15 @@
 
   /* Border color utilities */
   .border-cream-dark {
-    border-color: var(--color-tr-anti-primary);
+    border-color: var(--color-onprimary);
   }
 
   .border-deep-blue {
-    border-color: var(--color-tr-primary-blue);
+    border-color: var(--color-primary);
   }
 
   .border-orange {
-    border-color: var(--color-tr-accent);
+    border-color: var(--color-accent);
   }
 
   .border-tr-default {
@@ -371,7 +372,7 @@
     /* Thin 1px divider line */
     width: 1px;
     /* Use theme's border color variable for consistency */
-    background: var(--color-tr-border);
+    background: var(--color-border);
     /* Subtle opacity for non-intrusive visual separation */
     opacity: 0.3;
     /* Smooth transition when opacity changes */

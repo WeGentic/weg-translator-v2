@@ -24,7 +24,7 @@ type TableSectionProps<TElement extends keyof ElementTypeMap> = ComponentPropsWi
 };
 
 function TableHeader({ className, ref, ...props }: TableSectionProps<"thead">) {
-  return <thead ref={ref} className={cn("bg-muted/70", className)} {...props} />;
+  return <thead ref={ref} className={cn("bg-blend-color/70", className)} {...props} />;
 }
 TableHeader.displayName = "TableHeader";
 

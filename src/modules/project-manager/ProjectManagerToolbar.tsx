@@ -83,7 +83,7 @@ export function ProjectManagerToolbar({
               <button
                 type="button"
                 onClick={handleClearSearch}
-                className="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground/60 transition-all duration-200 hover:text-foreground hover:bg-[var(--color-tr-muted)]/30 focus-visible:outline-2 focus-visible:outline-[var(--color-tr-ring)] focus-visible:outline-offset-2"
+                className="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground/60 transition-all duration-200 hover:text-foreground hover:bg-[var(--color-muted)]/30 focus-visible:outline-2 focus-visible:outline-[var(--color-ring)] focus-visible:outline-offset-2"
                 aria-label="Clear search"
               >
                 <X className="h-3 w-3" />
@@ -104,31 +104,31 @@ export function ProjectManagerToolbar({
                 <SelectContent className="backdrop-blur-md">
                   <SelectItem
                     value="all"
-                    className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold"
+                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
                   >
                     All Status
                   </SelectItem>
                   <SelectItem
                     value="pending"
-                    className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold"
+                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
                   >
                     Pending
                   </SelectItem>
                   <SelectItem
                     value="running"
-                    className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold"
+                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
                   >
                     Running
                   </SelectItem>
                   <SelectItem
                     value="completed"
-                    className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold"
+                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
                   >
                     Completed
                   </SelectItem>
                   <SelectItem
                     value="failed"
-                    className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold"
+                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
                   >
                     Failed
                   </SelectItem>
@@ -145,19 +145,19 @@ export function ProjectManagerToolbar({
                 <SelectContent className="backdrop-blur-md">
                   <SelectItem
                     value="all"
-                    className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold"
+                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
                   >
                     All Types
                   </SelectItem>
                   <SelectItem
                     value="translation"
-                    className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold"
+                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
                   >
                     Translation
                   </SelectItem>
                   <SelectItem
                     value="rag"
-                    className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold"
+                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
                   >
                     RAG
                   </SelectItem>
@@ -174,25 +174,25 @@ export function ProjectManagerToolbar({
                 <SelectContent className="backdrop-blur-md">
                   <SelectItem
                     value="any"
-                    className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold"
+                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
                   >
                     Any time
                   </SelectItem>
                   <SelectItem
                     value="24h"
-                    className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold"
+                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
                   >
                     Last 24h
                   </SelectItem>
                   <SelectItem
                     value="7d"
-                    className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold"
+                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
                   >
                     Last 7d
                   </SelectItem>
                   <SelectItem
                     value="30d"
-                    className="data-[highlighted]:bg-[var(--color-tr-primary-blue)] data-[highlighted]:text-[var(--color-tr-anti-primary)] data-[state=checked]:bg-[var(--color-tr-secondary)] data-[state=checked]:text-[var(--color-tr-navy)] data-[state=checked]:font-semibold"
+                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
                   >
                     Last 30d
                   </SelectItem>

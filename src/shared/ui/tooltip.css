@@ -7,7 +7,7 @@
   overflow: hidden;
 
   /* Light mode: Rich semi-transparent dark background */
-  background: color-mix(in oklch, var(--color-tr-navy) 85%, transparent 15%);
+  background: color-mix(in oklch, var(--color-navy) 85%, transparent 15%);
 
   /* Enhanced liquid glass blur effect */
   backdrop-filter: blur(20px) saturate(180%);
@@ -15,12 +15,12 @@
 
   /* Liquid glass depth with inner glow */
   box-shadow:
-    0 8px 32px color-mix(in oklch, var(--color-tr-navy) 28%, transparent),
-    0 2px 8px color-mix(in oklch, var(--color-tr-navy) 16%, transparent),
-    inset 0 4px 20px color-mix(in oklch, var(--color-tr-white) 25%, transparent);
+    0 8px 32px color-mix(in oklch, var(--color-navy) 28%, transparent),
+    0 2px 8px color-mix(in oklch, var(--color-navy) 16%, transparent),
+    inset 0 4px 20px color-mix(in oklch, var(--color-background) 25%, transparent);
 
   /* Crisp white text on dark background */
-  color: var(--color-tr-white);
+  color: var(--color-background);
 
   /* Very subtle rounding - seamless look */
   border-radius: 4px;
@@ -41,15 +41,15 @@
   /* Subtle liquid glass overlay */
   background: linear-gradient(
     135deg,
-    color-mix(in oklch, var(--color-tr-white) 12%, transparent) 0%,
+    color-mix(in oklch, var(--color-background) 12%, transparent) 0%,
     transparent 50%,
-    color-mix(in oklch, var(--color-tr-white) 8%, transparent) 100%
+    color-mix(in oklch, var(--color-background) 8%, transparent) 100%
   );
 
   /* Liquid glass specular highlights */
   box-shadow:
-    inset -6px -4px 0px -7px color-mix(in oklch, var(--color-tr-white) 85%, transparent),
-    inset 0px -5px 0px -4px color-mix(in oklch, var(--color-tr-white) 75%, transparent);
+    inset -6px -4px 0px -7px color-mix(in oklch, var(--color-background) 85%, transparent),
+    inset 0px -5px 0px -4px color-mix(in oklch, var(--color-background) 75%, transparent);
 
   opacity: 0.5;
   z-index: -1;
@@ -65,9 +65,9 @@
   -webkit-backdrop-filter: blur(22px) saturate(190%);
 
   box-shadow:
-    0 10px 36px color-mix(in oklch, var(--color-tr-navy) 32%, transparent),
-    0 3px 10px color-mix(in oklch, var(--color-tr-navy) 20%, transparent),
-    inset 0 4px 22px color-mix(in oklch, var(--color-tr-white) 28%, transparent);
+    0 10px 36px color-mix(in oklch, var(--color-navy) 32%, transparent),
+    0 3px 10px color-mix(in oklch, var(--color-navy) 20%, transparent),
+    inset 0 4px 22px color-mix(in oklch, var(--color-background) 28%, transparent);
 }
 
 .tooltip-glass-content:hover::after {
@@ -77,37 +77,37 @@
 
 /* Dark mode: Lighter liquid glass tooltip */
 .dark .tooltip-glass-content {
-  background: color-mix(in oklch, var(--color-tr-anti-primary) 88%, transparent 12%);
+  background: color-mix(in oklch, var(--color-onprimary) 88%, transparent 12%);
 
   box-shadow:
-    0 8px 32px color-mix(in oklch, var(--color-tr-anti-primary) 32%, transparent),
-    0 2px 8px color-mix(in oklch, var(--color-tr-anti-primary) 18%, transparent),
-    inset 0 4px 20px color-mix(in oklch, var(--color-tr-white) 28%, transparent);
+    0 8px 32px color-mix(in oklch, var(--color-onprimary) 32%, transparent),
+    0 2px 8px color-mix(in oklch, var(--color-onprimary) 18%, transparent),
+    inset 0 4px 20px color-mix(in oklch, var(--color-background) 28%, transparent);
 
   /* Dark text on light background */
-  color: var(--color-tr-navy);
+  color: var(--color-navy);
 }
 
 .dark .tooltip-glass-content::after {
   background: linear-gradient(
     135deg,
-    color-mix(in oklch, var(--color-tr-white) 18%, transparent) 0%,
+    color-mix(in oklch, var(--color-background) 18%, transparent) 0%,
     transparent 50%,
-    color-mix(in oklch, var(--color-tr-white) 12%, transparent) 100%
+    color-mix(in oklch, var(--color-background) 12%, transparent) 100%
   );
 
   box-shadow:
-    inset -6px -4px 0px -7px color-mix(in oklch, var(--color-tr-white) 90%, transparent),
-    inset 0px -5px 0px -4px color-mix(in oklch, var(--color-tr-white) 82%, transparent);
+    inset -6px -4px 0px -7px color-mix(in oklch, var(--color-background) 90%, transparent),
+    inset 0px -5px 0px -4px color-mix(in oklch, var(--color-background) 82%, transparent);
 
   opacity: 0.55;
 }
 
 .dark .tooltip-glass-content:hover {
   box-shadow:
-    0 10px 36px color-mix(in oklch, var(--color-tr-anti-primary) 36%, transparent),
-    0 3px 10px color-mix(in oklch, var(--color-tr-anti-primary) 22%, transparent),
-    inset 0 4px 22px color-mix(in oklch, var(--color-tr-white) 32%, transparent);
+    0 10px 36px color-mix(in oklch, var(--color-onprimary) 36%, transparent),
+    0 3px 10px color-mix(in oklch, var(--color-onprimary) 22%, transparent),
+    inset 0 4px 22px color-mix(in oklch, var(--color-background) 32%, transparent);
 }
 
 .dark .tooltip-glass-content:hover::after {
@@ -117,11 +117,11 @@
 /* Fallback for browsers without backdrop-filter support */
 @supports not (backdrop-filter: blur(20px)) {
   .tooltip-glass-content {
-    background: color-mix(in oklch, var(--color-tr-navy) 92%, transparent 8%);
+    background: color-mix(in oklch, var(--color-navy) 92%, transparent 8%);
   }
 
   .dark .tooltip-glass-content {
-    background: color-mix(in oklch, var(--color-tr-anti-primary) 92%, transparent 8%);
+    background: color-mix(in oklch, var(--color-onprimary) 92%, transparent 8%);
   }
 
   .tooltip-glass-content::after {
@@ -133,12 +133,12 @@
 @media (prefers-reduced-motion: reduce) {
   .tooltip-glass-content {
     backdrop-filter: none;
-    background: color-mix(in oklch, var(--color-tr-navy) 92%, transparent 8%);
+    background: color-mix(in oklch, var(--color-navy) 92%, transparent 8%);
     transition: none;
   }
 
   .dark .tooltip-glass-content {
-    background: color-mix(in oklch, var(--color-tr-anti-primary) 92%, transparent 8%);
+    background: color-mix(in oklch, var(--color-onprimary) 92%, transparent 8%);
   }
 
   .tooltip-glass-content::after {

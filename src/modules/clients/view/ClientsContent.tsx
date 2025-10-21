@@ -82,7 +82,7 @@ export function ClientsContent({
                 <button
                   type="button"
                   onClick={onRetry}
-                  className="ml-3 inline-flex items-center text-sm font-medium text-[var(--color-tr-primary-blue)] underline-offset-2 hover:underline"
+                  className="ml-3 inline-flex items-center text-sm font-medium text-[var(--color-primary)] underline-offset-2 hover:underline"
                 >
                   Try again
                 </button>

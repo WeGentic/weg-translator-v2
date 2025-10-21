@@ -14,16 +14,17 @@
     overflow: visible;
   }
 
+  /* Main Background */
   .layout-shell__background {
     position: absolute;
     inset: 0;
     pointer-events: none;
     z-index: -10;
+    background-color: var(--color-victorian-peacock-950);
   }
 
   .layout-shell__background-fallback {
     height: 100%;
     width: 100%;
-    background-color: #0f0f0f;
   }
 }

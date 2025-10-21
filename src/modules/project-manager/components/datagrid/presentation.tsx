@@ -24,10 +24,10 @@ export function StatusBadge({ tone, label }: StatusPresentation) {
 
   const styles =
     tone === "destructive"
-      ? "border border-[var(--color-tr-destructive)]/30 bg-[var(--color-tr-destructive)]/10 text-[var(--color-tr-destructive)] hover:bg-[var(--color-tr-destructive)]/20 hover:border-[var(--color-tr-destructive)]/50 hover:scale-105"
+      ? "border border-[var(--color-destructive)]/30 bg-[var(--color-destructive)]/10 text-[var(--color-destructive)] hover:bg-[var(--color-destructive)]/20 hover:border-[var(--color-destructive)]/50 hover:scale-105"
       : tone === "muted"
-      ? "border border-[var(--color-tr-muted)]/30 bg-[var(--color-tr-muted)]/10 text-[var(--color-tr-muted-foreground)] hover:bg-[var(--color-tr-muted)]/20 hover:border-[var(--color-tr-muted)]/50 hover:scale-105"
-      : "border border-[var(--color-tr-primary-blue)]/30 bg-[var(--color-tr-primary-blue)]/10 text-[var(--color-tr-primary-blue)] hover:bg-[var(--color-tr-primary-blue)]/20 hover:border-[var(--color-tr-primary-blue)]/50 hover:scale-105";
+      ? "border border-[var(--color-muted)]/30 bg-[var(--color-muted)]/10 text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]/20 hover:border-[var(--color-muted)]/50 hover:scale-105"
+      : "border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/50 hover:scale-105";
 
   return (
     <span className={`${base} ${styles} relative overflow-hidden`}>

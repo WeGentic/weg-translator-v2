@@ -21,12 +21,12 @@
   width: min(34rem, 100%);
   padding: clamp(2.25rem, 4vw, 3rem) clamp(2rem, 4vw, 3.25rem);
   border-radius: 24px;
-  border: 1px solid color-mix(in oklch, var(--color-tr-border) 65%, transparent);
-  background: color-mix(in oklch, var(--color-tr-anti-primary) 35%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-border) 65%, transparent);
+  background: color-mix(in oklch, var(--color-onprimary) 35%, transparent);
   backdrop-filter: blur(14px);
   box-shadow:
-    0 20px 40px color-mix(in oklch, var(--color-tr-primary-blue) 18%, transparent),
-    0 1px 0 color-mix(in oklch, var(--color-tr-white) 35%, transparent);
+    0 20px 40px color-mix(in oklch, var(--color-primary) 18%, transparent),
+    0 1px 0 color-mix(in oklch, var(--color-background) 35%, transparent);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -35,14 +35,14 @@
 }
 
 .empty-projects-state__content::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 1px;
   border-radius: 22px;
   background: linear-gradient(
     150deg,
-    color-mix(in oklch, var(--color-tr-white) 8%, transparent) 0%,
-    color-mix(in oklch, var(--color-tr-accent) 12%, transparent) 45%,
+    color-mix(in oklch, var(--color-background) 8%, transparent) 0%,
+    color-mix(in oklch, var(--color-accent) 12%, transparent) 45%,
     transparent 100%
   );
   pointer-events: none;
@@ -63,7 +63,7 @@
   border-radius: 999px;
   background: radial-gradient(
     circle at 50% 40%,
-    color-mix(in oklch, var(--color-tr-accent) 24%, transparent) 0%,
+    color-mix(in oklch, var(--color-accent) 24%, transparent) 0%,
     transparent 70%
   );
   filter: blur(24px);
@@ -78,21 +78,21 @@
   width: 5rem;
   height: 5rem;
   border-radius: 999px;
-  border: 1px solid color-mix(in oklch, var(--color-tr-border) 75%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-border) 75%, transparent);
   background: linear-gradient(
     160deg,
-    color-mix(in oklch, var(--color-tr-white) 54%, transparent) 0%,
-    color-mix(in oklch, var(--color-tr-muted) 62%, transparent) 100%
+    color-mix(in oklch, var(--color-background) 54%, transparent) 0%,
+    color-mix(in oklch, var(--color-muted) 62%, transparent) 100%
   );
   box-shadow:
-    inset 0 1px 0 color-mix(in oklch, var(--color-tr-white) 45%, transparent),
-    0 12px 24px color-mix(in oklch, var(--color-tr-primary-blue) 12%, transparent);
+    inset 0 1px 0 color-mix(in oklch, var(--color-background) 45%, transparent),
+    0 12px 24px color-mix(in oklch, var(--color-primary) 12%, transparent);
 }
 
 .empty-projects-state__icon {
   width: 2rem;
   height: 2rem;
-  color: color-mix(in oklch, var(--color-tr-primary-blue) 58%, var(--color-tr-navy) 42%);
+  color: color-mix(in oklch, var(--color-primary) 58%, var(--color-navy) 42%);
 }
 
 .empty-projects-state__text {
@@ -100,7 +100,7 @@
   flex-direction: column;
   gap: 0.75rem;
   max-width: 28rem;
-  color: var(--color-foreground, var(--color-tr-sidebar-foreground));
+  color: var(--color-foreground, var(--color-sidebar-foreground));
   position: relative;
   z-index: 1;
 }
@@ -108,7 +108,7 @@
 .empty-projects-state__heading {
   font-size: clamp(1.35rem, 2.6vw, 1.75rem);
   font-weight: 600;
-  color: var(--color-tr-navy);
+  color: var(--color-navy);
   letter-spacing: -0.01em;
   margin: 0;
 }
@@ -117,26 +117,29 @@
   margin: 0;
   font-size: clamp(0.95rem, 2.2vw, 1.05rem);
   line-height: 1.6;
-  color: color-mix(in oklch, var(--color-tr-muted-foreground) 86%, var(--color-tr-navy) 14%);
+  color: color-mix(in oklch, var(--color-muted-foreground) 86%, var(--color-navy) 14%);
 }
 
 .empty-projects-state__cta {
   position: relative;
   z-index: 1;
   padding-inline: clamp(1.5rem, 4vw, 2.5rem);
-  box-shadow: 0 16px 32px color-mix(in oklch, var(--color-tr-primary-blue) 25%, transparent);
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  box-shadow: 0 16px 32px color-mix(in oklch, var(--color-primary) 25%, transparent);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .empty-projects-state__cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 20px 36px color-mix(in oklch, var(--color-tr-primary-blue) 32%, transparent);
+  box-shadow: 0 20px 36px color-mix(in oklch, var(--color-primary) 32%, transparent);
 }
 
 .empty-projects-state__cta:focus-visible {
   transform: translateY(-1px);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-tr-ring) 18%, transparent),
-    0 18px 34px color-mix(in oklch, var(--color-tr-primary-blue) 28%, transparent);
+  box-shadow:
+    0 0 0 3px color-mix(in oklch, var(--color-ring) 18%, transparent),
+    0 18px 34px color-mix(in oklch, var(--color-primary) 28%, transparent);
 }
 
 .empty-projects-state__cta-icon {

@@ -11,9 +11,9 @@
   gap: 0.55rem;
   padding: 0.5rem 0.65rem;
   border-radius: 0.75rem;
-  border: 1px solid color-mix(in oklch, var(--color-tr-border) 65%, transparent);
-  background: color-mix(in oklch, var(--color-tr-accent) 40%, var(--color-tr-muted));
-  color: var(--color-tr-primary-blue);
+  border: 1px solid color-mix(in oklch, var(--color-border) 65%, transparent);
+  background: color-mix(in oklch, var(--color-accent) 40%, var(--color-muted));
+  color: var(--color-primary);
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -31,16 +31,16 @@
 }
 
 .sidebar-two-focused-project__main--interactive:hover {
-  background: color-mix(in oklch, var(--color-tr-accent) 60%, transparent);
-  border-color: color-mix(in oklch, var(--color-tr-border) 80%, transparent);
-  color: var(--color-tr-anti-primary);
+  background: color-mix(in oklch, var(--color-accent) 60%, transparent);
+  border-color: color-mix(in oklch, var(--color-border) 80%, transparent);
+  color: var(--color-onprimary);
   box-shadow:
     0 4px 10px -6px rgb(30 45 80 / 0.45),
-    inset 0 1px 0 0 color-mix(in oklch, var(--color-tr-white) 85%, transparent);
+    inset 0 1px 0 0 color-mix(in oklch, var(--color-background) 85%, transparent);
 }
 
 .sidebar-two-focused-project__main:focus-visible {
-  outline: 2px solid var(--color-tr-ring);
+  outline: 2px solid var(--color-ring);
   outline-offset: 2px;
 }
 
@@ -53,8 +53,8 @@
   border-radius: 999px;
   background: linear-gradient(
     180deg,
-    color-mix(in oklch, var(--color-tr-accent) 85%, transparent) 0%,
-    color-mix(in oklch, var(--color-tr-primary-blue) 70%, transparent) 100%
+    color-mix(in oklch, var(--color-accent) 85%, transparent) 0%,
+    color-mix(in oklch, var(--color-primary) 70%, transparent) 100%
   );
 }
 
@@ -65,8 +65,8 @@
   width: 22px;
   height: 22px;
   border-radius: 999px;
-  background: color-mix(in oklch, var(--color-tr-secondary) 50%, transparent);
-  color: color-mix(in oklch, var(--color-tr-primary-blue) 90%, black 10%);
+  background: color-mix(in oklch, var(--color-secondary) 50%, transparent);
+  color: color-mix(in oklch, var(--color-primary) 90%, black 10%);
   font-size: 0.65rem;
   font-weight: 700;
   flex-shrink: 0;

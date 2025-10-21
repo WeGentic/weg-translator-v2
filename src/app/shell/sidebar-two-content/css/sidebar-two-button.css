@@ -20,13 +20,13 @@
   font-weight: 500;
   line-height: 1.25rem;
   text-align: left;
-  color: var(--color-tr-primary);
+  color: var(--color-victorian-peacock-50);
   white-space: nowrap;
 
   /* Appearance */
   border-radius: 0.5rem;
   border: 1px solid transparent;
-  background-color: color-mix(in oklch, var(--color-tr-anti-primary) 50%, transparent);
+  background-color: color-mix(in oklch, var(--color-victorian-peacock-600) 50%, transparent);
 
   /* Transitions */
   transition: all 0.15s ease-in-out;
@@ -47,8 +47,8 @@
 
 /* Hover State */
 .sidebar-two-button:not(:disabled):not(.sidebar-two-button--inactive):hover {
-  background-color: color-mix(in oklch, var(--color-tr-secondary) 50%, transparent);
-  color: var(--color-tr-anti-primary);
+  background-color: color-mix(in oklch, var(--color-secondary) 50%, transparent);
+  color: var(--color-onprimary);
   box-shadow:
     0 4px 6px -1px rgb(0 0 0 / 0.1),
     0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -59,8 +59,8 @@
 .sidebar-two-button:not(:disabled):not(.sidebar-two-button--inactive):active,
 .sidebar-two-button--clicked:not(:disabled):not(.sidebar-two-button--inactive),
 .sidebar-two-button--active:not(:disabled):not(.sidebar-two-button--inactive) {
-  background-color: color-mix(in oklch, var(--color-tr-secondary) 80%, transparent);
-  color: var(--color-tr-anti-secondary);
+  background-color: color-mix(in oklch, var(--color-secondary) 80%, transparent);
+  color: var(--color-onSecondary);
   box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.1);
   transform: translateY(0);
 }
@@ -181,7 +181,7 @@
   }
 }
 .sidebar-two-button--active:not(:disabled):not(.sidebar-two-button--inactive):hover {
-  background-color: color-mix(in oklch, var(--color-tr-secondary) 85%, transparent);
+  background-color: color-mix(in oklch, var(--color-secondary) 85%, transparent);
 }
 
 .sidebar-two-button--active:not(:disabled):not(.sidebar-two-button--inactive):focus-visible {

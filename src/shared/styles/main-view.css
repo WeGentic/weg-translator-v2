@@ -1,19 +1,17 @@
 :root {
   /* View Layout Dimensions */
-    --projects-table-header-height: 48px;
-    --projects-table-toolbar-height: 56px;
-    --dashboard-header-height: 48px;
-    --dashboard-toolbar-height: 56px;
-    --editor-header-height: 48px;
-    --editor-toolbar-height: 56px;
-    --resources-header-height: 48px;
-    --resources-toolbar-height: 56px;
-    --settings-header-height: 48px;
-    --settings-toolbar-height: 56px;
-    --projectmanager-header-height: 48px;
-    --projectmanager-toolbar-height: 56px;
-
-
+  --projects-table-header-height: 48px;
+  --projects-table-toolbar-height: 56px;
+  --dashboard-header-height: 48px;
+  --dashboard-toolbar-height: 56px;
+  --editor-header-height: 48px;
+  --editor-toolbar-height: 56px;
+  --resources-header-height: 48px;
+  --resources-toolbar-height: 56px;
+  --settings-header-height: 48px;
+  --settings-toolbar-height: 56px;
+  --projectmanager-header-height: 48px;
+  --projectmanager-toolbar-height: 56px;
 
   /* Spacing and Padding */
   --projects-table-header-padding: 0.75rem;
@@ -35,9 +33,9 @@
   border-top-width: 1px;
   border-left-width: 1px;
   border-bottom-width: 1px;
-  border-color: var(--border);
-  background-color: var(--popover);
-  box-shadow: var(--shadow-sm);
+  border-color: var(--color-primary);
+  background-color: var(--color-writers-parchment-100);
+  box-shadow: var(--color-onBackground);
 }
 
 .dashboard-header-zone {
@@ -59,7 +57,7 @@
   padding-left: 1rem;
   padding-right: 1rem;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(to right, var(--background)/98%, var(--background)/95%);
+  background: linear-gradient(to right, var(--background) / 98%, var(--background) / 95%);
   backdrop-blur: blur(10px);
   box-shadow: var(--shadow-sm);
   position: sticky;
@@ -86,7 +84,7 @@
   padding-left: 1rem;
   padding-right: 1rem;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(to right, var(--background)/98%, var(--background)/95%);
+  background: linear-gradient(to right, var(--background) / 98%, var(--background) / 95%);
   backdrop-blur: blur(10px);
   box-shadow: var(--shadow-sm);
   position: sticky;
@@ -113,7 +111,7 @@
   padding-left: 1rem;
   padding-right: 1rem;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(to right, var(--background)/98%, var(--background)/95%);
+  background: linear-gradient(to right, var(--background) / 98%, var(--background) / 95%);
   backdrop-blur: blur(10px);
   box-shadow: var(--shadow-sm);
   position: sticky;

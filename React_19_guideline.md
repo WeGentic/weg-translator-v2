@@ -25,7 +25,7 @@
 ## UI & Accessibility Standards
 - Build UI on ShadCN primitives + TanStack integrations using centralized configuration (columns, cell actions) to prevent drift across shells, sidebars, and toolbars.
 - Ensure interactive elements include appropriate ARIA roles/labels (`role="toolbar"`, `aria-live` summaries, focusable batch actions) and respect keyboard activation patterns.
-- Use palette CSS variables (`--color-tr-*`) via Tailwind utilities to guarantee theming parity between legacy and v2 surfaces.
+- Use palette CSS variables (`--color-*`) via Tailwind utilities to guarantee theming parity between legacy and v2 surfaces.
 
 ## Testing & Observability
 - Pair new hooks with Vitest coverage that exercises success, failure, optimistic rollback, and Suspense fallback scenarios using deterministic mocks.

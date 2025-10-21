@@ -98,7 +98,7 @@ export function LayoutSidebarOne({
       <div className="sidebar-one__logo" aria-label="Application logo">
         <div className="logo-container">
           <img
-            src="/src/assets/Logo_V5.webp"
+            src="/src/assets/LOGO-SVG.svg"
             alt="Tr-entic"
             width="28"
             height="28"

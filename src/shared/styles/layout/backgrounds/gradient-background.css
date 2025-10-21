@@ -8,20 +8,20 @@
     background-color: color-mix(in oklch, var(--background) 85%, var(--card) 15%);
 
     --tr-gradient-surface-base: color-mix(in oklch, var(--background) 70%, var(--card) 30%);
-    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-secondary) 24%, transparent);
-    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-accent) 22%, transparent);
-    --tr-gradient-emphasis-3: color-mix(in oklch, var(--color-tr-primary-blue) 18%, transparent);
-    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-tr-success) 16%, transparent);
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-secondary) 24%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-accent) 22%, transparent);
+    --tr-gradient-emphasis-3: color-mix(in oklch, var(--color-primary) 18%, transparent);
+    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-success) 16%, transparent);
 
     --tr-glass-bg: color-mix(in oklch, var(--background) 55%, transparent);
     --tr-glass-border: color-mix(in oklch, var(--border) 65%, transparent);
-    --tr-glass-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 55%, transparent);
-    --tr-glass-shadow: color-mix(in oklch, var(--color-tr-ring) 42%, transparent);
-    --tr-glass-glow: color-mix(in oklch, var(--color-tr-accent) 28%, transparent);
+    --tr-glass-highlight: color-mix(in oklch, var(--color-onprimary) 55%, transparent);
+    --tr-glass-shadow: color-mix(in oklch, var(--color-ring) 42%, transparent);
+    --tr-glass-glow: color-mix(in oklch, var(--color-accent) 28%, transparent);
   }
 
   .gradient-background::before {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
@@ -33,7 +33,8 @@
       radial-gradient(140% 120% at 65% 80%, var(--tr-gradient-emphasis-4) 0%, transparent 70%),
       linear-gradient(
         135deg,
-        color-mix(in oklch, var(--tr-gradient-surface-base) 82%, var(--tr-gradient-emphasis-3) 18%) 0%,
+        color-mix(in oklch, var(--tr-gradient-surface-base) 82%, var(--tr-gradient-emphasis-3) 18%)
+          0%,
         var(--tr-gradient-surface-base) 60%,
         color-mix(in oklch, var(--background) 92%, transparent) 100%
       );
@@ -41,7 +42,7 @@
   }
 
   .gradient-background::after {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0.25rem;
     border-radius: inherit;
@@ -74,59 +75,59 @@
   }
 
   .gradient-background--variant-mesh {
-    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-secondary) 30%, transparent);
-    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-accent) 24%, transparent);
-    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-tr-success) 18%, transparent);
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-secondary) 30%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-accent) 24%, transparent);
+    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-success) 18%, transparent);
   }
 
   .gradient-background--variant-aurora {
-    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-ring) 28%, transparent);
-    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-secondary) 22%, transparent);
-    --tr-gradient-emphasis-3: color-mix(in oklch, var(--color-tr-accent) 18%, transparent);
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-ring) 28%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-secondary) 22%, transparent);
+    --tr-gradient-emphasis-3: color-mix(in oklch, var(--color-accent) 18%, transparent);
   }
 
   .gradient-background--variant-holographic {
-    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-accent) 28%, transparent);
-    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-anti-primary) 24%, transparent);
-    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-tr-success) 18%, transparent);
-    --tr-glass-glow: color-mix(in oklch, var(--color-tr-accent) 42%, transparent);
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-accent) 28%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-onprimary) 24%, transparent);
+    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-success) 18%, transparent);
+    --tr-glass-glow: color-mix(in oklch, var(--color-accent) 42%, transparent);
   }
 
   .gradient-background--variant-glass {
-    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-anti-primary) 24%, transparent);
-    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-ring) 18%, transparent);
-    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-tr-muted) 16%, transparent);
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-onprimary) 24%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-ring) 18%, transparent);
+    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-muted) 16%, transparent);
     --tr-glass-bg: color-mix(in oklch, var(--background) 65%, transparent);
-    --tr-glass-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 60%, transparent);
-    --tr-glass-shadow: color-mix(in oklch, var(--color-tr-border) 35%, transparent);
+    --tr-glass-highlight: color-mix(in oklch, var(--color-onprimary) 60%, transparent);
+    --tr-glass-shadow: color-mix(in oklch, var(--color-border) 35%, transparent);
   }
 
   .gradient-background--variant-waves {
-    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-success) 26%, transparent);
-    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-primary-blue) 26%, transparent);
-    --tr-gradient-emphasis-3: color-mix(in oklch, var(--color-tr-accent) 20%, transparent);
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-success) 26%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-primary) 26%, transparent);
+    --tr-gradient-emphasis-3: color-mix(in oklch, var(--color-accent) 20%, transparent);
   }
 
   .gradient-background--variant-orbs {
-    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-accent) 30%, transparent);
-    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-secondary) 25%, transparent);
-    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-tr-primary-blue) 22%, transparent);
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-accent) 30%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-secondary) 25%, transparent);
+    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-primary) 22%, transparent);
   }
 
   .dark .gradient-background {
     background-color: color-mix(in oklch, var(--background) 88%, var(--card) 12%);
 
     --tr-gradient-surface-base: color-mix(in oklch, var(--background) 82%, var(--card) 18%);
-    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-tr-secondary) 18%, transparent);
-    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-tr-accent) 16%, transparent);
-    --tr-gradient-emphasis-3: color-mix(in oklch, var(--color-tr-anti-primary) 24%, transparent);
-    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-tr-success) 20%, transparent);
+    --tr-gradient-emphasis-1: color-mix(in oklch, var(--color-secondary) 18%, transparent);
+    --tr-gradient-emphasis-2: color-mix(in oklch, var(--color-accent) 16%, transparent);
+    --tr-gradient-emphasis-3: color-mix(in oklch, var(--color-onprimary) 24%, transparent);
+    --tr-gradient-emphasis-4: color-mix(in oklch, var(--color-success) 20%, transparent);
 
-    --tr-glass-bg: color-mix(in oklch, var(--color-tr-primary-blue) 32%, transparent);
+    --tr-glass-bg: color-mix(in oklch, var(--color-primary) 32%, transparent);
     --tr-glass-border: color-mix(in oklch, var(--border) 45%, transparent);
-    --tr-glass-highlight: color-mix(in oklch, var(--color-tr-anti-primary) 48%, transparent);
-    --tr-glass-shadow: color-mix(in oklch, var(--color-tr-primary-blue) 48%, transparent);
-    --tr-glass-glow: color-mix(in oklch, var(--color-tr-accent) 24%, transparent);
+    --tr-glass-highlight: color-mix(in oklch, var(--color-onprimary) 48%, transparent);
+    --tr-glass-shadow: color-mix(in oklch, var(--color-primary) 48%, transparent);
+    --tr-glass-glow: color-mix(in oklch, var(--color-accent) 24%, transparent);
   }
 
   .dark .gradient-background::after {
@@ -149,8 +150,16 @@
     z-index: 2;
     animation: gradient-pulse 9s ease-in-out infinite alternate;
     background-image:
-      radial-gradient(180% 130% at 10% 10%, color-mix(in oklch, var(--tr-glass-glow) 45%, transparent) 0%, transparent 70%),
-      linear-gradient(115deg, color-mix(in oklch, var(--tr-gradient-emphasis-3) 18%, transparent) 0%, transparent 70%);
+      radial-gradient(
+        180% 130% at 10% 10%,
+        color-mix(in oklch, var(--tr-glass-glow) 45%, transparent) 0%,
+        transparent 70%
+      ),
+      linear-gradient(
+        115deg,
+        color-mix(in oklch, var(--tr-gradient-emphasis-3) 18%, transparent) 0%,
+        transparent 70%
+      );
     mix-blend-mode: soft-light;
     opacity: 0.55;
   }
@@ -166,7 +175,7 @@
   .gradient-background__overlay-aurora {
     background-image: linear-gradient(
       130deg,
-      color-mix(in oklch, var(--color-tr-ring) 32%, transparent) 0%,
+      color-mix(in oklch, var(--color-ring) 32%, transparent) 0%,
       transparent 75%
     );
   }
@@ -174,7 +183,7 @@
   .gradient-background__overlay-mesh {
     background-image: linear-gradient(
       120deg,
-      color-mix(in oklch, var(--color-tr-secondary) 28%, transparent) 0%,
+      color-mix(in oklch, var(--color-secondary) 28%, transparent) 0%,
       transparent 70%
     );
   }
@@ -182,7 +191,7 @@
   .gradient-background__overlay-holographic {
     background-image: linear-gradient(
       160deg,
-      color-mix(in oklch, var(--color-tr-accent) 30%, transparent) 0%,
+      color-mix(in oklch, var(--color-accent) 30%, transparent) 0%,
       transparent 80%
     );
   }
@@ -190,14 +199,18 @@
   .gradient-background__overlay-default {
     background-image: linear-gradient(
       145deg,
-      color-mix(in oklch, var(--color-tr-primary-blue) 26%, transparent) 0%,
+      color-mix(in oklch, var(--color-primary) 26%, transparent) 0%,
       transparent 75%
     );
   }
 
   .gradient-background__noise {
     @apply pointer-events-none absolute inset-0 h-full w-full;
-    background-image: radial-gradient(circle at 1px 1px, color-mix(in oklch, var(--border) 30%, transparent) 0, transparent 1px);
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      color-mix(in oklch, var(--border) 30%, transparent) 0,
+      transparent 1px
+    );
     background-size: 3px 3px;
     mix-blend-mode: overlay;
     opacity: 0.28;

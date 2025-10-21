@@ -7,8 +7,8 @@
   align-items: center;
   height: var(--projectoverview-header-height);
   padding: 0 1.5rem;
-  background-color: var(--color-tr-sidebar, transparent);
-  border-bottom: 1px solid var(--color-tr-border);
+  background-color: var(--color-sidebar, transparent);
+  border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(6px);
   flex-shrink: 0;
 }
@@ -40,7 +40,7 @@
   font-size: 1.05rem;
   line-height: 1.1;
   font-weight: 600;
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -63,19 +63,19 @@
   gap: 0.2rem;
   font-size: 0.75rem;
   line-height: 1.2;
-  color: var(--color-tr-muted-foreground);
+  color: var(--color-muted-foreground);
   position: relative;
   margin-left: 1rem;
   padding-left: 1rem;
 }
 
 .project-view-header__col--meta::before {
-  content: "";
+  content: '';
   position: absolute;
   inset-block: 10%;
   left: 0;
   width: 1px;
-  background: color-mix(in srgb, var(--color-tr-border) 80%, transparent);
+  background: color-mix(in srgb, var(--color-border) 80%, transparent);
   pointer-events: none;
   border-radius: 999px;
 }
@@ -95,7 +95,7 @@
 }
 
 .project-view-header__meta-row--timestamps span:first-of-type {
-  color: var(--color-tr-primary-blue);
+  color: var(--color-primary);
   font-weight: 600;
 }
 
@@ -104,14 +104,14 @@
 }
 
 .project-view-header__meta-row strong {
-  color: var(--color-tr-sidebar-foreground);
+  color: var(--color-sidebar-foreground);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .project-view-header__separator {
-  color: var(--color-tr-border);
+  color: var(--color-border);
 }
 
 .project-view-header__col--actions {
@@ -126,18 +126,21 @@
   width: 2rem;
   height: 2rem;
   padding: 0;
-  color: var(--color-tr-anti-primary);
+  color: var(--color-onprimary);
   border: 1px solid transparent;
-  transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
 }
 
 .project-view-header__close:hover {
-  color: var(--color-tr-accent-foreground);
-  background-color: var(--color-tr-accent);
+  color: var(--color-accent-foreground);
+  background-color: var(--color-accent);
 }
 
 .project-view-header__close:focus-visible {
   outline: none;
-  border-color: var(--color-tr-ring);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-tr-ring) 25%, transparent);
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ring) 25%, transparent);
 }

@@ -37,7 +37,7 @@
 
 ## Step 3.2 (Files table refactor)
 - Migrated the legacy `ProjectViewFilesSection` logic into `ProjectFilesTable`, preserving sorting, selection, role switching, grouped view, and action handlers while complying with lint constraints (`src/modules/project-view/views/files-table/ProjectFilesTable.tsx:1-360`).
-- Simplified the layout per new guidance: title text plus compact table, language pairs rendered as low-profile text, and status/updated columns removed.
+- Simplified the layout per new guidance: title text plus compact table, subtle header background, stacked language rows, reduced padding, lighter checkboxes, and status/updated columns removed while keeping the role column read-only.
 - Updated `ProjectViewContent` to consume the new component and removed the obsolete section file, keeping state placeholders ready for future filter integration (`src/modules/project-view/ProjectViewContent.tsx:1-120`).
 - Validation: `pnpm typecheck`.
 - Outcome: Modular files table now powers the project view without behavioural regressions, meeting the refactor gate.
