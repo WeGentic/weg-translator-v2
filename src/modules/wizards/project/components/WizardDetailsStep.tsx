@@ -162,14 +162,16 @@ export function WizardDetailsStep({
           onChange={(event) => onProjectNameChange(event.target.value)}
           placeholder="Provide a name for your project"
           aria-required="true"
-          className={cn("wizard-v2-input", "wizard-v2-input--primary", "wizard-v2-control")}
+          className="wizard-input-field"
         />
       </div>
 
       <div className="wizard-v2-language-grid" role="group" aria-label="Language selection">
         <section className="wizard-v2-language-panel" aria-labelledby="wizard-v2-source-label">
-          <div className="wizard-v2-language-header">
-            <Label id="wizard-v2-source-label" htmlFor="wizard-v2-source-language" className="wizard-v2-label-darker">
+          <div className="wizard-v2-language-header pt-[2.5px]">
+            <Label id="wizard-v2-source-label" 
+              htmlFor="wizard-v2-source-language"
+              className="wizard-v2-label mb-2">
               Source language
             </Label>
           </div>
@@ -234,7 +236,9 @@ export function WizardDetailsStep({
 
         <section className="wizard-v2-language-panel" aria-labelledby="wizard-v2-target-label">
           <div className="wizard-v2-language-header">
-            <Label id="wizard-v2-target-label" htmlFor="wizard-v2-target-language-trigger" className="wizard-v2-label-darker">
+            <Label id="wizard-v2-target-label" 
+              htmlFor="wizard-v2-target-language-trigger"
+              className="wizard-v2-label">
               Target languages
             </Label>
             <span className="wizard-v2-language-count" aria-live="polite">

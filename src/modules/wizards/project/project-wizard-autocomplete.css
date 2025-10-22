@@ -1,0 +1,78 @@
+.wizard-v2-autocomplete {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wizard-v2-autocomplete-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 8px;
+  border: none;
+  background: var(--color-victorian-peacock-300);
+  padding: 8px;
+}
+
+.wizard-v2-autocomplete-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  border-radius: 8px;
+  border: none;
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 0.82rem;
+  background: color-mix(in oklab, var(--color-primary) 25%, transparent);
+  color: var(--color-victorian-peacock-800);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    transform 150ms ease;
+}
+
+.wizard-v2-autocomplete-item.is-highlighted {
+  transform: translateY(-1px);
+  border-color: var(--color-secondary);
+  background: var(--color-victorian-peacock-200);
+  color: var(--color-victorian-peacock-900);
+}
+
+.wizard-v2-autocomplete-item.is-selected {
+  border-color: var(--color-secondary);
+  background: color-mix(in oklab, var(--color-victorian-peacock-950) 55%, transparent);
+  color: var(--color-victorian-peacock-50);
+}
+
+.wizard-v2-autocomplete-primary {
+  font-weight: 600;
+}
+
+.wizard-v2-autocomplete-secondary {
+  font-size: 0.72rem;
+}
+
+.wizard-v2-autocomplete-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  font-size: 0.74rem;
+  color: color-mix(in oklab, var(--color-muted-foreground) 80%, var(--color-sidebar-primary) 15%);
+}
+
+.wizard-v2-autocomplete-error {
+  margin: 0;
+  font-size: 0.72rem;
+  color: color-mix(in oklab, var(--color-destructive) 55%, var(--color-antiwhite) 25%);
+}

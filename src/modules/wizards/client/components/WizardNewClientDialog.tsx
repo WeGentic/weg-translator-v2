@@ -1,6 +1,7 @@
-import { useId, useMemo, useRef, useState } from "react";
+import type { HTMLAttributes } from "react";
+import { Children, useId, useMemo, useRef, useState } from "react";
 
-import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
+import PhoneInput, { getCountryCallingCode, isValidPhoneNumber } from "react-phone-number-input";
 
 import { Button } from "@/shared/ui/button";
 import {
@@ -32,6 +33,36 @@ import "../client-wizard.css";
 import "../client-form.css";
 import "react-phone-number-input/style.css";
 
+interface WizardPhoneContainerProps extends HTMLAttributes<HTMLDivElement> {
+  countryCode?: string;
+  disabled?: boolean;
+}
+
+function WizardPhoneContainer({ children, className, countryCode, disabled, ...rest }: WizardPhoneContainerProps) {
+  const [countrySelect, input] = Children.toArray(children);
+
+  return (
+    <div
+      {...rest}
+      className={cn("wizard-v2-phone-container", className, disabled && "wizard-v2-phone-container--disabled")}
+      aria-disabled={disabled ? true : undefined}
+    >
+      {countrySelect}
+      <div className="wizard-v2-phone-input-shell">
+        {countryCode ? (
+          <>
+            <span className="wizard-v2-phone-prefix" aria-hidden="true">
+              {countryCode}
+            </span>
+            <span className="sr-only">Selected country code {countryCode}</span>
+          </>
+        ) : null}
+        {input}
+      </div>
+    </div>
+  );
+}
+
 export interface WizardNewClientFormValues {
   name: string;
   email: string;
@@ -62,6 +93,7 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
   const [fieldErrors, setFieldErrors] = useState<ClientFormErrors>({});
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const phoneDialCode = useMemo(() => `+${getCountryCallingCode(phoneCountry)}`, [phoneCountry]);
 
   const localeCandidates = useMemo<readonly string[]>(() => {
     if (typeof navigator !== "undefined" && navigator.language) {
@@ -266,21 +298,26 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                   defaultCountry={defaultPhoneCountry}
                   country={phoneCountry}
                   disabled={pending}
-                  aria-disabled={pending ? true : undefined}
                   placeholder="555 555 1234"
+                  autoComplete="tel"
+                  aria-invalid={fieldErrors.phone ? true : undefined}
                   className={cn("wizard-v2-phone-control", fieldErrors.phone && "wizard-v2-phone-control--error")}
-                  inputProps={{
-                    ref: phoneInputRef,
-                    id: "wizard-v2-client-phone",
-                    name: "phone",
-                    "aria-invalid": fieldErrors.phone ? true : undefined,
-                    onBlur: handlePhoneBlur,
-                    autoComplete: "tel",
-                    className: "wizard-v2-phone-input",
+                  onBlur={handlePhoneBlur}
+                  containerComponent={WizardPhoneContainer}
+                  containerComponentProps={{
+                    countryCode: phoneDialCode,
+                    disabled: pending,
                   }}
                   countrySelectProps={{
                     className: "wizard-v2-phone-select",
                     disabled: pending,
+                  }}
+                  numberInputProps={{
+                    className: "wizard-v2-phone-input",
+                    inputMode: "tel",
+                  }}
+                  inputRef={(element: HTMLInputElement | null) => {
+                    phoneInputRef.current = element;
                   }}
                 />
                 {fieldErrors.phone ? (

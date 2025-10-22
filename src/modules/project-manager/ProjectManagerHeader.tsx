@@ -1,6 +1,7 @@
 import { Button } from "@/shared/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/tooltip";
-import { Plus } from "lucide-react";
+import { MdLibraryAdd } from "react-icons/md";
+
 
 export interface ProjectManagerHeaderProps {
   onCreateProject?: () => void;
@@ -22,7 +23,7 @@ export function ProjectManagerHeader({ onCreateProject }: ProjectManagerHeaderPr
                 className="new-project-button"
                 aria-label="Create new project"
               >
-                <Plus className="h-5 w-5" />
+                <MdLibraryAdd className="h-7 w-7" />
                 <span className="font-medium">New Project</span>
               </Button>
             </TooltipTrigger>

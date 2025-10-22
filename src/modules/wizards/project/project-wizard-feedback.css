@@ -1,0 +1,217 @@
+.wizard-v2-feedback-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--color-sidebar-primary) 35%, var(--color-antiwhite) 15%);
+}
+
+.wizard-v2-feedback-test-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in oklab, var(--color-sidebar-primary) 30%, var(--color-antiwhite) 12%);
+}
+
+.wizard-v2-feedback-test-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wizard-v2-feedback-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.wizard-v2-feedback-test {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border: 1px dashed color-mix(in oklab, var(--color-border) 45%, transparent);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--color-muted) 82%, transparent);
+  padding: 10px 12px;
+}
+
+.wizard-v2-feedback-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-primary) 55%, var(--color-accent) 25%);
+  box-shadow: 0 0 6px color-mix(in oklab, var(--color-accent) 35%, transparent);
+}
+
+.wizard-v2-feedback-test-button {
+  border: 1px solid color-mix(in oklab, var(--color-border) 40%, transparent);
+  background: color-mix(in oklab, var(--color-onprimary) 25%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 35%, var(--color-antiwhite) 12%);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.wizard-v2-feedback-test-button:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 18%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 25%, var(--color-antiwhite) 8%);
+}
+
+.wizard-v2-feedback-test-button:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.wizard-v2-feedback-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--color-onprimary) 65%, transparent 35%);
+  backdrop-filter: blur(12px) saturate(140%);
+  z-index: 30;
+  padding: 24px;
+}
+
+.wizard-v2-feedback-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-background) 92%, transparent),
+      transparent 70%
+    )
+    color-mix(in oklab, var(--color-onprimary) 22%, transparent);
+  box-shadow:
+    0 28px 60px -32px color-mix(in oklab, black 45%, transparent),
+    0 1px 0 0 color-mix(in oklab, white 28%, transparent) inset;
+  max-width: 340px;
+  text-align: center;
+}
+
+.wizard-v2-feedback-card.is-loading {
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-primary) 18%, transparent),
+      transparent 70%
+    )
+    color-mix(in oklab, var(--color-onprimary) 18%, transparent);
+}
+
+.wizard-v2-feedback-card[data-state='success']:not(.is-loading) {
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-success) 16%, transparent),
+      transparent 70%
+    )
+    color-mix(in oklab, var(--color-onprimary) 20%, transparent);
+}
+
+.wizard-v2-feedback-card[data-state='error']:not(.is-loading) {
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-destructive) 28%, transparent),
+      transparent 70%
+    )
+    color-mix(in oklab, var(--color-onprimary) 22%, transparent);
+}
+
+.wizard-v2-feedback-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--color-border) 45%, transparent);
+  background: color-mix(in oklab, var(--color-background) 75%, transparent);
+  color: color-mix(in oklab, var(--color-primary) 55%, var(--color-accent) 25%);
+}
+
+.wizard-v2-feedback-card.is-loading .wizard-v2-feedback-icon {
+  color: color-mix(in oklab, var(--color-primary) 60%, var(--color-accent) 35%);
+}
+
+.wizard-v2-feedback-card:not(.is-loading)[data-state='success'] .wizard-v2-feedback-icon,
+.wizard-v2-feedback-card:not(.is-loading)[data-state='success'] .wizard-v2-feedback-icon svg {
+  color: color-mix(in oklab, var(--color-success) 55%, transparent);
+}
+
+.wizard-v2-feedback-card.is-loading .wizard-v2-feedback-icon svg {
+  color: currentColor;
+}
+
+.wizard-v2-feedback-card:not(.is-loading)[data-state='error'] .wizard-v2-feedback-icon,
+.wizard-v2-feedback-card:not(.is-loading)[data-state='error'] .wizard-v2-feedback-icon svg {
+  color: color-mix(in oklab, var(--color-destructive) 60%, transparent);
+}
+
+.wizard-v2-feedback-card[data-state='success'] .wizard-v2-feedback-title {
+  color: color-mix(in oklab, var(--color-success) 55%, transparent);
+}
+
+.wizard-v2-feedback-card[data-state='error'] .wizard-v2-feedback-title {
+  color: color-mix(in oklab, var(--color-destructive) 60%, transparent);
+}
+
+.wizard-v2-feedback-message {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: color-mix(in oklab, var(--color-muted-foreground) 60%, var(--color-sidebar-primary) 12%);
+}
+
+.wizard-v2-feedback-detail {
+  margin-top: 0.5rem;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: color-mix(in oklab, var(--color-muted-foreground) 72%, var(--color-sidebar-primary) 18%);
+}
+
+.wizard-v2-feedback-card[data-state='success'] .wizard-v2-feedback-message {
+  color: color-mix(in oklab, var(--color-success) 45%, var(--color-sidebar-primary) 12%);
+}
+
+.wizard-v2-feedback-card[data-state='error'] .wizard-v2-feedback-message {
+  color: color-mix(in oklab, var(--color-destructive) 55%, var(--color-sidebar-primary) 10%);
+}
+
+.wizard-v2-feedback-button {
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 24%, transparent);
+  color: color-mix(in oklab, var(--color-sidebar-primary) 35%, var(--color-antiwhite) 12%);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 6px 16px;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.wizard-v2-feedback-button:hover {
+  border-color: color-mix(in oklab, var(--color-ring) 55%, transparent);
+  background: color-mix(in oklab, var(--color-ring) 35%, transparent);
+  color: color-mix(in oklab, white 85%, transparent);
+  transform: translateY(-1px);
+}

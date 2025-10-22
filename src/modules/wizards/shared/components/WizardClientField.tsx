@@ -164,7 +164,7 @@ export function WizardClientField({
         onFocus={() => setIsOpen(true)}
         onKeyDown={handleKeyDown}
         placeholder="Search clients…"
-        className={cn("wizard-v2-input", "wizard-v2-control")}
+        className="wizard-input-field"
         autoComplete="off"
       />
 
@@ -224,7 +224,7 @@ export function WizardClientField({
           className="wizard-v2-client-hint"
           onClick={() => onCreateRequested(value.trim())}
         >
-          Can&apos;t find &quot;{value.trim()}&quot;? Add a new client.
+          Can&apos;t find &quot;{value.trim()}&quot;? Click to add a new Client.
         </button>
       ) : null}
     </div>

@@ -150,3 +150,16 @@ export interface WizardConversionPlan {
   projectDir: string;
   tasks: WizardConversionTask[];
 }
+
+export interface WizardDraftSnapshot {
+  step: WizardStep;
+  projectName: string;
+  clientName: string;
+  selectedClientUuid: string | null;
+  projectField: string;
+  notes: string;
+  sourceLanguage: string | null;
+  targetLanguages: string[];
+  files: DraftFileEntry[];
+  updatedAt: number;
+}

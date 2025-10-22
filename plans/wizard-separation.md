@@ -20,7 +20,7 @@ Completed: COMPLETED
 - Added `src/modules/wizards/project`, `client`, and `shared` packages with barrel exports for each scope.
 - Relocated project wizard components, hooks, utils, and tests into `wizards/project`, promoting the shared `WizardClientField` component into `wizards/shared`.
 - Moved the client wizard dialog helpers into `wizards/client` and ensured the dialog imports its dedicated stylesheet.
-- Split the legacy stylesheet into `project/project-wizard.css` and `client/client-wizard.css`, updating component imports accordingly and removing the old asset.
+- Split the legacy stylesheet into the project wizard bundle (`project-wizard-shell.css`, `project-wizard-form.css`, `project-wizard-autocomplete.css`, `project-wizard-combobox.css`, `project-wizard-language.css`, `project-wizard-actions.css`, `project-wizard-dropzone.css`, `project-wizard-files.css`, `project-wizard-feedback.css`) and `client/client-wizard.css`, updating component imports accordingly and removing the old asset.
 - Re-pointed feature and test imports to `@/modules/wizards/*`, then dropped the obsolete `src/modules/clients/wizard` directory.
 
 ## Notes

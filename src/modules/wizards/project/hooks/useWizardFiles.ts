@@ -10,18 +10,33 @@ import { useCallback, useRef, useState } from "react";
 import type { DraftFileEntry, FileRoleValue } from "../types";
 import { extractFileExtension, extractFileName, inferDefaultRoleFromExtension } from "../utils";
 
+interface UseWizardFilesOptions {
+  initialFiles?: DraftFileEntry[];
+}
+
 interface UseWizardFilesReturn {
   files: DraftFileEntry[];
   fileCount: number;
   appendPaths: (incoming: readonly string[]) => void;
   updateFileRole: (id: string, role: FileRoleValue) => void;
   removeFile: (id: string) => void;
-  resetFiles: () => void;
+  resetFiles: (next?: DraftFileEntry[]) => void;
 }
 
-export function useWizardFiles(): UseWizardFilesReturn {
-  const [files, setFiles] = useState<DraftFileEntry[]>([]);
+export function useWizardFiles(options?: UseWizardFilesOptions): UseWizardFilesReturn {
   const fileIdRef = useRef(0);
+
+  const [files, setFiles] = useState<DraftFileEntry[]>(() => {
+    if (!options?.initialFiles || options.initialFiles.length === 0) {
+      return [];
+    }
+    const sanitized = sanitizeInitialFiles(options.initialFiles);
+    if (sanitized.length === 0) {
+      return [];
+    }
+    fileIdRef.current = determineMaxFileId(sanitized);
+    return sanitized;
+  });
 
   const appendPaths = useCallback((incoming: readonly string[]) => {
     if (!incoming || incoming.length === 0) {
@@ -72,7 +87,14 @@ export function useWizardFiles(): UseWizardFilesReturn {
     setFiles((current) => current.filter((entry) => entry.id !== id));
   }, []);
 
-  const resetFiles = useCallback(() => {
+  const resetFiles = useCallback((next?: DraftFileEntry[]) => {
+    if (next && next.length > 0) {
+      const sanitized = sanitizeInitialFiles(next);
+      fileIdRef.current = determineMaxFileId(sanitized);
+      setFiles(sanitized);
+      return;
+    }
+
     fileIdRef.current = 0;
     setFiles([]);
   }, []);
@@ -85,4 +107,59 @@ export function useWizardFiles(): UseWizardFilesReturn {
     removeFile,
     resetFiles,
   };
+}
+
+function sanitizeInitialFiles(entries: DraftFileEntry[]): DraftFileEntry[] {
+  const sanitized: DraftFileEntry[] = [];
+  const seenPaths = new Set<string>();
+
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object") {
+      continue;
+    }
+
+    const id = typeof entry.id === "string" && entry.id.trim().length > 0 ? entry.id : null;
+    const path = typeof entry.path === "string" ? entry.path.trim() : "";
+    const role = entry.role;
+
+    if (!id || path.length === 0 || !isValidRole(role)) {
+      continue;
+    }
+
+    if (seenPaths.has(path)) {
+      continue;
+    }
+
+    sanitized.push({
+      id,
+      name: typeof entry.name === "string" ? entry.name : extractFileName(path),
+      extension: typeof entry.extension === "string" ? entry.extension : extractFileExtension(path),
+      role,
+      path,
+    });
+
+    seenPaths.add(path);
+  }
+
+  return sanitized;
+}
+
+function isValidRole(value: unknown): value is FileRoleValue {
+  return value === "processable" || value === "reference" || value === "instructions" || value === "image";
+}
+
+const FILE_ID_PATTERN = /file-(\d+)$/;
+
+function determineMaxFileId(entries: readonly DraftFileEntry[]): number {
+  return entries.reduce((currentMax, entry) => {
+    const match = FILE_ID_PATTERN.exec(entry.id);
+    if (!match) {
+      return currentMax;
+    }
+    const numeric = Number.parseInt(match[1] ?? "", 10);
+    if (Number.isFinite(numeric) && numeric > currentMax) {
+      return numeric;
+    }
+    return currentMax;
+  }, 0);
 }

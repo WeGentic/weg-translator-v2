@@ -5,7 +5,7 @@
  * delegates heavy business logic to dedicated modules for maintainability.
  */
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { X } from "lucide-react";
@@ -33,9 +33,18 @@ import { useWizardClients } from "./hooks/useWizardClients";
 import { useWizardDropzone } from "./hooks/useWizardDropzone";
 import { useWizardFiles } from "./hooks/useWizardFiles";
 import { useWizardFinalize } from "./hooks/useWizardFinalize";
-import type { WizardStep } from "./types";
+import { clearWizardDraftSnapshot, loadWizardDraftSnapshot, persistWizardDraftSnapshot } from "./draftStorage";
+import type { WizardDraftSnapshot, WizardStep } from "./types";
 
-import "./project-wizard.css";
+import "./project-wizard-shell.css";
+import "./project-wizard-form.css";
+import "./project-wizard-autocomplete.css";
+import "./project-wizard-combobox.css";
+import "./project-wizard-language.css";
+import "./project-wizard-actions.css";
+import "./project-wizard-dropzone.css";
+import "./project-wizard-files.css";
+import "./project-wizard-feedback.css";
 
 interface CreateProjectWizardV2Props {
   open: boolean;
@@ -48,20 +57,34 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
   const { user: authenticatedUser } = useAuth();
   const [submissionPending, startSubmission] = useTransition();
 
-  const [projectName, setProjectName] = useState("");
-  const [clientName, setClientName] = useState("");
-  const [selectedClientUuid, setSelectedClientUuid] = useState<string | null>(null);
+  const initialDraftRef = useRef<WizardDraftSnapshot | null>(loadWizardDraftSnapshot());
+
+  const [projectName, setProjectName] = useState(() => initialDraftRef.current?.projectName ?? "");
+  const [clientName, setClientName] = useState(() => initialDraftRef.current?.clientName ?? "");
+  const [selectedClientUuid, setSelectedClientUuid] = useState<string | null>(
+    () => initialDraftRef.current?.selectedClientUuid ?? null,
+  );
   const [isClientDialogOpen, setClientDialogOpen] = useState(false);
-  const [clientDialogInitialName, setClientDialogInitialName] = useState("");
+  const [clientDialogInitialName, setClientDialogInitialName] = useState(() => initialDraftRef.current?.clientName ?? "");
   const [clientDialogSession, setClientDialogSession] = useState(0);
-  const [projectField, setProjectField] = useState("");
-  const [notes, setNotes] = useState("");
-  const [sourceLanguage, setSourceLanguage] = useState<string | null>(null);
-  const [targetLanguages, setTargetLanguages] = useState<string[]>([]);
-  const [step, setStep] = useState<WizardStep>("details");
+  const [projectField, setProjectField] = useState(() => initialDraftRef.current?.projectField ?? "");
+  const [notes, setNotes] = useState(() => initialDraftRef.current?.notes ?? "");
+  const [sourceLanguage, setSourceLanguage] = useState<string | null>(
+    () => initialDraftRef.current?.sourceLanguage ?? null,
+  );
+  const [targetLanguages, setTargetLanguages] = useState<string[]>(
+    () => (initialDraftRef.current?.targetLanguages ? [...initialDraftRef.current.targetLanguages] : []),
+  );
+  const [step, setStep] = useState<WizardStep>(() => initialDraftRef.current?.step ?? "details");
   const [localResetCounter, setLocalResetCounter] = useState(0);
 
-  const { files, fileCount, appendPaths, updateFileRole, removeFile, resetFiles } = useWizardFiles();
+  const { files, fileCount, appendPaths, updateFileRole, removeFile, resetFiles } = useWizardFiles({
+    initialFiles: initialDraftRef.current?.files,
+  });
+
+  useEffect(() => {
+    initialDraftRef.current = null;
+  }, []);
   const {
     clients,
     loading: clientsLoading,
@@ -205,6 +228,39 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
     return hasName && hasSource && hasTargets && hasField;
   }, [projectField, projectName, sourceLanguage, targetLanguages]);
 
+  useEffect(() => {
+    if (!canClear) {
+      clearWizardDraftSnapshot();
+      return;
+    }
+
+    const snapshot: WizardDraftSnapshot = {
+      step,
+      projectName,
+      clientName,
+      selectedClientUuid,
+      projectField,
+      notes,
+      sourceLanguage,
+      targetLanguages,
+      files,
+      updatedAt: Date.now(),
+    };
+
+    persistWizardDraftSnapshot(snapshot);
+  }, [
+    canClear,
+    step,
+    projectName,
+    clientName,
+    selectedClientUuid,
+    projectField,
+    notes,
+    sourceLanguage,
+    targetLanguages,
+    files,
+  ]);
+
   const handleBrowseClick = useCallback(() => {
     void (async () => {
       try {
@@ -245,6 +301,8 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
   }, [resetDragState]);
 
   const handleClear = useCallback(() => {
+    clearWizardDraftSnapshot();
+    initialDraftRef.current = null;
     dismissFeedback();
     setProjectName("");
     setClientName("");
@@ -272,9 +330,11 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
 
   useEffect(() => {
     if (!open) {
-      handleClear();
+      setClientDialogOpen(false);
+      resetDragState();
+      dismissFeedback();
     }
-  }, [open, handleClear]);
+  }, [open, dismissFeedback, resetDragState]);
 
   useEffect(() => {
     if (open) {
@@ -284,13 +344,13 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
 
   const trimmedProjectName = projectName.trim();
   const wizardHeaderTitle =
-    step === "files" ? `${trimmedProjectName || "Unnamed Project"} - FILE MANAGER` : "New Project Wizard";
+    step === "files" ? `${trimmedProjectName || "Unnamed Project"} - FILE MANAGER` : "Create New Project";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        aria-label="Create project wizard"
-        className={cn("wizard-v2-dialog border-0 bg-transparent p-0")}
+        aria-label="Create new project"
+        className={cn("wizard-v2-dialog")}
         onInteractOutside={(event) => {
           event.preventDefault();
         }}
@@ -308,7 +368,7 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
             </div>
           </header>
 
-          <form className="wizard-v2-form" aria-label="New project details">
+          <form className="wizard-v2-form mt-4" aria-label="New project details">
             {step === "details" ? (
               <WizardDetailsStep
                 key={localResetCounter}

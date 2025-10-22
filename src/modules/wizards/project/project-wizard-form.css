@@ -1,0 +1,162 @@
+.wizard-v2-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 clamp(18px, 3vw, 24px);
+  scrollbar-gutter: stable;
+}
+
+.wizard-v2-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wizard-v2-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wizard-v2-client-hint {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+  color: var(--color-orioles-orange-600);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.wizard-v2-client-hint:hover {
+  color: var(--color-secondary);
+  text-decoration: underline;
+}
+
+.wizard-v2-field-grid {
+  display: grid;
+  gap: 18px;
+}
+
+@media (min-width: 640px) {
+  .wizard-v2-field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.wizard-v2-field-grid--paired {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.wizard-v2-label {
+  font-size: 0.72rem;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  color: var(--color-victorian-peacock-800);
+}
+
+.wizard-v2-label-darker {
+  font-size: 0.72rem;
+  line-height: 1.1;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: color-mix(in oklab, var(--color-primary) 90%, var(--color-antiwhite) 10%);
+}
+
+.wizard-v2-control {
+  min-height: var(--wizard-control-height);
+  border-radius: 10px;
+}
+
+.wizard-v2-input,
+.wizard-v2-textarea {
+  padding-inline-start: 1.25rem;
+  padding-inline-end: 2.25rem;
+  background-color: var(--color-writers-parchment-50);
+  color: var(--color-neverything-900);
+  border-color: var(--color-victorian-peacock-200);
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.wizard-input-field {
+  height: 40px;
+  padding-inline-start: 1.25rem;
+  background-color: var(--color-writers-parchment-50);
+  color: var(--color-neverything-900);
+  border-color: var(--color-victorian-peacock-200);
+}
+
+.wizard-input-field:hover {
+  background-color: var(--color-victorian-peacock-100);
+  border-color: var(--color-secondary);
+}
+
+.wizard-input-field:focus-visible,
+.wizard-input-field:active {
+  background-color: var(--color-victorian-peacock-100);
+  border-color: var(--color-secondary);
+  border-width: 2px;
+  color: var(--color-neverything-900);
+  outline: none;
+  box-shadow: none;
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+}
+
+.wizard-input-field::placeholder {
+  color: var(--color-neverything-600);
+}
+
+.wizard-v2-input {
+  display: flex;
+  align-items: center;
+}
+
+.wizard-v2-input:hover,
+.wizard-v2-textarea:hover {
+  background-color: var(--color-victorian-peacock-100);
+  border-color: var(--color-secondary);
+}
+
+.wizard-v2-input:focus-visible,
+.wizard-v2-textarea:focus-visible {
+  outline: none;
+  border-color: color-mix(in oklab, var(--color-ring) 55%, transparent);
+  box-shadow:
+    0 24px 42px -24px color-mix(in oklab, var(--color-ring) 35%, transparent),
+    0 0 0 2px color-mix(in oklab, var(--color-ring) 45%, transparent);
+}
+
+.wizard-v2-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.wizard-v2-input--primary {
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--color-accent) 28%, transparent),
+      transparent 65%
+    )
+    color-mix(in oklab, var(--color-background) 62%, transparent);
+  color: color-mix(in oklab, var(--color-primary) 80%, var(--color-antiwhite) 10%);
+  border-color: color-mix(in oklab, var(--color-accent) 55%, transparent);
+}
+
+.wizard-v2-input--primary::placeholder {
+  color: color-mix(in oklab, var(--color-muted-foreground) 70%, var(--color-sidebar-primary) 15%);
+}

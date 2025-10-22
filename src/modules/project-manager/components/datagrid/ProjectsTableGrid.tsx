@@ -23,7 +23,7 @@ export function ProjectsTableGrid({ table, rows, selectedRows, search }: Project
   const columns = table.getAllColumns();
 
   return (
-    <div className="clients-project-manager-main-zone">
+    <div className="project-manager-main-zone">
       <Table aria-label="Projects table" className="text-[14px] leading-6 text-foreground table-fixed">
         <TableHeader
         className="
@@ -60,7 +60,7 @@ export function ProjectsTableGrid({ table, rows, selectedRows, search }: Project
               <TableCell colSpan={columns.length} 
                 className="h-32 px-3 py-8 text-center text-(--color-victorian-peacock-950)">
                 <div className="flex flex-col items-center gap-2 transition-all duration-500 ease-in-out">
-                  <div className="h-20 w-20 rounded-full bg-(--color-destructive) flex items-center justify-center">
+                  <div className="h-20 w-20 rounded bg-(--color-destructive) flex items-center justify-center">
                     <LuFileQuestion className="h-10 w-10 text-(--color-victorian-peacock-50)" />
                   </div>
                   <div>
@@ -93,7 +93,7 @@ export function ProjectsTableGrid({ table, rows, selectedRows, search }: Project
                       key={cell.id}
                       className={cn(
                         "px-3 py-2 text-[12px] font-normal transition-colors duration-200",
-                        "text-[var(--color-navy)]/90",
+                        "text-(--color-primary)",
                         (cell.column.columnDef.meta as ColumnMetaShape | undefined)?.cellClassName,
                       )}
                     >
