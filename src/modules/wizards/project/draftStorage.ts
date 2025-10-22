@@ -223,7 +223,14 @@ function pickNullableString(value: unknown): string | null {
 }
 
 function pickRole(value: unknown): FileRoleValue | null {
-  if (value === "processable" || value === "reference" || value === "instructions" || value === "image") {
+  if (
+    value === "undefined" ||
+    value === "processable" ||
+    value === "reference" ||
+    value === "instructions" ||
+    value === "image" ||
+    value === "ocr"
+  ) {
     return value;
   }
   return null;

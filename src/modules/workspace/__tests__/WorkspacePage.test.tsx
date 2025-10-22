@@ -4,8 +4,13 @@ import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WorkspacePage } from "@/modules/workspace/WorkspacePage";
+import { WorkspaceRoute } from "@/modules/workspace";
 import { MainLayout } from "@/app/shell";
 import { ToastProvider } from "@/shared/ui/toast";
+import {
+  consumeQueuedWorkspaceMainView,
+  queueWorkspaceMainViewIfNeeded,
+} from "@/modules/workspace/navigation/main-view-persist";
 
 const TEST_LAYOUT_CONFIG = {
   footer: { mounted: true, visible: true, height: 56 },
@@ -52,6 +57,8 @@ vi.mock("@/modules/clients", () => ({
 describe("WorkspacePage", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    window.sessionStorage.clear();
+    window.history.replaceState({}, "", "/");
   });
 
   it("opens the editor placeholder when the editor navigation event fires without a project", async () => {
@@ -94,5 +101,37 @@ describe("WorkspacePage", () => {
     });
 
     expect(await screen.findByTestId("clients-view")).toBeInTheDocument();
+  });
+
+  it("queues a workspace view when invoked from a non-workspace route", () => {
+    window.history.replaceState({}, "", "/dashboard");
+
+    queueWorkspaceMainViewIfNeeded("settings");
+
+    expect(consumeQueuedWorkspaceMainView()).toBe("settings");
+  });
+
+  it("does not queue when already on the workspace route", () => {
+    window.history.replaceState({}, "", "/");
+
+    queueWorkspaceMainViewIfNeeded("projects");
+
+    expect(consumeQueuedWorkspaceMainView()).toBeUndefined();
+  });
+
+  it("consumes the queued workspace view on first render", async () => {
+    window.history.replaceState({}, "", "/dashboard");
+    queueWorkspaceMainViewIfNeeded("settings");
+    window.history.replaceState({}, "", "/");
+
+    render(
+      <ToastProvider>
+        <MainLayout.Root config={TEST_LAYOUT_CONFIG}>
+          <WorkspaceRoute />
+        </MainLayout.Root>
+      </ToastProvider>,
+    );
+
+    expect(await screen.findByTestId("settings-panel")).toBeInTheDocument();
   });
 });

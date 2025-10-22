@@ -45,7 +45,7 @@ export function LayoutSidebarOne({
   const sidebarOneContent = useLayoutSelector((state) => state.sidebarOneContent);
   const sidebarTwo = useLayoutSelector((state) => state.sidebarTwo);
   const footer = useLayoutSelector((state) => state.footer);
-  const [activeView, setActiveView] = useState<"dashboard" | "projects" | "editor" | "resource" | "settings" | "other">("projects");
+  const [activeView, setActiveView] = useState<"dashboard" | "projects" | "editor" | "resource" | "settings" | "other">("dashboard");
 
   useEffect(() => {
     const store = layoutStore;

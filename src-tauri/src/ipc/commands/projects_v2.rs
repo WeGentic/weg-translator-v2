@@ -808,6 +808,7 @@ fn resolve_asset_directory(root: &Path, role: ProjectAssetRoleDto) -> PathBuf {
         ProjectAssetRoleDto::Processable => root.join("Translations"),
         ProjectAssetRoleDto::Reference | ProjectAssetRoleDto::Image => root.join("References"),
         ProjectAssetRoleDto::Instructions => root.join("Instructions"),
+        ProjectAssetRoleDto::Ocr => root.join("OCR"),
     }
 }
 
@@ -1247,6 +1248,7 @@ fn map_asset_role_to_file_info_type(role: ProjectAssetRoleDto) -> String {
         ProjectAssetRoleDto::Reference => "reference".to_string(),
         ProjectAssetRoleDto::Instructions => "instructions".to_string(),
         ProjectAssetRoleDto::Image => "image".to_string(),
+        ProjectAssetRoleDto::Ocr => "ocr".to_string(),
     }
 }
 
@@ -1256,6 +1258,7 @@ fn map_asset_role_to_project_file_type(role: ProjectAssetRoleDto) -> String {
         ProjectAssetRoleDto::Reference => "reference".to_string(),
         ProjectAssetRoleDto::Instructions => "instructions".to_string(),
         ProjectAssetRoleDto::Image => "image".to_string(),
+        ProjectAssetRoleDto::Ocr => "ocr".to_string(),
     }
 }
 
@@ -1380,6 +1383,7 @@ fn map_project_statistics(stats: ProjectStatistics) -> ProjectStatisticsDto {
             processable: stats.totals.processable,
             reference: stats.totals.reference,
             instructions: stats.totals.instructions,
+            ocr: stats.totals.ocr,
             image: stats.totals.image,
             other: stats.totals.other,
         },
@@ -1574,7 +1578,7 @@ fn parse_uuid(value: &str, field: &str) -> Result<Uuid, IpcError> {
 fn normalize_project_file_role(value: &str) -> Result<String, IpcError> {
     let normalized = value.trim().to_lowercase();
     match normalized.as_str() {
-        "processable" | "reference" | "instructions" | "image" => Ok(normalized),
+        "processable" | "reference" | "instructions" | "image" | "ocr" => Ok(normalized),
         _ => Err(IpcError::Validation(format!(
             "Unsupported project file role '{value}'"
         ))),
@@ -1762,6 +1766,9 @@ async fn create_project_scaffold(root: PathBuf) -> Result<DirectoryCreationGuard
 
         let instructions = root_clone.join("Instructions");
         create_dir(&instructions)?;
+
+        let ocr = root_clone.join("OCR");
+        create_dir(&ocr)?;
 
         Ok(created_paths)
     })

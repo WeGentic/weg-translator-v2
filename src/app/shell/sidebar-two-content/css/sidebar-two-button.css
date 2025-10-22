@@ -16,15 +16,15 @@
   padding: 0.5rem 0.5rem;
 
   /* Typography */
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 600;
   line-height: 1.25rem;
   text-align: left;
   color: var(--color-victorian-peacock-50);
   white-space: nowrap;
 
   /* Appearance */
-  border-radius: 0.5rem;
+  border-radius: 6px;
   border: 1px solid transparent;
   background-color: color-mix(in oklch, var(--color-victorian-peacock-600) 50%, transparent);
 
@@ -47,11 +47,8 @@
 
 /* Hover State */
 .sidebar-two-button:not(:disabled):not(.sidebar-two-button--inactive):hover {
-  background-color: color-mix(in oklch, var(--color-secondary) 50%, transparent);
-  color: var(--color-onprimary);
-  box-shadow:
-    0 4px 6px -1px rgb(0 0 0 / 0.1),
-    0 2px 4px -2px rgb(0 0 0 / 0.1);
+  background-color: color-mix(in oklch, var(--color-victorian-peacock-200) 50%, transparent);
+  
   transform: translateY(-1px);
 }
 

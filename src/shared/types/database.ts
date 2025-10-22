@@ -91,7 +91,7 @@ export interface FileLanguagePair {
   targetLang: string;
 }
 
-export type ProjectAssetRole = "processable" | "reference" | "instructions" | "image";
+export type ProjectAssetRole = "processable" | "reference" | "instructions" | "image" | "ocr";
 
 export interface ProjectAssetDescriptor {
   draftId: string;

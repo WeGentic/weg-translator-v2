@@ -1,0 +1,158 @@
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.wizard-v2-phone-container {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: stretch;
+  width: 100%;
+  height: 2.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-victorian-peacock-200);
+  background-color: var(--color-victorian-peacock-300);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+  color: var(--color-victorian-peacock-50);
+  overflow: hidden;
+}
+
+.wizard-v2-phone-container:hover {
+  background-color: var(--color-victorian-peacock-200);
+  border-color: var(--color-victorian-peacock-700);
+  color: var(--color-neverything-900);
+}
+
+.wizard-v2-phone-container:focus-within {
+  background-color: var(--color-victorian-peacock-100);
+  border-color: var(--color-victorian-peacock-700);
+  color: var(--color-neverything-900);
+}
+
+.wizard-v2-phone-control--error {
+  border-color: color-mix(in oklab, var(--color-destructive) 65%, transparent);
+}
+
+.wizard-v2-phone-control--error:focus-within {
+  border-color: color-mix(in oklab, var(--color-destructive) 75%, transparent);
+  background-color: color-mix(in oklab, var(--color-destructive) 10%, var(--color-victorian-peacock-100) 90%);
+}
+
+.wizard-v2-phone-container--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.wizard-v2-phone-container--disabled .wizard-v2-phone-input {
+  cursor: not-allowed;
+}
+
+.wizard-v2-phone-container .PhoneInputCountry {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-right: 1px solid color-mix(in oklab, var(--color-victorian-peacock-200) 85%, transparent);
+  min-width: 88px;
+  max-width: 112px;
+  height: 100%;
+  background: transparent;
+}
+
+.wizard-v2-phone-container .PhoneInputCountrySelect {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0;
+  margin: 0;
+  appearance: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.wizard-v2-phone-container .PhoneInputCountrySelectArrow {
+  margin-left: 6px;
+  border-color: currentColor;
+  opacity: 0.6;
+}
+
+.wizard-v2-phone-container:hover .PhoneInputCountrySelectArrow,
+.wizard-v2-phone-container:focus-within .PhoneInputCountrySelectArrow {
+  opacity: 0.9;
+}
+
+.wizard-v2-phone-container .PhoneInputCountryIcon {
+  width: 20px;
+  height: 14px;
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-border) 60%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--color-border) 35%, transparent) inset;
+}
+
+.wizard-v2-phone-select {
+  cursor: pointer;
+}
+
+.wizard-v2-phone-select[disabled] {
+  cursor: not-allowed;
+}
+
+.wizard-v2-phone-input-shell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+
+.wizard-v2-phone-prefix {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--color-victorian-peacock-600) 80%, var(--color-victorian-peacock-800) 20%);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.wizard-v2-phone-container .PhoneInputInput,
+.wizard-v2-phone-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 0.9rem;
+  color: inherit;
+  outline: none;
+  height: 100%;
+}
+
+.wizard-v2-phone-container .PhoneInputInput::placeholder,
+.wizard-v2-phone-input::placeholder {
+  color: var(--color-victorian-peacock-100);
+}
+
+.wizard-v2-phone-container .PhoneInputInput:disabled {
+  cursor: not-allowed;
+}

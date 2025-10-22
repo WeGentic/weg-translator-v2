@@ -41,6 +41,7 @@ export function ProjectViewStatsSection({
     { label: "Processable", value: totals.processable },
     { label: "Reference", value: totals.reference },
     { label: "Instructions", value: totals.instructions },
+    { label: "OCR", value: totals.ocr },
     { label: "Image", value: totals.image },
     { label: "Other", value: totals.other },
   ].filter((entry) => entry.value > 0);

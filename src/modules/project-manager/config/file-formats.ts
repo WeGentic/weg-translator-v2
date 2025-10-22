@@ -5,7 +5,7 @@ const PROJECT_FILE_FORMAT_GROUP_DEFINITION = [
   },
   {
     label: "Microsoft Office",
-    extensions: ["doc", "docx", "ppt", "pptx", "xls", "xlsx"] as const,
+    extensions: ["doc", "docx", "ppt", "pptx", "xls", "xlsx", "pdf"] as const,
   },
   {
     label: "OpenDocument",

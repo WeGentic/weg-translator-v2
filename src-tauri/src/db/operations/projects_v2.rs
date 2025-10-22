@@ -343,7 +343,7 @@ pub async fn update_project_file_role(
     file_uuid: Uuid,
     next_role: &str,
 ) -> DbResult<ProjectFileBundle> {
-    const VALID_ROLES: &[&str] = &["processable", "reference", "instructions", "image"];
+    const VALID_ROLES: &[&str] = &["processable", "reference", "instructions", "image", "ocr"];
 
     let normalized = next_role.trim().to_lowercase();
     if !VALID_ROLES.contains(&normalized.as_str()) {
@@ -620,6 +620,7 @@ fn compute_project_statistics(bundle: &ProjectBundle) -> ProjectStatistics {
         processable: 0,
         reference: 0,
         instructions: 0,
+        ocr: 0,
         image: 0,
         other: 0,
     };
@@ -660,6 +661,7 @@ fn compute_project_statistics(bundle: &ProjectBundle) -> ProjectStatistics {
             "processable" | "source" | "xliff" | "translation" => totals.processable += 1,
             "reference" => totals.reference += 1,
             "instructions" | "instruction" => totals.instructions += 1,
+            "ocr" => totals.ocr += 1,
             "image" => totals.image += 1,
             _ => totals.other += 1,
         }
@@ -1317,6 +1319,7 @@ mod tests {
         assert_eq!(stats.totals.processable, 2);
         assert_eq!(stats.totals.reference, 1);
         assert_eq!(stats.totals.instructions, 0);
+        assert_eq!(stats.totals.ocr, 0);
         assert_eq!(stats.totals.image, 0);
 
         assert_eq!(stats.conversions.total, 2);

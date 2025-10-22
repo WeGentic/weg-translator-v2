@@ -26,6 +26,12 @@ import {
 
 import "./css/project-manager-toolbar.css";
 
+const filterTriggerClassName =
+  "project-filter-trigger text-[14px] text-(--color-victorian-peacock-900)/70";
+const filterContentClassName = "bg-(--color-victorian-peacock-100) mt-2 border-none";
+const filterItemClassName =
+  "data-highlighted:bg-(--color-primary) data-highlighted:text-(--color-victorian-peacock-900) data-[state=checked]:bg-(--color-secondary) data-[state=checked]:text-(--color-victorian-peacock-50) data-[state=checked]:font-semibold";
+
 export interface ProjectManagerToolbarProps {
   search: string;
   onSearchChange: (value: string) => void;
@@ -111,63 +117,23 @@ export function ProjectManagerToolbar({
                 value={filters.progress}
                 onValueChange={(value: ProgressFilter) => applyFilterUpdate("progress", value)}
               >
-                <SelectTrigger className="project-filter-trigger text-[14px] text-(--color-victorian-peacock-900)/70">
+                <SelectTrigger className={filterTriggerClassName}>
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent className="bg-(--color-victorian-peacock-100) mt-2 border-none">
-                  <SelectItem
-                    value="all"
-                    className="
-                    data-highlighted:bg-(--color-primary)
-                    data-highlighted:text-(--color-victorian-peacock-900)
-                    data-[state=checked]:bg-(--color-secondary)
-                    data-[state=checked]:text-(--color-victorian-peacock-50)
-                    data-[state=checked]:font-semibold"
-                  >
+                <SelectContent className={filterContentClassName}>
+                  <SelectItem value="all" className={filterItemClassName}>
                     All Status
                   </SelectItem>
-                  <SelectItem
-                    value="pending"
-                    className="
-                    data-highlighted:bg-(--color-primary)
-                    data-highlighted:text-(--color-victorian-peacock-900)
-                    data-[state=checked]:bg-(--color-secondary)
-                    data-[state=checked]:text-(--color-victorian-peacock-50)
-                    data-[state=checked]:font-semibold"
-                  >
+                  <SelectItem value="pending" className={filterItemClassName}>
                     Pending
                   </SelectItem>
-                  <SelectItem
-                    value="running"
-                    className="
-                    data-highlighted:bg-(--color-primary)
-                    data-highlighted:text-(--color-victorian-peacock-900)
-                    data-[state=checked]:bg-(--color-secondary)
-                    data-[state=checked]:text-(--color-victorian-peacock-50)
-                    data-[state=checked]:font-semibold"
-                  >
+                  <SelectItem value="running" className={filterItemClassName}>
                     Running
                   </SelectItem>
-                  <SelectItem
-                    value="completed"
-                    className="
-                    data-highlighted:bg-(--color-primary)
-                    data-highlighted:text-(--color-victorian-peacock-900)
-                    data-[state=checked]:bg-(--color-secondary)
-                    data-[state=checked]:text-(--color-victorian-peacock-50)
-                    data-[state=checked]:font-semibold"
-                  >
+                  <SelectItem value="completed" className={filterItemClassName}>
                     Completed
                   </SelectItem>
-                  <SelectItem
-                    value="failed"
-                    className="
-                    data-highlighted:bg-(--color-primary)
-                    data-highlighted:text-(--color-victorian-peacock-900)
-                    data-[state=checked]:bg-(--color-secondary)
-                    data-[state=checked]:text-(--color-victorian-peacock-50)
-                    data-[state=checked]:font-semibold"
-                  >
+                  <SelectItem value="failed" className={filterItemClassName}>
                     Failed
                   </SelectItem>
                 </SelectContent>
@@ -177,39 +143,17 @@ export function ProjectManagerToolbar({
                 value={filters.projectType}
                 onValueChange={(value: TypeFilter) => applyFilterUpdate("projectType", value)}
               >
-                <SelectTrigger className="project-filter-trigger text-[14px] text-(--color-victorian-peacock-900)/70">
+                <SelectTrigger className={filterTriggerClassName}>
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
-                                <SelectContent className="bg-(--color-victorian-peacock-100) mt-2 border-none">
-                  <SelectItem
-                    value="all"
-className="
-                    data-highlighted:bg-(--color-primary)
-                    data-highlighted:text-(--color-victorian-peacock-900)
-                    data-[state=checked]:bg-(--color-secondary)
-                    data-[state=checked]:text-(--color-victorian-peacock-50)
-                    data-[state=checked]:font-semibold"                  >
+                <SelectContent className={filterContentClassName}>
+                  <SelectItem value="all" className={filterItemClassName}>
                     All Types
                   </SelectItem>
-                  <SelectItem
-                    value="translation"
-className="
-                    data-highlighted:bg-(--color-primary)
-                    data-highlighted:text-(--color-victorian-peacock-900)
-                    data-[state=checked]:bg-(--color-secondary)
-                    data-[state=checked]:text-(--color-victorian-peacock-50)
-                    data-[state=checked]:font-semibold"                  >
+                  <SelectItem value="translation" className={filterItemClassName}>
                     Translation
                   </SelectItem>
-                  <SelectItem
-                    value="rag"
-                    className="
-                    data-highlighted:bg-(--color-primary)
-                    data-highlighted:text-(--color-victorian-peacock-900)
-                    data-[state=checked]:bg-(--color-secondary)
-                    data-[state=checked]:text-(--color-victorian-peacock-50)
-                    data-[state=checked]:font-semibold"
-                  >
+                  <SelectItem value="rag" className={filterItemClassName}>
                     RAG
                   </SelectItem>
                 </SelectContent>
@@ -219,49 +163,20 @@ className="
                 value={filters.updatedWithin}
                 onValueChange={(value: DatePreset) => applyFilterUpdate("updatedWithin", value)}
               >
-                <SelectTrigger className="project-filter-trigger text-[14px] text-(--color-victorian-peacock-900)/70">
+                <SelectTrigger className={filterTriggerClassName}>
                   <SelectValue placeholder="Date" />
                 </SelectTrigger>
-                <SelectContent className="bg-(--color-victorian-peacock-100) mt-2 border-none">
-                  <SelectItem
-                    value="any"
-className="
-                    data-highlighted:bg-(--color-primary)
-                    data-highlighted:text-(--color-victorian-peacock-900)
-                    data-[state=checked]:bg-(--color-secondary)
-                    data-[state=checked]:text-(--color-victorian-peacock-50)
-                    data-[state=checked]:font-semibold"                  >
+                <SelectContent className={filterContentClassName}>
+                  <SelectItem value="any" className={filterItemClassName}>
                     Any time
                   </SelectItem>
-                  <SelectItem
-                    value="24h"
-                    className="
-                    data-highlighted:bg-(--color-primary)
-                    data-highlighted:text-(--color-victorian-peacock-900)
-                    data-[state=checked]:bg-(--color-secondary)
-                    data-[state=checked]:text-(--color-victorian-peacock-50)
-                    data-[state=checked]:font-semibold"
-                    >
+                  <SelectItem value="24h" className={filterItemClassName}>
                     Last 24h
                   </SelectItem>
-                  <SelectItem
-                    value="7d"
-className="
-                    data-highlighted:bg-(--color-primary)
-                    data-highlighted:text-(--color-victorian-peacock-900)
-                    data-[state=checked]:bg-(--color-secondary)
-                    data-[state=checked]:text-(--color-victorian-peacock-50)
-                    data-[state=checked]:font-semibold"                  >
+                  <SelectItem value="7d" className={filterItemClassName}>
                     Last 7d
                   </SelectItem>
-                  <SelectItem
-                    value="30d"
-className="
-                    data-highlighted:bg-(--color-primary)
-                    data-highlighted:text-(--color-victorian-peacock-900)
-                    data-[state=checked]:bg-(--color-secondary)
-                    data-[state=checked]:text-(--color-victorian-peacock-50)
-                    data-[state=checked]:font-semibold"                  >
+                  <SelectItem value="30d" className={filterItemClassName}>
                     Last 30d
                   </SelectItem>
                 </SelectContent>
@@ -291,7 +206,7 @@ className="
             ) : null}
           </div>
 
-          {/* Mobile Filters - Popover */}
+          {/* Small Width Filters - Popover */}
           <div className="lg:hidden">
             <Popover>
               <PopoverTrigger asChild>
@@ -330,15 +245,25 @@ className="
                         value={filters.progress}
                         onValueChange={(value: ProgressFilter) => applyFilterUpdate("progress", value)}
                       >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue />
+                        <SelectTrigger className={filterTriggerClassName}>
+                          <SelectValue placeholder="Status" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Status</SelectItem>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="running">Running</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="failed">Failed</SelectItem>
+                        <SelectContent className={filterContentClassName}>
+                          <SelectItem value="all" className={filterItemClassName}>
+                            All Status
+                          </SelectItem>
+                          <SelectItem value="pending" className={filterItemClassName}>
+                            Pending
+                          </SelectItem>
+                          <SelectItem value="running" className={filterItemClassName}>
+                            Running
+                          </SelectItem>
+                          <SelectItem value="completed" className={filterItemClassName}>
+                            Completed
+                          </SelectItem>
+                          <SelectItem value="failed" className={filterItemClassName}>
+                            Failed
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -349,13 +274,19 @@ className="
                         value={filters.projectType}
                         onValueChange={(value: TypeFilter) => applyFilterUpdate("projectType", value)}
                       >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue />
+                        <SelectTrigger className={filterTriggerClassName}>
+                          <SelectValue placeholder="Type" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Types</SelectItem>
-                          <SelectItem value="translation">Translation</SelectItem>
-                          <SelectItem value="rag">RAG</SelectItem>
+                        <SelectContent className={filterContentClassName}>
+                          <SelectItem value="all" className={filterItemClassName}>
+                            All Types
+                          </SelectItem>
+                          <SelectItem value="translation" className={filterItemClassName}>
+                            Translation
+                          </SelectItem>
+                          <SelectItem value="rag" className={filterItemClassName}>
+                            RAG
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -366,14 +297,22 @@ className="
                         value={filters.updatedWithin}
                         onValueChange={(value: DatePreset) => applyFilterUpdate("updatedWithin", value)}
                       >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue />
+                        <SelectTrigger className={filterTriggerClassName}>
+                          <SelectValue placeholder="Date" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="any">Any time</SelectItem>
-                          <SelectItem value="24h">Last 24 hours</SelectItem>
-                          <SelectItem value="7d">Last 7 days</SelectItem>
-                          <SelectItem value="30d">Last 30 days</SelectItem>
+                        <SelectContent className={filterContentClassName}>
+                          <SelectItem value="any" className={filterItemClassName}>
+                            Any time
+                          </SelectItem>
+                          <SelectItem value="24h" className={filterItemClassName}>
+                            Last 24 hours
+                          </SelectItem>
+                          <SelectItem value="7d" className={filterItemClassName}>
+                            Last 7 days
+                          </SelectItem>
+                          <SelectItem value="30d" className={filterItemClassName}>
+                            Last 30 days
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

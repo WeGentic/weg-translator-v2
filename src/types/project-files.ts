@@ -1,1 +1,1 @@
-export type ProjectFileRoleValue = "processable" | "reference" | "instructions" | "image";
+export type ProjectFileRoleValue = "processable" | "reference" | "instructions" | "image" | "ocr";

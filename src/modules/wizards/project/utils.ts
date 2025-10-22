@@ -3,7 +3,6 @@
  */
 
 import type { EnhancedLanguageOption, FileRoleValue } from "./types";
-import { IMAGE_EXTENSIONS } from "./constants";
 import type { LanguageOption } from "@/modules/project-manager/config/languages";
 
 /**
@@ -45,11 +44,8 @@ export function extractFileExtension(fileName: string): string {
  * Guesses a reasonable default file role using the extension alone. Image files
  * are auto-tagged as "image" while every other format defaults to "processable".
  */
-export function inferDefaultRoleFromExtension(extension: string): FileRoleValue {
-  if (IMAGE_EXTENSIONS.has(extension)) {
-    return "image";
-  }
-  return "processable";
+export function inferDefaultRoleFromExtension(_extension: string): FileRoleValue {
+  return "undefined";
 }
 
 /**

@@ -1,0 +1,12 @@
+.wizard-v2-client-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.wizard-v2-client-error {
+  margin: 0;
+  font-size: 0.78rem;
+  color: color-mix(in oklab, var(--color-destructive) 55%, var(--color-antiwhite) 15%);
+}

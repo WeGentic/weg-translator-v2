@@ -275,6 +275,22 @@
   );
 }
 
+.wizard-v2-role-variant--ocr {
+  --wizard-role-accent: color-mix(
+    in oklab,
+    var(--color-gradient-parchment-orange-600) 70%,
+    var(--color-sidebar-primary) 30%
+  );
+}
+
+.wizard-v2-role-variant--undefined {
+  --wizard-role-accent: color-mix(
+    in oklab,
+    var(--color-destructive) 75%,
+    var(--color-sidebar-primary) 25%
+  );
+}
+
 .wizard-v2-role-trigger {
   border-radius: 6px;
   border: none;
@@ -302,6 +318,11 @@
   border-color: color-mix(in oklab, var(--wizard-role-accent) 65%, transparent);
   background: var(--color-victorian-peacock-500);
   color: var(--color-victorian-peacock-50);
+}
+
+.wizard-v2-role-trigger[data-role-state='undefined'] {
+  background: color-mix(in oklab, var(--color-orioles-orange-200) 80%, transparent);
+  color: var(--color-orioles-orange-900);
 }
 
 .wizard-v2-role-menu {

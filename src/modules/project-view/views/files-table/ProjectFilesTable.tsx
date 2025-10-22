@@ -598,6 +598,7 @@ function normalizeProjectFileRole(value: string | null | undefined): ProjectFile
     case "reference":
     case "instructions":
     case "image":
+    case "ocr":
       return normalized;
     case "processable":
     case "source":

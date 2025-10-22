@@ -15,7 +15,7 @@ import {
  * currently highlighted file within the editor. The hook purposefully keeps pure data concerns so
  * the UI shell can stay focused on layout composition.
  */
-export function useWorkspaceShell(initialView: MainView = "projects") {
+export function useWorkspaceShell(initialView: MainView = "dashboard") {
   const [mainView, setMainView] = useState<MainView>(initialView);
   const [projectCache, setProjectCache] = useState<Record<string, ProjectListItem>>({});
   const [openOverviewIds, setOpenOverviewIds] = useState<string[]>([]);

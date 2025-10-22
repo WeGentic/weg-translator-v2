@@ -120,6 +120,16 @@ export function buildWizardFinalizePayload(params: BuildWizardFinalizePayloadPar
       };
     }
 
+    if (file.role === "undefined") {
+      return {
+        success: false,
+        issue: {
+          focusStep: "files",
+          message: `Assign a role to ${file.name} to continue.`,
+        },
+      };
+    }
+
     files.push({
       id: file.id,
       name: file.name,

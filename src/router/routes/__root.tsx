@@ -1,10 +1,17 @@
 import { Fragment, useCallback } from "react";
-import { Outlet, createRootRoute, useNavigate } from "@tanstack/react-router";
+import {
+  Outlet,
+  createRootRouteWithContext,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import { MainLayout } from "@/app/shell";
 import { WorkspaceFooter } from "@/app/shell/main_elements";
 import { useAppHealth } from "@/app/hooks/useAppHealth";
+import { queueWorkspaceMainViewIfNeeded } from "@/modules/workspace/navigation/main-view-persist";
+import type { RouterContext as AppRouterContext } from "@/router/router-context";
 
 const BASE_LAYOUT_CONFIG = {
   footer: { mounted: true, visible: true, height: 56 },
@@ -12,6 +19,8 @@ const BASE_LAYOUT_CONFIG = {
   sidebarTwo: { mounted: true, visible: true, width: 192 },
   background: { mounted: true, visible: true },
 };
+
+const LOGIN_PATH = "/login";
 
 /**
  * Dispatches a custom navigation event that will be handled by useGlobalNavigationEvents
@@ -35,11 +44,13 @@ function RootComponent() {
   }, [navigate]);
 
   const handleProjectsClick = useCallback(() => {
+    queueWorkspaceMainViewIfNeeded("projects");
     navigate({ to: "/" }).catch(() => undefined);
     dispatchNavigationEvent("projects");
   }, [navigate]);
 
   const handleEditorClick = useCallback(() => {
+    queueWorkspaceMainViewIfNeeded("editor");
     navigate({ to: "/" }).catch(() => undefined);
     dispatchNavigationEvent("editor");
   }, [navigate]);
@@ -50,6 +61,7 @@ function RootComponent() {
   }, [navigate]);
 
   const handleSettingsClick = useCallback(() => {
+    queueWorkspaceMainViewIfNeeded("settings");
     navigate({ to: "/" }).catch(() => undefined);
     dispatchNavigationEvent("settings");
   }, [navigate]);
@@ -78,6 +90,25 @@ function RootComponent() {
   );
 }
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<AppRouterContext>()({
+  beforeLoad: ({ context, location }) => {
+    if (location.pathname === LOGIN_PATH) {
+      return;
+    }
+
+    const auth = context.auth;
+    if (!auth?.isAuthenticated) {
+      const search = location.search ?? "";
+      const hash = location.hash ?? "";
+      const redirectTarget = `${location.pathname}${search}${hash}` || "/";
+
+      throw redirect({
+        to: "/login",
+        search: {
+          redirect: redirectTarget,
+        },
+      });
+    }
+  },
   component: RootComponent,
 });

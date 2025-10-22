@@ -2,6 +2,7 @@ import type { MainView } from "@/app/state/main-view";
 import { CLIENT_VIEW_PREFIX, EDITOR_VIEW_PREFIX, PROJECT_VIEW_PREFIX } from "@/app/state/main-view";
 
 const STORAGE_KEY = "weg-translator:workspace:next-view";
+const WORKSPACE_ROOT_PATH = "/";
 
 export function queueWorkspaceMainView(view: MainView): void {
   if (typeof window === "undefined") {
@@ -9,6 +10,18 @@ export function queueWorkspaceMainView(view: MainView): void {
   }
 
   window.sessionStorage.setItem(STORAGE_KEY, view);
+}
+
+export function queueWorkspaceMainViewIfNeeded(view: MainView): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (isWorkspacePath(window.location.pathname)) {
+    return;
+  }
+
+  queueWorkspaceMainView(view);
 }
 
 export function consumeQueuedWorkspaceMainView(): MainView | undefined {
@@ -28,6 +41,10 @@ export function consumeQueuedWorkspaceMainView(): MainView | undefined {
   }
 
   return undefined;
+}
+
+function isWorkspacePath(pathname: string): boolean {
+  return pathname === WORKSPACE_ROOT_PATH;
 }
 
 function isMainView(value: string): value is MainView {

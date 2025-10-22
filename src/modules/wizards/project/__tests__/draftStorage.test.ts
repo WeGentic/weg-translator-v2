@@ -66,33 +66,47 @@ describe("wizard draft storage", () => {
           notes: 15,
           sourceLanguage: "en-GB",
           targetLanguages: ["", " fr-CA ", 12, "fr-CA"],
-          files: [
-            {
-              id: "file-1",
-              name: "brief.pdf",
-              extension: "PDF",
-              role: "processable",
-              path: "/tmp/brief.pdf",
-            },
-            {
-              id: "file-2",
-              name: "duplicate.pdf",
-              extension: "PDF",
-              role: "reference",
-              path: "/tmp/brief.pdf",
-            },
-            {
-              id: "",
-              name: "bad",
-              extension: "TXT",
-              role: "image",
-              path: "",
-            },
-          ],
-          updatedAt: "invalid",
+      files: [
+        {
+          id: "file-1",
+          name: "brief.pdf",
+          extension: "PDF",
+          role: "processable",
+          path: "/tmp/brief.pdf",
         },
-      }),
-    );
+        {
+          id: "file-2",
+          name: "duplicate.pdf",
+          extension: "PDF",
+          role: "reference",
+          path: "/tmp/brief.pdf",
+        },
+        {
+          id: "",
+          name: "bad",
+          extension: "TXT",
+          role: "image",
+          path: "",
+        },
+        {
+          id: "file-3",
+          name: "scanned.pdf",
+          extension: "PDF",
+          role: "ocr",
+          path: "/tmp/scanned.pdf",
+        },
+        {
+          id: "file-4",
+          name: "pending.pdf",
+          extension: "PDF",
+          role: "undefined",
+          path: "/tmp/pending.pdf",
+        },
+      ],
+      updatedAt: "invalid",
+    },
+  }),
+);
 
     const restored = loadWizardDraftSnapshot();
     expect(restored).not.toBeNull();
@@ -111,6 +125,20 @@ describe("wizard draft storage", () => {
         extension: "PDF",
         role: "processable",
         path: "/tmp/brief.pdf",
+      },
+      {
+        id: "file-3",
+        name: "scanned.pdf",
+        extension: "PDF",
+        role: "ocr",
+        path: "/tmp/scanned.pdf",
+      },
+      {
+        id: "file-4",
+        name: "pending.pdf",
+        extension: "PDF",
+        role: "undefined",
+        path: "/tmp/pending.pdf",
       },
     ]);
     expect(restored?.updatedAt).toBe(new Date("2024-01-01T00:00:00.000Z").getTime());

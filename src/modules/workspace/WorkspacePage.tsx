@@ -33,7 +33,7 @@ export interface WorkspacePageProps {
   initialView?: MainView;
 }
 
-export function WorkspacePage({ initialView = "projects" }: WorkspacePageProps) {
+export function WorkspacePage({ initialView = "dashboard" }: WorkspacePageProps) {
   const { systemError } = useAppHealth();
 
   const {
@@ -72,6 +72,18 @@ export function WorkspacePage({ initialView = "projects" }: WorkspacePageProps) 
     onChangeView: setMainView,
     onFocusEditor: focusEditor,
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("app:navigate", {
+        detail: { view: mainView },
+      }),
+    );
+  }, [mainView]);
 
   useEffect(() => {
     const store = layoutStore;

@@ -32,7 +32,8 @@ export type EnhancedLanguageOption = LanguageOption & {
  * Tags used to describe how an uploaded asset will participate in the project.
  * These map to the options shown in the role dropdown.
  */
-export type FileRoleValue = "processable" | "reference" | "instructions" | "image";
+export type FileRoleValue = "undefined" | "processable" | "reference" | "instructions" | "image" | "ocr";
+export type AssignableFileRoleValue = Exclude<FileRoleValue, "undefined">;
 
 /**
  * Structure of a file queued for upload before the project is persisted.
@@ -64,7 +65,7 @@ export interface WizardFinalizeFileDescriptor {
   id: string;
   name: string;
   extension: string;
-  role: FileRoleValue;
+  role: AssignableFileRoleValue;
   path: string;
 }
 

@@ -92,13 +92,12 @@
   gap: 16px;
   padding: 20px 24px;
   border-radius: 12px;
-  border: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
+  border: 1px solid var(--color-victorian-peacock-300);
   background: linear-gradient(
       135deg,
-      color-mix(in oklab, var(--color-background) 92%, transparent),
-      transparent 70%
-    )
-    color-mix(in oklab, var(--color-onprimary) 22%, transparent);
+      var(--color-victorian-peacock-700) 0%,
+      var(--color-victorian-peacock-700) 22%
+    );
   box-shadow:
     0 28px 60px -32px color-mix(in oklab, black 45%, transparent),
     0 1px 0 0 color-mix(in oklab, white 28%, transparent) inset;
@@ -109,10 +108,9 @@
 .wizard-v2-feedback-card.is-loading {
   background: linear-gradient(
       135deg,
-      color-mix(in oklab, var(--color-primary) 18%, transparent),
-      transparent 70%
-    )
-    color-mix(in oklab, var(--color-onprimary) 18%, transparent);
+      var(--color-victorian-peacock-700) 0%,
+      var(--color-victorian-peacock-700) 22%
+    );
 }
 
 .wizard-v2-feedback-card[data-state='success']:not(.is-loading) {
@@ -125,12 +123,9 @@
 }
 
 .wizard-v2-feedback-card[data-state='error']:not(.is-loading) {
-  background: linear-gradient(
-      135deg,
-      color-mix(in oklab, var(--color-destructive) 28%, transparent),
-      transparent 70%
-    )
-    color-mix(in oklab, var(--color-onprimary) 22%, transparent);
+  background: 
+      color-mix(in oklab, var(--color-destructive) 70%, transparent);
+  color: var(--color-victorian-peacock-950);
 }
 
 .wizard-v2-feedback-icon {
@@ -168,7 +163,7 @@
 }
 
 .wizard-v2-feedback-card[data-state='error'] .wizard-v2-feedback-title {
-  color: color-mix(in oklab, var(--color-destructive) 60%, transparent);
+  color: var(--color-victorian-peacock-50);
 }
 
 .wizard-v2-feedback-message {
@@ -189,7 +184,7 @@
 }
 
 .wizard-v2-feedback-card[data-state='error'] .wizard-v2-feedback-message {
-  color: color-mix(in oklab, var(--color-destructive) 55%, var(--color-sidebar-primary) 10%);
+  color: var(--color-victorian-peacock-50);
 }
 
 .wizard-v2-feedback-button {

@@ -145,7 +145,14 @@ function sanitizeInitialFiles(entries: DraftFileEntry[]): DraftFileEntry[] {
 }
 
 function isValidRole(value: unknown): value is FileRoleValue {
-  return value === "processable" || value === "reference" || value === "instructions" || value === "image";
+  return (
+    value === "undefined" ||
+    value === "processable" ||
+    value === "reference" ||
+    value === "instructions" ||
+    value === "image" ||
+    value === "ocr"
+  );
 }
 
 const FILE_ID_PATTERN = /file-(\d+)$/;

@@ -3,8 +3,6 @@
  */
 
 import { useCallback, useMemo, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
-
-import { Trash2 } from "lucide-react";
 import { LuFilePlus2 } from "react-icons/lu";
 import { LuFileMinus2 } from "react-icons/lu";
 
@@ -16,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/shared/utils/class-names";
 
 import { EDITABLE_FILE_ROLE_OPTIONS, FILE_ROLE_LABELS, IMAGE_EXTENSIONS } from "../constants";
-import type { DraftFileEntry, FileRoleValue } from "../types";
+import type { AssignableFileRoleValue, DraftFileEntry, FileRoleValue } from "../types";
 
 type FileTypeVariant = "document" | "spreadsheet" | "presentation" | "image" | "archive" | "media" | "code" | "other";
 
@@ -32,10 +30,12 @@ const TYPE_VARIANT_CLASS_MAP: Record<FileTypeVariant, string> = {
 };
 
 const ROLE_VARIANT_CLASS_MAP: Record<FileRoleValue, string> = {
+  undefined: "wizard-v2-role-variant--undefined",
   processable: "wizard-v2-role-variant--processable",
   reference: "wizard-v2-role-variant--reference",
   instructions: "wizard-v2-role-variant--instructions",
   image: "wizard-v2-role-variant--image",
+  ocr: "wizard-v2-role-variant--ocr",
 };
 
 const DOCUMENT_EXTENSIONS = new Set(["DOC", "DOCX", "PDF", "TXT", "RTF", "ODT", "MD"]);
@@ -130,7 +130,7 @@ export function WizardFilesStep({
       return accumulator;
     }, {} as Partial<Record<FileRoleValue, number>>);
 
-    const orderedRoles: FileRoleValue[] = ["processable", "reference", "instructions", "image"];
+    const orderedRoles: FileRoleValue[] = ["undefined", "processable", "reference", "instructions", "ocr", "image"];
     const parts = orderedRoles
       .map((role) => {
         const count = counts[role];
@@ -207,6 +207,25 @@ export function WizardFilesStep({
                   const extensionLabel = entry.extension.toUpperCase();
                   const fileTypeClass = TYPE_VARIANT_CLASS_MAP[resolveFileTypeVariant(extensionLabel)];
                   const roleVariantClass = ROLE_VARIANT_CLASS_MAP[entry.role];
+                  const normalizedExtension = extensionLabel.trim();
+                  const eligibleRoleOptions = EDITABLE_FILE_ROLE_OPTIONS.filter((option) => {
+                    if (!option.isEligible) {
+                      return true;
+                    }
+                    return option.isEligible(normalizedExtension);
+                  });
+                  const selectableOptions: Array<{ value: AssignableFileRoleValue; label: string }> = eligibleRoleOptions.map(
+                    ({ value, label }) => ({
+                      value,
+                      label,
+                    }),
+                  );
+                  if (
+                    entry.role !== "undefined" &&
+                    !selectableOptions.some((option) => option.value === entry.role)
+                  ) {
+                    selectableOptions.push({ value: entry.role, label: FILE_ROLE_LABELS[entry.role] });
+                  }
 
                   return (
                     <TableRow key={entry.id} className="wizard-v2-file-row">
@@ -222,27 +241,25 @@ export function WizardFilesStep({
                         </Badge>
                       </TableCell>
                       <TableCell className="wizard-v2-file-role">
-                        {entry.role === "image" ? (
-                          <Badge variant="outline" className={cn("wizard-v2-role-badge", roleVariantClass)}>
-                            {FILE_ROLE_LABELS.image}
-                          </Badge>
-                        ) : (
-                          <Select value={entry.role} onValueChange={(value) => onRoleChange(entry.id, value as FileRoleValue)}>
-                            <SelectTrigger
-                              className={cn("wizard-v2-role-trigger", roleVariantClass)}
-                              aria-label={`Select role for ${entry.name}`}
-                            >
-                              <SelectValue placeholder="Select role" />
-                            </SelectTrigger>
-                            <SelectContent className="wizard-v2-role-menu mt-2">
-                              {EDITABLE_FILE_ROLE_OPTIONS.map((option) => (
-                                <SelectItem key={option.value} value={option.value} className="wizard-v2-role-item">
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
+                        <Select
+                          value={entry.role === "undefined" ? undefined : entry.role}
+                          onValueChange={(value) => onRoleChange(entry.id, value as FileRoleValue)}
+                        >
+                          <SelectTrigger
+                            className={cn("wizard-v2-role-trigger", roleVariantClass)}
+                            aria-label={`Select role for ${entry.name}`}
+                            data-role-state={entry.role}
+                          >
+                            <SelectValue placeholder={FILE_ROLE_LABELS.undefined} />
+                          </SelectTrigger>
+                          <SelectContent className="wizard-v2-role-menu mt-2">
+                            {selectableOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value} className="wizard-v2-role-item">
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="wizard-v2-file-actions">
                         <button

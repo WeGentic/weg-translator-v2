@@ -112,6 +112,7 @@ interface ProjectFileTotalsDto {
   processable: number;
   reference: number;
   instructions: number;
+  ocr: number;
   image: number;
   other: number;
 }
@@ -436,6 +437,7 @@ function mapProjectStatisticsDto(dto: ProjectStatisticsDto): ProjectStatistics {
       processable: dto.totals.processable,
       reference: dto.totals.reference,
       instructions: dto.totals.instructions,
+      ocr: dto.totals.ocr,
       image: dto.totals.image,
       other: dto.totals.other,
     },

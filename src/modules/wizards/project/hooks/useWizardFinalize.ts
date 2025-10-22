@@ -133,6 +133,10 @@ export function useWizardFinalize({
       return { ready: false, reason: "One or more files are missing a resolved path. Re-add them and try again." };
     }
 
+    if (files.some((entry) => entry.role === "undefined")) {
+      return { ready: false, reason: "Assign a role to each file before finalizing the project." };
+    }
+
     return { ready: true, reason: null };
   }, [submissionPending, finalizeBusy, projectName, sourceLanguage, targetLanguages, fileCount, files]);
 

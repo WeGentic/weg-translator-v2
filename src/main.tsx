@@ -4,26 +4,21 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { routeTree } from "@/router";
 import { ScreenGuard } from "@/app/shell/screen-guard";
 import { AppProviders, useAuth } from "@/app/providers";
+import type { RouterContext as AppRouterContext } from "@/router/router-context";
 import "./App.css";
-
-interface RouterContext {
-  auth: ReturnType<typeof useAuth>;
-}
 
 const router = createRouter({
   routeTree,
   context: {
     auth: undefined!,
-  } as RouterContext,
+  } as AppRouterContext,
 });
 
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
   }
-  interface RouterContext {
-    auth: ReturnType<typeof useAuth>;
-  }
+  interface RouterContext extends AppRouterContext {}
 }
 
 function InnerApp() {

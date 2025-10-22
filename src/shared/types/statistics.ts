@@ -3,6 +3,7 @@ export type ProjectFileTotals = {
   processable: number;
   reference: number;
   instructions: number;
+  ocr: number;
   image: number;
   other: number;
 };
@@ -48,4 +49,3 @@ export type ProjectStatistics = {
   warnings: ProjectWarningStats;
   lastActivity?: string | null;
 };
-

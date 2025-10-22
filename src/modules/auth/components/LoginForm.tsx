@@ -30,9 +30,18 @@ export function LoginForm() {
 
       try {
         await login(email, password);
-        const search = router.state.location.search as { redirect?: "/" };
-        const redirectTo = search?.redirect ?? "/";
-        await router.navigate({ to: redirectTo });
+        const search = router.state.location.search as { redirect?: string };
+        const redirectTo =
+          typeof search?.redirect === "string" && search.redirect.length > 0
+            ? search.redirect
+            : "/";
+
+        if (redirectTo === "/" || !redirectTo.startsWith("/")) {
+          await router.navigate({ to: "/" });
+          return;
+        }
+
+        router.history.push(redirectTo);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Login failed");
       }

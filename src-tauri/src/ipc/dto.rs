@@ -274,6 +274,7 @@ pub enum ProjectAssetRoleDto {
     Reference,
     Instructions,
     Image,
+    Ocr,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -554,6 +555,7 @@ pub struct ProjectFileTotalsDto {
     pub processable: i64,
     pub reference: i64,
     pub instructions: i64,
+    pub ocr: i64,
     pub image: i64,
     pub other: i64,
 }

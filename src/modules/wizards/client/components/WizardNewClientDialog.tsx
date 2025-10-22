@@ -29,8 +29,12 @@ import { resolveDefaultCountry } from "./phoneUtils";
 import { resolveLanguageCode } from "./addressUtils";
 import { useAddressAutocomplete } from "./useAddressAutocomplete";
 
-import "../client-wizard.css";
-import "../client-form.css";
+import "../css/client-wizard-dialog.css";
+import "../css/client-wizard-layout.css";
+import "../css/client-wizard-phone.css";
+import "../css/client-wizard-autocomplete.css";
+import "../css/client-wizard-feedback.css";
+import "../css/client-wizard-input.css";
 import "react-phone-number-input/style.css";
 
 interface WizardPhoneContainerProps extends HTMLAttributes<HTMLDivElement> {

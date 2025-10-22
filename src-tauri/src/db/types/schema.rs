@@ -179,6 +179,7 @@ pub struct ProjectFileTotals {
     pub processable: i64,
     pub reference: i64,
     pub instructions: i64,
+    pub ocr: i64,
     pub image: i64,
     pub other: i64,
 }

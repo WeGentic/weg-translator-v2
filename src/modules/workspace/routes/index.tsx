@@ -11,7 +11,7 @@ function resolveInitialView(): MainView | undefined {
 export function WorkspaceRoute() {
   const initialView = useMemo(() => resolveInitialView(), []);
 
-  return <WorkspacePage initialView={initialView ?? "projects"} />;
+  return <WorkspacePage initialView={initialView ?? "dashboard"} />;
 }
 
 export const workspaceRouteComponent = WorkspaceRoute;

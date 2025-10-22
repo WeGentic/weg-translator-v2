@@ -56,6 +56,17 @@ describe("buildWizardFinalizePayload", () => {
     if (result.success) throw new Error("expected validation failure");
     expect(result.issue.focusStep).toBe("files");
   });
+
+  it("fails when a file role is still undefined", () => {
+    const result = buildWizardFinalizePayload({
+      ...baseParams,
+      files: [{ ...baseParams.files[0], role: "undefined" }],
+    });
+
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected validation failure");
+    expect(result.issue.message).toContain("Assign a role");
+  });
 });
 
 describe("buildCreateProjectWithAssetsInput", () => {
