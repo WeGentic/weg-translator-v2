@@ -1,4 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
+
+import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 
 import { Button } from "@/shared/ui/button";
 import {
@@ -22,17 +24,13 @@ import {
   validateEmail,
   type ClientFormErrors,
 } from "./clientFormValidation";
-import {
-  createPhoneCountryOptions,
-  evaluatePhone,
-  FALLBACK_PHONE_COUNTRY,
-  getPhoneCountryMeta,
-  resolveDefaultCountry,
-  type PhoneCountryMeta,
-} from "./phoneUtils";
+import { resolveDefaultCountry } from "./phoneUtils";
 import { resolveLanguageCode } from "./addressUtils";
 import { useAddressAutocomplete } from "./useAddressAutocomplete";
-import { PhoneCountrySelect } from "./PhoneCountrySelect";
+
+import "../client-wizard.css";
+import "../client-form.css";
+import "react-phone-number-input/style.css";
 
 export interface WizardNewClientFormValues {
   name: string;
@@ -50,25 +48,17 @@ interface WizardNewClientDialogProps {
   onSubmit: (values: WizardNewClientFormValues) => Promise<void>;
 }
 
-type PhoneState = {
-  readonly raw: string;
-  readonly national: string;
-  readonly e164: string | null;
-  readonly isValid: boolean;
-  readonly country: CountryCode;
-};
-
 export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmit }: WizardNewClientDialogProps) {
   const [name, setName] = useState(initialName);
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [address, setAddress] = useState("");
   const [vatNumber, setVatNumber] = useState("");
-  const addressInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const [phoneState, setPhoneState] = useState<PhoneState>(() => {
-    const country = resolveDefaultCountry();
-    return { raw: "", national: "", e164: null, isValid: false, country };
-  });
+  const addressInputRef = useRef<HTMLInputElement | null>(null);
+  const phoneInputRef = useRef<HTMLInputElement | null>(null);
+  const defaultPhoneCountry = useMemo<CountryCode>(() => resolveDefaultCountry(), []);
+  const [phoneCountry, setPhoneCountry] = useState<CountryCode>(defaultPhoneCountry);
+  const [phoneValue, setPhoneValue] = useState<string | undefined>(undefined);
   const [fieldErrors, setFieldErrors] = useState<ClientFormErrors>({});
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -80,29 +70,11 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
     return ["en"] as const;
   }, []);
 
-  const countryDisplayNames = useMemo(() => {
-    if (typeof Intl !== "undefined" && typeof Intl.DisplayNames !== "undefined") {
-      return new Intl.DisplayNames(localeCandidates, { type: "region" });
-    }
-    return null;
-  }, [localeCandidates]);
-
-  const phoneCountryOptions = useMemo<PhoneCountryMeta[]>(() => {
-    return createPhoneCountryOptions(countryDisplayNames, localeCandidates[0] ?? "en");
-  }, [countryDisplayNames, localeCandidates]);
-
   const languageCode = useMemo(() => resolveLanguageCode(localeCandidates[0]), [localeCandidates]);
 
   const countryBias = useMemo<readonly string[] | undefined>(() => {
-    return phoneState.country ? [phoneState.country] : undefined;
-  }, [phoneState.country]);
-
-  const selectedPhoneMeta = useMemo(() => {
-    return (phoneCountryOptions.find((option) => option.code === phoneState.country) ??
-      getPhoneCountryMeta(phoneState.country, countryDisplayNames));
-  }, [phoneCountryOptions, phoneState.country, countryDisplayNames]);
-
-  const phonePrefixLabel = selectedPhoneMeta.callingCode ? `+${selectedPhoneMeta.callingCode}` : `+${selectedPhoneMeta.code}`;
+    return phoneCountry ? [phoneCountry] : undefined;
+  }, [phoneCountry]);
 
   const {
     suggestions: addressSuggestions,
@@ -120,9 +92,10 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
     query: address,
     language: languageCode,
     countryBias,
-    textareaRef: addressInputRef,
+    fieldRef: addressInputRef,
     onResolve: setAddress,
   });
+  const addressSuggestionListId = useId();
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault();
@@ -131,9 +104,9 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
     const emailValidation = validateEmail(email);
     const vatValidation = sanitizeVat(vatNumber);
 
-    const hasPhoneValue = phoneState.raw.length > 0 || phoneState.national.length > 0 || Boolean(phoneState.e164);
+    const hasPhoneValue = Boolean(phoneInputRef.current?.value.trim().length);
     const phoneError =
-      hasPhoneValue && (!phoneState.isValid || !phoneState.e164)
+      hasPhoneValue && (!phoneValue || !isValidPhoneNumber(phoneValue))
         ? "Enter a valid phone number for the selected country."
         : undefined;
 
@@ -162,7 +135,7 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
         await onSubmit({
           name: trimmedName,
           email: emailValidation.normalized,
-          phone: hasPhoneValue && phoneState.e164 ? phoneState.e164 : "",
+          phone: hasPhoneValue && phoneValue ? phoneValue : "",
           address: trimmedAddress,
           vatNumber: vatValidation.normalized,
           note: trimmedNotes,
@@ -178,29 +151,14 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
     })();
   };
 
-  const handlePhoneInputChange = (value: string) => {
-    const digits = value.replace(/[^\d]/g, "");
-    const evaluation = evaluatePhone(digits, phoneState.country);
-    setPhoneState((prev) => ({
-      ...prev,
-      raw: evaluation.raw,
-      national: evaluation.national,
-      e164: evaluation.e164,
-      isValid: evaluation.isValid,
-    }));
-
-    if (fieldErrors.phone) {
-      setFieldErrors((prev) => ({ ...prev, phone: undefined }));
-    }
-  };
-
   const handlePhoneBlur = () => {
-    if (!phoneState.raw) {
+    const hasPhoneDigits = Boolean(phoneInputRef.current?.value.trim().length);
+    if (!hasPhoneDigits) {
       setFieldErrors((prev) => ({ ...prev, phone: undefined }));
       return;
     }
 
-    if (!phoneState.isValid) {
+    if (!phoneValue || !isValidPhoneNumber(phoneValue)) {
       setFieldErrors((prev) => ({
         ...prev,
         phone: "Enter a valid phone number for the selected country.",
@@ -210,38 +168,23 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
     }
   };
 
-  const handlePhoneCountryChange = (value: CountryCode) => {
-    const nextCountry = phoneCountryOptions.find((option) => option.code === value)?.code ?? FALLBACK_PHONE_COUNTRY;
-    if (phoneState.country === nextCountry) {
-      return;
+  const handlePhoneChange = (value?: string) => {
+    setPhoneValue(value);
+    if (fieldErrors.phone) {
+      setFieldErrors((prev) => ({ ...prev, phone: undefined }));
     }
+  };
 
-    const evaluation = evaluatePhone(phoneState.raw, nextCountry);
-    setPhoneState({
-      country: nextCountry,
-      raw: evaluation.raw,
-      national: evaluation.national,
-      e164: evaluation.e164,
-      isValid: evaluation.isValid,
-    });
-
-    setFieldErrors((prev) => {
-      if (!evaluation.raw) {
-        return { ...prev, phone: undefined };
-      }
-      return {
-        ...prev,
-        phone: evaluation.isValid ? undefined : "Enter a valid phone number for the selected country.",
-      };
-    });
+  const handlePhoneCountryChange = (nextCountry?: CountryCode) => {
+    setPhoneCountry(nextCountry ?? defaultPhoneCountry);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn("wizard-v2-client-dialog")}>
         <DialogHeader>
-          <DialogTitle>Add new client</DialogTitle>
-          <DialogDescription>Provide basic information to create a client profile.</DialogDescription>
+          <DialogTitle className="text-(--color-victorian-peacock-900)">Add new client</DialogTitle>
+          <DialogDescription className="text-(--color-victorian-peacock-700)">Provide basic information to create a client profile.</DialogDescription>
         </DialogHeader>
         <form className="wizard-v2-client-form" onSubmit={handleSubmit}>
           <div className="wizard-v2-client-body">
@@ -252,6 +195,7 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                 </label>
                 <Input
                   id="wizard-v2-client-name"
+                  className="client-form-input"
                   value={name}
                   autoFocus
                   maxLength={MAX_CLIENT_NAME_LENGTH}
@@ -261,7 +205,7 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                       setFieldErrors((prev) => ({ ...prev, name: undefined }));
                     }
                   }}
-                  placeholder="Acme Corporation"
+                  placeholder="Client name"
                   required
                   aria-invalid={fieldErrors.name ? "true" : "false"}
                   autoCapitalize="words"
@@ -278,6 +222,7 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                 </label>
                 <Input
                   id="wizard-v2-client-email"
+                  className="client-form-input"
                   value={email}
                   onChange={(event) => {
                     setEmail(event.target.value);
@@ -312,33 +257,32 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                 <label className="wizard-v2-client-label" htmlFor="wizard-v2-client-phone">
                   Phone
                 </label>
-                <div className="wizard-v2-client-phone">
-                  <PhoneCountrySelect
-                    value={phoneState.country}
-                    options={phoneCountryOptions}
-                    currentLabel={selectedPhoneMeta}
-                    disabled={pending}
-                    onChange={handlePhoneCountryChange}
-                  />
-                  <div className="wizard-v2-phone-field">
-                    <span className="wizard-v2-phone-prefix" aria-hidden="true" title={`Country calling code ${phonePrefixLabel}`}>
-                      {phonePrefixLabel}
-                    </span>
-                    <Input
-                      id="wizard-v2-client-phone"
-                      className="wizard-v2-client-phone-input"
-                      value={phoneState.national}
-                      onChange={(event) => handlePhoneInputChange(event.target.value)}
-                      onBlur={handlePhoneBlur}
-                      placeholder="555 555 1234"
-                      type="tel"
-                      inputMode="tel"
-                      autoComplete="tel-national"
-                      aria-label={`Phone number (${phonePrefixLabel})`}
-                      aria-invalid={fieldErrors.phone ? "true" : "false"}
-                    />
-                  </div>
-                </div>
+                <PhoneInput
+                  id="wizard-v2-client-phone"
+                  name="phone"
+                  value={phoneValue}
+                  onChange={handlePhoneChange}
+                  onCountryChange={handlePhoneCountryChange}
+                  defaultCountry={defaultPhoneCountry}
+                  country={phoneCountry}
+                  disabled={pending}
+                  aria-disabled={pending ? true : undefined}
+                  placeholder="555 555 1234"
+                  className={cn("wizard-v2-phone-control", fieldErrors.phone && "wizard-v2-phone-control--error")}
+                  inputProps={{
+                    ref: phoneInputRef,
+                    id: "wizard-v2-client-phone",
+                    name: "phone",
+                    "aria-invalid": fieldErrors.phone ? true : undefined,
+                    onBlur: handlePhoneBlur,
+                    autoComplete: "tel",
+                    className: "wizard-v2-phone-input",
+                  }}
+                  countrySelectProps={{
+                    className: "wizard-v2-phone-select",
+                    disabled: pending,
+                  }}
+                />
                 {fieldErrors.phone ? (
                   <p className="wizard-v2-client-field-error" role="alert">
                     {fieldErrors.phone}
@@ -351,6 +295,7 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                 </label>
                 <Input
                   id="wizard-v2-client-vat"
+                  className="client-form-input"
                   value={vatNumber}
                   onChange={(event) => {
                     setVatNumber(event.target.value);
@@ -372,9 +317,11 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                   Address
                 </label>
                 <div className="wizard-v2-client-autocomplete">
-                  <Textarea
+                  <Input
                     id="wizard-v2-client-address"
                     ref={addressInputRef}
+                    className="client-form-input wizard-v2-client-address-input"
+                    type="text"
                     value={address}
                     onChange={(event) => {
                       setAddress(event.target.value);
@@ -384,12 +331,27 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                     onBlur={handleAddressBlur}
                     onKeyDown={handleAddressKeyDown}
                     placeholder="123 Example Street, City, Country"
-                    rows={3}
+                    autoComplete="street-address"
+                    autoCapitalize="words"
+                    spellCheck={false}
+                    role="combobox"
                     aria-autocomplete="list"
+                    aria-haspopup="listbox"
                     aria-expanded={addressShowPanel ? "true" : "false"}
+                    aria-controls={addressShowPanel ? addressSuggestionListId : undefined}
+                    aria-activedescendant={
+                      addressShowPanel && addressActiveIndex >= 0
+                        ? `${addressSuggestionListId}-option-${addressActiveIndex}`
+                        : undefined
+                    }
                   />
                   {addressShowPanel ? (
-                    <div className="wizard-v2-client-suggestions" role="listbox" aria-label="Address suggestions">
+                    <div
+                      id={addressSuggestionListId}
+                      className="wizard-v2-client-suggestions"
+                      role="listbox"
+                      aria-label="Address suggestions"
+                    >
                       {addressLoading ? (
                         <div className="wizard-v2-client-suggestion-status">Searching addresses…</div>
                       ) : null}
@@ -399,6 +361,7 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                           <button
                             key={suggestion.id}
                             type="button"
+                            id={`${addressSuggestionListId}-option-${index}`}
                             className={cn(
                               "wizard-v2-client-suggestion",
                               isActive && "wizard-v2-client-suggestion--active",
@@ -439,6 +402,7 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                 <Textarea
                   id="wizard-v2-client-notes"
                   value={notes}
+                  className="client-form-input wizard-v2-client-notes-textarea"
                   onChange={(event) => setNotes(event.target.value)}
                   placeholder="Internal notes, key contacts, style guides…"
                   rows={4}
@@ -455,7 +419,12 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending} className="
+            bg-[var(--color-victorian-peacock-900)]
+            text-[var(--color-neverything-50)]
+            hover:bg-[var(--color-victorian-peacock-800)]
+            focus-visible:ring-[var(--color-victorian-peacock-700)]
+            ">
               {pending ? "Saving…" : "Save client"}
             </Button>
           </DialogFooter>

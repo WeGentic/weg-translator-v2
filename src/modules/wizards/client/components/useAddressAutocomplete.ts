@@ -5,6 +5,8 @@ import { supabase } from "@/core/config";
 
 import { generatePlacesSessionToken } from "./addressUtils";
 
+type AddressFieldElement = HTMLInputElement | HTMLTextAreaElement;
+
 interface AutocompleteResponse {
   readonly sessionToken: string | null;
   readonly suggestions: AddressSuggestion[];
@@ -35,15 +37,15 @@ export interface AddressSuggestion {
   readonly distanceMeters: number | null;
 }
 
-interface UseAddressAutocompleteOptions {
+interface UseAddressAutocompleteOptions<T extends AddressFieldElement> {
   query: string;
   language: string;
   countryBias?: readonly string[];
-  textareaRef: MutableRefObject<HTMLTextAreaElement | null>;
+  fieldRef: MutableRefObject<T | null>;
   onResolve: (address: string) => void;
 }
 
-interface UseAddressAutocompleteResult {
+interface UseAddressAutocompleteResult<T extends AddressFieldElement> {
   suggestions: AddressSuggestion[];
   loading: boolean;
   error: string | null;
@@ -51,20 +53,20 @@ interface UseAddressAutocompleteResult {
   focused: boolean;
   handleFocus: () => void;
   handleBlur: () => void;
-  handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement>;
+  handleKeyDown: KeyboardEventHandler<T>;
   handleSuggestionSelect: (suggestion: AddressSuggestion) => void;
   activeIndex: number;
   setActiveIndex: (index: number) => void;
   showPanel: boolean;
 }
 
-export function useAddressAutocomplete({
+export function useAddressAutocomplete<T extends AddressFieldElement>({
   query,
   language,
   countryBias,
-  textareaRef,
+  fieldRef,
   onResolve,
-}: UseAddressAutocompleteOptions): UseAddressAutocompleteResult {
+}: UseAddressAutocompleteOptions<T>): UseAddressAutocompleteResult<T> {
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -272,7 +274,7 @@ export function useAddressAutocomplete({
       onResolve(resolvedAddress);
 
       requestAnimationFrame(() => {
-        const element = textareaRef.current;
+        const element = fieldRef.current;
         if (element) {
           element.focus();
           const length = resolvedAddress.length;
@@ -280,7 +282,7 @@ export function useAddressAutocomplete({
         }
       });
     },
-    [fetchPlaceDetails, onResolve, textareaRef],
+    [fetchPlaceDetails, onResolve, fieldRef],
   );
 
   const handleSuggestionSelect = useCallback(
@@ -290,7 +292,7 @@ export function useAddressAutocomplete({
     [handleSuggestionSelectInternal],
   );
 
-  const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = useCallback(
+  const handleKeyDown: KeyboardEventHandler<AddressFieldElement> = useCallback(
     (event) => {
       if (suggestions.length === 0) {
         return;

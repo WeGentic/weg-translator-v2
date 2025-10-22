@@ -240,8 +240,8 @@ impl DbManager {
             .insert_project_file_conversions(std::slice::from_ref(&new_conversion), tx)
             .await
         {
-            if let DbError::Sqlx(sqlx::Error::Database(db_err)) = &err {
-                if db_err.message().contains("UNIQUE constraint failed") {
+            if let DbError::ConstraintViolation(message) = &err {
+                if message.contains("UNIQUE constraint failed") {
                     let select_existing = format!(
                         "SELECT {columns} FROM project_file_conversions
                          WHERE project_file_id = ?1

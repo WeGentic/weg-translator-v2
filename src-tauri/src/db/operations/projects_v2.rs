@@ -15,13 +15,28 @@ use crate::db::types::{
     UpdateProjectArgs,
 };
 
+fn ensure_project_language_pairs_unique(pairs: &[ProjectLanguagePairInput]) -> DbResult<()> {
+    let mut seen: HashSet<(String, String)> = HashSet::with_capacity(pairs.len());
+    for pair in pairs {
+        let key = (pair.source_lang.clone(), pair.target_lang.clone());
+        if !seen.insert(key) {
+            return Err(DbError::ConstraintViolation(format!(
+                "Duplicate project language pair '{} -> {}'",
+                pair.source_lang, pair.target_lang
+            )));
+        }
+    }
+    Ok(())
+}
+
 /// Creates a project with associated subjects and language pairs.
 pub async fn create_project(pool: &SqlitePool, args: NewProjectArgs) -> DbResult<ProjectBundle> {
     if args.language_pairs.is_empty() {
         return Err(DbError::ConstraintViolation(
-            "project requires at least one language pair",
+            "project requires at least one language pair".into(),
         ));
     }
+    ensure_project_language_pairs_unique(&args.language_pairs)?;
 
     let mut tx = pool.begin().await?;
 
@@ -140,9 +155,10 @@ pub async fn update_project(
     if let Some(language_pairs) = args.language_pairs.as_ref() {
         if language_pairs.is_empty() {
             return Err(DbError::ConstraintViolation(
-                "project requires at least one language pair",
+                "project requires at least one language pair".into(),
             ));
         }
+        ensure_project_language_pairs_unique(language_pairs)?;
         replace_project_language_pairs(&mut tx, args.project_uuid, language_pairs).await?;
     }
 
@@ -303,10 +319,18 @@ pub async fn detach_project_file(
         .execute(&mut *tx)
         .await?;
 
-    sqlx::query("DELETE FROM file_info WHERE file_uuid = ?1")
-        .bind(file_uuid)
-        .execute(&mut *tx)
-        .await?;
+    let remaining_links: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) as count FROM project_files WHERE file_uuid = ?1")
+            .bind(file_uuid)
+            .fetch_one(&mut *tx)
+            .await?;
+
+    if remaining_links.0 == 0 {
+        sqlx::query("DELETE FROM file_info WHERE file_uuid = ?1")
+            .bind(file_uuid)
+            .execute(&mut *tx)
+            .await?;
+    }
 
     tx.commit().await?;
     Ok(())
@@ -323,7 +347,9 @@ pub async fn update_project_file_role(
 
     let normalized = next_role.trim().to_lowercase();
     if !VALID_ROLES.contains(&normalized.as_str()) {
-        return Err(DbError::ConstraintViolation("invalid project file role"));
+        return Err(DbError::ConstraintViolation(
+            "invalid project file role".into(),
+        ));
     }
 
     let mut tx = pool.begin().await?;
@@ -354,7 +380,7 @@ pub async fn update_project_file_role(
 
         if project_pairs.is_empty() {
             return Err(DbError::ConstraintViolation(
-                "processable files require project language pairs",
+                "processable files require project language pairs".into(),
             ));
         }
 
@@ -772,8 +798,13 @@ mod tests {
 
         let result = create_project(&pool, args).await;
         match result {
-            Err(DbError::Sqlx(sqlx::Error::Database(_))) => {}
-            other => panic!("expected database error, got {other:?}"),
+            Err(DbError::ConstraintViolation(message)) => {
+                assert!(
+                    message.contains("Duplicate project language pair"),
+                    "unexpected message: {message}",
+                );
+            }
+            other => panic!("expected validation error, got {other:?}"),
         }
 
         let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM projects WHERE project_uuid = ?1")
@@ -849,16 +880,14 @@ mod tests {
         .await;
 
         match result {
-            Err(DbError::Sqlx(sqlx::Error::Database(db_error))) => {
+            Err(DbError::ConstraintViolation(message)) => {
                 assert!(
-                    db_error
-                        .message()
+                    message
                         .contains("file language pair must match existing project language pair"),
-                    "unexpected database error message: {}",
-                    db_error.message()
+                    "unexpected message: {message}",
                 );
             }
-            other => panic!("expected trigger violation, got {other:?}"),
+            other => panic!("expected validation error, got {other:?}"),
         }
 
         let project_file_count: (i64,) =
@@ -879,6 +908,106 @@ mod tests {
                 .await
                 .expect("expected file_info count query");
         assert_eq!(file_info_count.0, 0, "file info insert should roll back");
+    }
+
+    #[tokio::test]
+    async fn detach_project_file_retains_shared_metadata() {
+        let pool = test_pool().await;
+        let user_uuid = Uuid::new_v4();
+        seed_user(&pool, user_uuid).await;
+
+        let project_a = Uuid::new_v4();
+        let project_b = Uuid::new_v4();
+
+        for (project_uuid, name) in [(project_a, "Alpha"), (project_b, "Beta")] {
+            create_project(
+                &pool,
+                NewProjectArgs {
+                    project_uuid,
+                    project_name: format!("Project {name}"),
+                    project_status: "active".into(),
+                    user_uuid,
+                    client_uuid: None,
+                    r#type: "translation".into(),
+                    notes: None,
+                    subjects: vec![],
+                    language_pairs: vec![ProjectLanguagePairInput {
+                        source_lang: "en".into(),
+                        target_lang: "fr".into(),
+                    }],
+                },
+            )
+            .await
+            .expect("expected project creation to succeed");
+        }
+
+        let file_uuid = Uuid::new_v4();
+
+        for (project_uuid, suffix) in [(project_a, "a"), (project_b, "b")] {
+            attach_project_file(
+                &pool,
+                NewFileInfoArgs {
+                    file_uuid,
+                    ext: "xliff".into(),
+                    r#type: "processable".into(),
+                    size_bytes: Some(2048),
+                    segment_count: Some(10),
+                    token_count: Some(512),
+                    notes: Some(format!("shared-{suffix}")),
+                },
+                NewProjectFileArgs {
+                    project_uuid,
+                    file_uuid,
+                    filename: format!("shared-{suffix}.xlf"),
+                    stored_at: format!("Translations/shared-{suffix}.xlf"),
+                    r#type: "processable".into(),
+                    language_pairs: vec![FileLanguagePairInput {
+                        source_lang: "en".into(),
+                        target_lang: "fr".into(),
+                    }],
+                },
+            )
+            .await
+            .expect("expected shared file attach to succeed");
+        }
+
+        detach_project_file(&pool, project_a, file_uuid)
+            .await
+            .expect("expected detach to succeed");
+
+        let remaining_link: Option<(Uuid,)> =
+            sqlx::query_as("SELECT project_uuid FROM project_files WHERE file_uuid = ?1")
+                .bind(file_uuid)
+                .fetch_optional(&pool)
+                .await
+                .expect("expected project_files query to succeed");
+        assert_eq!(remaining_link.map(|row| row.0), Some(project_b));
+
+        let info_still_present: Option<(Uuid,)> =
+            sqlx::query_as("SELECT file_uuid FROM file_info WHERE file_uuid = ?1")
+                .bind(file_uuid)
+                .fetch_optional(&pool)
+                .await
+                .expect("expected file_info query to succeed");
+        assert!(
+            info_still_present.is_some(),
+            "file_info should remain while other links reference it"
+        );
+
+        detach_project_file(&pool, project_b, file_uuid)
+            .await
+            .expect("expected second detach to succeed");
+
+        let info_after_final_detach: Option<(Uuid,)> =
+            sqlx::query_as("SELECT file_uuid FROM file_info WHERE file_uuid = ?1")
+                .bind(file_uuid)
+                .fetch_optional(&pool)
+                .await
+                .expect("expected final file_info query to succeed");
+        assert!(
+            info_after_final_detach.is_none(),
+            "file_info should be removed when no project references remain"
+        );
     }
 
     #[tokio::test]
@@ -934,28 +1063,83 @@ mod tests {
         .await;
 
         match result {
-            Err(DbError::Sqlx(sqlx::Error::Database(_))) => {}
-            other => panic!("expected duplicate subject violation, got {other:?}"),
+            Err(DbError::ConstraintViolation(message)) => {
+                assert!(
+                    message.contains("project_subjects"),
+                    "unexpected message: {message}",
+                );
+            }
+            other => panic!("expected validation error, got {other:?}"),
         }
 
-        let bundle = get_project(&pool, project_uuid)
-            .await
-            .expect("expected project fetch to succeed")
-            .expect("project should still exist");
-        let subjects: Vec<String> = bundle
-            .subjects
-            .into_iter()
-            .map(|record| record.subject)
-            .collect();
-        assert_eq!(
-            subjects,
-            vec!["initial".to_string()],
-            "original subjects should remain after rollback"
-        );
+        let subjects: Vec<ProjectSubjectRecord> =
+            sqlx::query_as("SELECT * FROM project_subjects WHERE project_uuid = ?1")
+                .bind(project_uuid)
+                .fetch_all(&pool)
+                .await
+                .expect("expected subject query");
+        assert_eq!(subjects.len(), 1, "original subjects should remain");
     }
 
     #[tokio::test]
-    async fn project_statistics_reflects_artifacts_and_jobs() {
+    async fn update_project_file_role_updates_type() {
+        let pool = test_pool().await;
+        let user_uuid = Uuid::new_v4();
+        seed_user(&pool, user_uuid).await;
+
+        let project_uuid = Uuid::new_v4();
+        create_project(
+            &pool,
+            NewProjectArgs {
+                project_uuid,
+                project_name: "Role project".into(),
+                project_status: "draft".into(),
+                user_uuid,
+                client_uuid: None,
+                r#type: "standard".into(),
+                notes: None,
+                subjects: vec![],
+                language_pairs: vec![ProjectLanguagePairInput {
+                    source_lang: "en".into(),
+                    target_lang: "fr".into(),
+                }],
+            },
+        )
+        .await
+        .expect("expected project creation to succeed");
+
+        let file_uuid = Uuid::new_v4();
+        attach_project_file(
+            &pool,
+            NewFileInfoArgs {
+                file_uuid,
+                ext: "pdf".into(),
+                r#type: "reference".into(),
+                size_bytes: Some(1_024),
+                segment_count: None,
+                token_count: None,
+                notes: None,
+            },
+            NewProjectFileArgs {
+                project_uuid,
+                file_uuid,
+                filename: "doc.pdf".into(),
+                stored_at: "References/doc.pdf".into(),
+                r#type: "reference".into(),
+                language_pairs: vec![],
+            },
+        )
+        .await
+        .expect("expected file attachment to succeed");
+
+        let bundle = update_project_file_role(&pool, project_uuid, file_uuid, "instructions")
+            .await
+            .expect("expected role update to succeed");
+        assert_eq!(bundle.link.r#type, "instructions");
+    }
+
+    #[tokio::test]
+    async fn project_statistics_matches_expected_values() {
         let pool = test_pool().await;
         let user_uuid = Uuid::new_v4();
         seed_user(&pool, user_uuid).await;
@@ -982,23 +1166,23 @@ mod tests {
         .expect("expected project creation to succeed");
 
         // Processable file with successful conversion
-        let processable_file = Uuid::new_v4();
+        let processed_file = Uuid::new_v4();
         attach_project_file(
             &pool,
             NewFileInfoArgs {
-                file_uuid: processable_file,
+                file_uuid: processed_file,
                 ext: "docx".into(),
                 r#type: "processable".into(),
-                size_bytes: Some(2_048),
-                segment_count: Some(120),
-                token_count: Some(3_400),
+                size_bytes: Some(3_072),
+                segment_count: Some(15),
+                token_count: Some(1_200),
                 notes: None,
             },
             NewProjectFileArgs {
                 project_uuid,
-                file_uuid: processable_file,
-                filename: "ready.docx".into(),
-                stored_at: "ready.docx".into(),
+                file_uuid: processed_file,
+                filename: "processed.docx".into(),
+                stored_at: "processed.docx".into(),
                 r#type: "processable".into(),
                 language_pairs: vec![FileLanguagePairInput {
                     source_lang: "en".into(),
@@ -1007,9 +1191,8 @@ mod tests {
             },
         )
         .await
-        .expect("expected processable file attach to succeed");
+        .expect("expected processed file attach to succeed");
 
-        let completed_artifact = Uuid::new_v4();
         sqlx::query(
             r#"
             INSERT INTO artifacts (
@@ -1018,13 +1201,13 @@ mod tests {
             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'completed')
             "#,
         )
-        .bind(completed_artifact)
+        .bind(processed_file)
         .bind(project_uuid)
-        .bind(processable_file)
+        .bind(processed_file)
         .bind("xliff")
-        .bind(Some(4096_i64))
-        .bind(Some(120_i64))
-        .bind(Some(3400_i64))
+        .bind(3_072)
+        .bind(120)
+        .bind(3_400)
         .execute(&pool)
         .await
         .expect("expected artifact insert");
@@ -1036,11 +1219,11 @@ mod tests {
             ) VALUES (?1, 'convert', ?2, 'completed', NULL)
             "#,
         )
-        .bind(completed_artifact)
+        .bind(processed_file)
         .bind(project_uuid)
         .execute(&pool)
         .await
-        .expect("expected completed job insert");
+        .expect("expected job insert");
 
         // Processable file with failed conversion/job
         let failing_file = Uuid::new_v4();

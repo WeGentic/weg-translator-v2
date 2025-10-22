@@ -37,13 +37,13 @@ function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxP
         // Focus state: visible outline with ring color
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]/50 focus-visible:ring-offset-2",
         // Hover state: slight border color intensification
-        "hover:border-[var(--color-primary)] hover:shadow-sm",
+        "hover:border-(--color-primary) hover:shadow-sm",
         // Disabled state: reduced opacity and no pointer events
         "disabled:cursor-not-allowed disabled:opacity-50",
         // Checked state: primary background with contrast text
-        "data-[state=checked]:bg-[var(--color-primary)] data-[state=checked]:border-[var(--color-primary)] data-[state=checked]:text-primary-foreground",
+        "data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary) data-[state=checked]:text-primary-foreground",
         // Indeterminate state styling
-        "data-[state=indeterminate]:bg-[var(--color-primary)] data-[state=indeterminate]:border-[var(--color-primary)]",
+        "data-[state=indeterminate]:bg-(--color-primary) data-[state=indeterminate]:border-(--color-primary)",
         className,
       )}
       {...props}

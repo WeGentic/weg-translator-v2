@@ -310,8 +310,9 @@ pub async fn attach_project_file_v2(
     db: State<'_, DbManager>,
     payload: AttachProjectFilePayload,
 ) -> IpcResult<ProjectFileBundleV2Dto> {
-    let file_info = map_new_file_info_args(&payload)?;
-    let link_args = map_new_project_file_args(&payload)?;
+    let file_uuid = resolve_attachment_file_uuid(&payload)?;
+    let file_info = map_new_file_info_args(&payload, file_uuid);
+    let link_args = map_new_project_file_args(&payload, file_uuid)?;
     let bundle = db
         .attach_project_file(file_info, link_args)
         .await
@@ -1323,15 +1324,8 @@ fn map_update_project_args(payload: UpdateProjectPayload) -> Result<UpdateProjec
     })
 }
 
-fn map_new_file_info_args(payload: &AttachProjectFilePayload) -> Result<NewFileInfoArgs, IpcError> {
-    let file_uuid = payload
-        .file_uuid
-        .as_deref()
-        .map(|value| parse_uuid(value, "fileUuid"))
-        .transpose()?
-        .unwrap_or_else(Uuid::new_v4);
-
-    Ok(NewFileInfoArgs {
+fn map_new_file_info_args(payload: &AttachProjectFilePayload, file_uuid: Uuid) -> NewFileInfoArgs {
+    NewFileInfoArgs {
         file_uuid,
         ext: payload.ext.clone(),
         r#type: payload.r#type.clone(),
@@ -1339,21 +1333,26 @@ fn map_new_file_info_args(payload: &AttachProjectFilePayload) -> Result<NewFileI
         segment_count: payload.segment_count,
         token_count: payload.token_count,
         notes: payload.notes.clone(),
-    })
+    }
+}
+
+fn resolve_attachment_file_uuid(payload: &AttachProjectFilePayload) -> Result<Uuid, IpcError> {
+    payload
+        .file_uuid
+        .as_deref()
+        .map(|value| parse_uuid(value, "fileUuid"))
+        .transpose()
+        .map(|maybe_uuid| maybe_uuid.unwrap_or_else(Uuid::new_v4))
 }
 
 fn map_new_project_file_args(
     payload: &AttachProjectFilePayload,
+    file_uuid: Uuid,
 ) -> Result<NewProjectFileArgs, IpcError> {
     let project_uuid = parse_uuid(&payload.project_uuid, "projectUuid")?;
-    let file_uuid = payload
-        .file_uuid
-        .as_deref()
-        .map(|value| parse_uuid(value, "fileUuid"))
-        .transpose()?
-        .unwrap_or_else(Uuid::new_v4);
+    let requires_language_pairs = payload.r#type.trim().eq_ignore_ascii_case("processable");
 
-    if payload.language_pairs.is_empty() {
+    if requires_language_pairs && payload.language_pairs.is_empty() {
         return Err(IpcError::Validation(
             "languagePairs must include at least one entry".into(),
         ));
@@ -1579,6 +1578,98 @@ fn normalize_project_file_role(value: &str) -> Result<String, IpcError> {
         _ => Err(IpcError::Validation(format!(
             "Unsupported project file role '{value}'"
         ))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ipc::dto::{AttachProjectFilePayload, FileLanguagePairDto};
+
+    fn sample_processable_payload(project_uuid: Uuid) -> AttachProjectFilePayload {
+        AttachProjectFilePayload {
+            project_uuid: project_uuid.to_string(),
+            file_uuid: None,
+            filename: "launch.xliff".into(),
+            stored_at: "Translations/launch.xliff".into(),
+            r#type: "processable".into(),
+            ext: "xliff".into(),
+            size_bytes: Some(2_048),
+            segment_count: Some(42),
+            token_count: Some(1_024),
+            notes: Some("Initial upload".into()),
+            language_pairs: vec![FileLanguagePairDto {
+                source_lang: "en-US".into(),
+                target_lang: "it-IT".into(),
+            }],
+        }
+    }
+
+    #[test]
+    fn attachment_mapper_threads_shared_uuid_for_generated_files() {
+        let project_uuid = Uuid::new_v4();
+        let payload = sample_processable_payload(project_uuid);
+
+        let resolved =
+            resolve_attachment_file_uuid(&payload).expect("expected UUID resolution to succeed");
+        let file_info = map_new_file_info_args(&payload, resolved);
+        let project_file = map_new_project_file_args(&payload, resolved)
+            .expect("expected project file mapping to succeed");
+
+        assert_eq!(file_info.file_uuid, resolved);
+        assert_eq!(
+            project_file.file_uuid, resolved,
+            "project file mapper must reuse the provided UUID"
+        );
+        assert_eq!(project_file.language_pairs.len(), 1);
+    }
+
+    #[test]
+    fn attachment_mapper_allows_empty_pairs_for_non_processable_role() {
+        let project_uuid = Uuid::new_v4();
+        let payload = AttachProjectFilePayload {
+            project_uuid: project_uuid.to_string(),
+            file_uuid: None,
+            filename: "handbook.pdf".into(),
+            stored_at: "References/handbook.pdf".into(),
+            r#type: "reference".into(),
+            ext: "pdf".into(),
+            size_bytes: Some(512),
+            segment_count: None,
+            token_count: None,
+            notes: None,
+            language_pairs: Vec::new(),
+        };
+
+        let resolved =
+            resolve_attachment_file_uuid(&payload).expect("expected UUID resolution to succeed");
+        let project_file = map_new_project_file_args(&payload, resolved)
+            .expect("expected mapper to accept empty language pairs for reference role");
+
+        assert_eq!(project_file.file_uuid, resolved);
+        assert!(
+            project_file.language_pairs.is_empty(),
+            "reference attachments must not introduce language pairs"
+        );
+    }
+
+    #[test]
+    fn attachment_mapper_rejects_empty_pairs_for_processable_role() {
+        let project_uuid = Uuid::new_v4();
+        let mut payload = sample_processable_payload(project_uuid);
+        payload.language_pairs.clear();
+
+        let resolved =
+            resolve_attachment_file_uuid(&payload).expect("expected UUID resolution to succeed");
+        let result = map_new_project_file_args(&payload, resolved);
+
+        match result {
+            Err(IpcError::Validation(message)) => assert!(
+                message.contains("languagePairs"),
+                "expected validation message mentioning languagePairs, got {message}"
+            ),
+            other => panic!("expected validation error for processable role, got {other:?}"),
+        }
     }
 }
 

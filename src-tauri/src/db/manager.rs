@@ -79,10 +79,12 @@ impl DbManager {
             "PRAGMA journal_mode = {};",
             performance.journal_mode().as_str()
         ));
+        log::info!(target: "db::connect", "journal_mode configured to {}", performance.journal_mode().as_str());
         let synchronous_stmt = Arc::new(format!(
             "PRAGMA synchronous = {};",
             performance.synchronous().as_str()
         ));
+        log::info!(target: "db::connect", "synchronous configured to {}", performance.synchronous().as_str());
 
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
@@ -101,6 +103,16 @@ impl DbManager {
                             .await?;
                         sqlx::query(&journal_mode_stmt).execute(&mut *conn).await?;
                         sqlx::query(&synchronous_stmt).execute(&mut *conn).await?;
+
+                        let journal_snapshot: (String,) = sqlx::query_as("PRAGMA journal_mode;")
+                            .fetch_one(&mut *conn)
+                            .await?;
+                        log::info!(target: "db::connect", "active journal_mode = {}", journal_snapshot.0);
+
+                        let synchronous_snapshot: (i64,) = sqlx::query_as("PRAGMA synchronous;")
+                            .fetch_one(&mut *conn)
+                            .await?;
+                        log::info!(target: "db::connect", "active synchronous = {}", synchronous_snapshot.0);
                         Ok(())
                     })
                 }

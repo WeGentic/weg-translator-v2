@@ -25,8 +25,8 @@ import { Textarea } from "@/shared/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 import type { ClientRecord } from "@/shared/types/database";
 
-import { WizardClientField } from "./WizardClientField";
-import { PROJECT_SUBJECT_OPTIONS, resolveProjectSubjectLabel } from "../../../constants";
+import { WizardClientField } from "@/modules/wizards/shared";
+import { PROJECT_SUBJECT_OPTIONS, resolveProjectSubjectLabel } from "@/modules/project-manager/constants";
 
 interface WizardDetailsStepProps {
   projectName: string;

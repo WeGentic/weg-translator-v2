@@ -5,6 +5,7 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/tooltip";
 import "@/shared/styles/buttons.css";
+import "./client-search.css";
 
 export interface ClientsToolbarProps {
   search: string;
@@ -36,14 +37,19 @@ export function ClientsToolbar({
             <label htmlFor="clients-search-input" className="sr-only">
               Search clients
             </label>
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70 transition-opacity duration-200 group-focus-within:opacity-100" />
+            <Search className="
+            pointer-events-none
+            absolute left-3
+            top-1/2 h-3.5 w-3.5 -translate-y-1/2
+            text-(--color-victorian-peacock-900)/70
+            transition-opacity duration-200 group-focus-within:opacity-100" />
             <Input
               id="clients-search-input"
               type="search"
               value={search}
               onChange={handleSearchInputChange}
               placeholder="Search clients…"
-              className="h-9 pl-9 pr-9"
+              className="client-search-input"
               aria-label="Search clients"
               autoComplete="off"
             />

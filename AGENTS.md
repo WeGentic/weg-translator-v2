@@ -85,9 +85,9 @@ App will use ONLY colors from src/shared/styles/theme.css:
 ## Architecture overview
 
 ### Folder Structure
+
 ## Repository layout
 
-```
 src/                      React frontend entrypoint
 src/app/                  Application providers, shell layout, shared state
 src/app/shell/            MainLayout implementation, sidebars, footer chrome

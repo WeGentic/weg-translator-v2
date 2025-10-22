@@ -1,11 +1,10 @@
 'use no memo';
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   getCoreRowModel,
   getSortedRowModel,
   useReactTable,
-  type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
 
@@ -39,9 +38,59 @@ export function ClientsContent({
   onRequestDelete,
 }: ClientsContentProps) {
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(() => new Set());
 
   const clientRows = useMemo(() => clients.map(toClientRow), [clients]);
+  const totalClients = clientRows.length;
+
+  const isClientSelected = useCallback(
+    (clientId: string) => selectedClientIds.has(clientId),
+    [selectedClientIds],
+  );
+
+  const selectedCount = useMemo(() => {
+    if (selectedClientIds.size === 0 || totalClients === 0) {
+      return 0;
+    }
+    let count = 0;
+    for (const row of clientRows) {
+      if (selectedClientIds.has(row.id)) {
+        count += 1;
+      }
+    }
+    return count;
+  }, [clientRows, selectedClientIds, totalClients]);
+
+  const isAllSelected = totalClients > 0 && selectedCount === totalClients;
+  const isSomeSelected = selectedCount > 0 && !isAllSelected;
+
+  const handleToggleRowSelection = useCallback((clientId: string, checked: boolean) => {
+    setSelectedClientIds((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(clientId);
+      } else {
+        next.delete(clientId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleToggleAllSelection = useCallback(
+    (checked: boolean) => {
+      setSelectedClientIds(() => {
+        if (!checked) {
+          return new Set();
+        }
+        const next = new Set<string>();
+        for (const row of clientRows) {
+          next.add(row.id);
+        }
+        return next;
+      });
+    },
+    [clientRows],
+  );
 
   const columns = useMemo(
     () =>
@@ -49,8 +98,24 @@ export function ClientsContent({
         onRequestOpen,
         onRequestEdit,
         onRequestDelete,
+        selection: {
+          isAllSelected,
+          isSomeSelected,
+          isRowSelected: isClientSelected,
+          onToggleAll: handleToggleAllSelection,
+          onToggleRow: handleToggleRowSelection,
+        },
       }),
-    [onRequestOpen, onRequestEdit, onRequestDelete],
+    [
+      onRequestOpen,
+      onRequestEdit,
+      onRequestDelete,
+      isAllSelected,
+      isSomeSelected,
+      isClientSelected,
+      handleToggleAllSelection,
+      handleToggleRowSelection,
+    ],
   );
   const trimmedSearch = search.trim();
 
@@ -59,13 +124,10 @@ export function ClientsContent({
     columns,
     state: {
       sorting,
-      rowSelection,
     },
     onSortingChange: setSorting,
-    onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    enableRowSelection: true,
   });
 
   const tableRows = table.getRowModel().rows;
@@ -82,7 +144,7 @@ export function ClientsContent({
                 <button
                   type="button"
                   onClick={onRetry}
-                  className="ml-3 inline-flex items-center text-sm font-medium text-[var(--color-primary)] underline-offset-2 hover:underline"
+                  className="ml-3 inline-flex items-center text-sm font-medium text-(--color-primary) underline-offset-2 hover:underline"
                 >
                   Try again
                 </button>
@@ -98,6 +160,7 @@ export function ClientsContent({
           rows={tableRows}
           searchTerm={trimmedSearch}
           isLoading={isLoading}
+          selectedRowIds={selectedClientIds}
         />
       </div>
     </section>

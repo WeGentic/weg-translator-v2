@@ -27,7 +27,7 @@ export function StatusBadge({ tone, label }: StatusPresentation) {
       ? "border border-[var(--color-destructive)]/30 bg-[var(--color-destructive)]/10 text-[var(--color-destructive)] hover:bg-[var(--color-destructive)]/20 hover:border-[var(--color-destructive)]/50 hover:scale-105"
       : tone === "muted"
       ? "border border-[var(--color-muted)]/30 bg-[var(--color-muted)]/10 text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]/20 hover:border-[var(--color-muted)]/50 hover:scale-105"
-      : "border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/50 hover:scale-105";
+      : "border border-(--color-primary)/30 bg-(--color-primary)/10 text-(--color-primary) hover:bg-(--color-primary)/20 hover:border-(--color-primary)/50 hover:scale-105";
 
   return (
     <span className={`${base} ${styles} relative overflow-hidden`}>

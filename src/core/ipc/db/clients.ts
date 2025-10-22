@@ -29,6 +29,12 @@ const COMMAND = {
   list: "list_client_records_v2",
 } as const;
 
+const includeIfDefined = <Key extends string, Value>(
+  key: Key,
+  value: Value | undefined,
+): Partial<Record<Key, Value>> =>
+  value === undefined ? {} : ({ [key]: value } as Partial<Record<Key, Value>>);
+
 export async function createClientRecord(input: CreateClientInput): Promise<ClientRecord> {
   const payload = mapCreateClientInput(input);
   const dto = await safeInvoke<ClientDto>(COMMAND.create, { payload });
@@ -59,25 +65,25 @@ export async function listClientRecords(): Promise<ClientRecord[]> {
 
 function mapCreateClientInput(input: CreateClientInput) {
   return {
-    clientUuid: input.clientUuid,
     name: input.name,
-    email: input.email ?? undefined,
-    phone: input.phone ?? undefined,
-    address: input.address ?? undefined,
-    vatNumber: input.vatNumber ?? undefined,
-    note: input.note ?? undefined,
+    ...includeIfDefined("clientUuid", input.clientUuid),
+    ...includeIfDefined("email", input.email),
+    ...includeIfDefined("phone", input.phone),
+    ...includeIfDefined("address", input.address),
+    ...includeIfDefined("vatNumber", input.vatNumber),
+    ...includeIfDefined("note", input.note),
   };
 }
 
 function mapUpdateClientInput(input: UpdateClientInput) {
   return {
     clientUuid: input.clientUuid,
-    name: input.name ?? undefined,
-    email: input.email ?? undefined,
-    phone: input.phone ?? undefined,
-    address: input.address ?? undefined,
-    vatNumber: input.vatNumber ?? undefined,
-    note: input.note ?? undefined,
+    ...includeIfDefined("name", input.name),
+    ...includeIfDefined("email", input.email),
+    ...includeIfDefined("phone", input.phone),
+    ...includeIfDefined("address", input.address),
+    ...includeIfDefined("vatNumber", input.vatNumber),
+    ...includeIfDefined("note", input.note),
   };
 }
 

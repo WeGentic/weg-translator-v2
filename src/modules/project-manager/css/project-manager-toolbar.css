@@ -1,0 +1,70 @@
+/* Custom styling for the project-managers search input */
+.project-search-input {
+  padding-inline-start: 2.25rem;
+  padding-inline-end: 2.25rem;
+  background-color: var(--color-writers-parchment-50);
+  color: var(--color-neverything-900);
+  border-color: var(--color-victorian-peacock-200);
+}
+
+.project-search-input:hover {
+  background-color: var(--color-victorian-peacock-100);
+  border-color: var(--color-secondary);
+}
+
+.project-search-input:focus-visible,
+.project-search-input:active {
+  background-color: var(--color-victorian-peacock-100);
+  border-color: var(--color-secondary);
+  border-width: 2px;
+  color: var(--color-neverything-900);
+  outline: none;
+  box-shadow: none;
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+}
+
+.project-search-input::placeholder {
+  color: var(--color-neverything-600);
+}
+
+.project-search-input::-webkit-search-decoration,
+.project-search-input::-webkit-search-cancel-button,
+.project-search-input::-webkit-search-results-button,
+.project-search-input::-webkit-search-results-decoration {
+  display: none;
+}
+
+.project-search-input::-ms-clear {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.project-filter-trigger {
+    height: 36px;
+    width: 120px;
+
+    background-color: var(--color-writers-parchment-50);
+    color: var(--color-neverything-900);
+    border-color: var(--color-victorian-peacock-200);
+}
+
+.project-filter-trigger:focus-visible,
+.project-filter-trigger:active {
+  background-color: var(--color-victorian-peacock-100);
+  
+  border-width: 2px;
+  color: var(--color-neverything-900);
+  outline: none;
+  box-shadow: none;
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+}
+
+.project-filter-trigger:hover {
+  background-color: var(--color-victorian-peacock-100);
+  border-color: var(--color-secondary);
+}

@@ -30,6 +30,12 @@ const COMMAND = {
   list: "list_user_profiles_v2",
 } as const;
 
+const includeIfDefined = <Key extends string, Value>(
+  key: Key,
+  value: Value | undefined,
+): Partial<Record<Key, Value>> =>
+  value === undefined ? {} : ({ [key]: value } as Partial<Record<Key, Value>>);
+
 export async function createUserProfile(input: CreateUserInput): Promise<UserProfile> {
   const payload = mapCreateUserInput(input);
   const dto = await safeInvoke<UserProfileDto>(COMMAND.create, { payload });
@@ -60,25 +66,28 @@ export async function listUserProfiles(): Promise<UserProfile[]> {
 
 function mapCreateUserInput(input: CreateUserInput) {
   return {
-    userUuid: input.userUuid,
+    ...includeIfDefined("userUuid", input.userUuid),
     username: input.username,
     email: input.email,
-    phone: input.phone ?? undefined,
-    address: input.address ?? undefined,
     roles: input.roles ?? [],
     permissionOverrides: (input.permissionOverrides ?? []).map(mapPermissionOverrideInput),
+    ...includeIfDefined("phone", input.phone),
+    ...includeIfDefined("address", input.address),
   };
 }
 
 function mapUpdateUserInput(input: UpdateUserInput) {
   return {
     userUuid: input.userUuid,
-    username: input.username,
-    email: input.email,
-    phone: input.phone ?? undefined,
-    address: input.address ?? undefined,
-    roles: input.roles ?? undefined,
-    permissionOverrides: input.permissionOverrides?.map(mapPermissionOverrideInput),
+    ...includeIfDefined("username", input.username),
+    ...includeIfDefined("email", input.email),
+    ...includeIfDefined("phone", input.phone),
+    ...includeIfDefined("address", input.address),
+    ...includeIfDefined("roles", input.roles),
+    ...includeIfDefined(
+      "permissionOverrides",
+      input.permissionOverrides?.map(mapPermissionOverrideInput),
+    ),
   };
 }
 

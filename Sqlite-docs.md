@@ -90,7 +90,7 @@ Modules that assemble aggregates read back through the same transaction that per
 
 - Infrastructure failures (IO, JSON, SQLx).
 - User-facing domain violations (invalid enum values stored in DB, missing rows, duplicate identifiers).
-- Soft constraints (`ConstraintViolation(&'static str)`) used for business rule validation before the database returns an error.
+- Soft constraints (`ConstraintViolation(String)`) used for business rule validation before the database returns an error.
 
 All public manager methods return `DbResult<T>`. IPC handlers convert them into `IpcError`, propagating meaningful messages to the frontend.
 
@@ -145,3 +145,12 @@ The current setup matches the external guidance we reviewed:
 - Types and operations are isolated, making the data layer easy to reason about and extend.
 
 Keep these principles in mind for future evolution, and consult the `config.rs` defaults if you need to revisit PRAGMA choices for specialised workflows (e.g., air-gapped high-durability deployments).
+
+## Runtime Telemetry & Validation
+
+- `DbManager::connect_pool` logs the configured and active `PRAGMA journal_mode` and `PRAGMA synchronous` values (log target `db::connect`) so support can confirm runtime durability settings.
+- Project creation/update paths call `ensure_project_language_pairs_unique` (Rust-side HashSet dedupe) and return `DbError::ConstraintViolation("Duplicate project language pair ...")` when a user submits duplicates.
+- Constraint failures from SQLite (unique/foreign key checks, trigger aborts) are mapped to user-friendly `IpcError::Validation` messages; the IPC layer rewrites messages for common scenarios (duplicate language pairs, subjects, file conversion conflicts, file language pair trigger).
+- Vitest suites (`src/core/ipc/db/__tests__/null-forwarding.test.ts`, `projects-adapter.test.ts`) guard the IPC adapters, ensuring optional fields and explicit nulls round-trip correctly.
+
+

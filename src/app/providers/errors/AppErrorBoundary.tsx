@@ -3,12 +3,17 @@ import {
   type ErrorInfo,
   type ReactElement,
   type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
 } from "react";
 import { AlertCircle, Copy, RefreshCw } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
 import { logger } from "@/core/logging";
+
+import "./css/app-error-boundary.css";
 
 export interface ErrorBoundaryFallbackProps {
   error: Error;
@@ -130,48 +135,185 @@ function DefaultErrorFallback({
   resetErrorBoundary,
 }: ErrorBoundaryFallbackProps) {
   const details = stringifyErrorDetails(error, errorInfo);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(isDev);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const titleId = useId();
+  const descriptionId = useId();
+  const detailsId = useId();
+  const diagnosticsId = useId();
+  const metaTitleId = useId();
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const copyResetTimerRef = useRef<number | null>(null);
+  const errorTitle = error.name?.trim() || "Application error";
+  const errorSummary =
+    error.message?.trim() || "The operation was interrupted by an unexpected condition.";
+
+  useEffect(() => {
+    sectionRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (copyState !== "copied") return;
+    if (typeof window === "undefined") return;
+
+    copyResetTimerRef.current = window.setTimeout(() => {
+      setCopyState("idle");
+      copyResetTimerRef.current = null;
+    }, 2400);
+
+    return () => {
+      if (copyResetTimerRef.current !== null && typeof window !== "undefined") {
+        window.clearTimeout(copyResetTimerRef.current);
+        copyResetTimerRef.current = null;
+      }
+    };
+  }, [copyState]);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimerRef.current !== null && typeof window !== "undefined") {
+        window.clearTimeout(copyResetTimerRef.current);
+        copyResetTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const handleCopyDetails = () => {
     if (typeof navigator === "undefined" || !navigator.clipboard) {
       void logger.warn("Clipboard API is not available in this environment.");
+      setCopyState("failed");
       return;
     }
 
-    void navigator.clipboard.writeText(details).catch((copyError) => {
-      void logger.error("Unable to copy error details", copyError);
-    });
+    navigator.clipboard
+      .writeText(details)
+      .then(() => {
+        setCopyState("copied");
+      })
+      .catch((copyError) => {
+        setCopyState("failed");
+        void logger.error("Unable to copy error details", copyError);
+      });
   };
 
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-background px-6 py-12 text-foreground">
-      <div className="mx-auto w-full max-w-xl space-y-6">
-        <Alert variant="destructive" className="border-destructive/40">
-          <AlertCircle className="col-start-1" />
-          <AlertTitle>We hit an unexpected snag</AlertTitle>
-          <AlertDescription>
-            <p className="text-sm">
-              The section you were viewing failed to render. You can try again, and if the issue
-              persists please share the error details with the team.
+    <section
+      ref={sectionRef}
+      role="alert"
+      aria-live="assertive"
+      tabIndex={-1}
+      className="app-error-boundary"
+    >
+      <article
+        className="app-error-boundary__panel"
+        aria-describedby={descriptionId}
+        aria-labelledby={titleId}
+      >
+        <header className="app-error-boundary__header">
+          <span className="app-error-boundary__icon" aria-hidden="true">
+            <AlertCircle className="size-6" />
+          </span>
+          <div>
+            <h2 id={titleId} className="app-error-boundary__title">
+              We hit an unexpected snag
+            </h2>
+            <p id={descriptionId} className="app-error-boundary__subtitle">
+              The section you were viewing failed to render. Try reloading it, or copy the technical
+              details and share them with the team.
             </p>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Button onClick={resetErrorBoundary} className="gap-2">
-                <RefreshCw className="size-4" aria-hidden="true" />
-                Try again
-              </Button>
-              <Button variant="outline" onClick={handleCopyDetails} className="gap-2">
-                <Copy className="size-4" aria-hidden="true" />
-                Copy error details
-              </Button>
-            </div>
-            {isDev ? (
-              <pre className="mt-4 max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-4 text-left text-xs text-muted-foreground">
-                {details}
-              </pre>
-            ) : null}
-          </AlertDescription>
-        </Alert>
-      </div>
-    </div>
+          </div>
+        </header>
+
+        <div className="app-error-boundary__body">
+          <div className="app-error-boundary__summary">
+            <h3 className="app-error-boundary__heading">What you can do</h3>
+            <p className="app-error-boundary__text">
+              We restored everything we could. Try reloading this view to continue, and if the
+              problem persists share the log with the team so we can investigate quickly.
+            </p>
+          </div>
+          <div
+            role="group"
+            aria-labelledby={metaTitleId}
+            className="app-error-boundary__meta"
+          >
+            <p id={metaTitleId} className="app-error-boundary__meta-title">
+              Latest error report
+            </p>
+            <p className="app-error-boundary__meta-value" title={`${errorTitle}: ${errorSummary}`}>
+              <span className="app-error-boundary__meta-label">{errorTitle}</span>
+              {errorSummary}
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="app-error-boundary__actions"
+          role="group"
+          aria-label="Error recovery actions"
+        >
+          <Button onClick={resetErrorBoundary} className="app-error-boundary__action">
+            <RefreshCw className="size-4" aria-hidden="true" />
+            Try again
+          </Button>
+        </div>
+
+        <section
+          className="app-error-boundary__diagnostics"
+          aria-labelledby={diagnosticsId}
+        >
+          <header className="app-error-boundary__diagnostics-header">
+            <h3 id={diagnosticsId} className="app-error-boundary__heading">
+              Diagnostics
+            </h3>
+            <p className="app-error-boundary__text">
+              Share the captured log or expand the technical trace for deeper debugging.
+            </p>
+          </header>
+
+          <div className="app-error-boundary__diagnostics-actions">
+            <Button
+              variant="outline"
+              onClick={handleCopyDetails}
+              className="app-error-boundary__action app-error-boundary__action--secondary"
+              aria-label="Copy the latest error log to the clipboard"
+            >
+              <Copy className="size-4" aria-hidden="true" />
+              Copy log
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="app-error-boundary__action app-error-boundary__details-toggle"
+              aria-expanded={isDetailsOpen}
+              aria-controls={detailsId}
+              onClick={() => setIsDetailsOpen((open) => !open)}
+            >
+              {isDetailsOpen ? "Hide technical details" : "Show technical details"}
+            </Button>
+          </div>
+
+        <div
+          role="status"
+          aria-live="polite"
+          className="app-error-boundary__copy-feedback"
+          data-state={copyState}
+        >
+          {copyState === "copied"
+            ? "Copied error details to clipboard."
+            : copyState === "failed"
+              ? "Unable to copy. Please try again."
+              : "\u00a0"}
+        </div>
+
+        {isDetailsOpen ? (
+          <pre id={detailsId} className="app-error-boundary__details">
+            {details}
+          </pre>
+          ) : null}
+        </section>
+      </article>
+    </section>
   );
 }
 

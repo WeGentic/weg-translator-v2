@@ -8,6 +8,8 @@ import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 
+import "./clients-table.css";
+
 export interface ClientRow {
   id: string;
   name: string;
@@ -68,32 +70,44 @@ export interface ClientColumnOptions {
   onRequestOpen?: (client: ClientRow) => void;
   onRequestEdit?: (client: ClientRow) => void;
   onRequestDelete?: (client: ClientRow) => void;
+  selection?: {
+    isAllSelected: boolean;
+    isSomeSelected: boolean;
+    isRowSelected: (clientId: string) => boolean;
+    onToggleAll: (checked: boolean) => void;
+    onToggleRow: (clientId: string, checked: boolean) => void;
+  };
 }
 
 export function buildClientColumns(options: ClientColumnOptions = {}): ColumnDef<ClientRow>[] {
+  const selection = options.selection;
   return [
     {
       id: "select",
-      header: ({ table }) => {
-        const isAllSelected = table.getIsAllRowsSelected();
-        const isSomeSelected = table.getIsSomeRowsSelected();
-        const checkedState = isAllSelected ? true : isSomeSelected ? "indeterminate" : false;
+      header: () => {
+        const checkedState = selection
+          ? selection.isAllSelected
+            ? true
+            : selection.isSomeSelected
+              ? "indeterminate"
+              : false
+          : false;
 
         return (
           <Checkbox
             aria-label="Select all clients"
             checked={checkedState}
             onCheckedChange={(value) => {
-              table.toggleAllRowsSelected(value === true);
+              selection?.onToggleAll(value !== false);
             }}
-            className="translate-y-[1px]"
+            className="clients-table-checkbox"
           />
         );
       },
       cell: ({ row }) => {
-        const isSelected = row.getIsSelected();
-        const isSomeSelected = row.getIsSomeSelected();
-        const checkedState = isSelected ? true : isSomeSelected ? "indeterminate" : false;
+        const clientId = row.original.id;
+        const isSelected = selection?.isRowSelected(clientId) ?? false;
+        const checkedState = isSelected ? true : false;
         const trimmedName = row.original.name.trim();
         const nameLabel = trimmedName.length > 0 ? trimmedName : "client";
 
@@ -102,9 +116,9 @@ export function buildClientColumns(options: ClientColumnOptions = {}): ColumnDef
             aria-label={`Select ${nameLabel}`}
             checked={checkedState}
             onCheckedChange={(value) => {
-              row.toggleSelected(value === true);
+              selection?.onToggleRow(clientId, value === true);
             }}
-            className="translate-y-[1px]"
+            className="clients-table-checkbox"
           />
         );
       },

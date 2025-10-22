@@ -41,20 +41,15 @@ export function ProjectViewContent({
   headingId: providedHeadingId,
   languagePairs,
   files,
-  references: _references,
-  instructions: _instructions,
   onOpenFile,
   onRegenerateFile,
   onRegenerateFiles,
   onRemoveFile,
-  onAddFiles: _onAddFiles,
   isBusy = false,
-  onChangeRole: _onChangeRole,
-  statistics: _statistics = null,
 }: ProjectViewContentProps) {
   const layoutHeadingId = providedHeadingId ?? "ProjectView-heading";
-  const [filters, _setFilters] = useState<AssetFilters>({ search: "", role: "all", status: "all" });
-  const [grouping, _setGrouping] = useState<AssetGrouping>("flat");
+  const [filters] = useState<AssetFilters>({ search: "", role: "all", status: "all" });
+  const [grouping] = useState<AssetGrouping>("flat");
 
   const roleOptions = useMemo(() => PROJECT_FILE_ROLE_OPTIONS, []);
 

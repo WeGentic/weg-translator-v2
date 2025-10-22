@@ -35,6 +35,12 @@ type ProjectLanguagePairDto = ProjectLanguagePair;
 type FileLanguagePairDto = FileLanguagePair;
 type ProjectAssetRoleDto = ProjectAssetRole;
 
+const includeIfDefined = <Key extends string, Value>(
+  key: Key,
+  value: Value | undefined,
+): Partial<Record<Key, Value>> =>
+  value === undefined ? {} : ({ [key]: value } as Partial<Record<Key, Value>>);
+
 export interface UpdateConversionStatusInput {
   artifactUuid: string;
   status: string;
@@ -402,8 +408,8 @@ export async function convertXliffToJliffDto(
     projectUuid: input.projectUuid,
     conversionId: input.conversionId,
     xliffAbsPath: input.xliffAbsPath,
-    operator: input.operator ?? undefined,
-    schemaAbsPath: input.schemaAbsPath ?? undefined,
+    ...includeIfDefined("operator", input.operator),
+    ...includeIfDefined("schemaAbsPath", input.schemaAbsPath),
   };
 
   return safeInvoke<JliffConversionResultDto>(COMMAND.convertXliffToJliff, { payload });
@@ -415,11 +421,11 @@ function mapCreateProjectInput(input: CreateProjectInput) {
     projectName: input.projectName,
     projectStatus: input.projectStatus ?? "active",
     userUuid: input.userUuid,
-    clientUuid: input.clientUuid ?? undefined,
     type: input.type,
-    notes: input.notes ?? undefined,
     subjects: input.subjects ?? [],
     languagePairs: input.languagePairs.map(mapProjectLanguagePairInput),
+    ...includeIfDefined("clientUuid", input.clientUuid),
+    ...includeIfDefined("notes", input.notes),
   };
 }
 
@@ -474,42 +480,47 @@ function mapCreateProjectWithAssetsInput(
     projectFolderName: input.projectFolderName,
     projectStatus: input.projectStatus ?? "active",
     userUuid: input.userUuid,
-    clientUuid: input.clientUuid ?? undefined,
     type: input.type,
-    notes: input.notes ?? undefined,
     subjects: input.subjects ?? [],
     languagePairs: input.languagePairs.map(mapProjectLanguagePairInput),
     assets: input.assets.map(mapProjectAssetDescriptorInput),
+    ...includeIfDefined("clientUuid", input.clientUuid),
+    ...includeIfDefined("notes", input.notes),
   };
 }
 
 function mapUpdateProjectInput(input: UpdateProjectInput) {
+  const mappedLanguagePairs =
+    input.languagePairs === undefined
+      ? undefined
+      : input.languagePairs.map(mapProjectLanguagePairInput);
+
   return {
     projectUuid: input.projectUuid,
-    projectName: input.projectName ?? undefined,
-    projectStatus: input.projectStatus ?? undefined,
-    userUuid: input.userUuid ?? undefined,
-    clientUuid: input.clientUuid ?? undefined,
-    type: input.type ?? undefined,
-    notes: input.notes ?? undefined,
-    subjects: input.subjects ?? undefined,
-    languagePairs: input.languagePairs?.map(mapProjectLanguagePairInput),
+    ...includeIfDefined("projectName", input.projectName),
+    ...includeIfDefined("projectStatus", input.projectStatus),
+    ...includeIfDefined("userUuid", input.userUuid),
+    ...includeIfDefined("clientUuid", input.clientUuid),
+    ...includeIfDefined("type", input.type),
+    ...includeIfDefined("notes", input.notes),
+    ...includeIfDefined("subjects", input.subjects),
+    ...includeIfDefined("languagePairs", mappedLanguagePairs),
   };
 }
 
 function mapAttachProjectFileInput(input: AttachProjectFileInput) {
   return {
     projectUuid: input.projectUuid,
-    fileUuid: input.fileUuid ?? undefined,
     filename: input.filename,
     storedAt: input.storedAt,
     type: input.type,
     ext: input.ext,
-    sizeBytes: input.sizeBytes ?? undefined,
-    segmentCount: input.segmentCount ?? undefined,
-    tokenCount: input.tokenCount ?? undefined,
-    notes: input.notes ?? undefined,
     languagePairs: input.languagePairs.map(mapFileLanguagePairInput),
+    ...includeIfDefined("fileUuid", input.fileUuid),
+    ...includeIfDefined("sizeBytes", input.sizeBytes),
+    ...includeIfDefined("segmentCount", input.segmentCount),
+    ...includeIfDefined("tokenCount", input.tokenCount),
+    ...includeIfDefined("notes", input.notes),
   };
 }
 

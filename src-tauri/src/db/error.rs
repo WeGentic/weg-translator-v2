@@ -1,5 +1,6 @@
 //! Core database error types and shared result alias.
 
+use sqlx::error::ErrorKind;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -16,7 +17,7 @@ pub enum DbError {
     #[error("failed to (de)serialize JSON payload: {0}")]
     Json(#[from] serde_json::Error),
     #[error("database error: {0}")]
-    Sqlx(#[from] sqlx::Error),
+    Sqlx(sqlx::Error),
     #[error("translation job not found: {0}")]
     NotFound(Uuid),
     #[error("invalid translation stage '{0}' in storage")]
@@ -52,5 +53,38 @@ pub enum DbError {
     #[error("refused to create subdirectory with unsafe name: {0}")]
     InvalidSubdirectory(String),
     #[error("constraint violation: {0}")]
-    ConstraintViolation(&'static str),
+    ConstraintViolation(String),
+}
+
+impl From<sqlx::Error> for DbError {
+    fn from(error: sqlx::Error) -> Self {
+        if let sqlx::Error::Database(db_error) = &error {
+            let message = db_error.message().to_string();
+            let mut is_constraint = matches!(
+                db_error.kind(),
+                ErrorKind::UniqueViolation
+                    | ErrorKind::ForeignKeyViolation
+                    | ErrorKind::NotNullViolation
+                    | ErrorKind::CheckViolation
+            );
+
+            if !is_constraint {
+                if let Some(code) = db_error.code() {
+                    if let Ok(code_int) = code.parse::<i32>() {
+                        // Handle constraint violations that report as generic errors (e.g., trigger aborts).
+                        const SQLITE_CONSTRAINT_TRIGGER: i32 = 1811;
+                        if code_int == SQLITE_CONSTRAINT_TRIGGER {
+                            is_constraint = true;
+                        }
+                    }
+                }
+            }
+
+            if is_constraint {
+                return DbError::ConstraintViolation(message);
+            }
+        }
+
+        DbError::Sqlx(error)
+    }
 }

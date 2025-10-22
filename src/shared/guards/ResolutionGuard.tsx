@@ -1,10 +1,23 @@
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
+import { Monitor } from "lucide-react";
+
+import "./css/resolution-guard.css";
 
 interface ViewportSize {
   width: number;
   height: number;
 }
+
+type ResolutionMetricStyle = CSSProperties & {
+  "--rg-progress"?: string;
+};
 
 function useViewport(): ViewportSize {
   const [size, setSize] = useState<ViewportSize>(() => ({
@@ -13,6 +26,10 @@ function useViewport(): ViewportSize {
   }));
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
     const handleResize = () => {
       setSize({
         width: window.innerWidth,
@@ -20,7 +37,7 @@ function useViewport(): ViewportSize {
       });
     };
 
-    window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", handleResize, { passive: true });
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -28,7 +45,7 @@ function useViewport(): ViewportSize {
 }
 
 interface ResolutionGuardProps {
-  children: React.ReactNode;
+  children: ReactNode;
   minWidth?: number;
   minHeight?: number;
 }
@@ -39,63 +56,94 @@ export function ResolutionGuard({
   minHeight = 600,
 }: ResolutionGuardProps) {
   const { width, height } = useViewport();
+  const titleId = useId();
+  const descriptionId = useId();
+  const panelRef = useRef<HTMLElement | null>(null);
   const isBlocked = width < minWidth || height < minHeight;
+  const widthShortfall = Math.max(0, minWidth - width);
+  const heightShortfall = Math.max(0, minHeight - height);
+
+  useEffect(() => {
+    if (!isBlocked) return;
+    panelRef.current?.focus();
+  }, [isBlocked, width, height]);
 
   if (!isBlocked) {
     return <>{children}</>;
   }
 
+  const requirements = [
+    { label: "Width", current: width, required: minWidth, shortfall: widthShortfall },
+    { label: "Height", current: height, required: minHeight, shortfall: heightShortfall },
+  ];
+
   return (
-    <>
-      <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-3xl">
-        <div className="flex h-full items-center justify-center p-4">
-          <Card className="max-w-md animate-in fade-in-0 zoom-in-95 duration-200">
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
-                <svg
-                  className="h-6 w-6 text-orange-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-                  />
-                </svg>
-              </div>
-              <CardTitle className="text-xl">Screen Resolution Too Small</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <p className="text-muted-foreground">
-                This application requires a minimum screen resolution to function properly.
+    <div className="resolution-guard">
+      <section
+        className="resolution-guard__overlay"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        <article
+          ref={panelRef}
+          className="resolution-guard__panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={descriptionId}
+          tabIndex={-1}
+        >
+          <header className="resolution-guard__header">
+            <span aria-hidden="true" className="resolution-guard__icon">
+              <Monitor className="resolution-guard__icon-glyph" />
+            </span>
+            <div className="resolution-guard__intro">
+              <h2 id={titleId} className="resolution-guard__title">
+                Give us a little more space
+              </h2>
+              <p id={descriptionId} className="resolution-guard__subtitle">
+                Weg Translator works best on larger viewports. Grow the window or connect to a bigger
+                display to unlock the full workspace.
               </p>
-              <div className="space-y-2 rounded-lg bg-muted p-3 text-sm">
-                <div className="flex justify-between">
-                  <span>Current:</span>
-                  <span className="font-mono">
-                    {width} × {height}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Required:</span>
-                  <span className="font-mono">
-                    {minWidth} × {minHeight}
-                  </span>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Please resize your window or use a device with a larger screen.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-      <div aria-hidden="true" className="pointer-events-none relative z-0">
+            </div>
+          </header>
+
+          <ul className="resolution-guard__metrics">
+            {requirements.map(({ label, current, required, shortfall }) => {
+              const progress =
+                required > 0 ? Math.min(100, Math.round((current / required) * 100)) : 100;
+              const metricStyle: ResolutionMetricStyle = {
+                "--rg-progress": `${progress}%`,
+              };
+              const status = shortfall > 0 ? "alert" : "ok";
+
+              return (
+                <li key={label} className="resolution-guard__metric" data-state={status}>
+                  <div className="resolution-guard__metric-header">
+                    <span className="resolution-guard__metric-label">{label}</span>
+                    <span className="resolution-guard__metric-value">{current}px</span>
+                  </div>
+                  <div
+                    className="resolution-guard__metric-bar"
+                    role="presentation"
+                    style={metricStyle}
+                  >
+                    <span aria-hidden="true" className="resolution-guard__metric-bar-fill" />
+                  </div>
+                  <p className="resolution-guard__metric-caption">
+                    {shortfall > 0
+                      ? `Add ${shortfall}px to reach ${required}px`
+                      : `Meets the ${required}px requirement`}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </article>
+      </section>
+      <div aria-hidden="true" className="resolution-guard__content">
         {children}
       </div>
-    </>
+    </div>
   );
 }

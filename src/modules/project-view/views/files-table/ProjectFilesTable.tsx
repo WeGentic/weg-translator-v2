@@ -235,7 +235,7 @@ function PlainTable({
             checked={isAllSelected ? true : isSomeSelected ? "indeterminate" : false}
             onCheckedChange={(value) => onToggleAll(value !== false)}
             disabled={selectionDisabled || isBusy || rows.length === 0}
-            className="h-3.5 w-3.5 translate-y-[1px] border border-border/40"
+            className="h-3.5 w-3.5 translate-y-px border border-border/40"
           />
         ),
         cell: ({ row }) => {
@@ -246,7 +246,7 @@ function PlainTable({
               checked={isSelected}
               onCheckedChange={(value) => onToggleRow(row.original.id, value === true)}
               disabled={selectionDisabled || isBusy}
-              className="h-3.5 w-3.5 translate-y-[1px] border border-border/40"
+              className="h-3.5 w-3.5 translate-y-px border border-border/40"
             />
           );
         },

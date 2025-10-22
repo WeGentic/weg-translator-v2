@@ -1,0 +1,43 @@
+/* Custom styling for the clients search input */
+.client-search-input {
+  padding-inline-start: 2.25rem;
+  padding-inline-end: 2.25rem;
+  background-color: var(--color-writers-parchment-50);
+  color: var(--color-neverything-900);
+  border-color: var(--color-victorian-peacock-200);
+}
+
+.client-search-input:hover {
+  background-color: var(--color-victorian-peacock-100);
+  border-color: var(--color-secondary);
+}
+
+.client-search-input:focus-visible,
+.client-search-input:active {
+  background-color: var(--color-victorian-peacock-100);
+  border-color: var(--color-secondary);
+  border-width: 2px;
+  color: var(--color-neverything-900);
+  outline: none;
+  box-shadow: none;
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+}
+
+.client-search-input::placeholder {
+  color: var(--color-neverything-600);
+}
+
+.client-search-input::-webkit-search-decoration,
+.client-search-input::-webkit-search-cancel-button,
+.client-search-input::-webkit-search-results-button,
+.client-search-input::-webkit-search-results-decoration {
+  display: none;
+}
+
+.client-search-input::-ms-clear {
+  display: none;
+  width: 0;
+  height: 0;
+}

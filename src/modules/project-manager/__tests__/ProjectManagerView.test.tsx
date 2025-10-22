@@ -65,7 +65,7 @@ type WizardMockProps = {
 
 const wizardState = vi.hoisted(() => ({ current: null as WizardMockProps | null }));
 
-vi.mock("@/modules/project-manager/components/wizard-v2/CreateProjectWizardV2", () => ({
+vi.mock("@/modules/wizards/project", () => ({
   CreateProjectWizardV2: (props: WizardMockProps) => {
     wizardState.current = props;
     if (!props.open) {

@@ -1,6 +1,6 @@
 import "@/shared/styles/main-view.css";
 import "@/modules/project-manager/css/dropdowns.css";
-import "@/modules/project-manager/css/data-table.css";
+import "@/modules/project-manager/css/project-manager.css";
 import "@/modules/project-manager/css/new-project-button.css";
 
 import { useEffect, useRef, useState } from "react";
@@ -17,7 +17,7 @@ import { ProjectManagerHeader } from "./ProjectManagerHeader";
 import { ProjectManagerToolbar } from "./ProjectManagerToolbar";
 import { ProjectManagerContent } from "./ProjectManagerContent";
 import { EmptyProjectsState } from "./components/EmptyProjectsState";
-import { CreateProjectWizardV2 } from "./components/wizard-v2/CreateProjectWizardV2";
+import { CreateProjectWizardV2 } from "@/modules/wizards/project";
 import { DeleteProjectDialog } from "./components/DeleteProjectDialog";
 import { ProjectManagerLayout } from "./layout/ProjectManagerLayout";
 import { useSidebarTwoContentSync } from "./state/useSidebarTwoContentSync";
@@ -297,7 +297,7 @@ function ProjectsSelectionFooter({
     <div className="flex flex-1 items-center justify-between px-4">
       <div className="flex flex-1 items-center gap-3">
         <div className="flex items-center gap-3">
-          <span className="inline-flex h-8 min-w-[32px] items-center justify-center rounded-full bg-[var(--color-primary)] px-3 text-sm font-semibold text-[var(--color-onprimary)]">
+          <span className="inline-flex h-8 min-w-[32px] items-center justify-center rounded-full bg-(--color-primary) px-3 text-sm font-semibold text-[var(--color-onprimary)]">
             {selectedProjects.length}
           </span>
           <div className="flex flex-col gap-1">

@@ -4,9 +4,9 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   WizardNewClientDialog,
   type WizardNewClientFormValues,
-} from "@/modules/project-manager/components/wizard-v2/components/WizardNewClientDialog";
+} from "@/modules/wizards/client";
 import "@/shared/styles/main-view.css";
-import "@/modules/project-manager/css/data-table.css";
+import "@/modules/project-manager/css/project-manager.css";
 import "./clients-view.css";
 
 import { createClientRecord } from "@/core/ipc/db/clients";
@@ -175,14 +175,14 @@ export function ClientsView() {
         onSubmit={handleSubmitNewClient}
       />
       <DeleteClientDialog
-        key={deleteTarget?.id ?? "no-client"}
+        key={deleteTarget?.id ?? "dialog-delete-none"}
         open={isDeleteDialogOpen}
         onOpenChange={handleDeleteDialogChange}
         target={deleteTarget}
         onAfterDelete={handleAfterDelete}
       />
       <EditClientDialog
-        key={editTarget?.id ?? "no-client"}
+        key={editTarget?.id ?? "dialog-edit-none"}
         open={isEditDialogOpen}
         onOpenChange={handleEditDialogChange}
         target={editTarget}

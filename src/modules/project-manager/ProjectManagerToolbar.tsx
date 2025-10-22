@@ -24,6 +24,8 @@ import {
   type TypeFilter,
 } from "./state/types";
 
+import "./css/project-manager-toolbar.css";
+
 export interface ProjectManagerToolbarProps {
   search: string;
   onSearchChange: (value: string) => void;
@@ -71,13 +73,24 @@ export function ProjectManagerToolbar({
         <div className="flex h-full items-center gap-3 px-3">
           {/* Search - Primary Action */}
           <div className="group relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground opacity-70 transition-opacity duration-200" />
+            <label htmlFor="clients-search-input" className="sr-only">
+              Search projects
+            </label>
+<Search className="
+            pointer-events-none
+            absolute left-3
+            top-1/2 h-3.5 w-3.5 -translate-y-1/2
+            text-(--color-victorian-peacock-900)/70
+            transition-opacity duration-200 group-focus-within:opacity-100" />
             <Input
+              id="project-search-input"
+              type="search"
               value={search}
               onChange={handleSearchInputChange}
               placeholder="Search projects…"
-              className="h-9 pl-9 pr-9"
+              className="project-search-input"
               aria-label="Search projects"
+              autoComplete="off"
             />
             {search ? (
               <button
@@ -98,37 +111,62 @@ export function ProjectManagerToolbar({
                 value={filters.progress}
                 onValueChange={(value: ProgressFilter) => applyFilterUpdate("progress", value)}
               >
-                <SelectTrigger className="h-9 w-[120px] border-border/50 bg-background/60 text-sm transition-all duration-200 hover:bg-background/80 hover:border-border/70 focus:ring-2 focus:ring-ring/60">
+                <SelectTrigger className="project-filter-trigger text-[14px] text-(--color-victorian-peacock-900)/70">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-md">
+                <SelectContent className="bg-(--color-victorian-peacock-100) mt-2 border-none">
                   <SelectItem
                     value="all"
-                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
+                    className="
+                    data-highlighted:bg-(--color-primary)
+                    data-highlighted:text-(--color-victorian-peacock-900)
+                    data-[state=checked]:bg-(--color-secondary)
+                    data-[state=checked]:text-(--color-victorian-peacock-50)
+                    data-[state=checked]:font-semibold"
                   >
                     All Status
                   </SelectItem>
                   <SelectItem
                     value="pending"
-                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
+                    className="
+                    data-highlighted:bg-(--color-primary)
+                    data-highlighted:text-(--color-victorian-peacock-900)
+                    data-[state=checked]:bg-(--color-secondary)
+                    data-[state=checked]:text-(--color-victorian-peacock-50)
+                    data-[state=checked]:font-semibold"
                   >
                     Pending
                   </SelectItem>
                   <SelectItem
                     value="running"
-                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
+                    className="
+                    data-highlighted:bg-(--color-primary)
+                    data-highlighted:text-(--color-victorian-peacock-900)
+                    data-[state=checked]:bg-(--color-secondary)
+                    data-[state=checked]:text-(--color-victorian-peacock-50)
+                    data-[state=checked]:font-semibold"
                   >
                     Running
                   </SelectItem>
                   <SelectItem
                     value="completed"
-                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
+                    className="
+                    data-highlighted:bg-(--color-primary)
+                    data-highlighted:text-(--color-victorian-peacock-900)
+                    data-[state=checked]:bg-(--color-secondary)
+                    data-[state=checked]:text-(--color-victorian-peacock-50)
+                    data-[state=checked]:font-semibold"
                   >
                     Completed
                   </SelectItem>
                   <SelectItem
                     value="failed"
-                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
+                    className="
+                    data-highlighted:bg-(--color-primary)
+                    data-highlighted:text-(--color-victorian-peacock-900)
+                    data-[state=checked]:bg-(--color-secondary)
+                    data-[state=checked]:text-(--color-victorian-peacock-50)
+                    data-[state=checked]:font-semibold"
                   >
                     Failed
                   </SelectItem>
@@ -139,25 +177,38 @@ export function ProjectManagerToolbar({
                 value={filters.projectType}
                 onValueChange={(value: TypeFilter) => applyFilterUpdate("projectType", value)}
               >
-                <SelectTrigger className="h-9 w-[120px] border-border/50 bg-background/60 text-sm transition-all duration-200 hover:bg-background/80 hover:border-border/70 focus:ring-2 focus:ring-ring/60">
+                <SelectTrigger className="project-filter-trigger text-[14px] text-(--color-victorian-peacock-900)/70">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-md">
+                                <SelectContent className="bg-(--color-victorian-peacock-100) mt-2 border-none">
                   <SelectItem
                     value="all"
-                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
-                  >
+className="
+                    data-highlighted:bg-(--color-primary)
+                    data-highlighted:text-(--color-victorian-peacock-900)
+                    data-[state=checked]:bg-(--color-secondary)
+                    data-[state=checked]:text-(--color-victorian-peacock-50)
+                    data-[state=checked]:font-semibold"                  >
                     All Types
                   </SelectItem>
                   <SelectItem
                     value="translation"
-                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
-                  >
+className="
+                    data-highlighted:bg-(--color-primary)
+                    data-highlighted:text-(--color-victorian-peacock-900)
+                    data-[state=checked]:bg-(--color-secondary)
+                    data-[state=checked]:text-(--color-victorian-peacock-50)
+                    data-[state=checked]:font-semibold"                  >
                     Translation
                   </SelectItem>
                   <SelectItem
                     value="rag"
-                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
+                    className="
+                    data-highlighted:bg-(--color-primary)
+                    data-highlighted:text-(--color-victorian-peacock-900)
+                    data-[state=checked]:bg-(--color-secondary)
+                    data-[state=checked]:text-(--color-victorian-peacock-50)
+                    data-[state=checked]:font-semibold"
                   >
                     RAG
                   </SelectItem>
@@ -168,32 +219,49 @@ export function ProjectManagerToolbar({
                 value={filters.updatedWithin}
                 onValueChange={(value: DatePreset) => applyFilterUpdate("updatedWithin", value)}
               >
-                <SelectTrigger className="h-9 w-[110px] border-border/50 bg-background/60 text-sm transition-all duration-200 hover:bg-background/80 hover:border-border/70 focus:ring-2 focus:ring-ring/60">
+                <SelectTrigger className="project-filter-trigger text-[14px] text-(--color-victorian-peacock-900)/70">
                   <SelectValue placeholder="Date" />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-md">
+                <SelectContent className="bg-(--color-victorian-peacock-100) mt-2 border-none">
                   <SelectItem
                     value="any"
-                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
-                  >
+className="
+                    data-highlighted:bg-(--color-primary)
+                    data-highlighted:text-(--color-victorian-peacock-900)
+                    data-[state=checked]:bg-(--color-secondary)
+                    data-[state=checked]:text-(--color-victorian-peacock-50)
+                    data-[state=checked]:font-semibold"                  >
                     Any time
                   </SelectItem>
                   <SelectItem
                     value="24h"
-                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
-                  >
+                    className="
+                    data-highlighted:bg-(--color-primary)
+                    data-highlighted:text-(--color-victorian-peacock-900)
+                    data-[state=checked]:bg-(--color-secondary)
+                    data-[state=checked]:text-(--color-victorian-peacock-50)
+                    data-[state=checked]:font-semibold"
+                    >
                     Last 24h
                   </SelectItem>
                   <SelectItem
                     value="7d"
-                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
-                  >
+className="
+                    data-highlighted:bg-(--color-primary)
+                    data-highlighted:text-(--color-victorian-peacock-900)
+                    data-[state=checked]:bg-(--color-secondary)
+                    data-[state=checked]:text-(--color-victorian-peacock-50)
+                    data-[state=checked]:font-semibold"                  >
                     Last 7d
                   </SelectItem>
                   <SelectItem
                     value="30d"
-                    className="data-[highlighted]:bg-[var(--color-primary)] data-[highlighted]:text-[var(--color-onprimary)] data-[state=checked]:bg-[var(--color-secondary)] data-[state=checked]:text-[var(--color-navy)] data-[state=checked]:font-semibold"
-                  >
+className="
+                    data-highlighted:bg-(--color-primary)
+                    data-highlighted:text-(--color-victorian-peacock-900)
+                    data-[state=checked]:bg-(--color-secondary)
+                    data-[state=checked]:text-(--color-victorian-peacock-50)
+                    data-[state=checked]:font-semibold"                  >
                     Last 30d
                   </SelectItem>
                 </SelectContent>

@@ -39,3 +39,7 @@ export const IMAGE_EXTENSIONS = new Set([
 ]);
 
 export const DEFAULT_PROJECT_TYPE: WizardProjectType = "translation";
+
+export const PROJECT_CREATE_PROGRESS_EVENT = "project:create:progress";
+
+export const XLIFF_TARGET_VERSION = "2.0" as const;
