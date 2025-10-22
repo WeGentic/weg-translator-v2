@@ -226,7 +226,7 @@
 
 .wizard-v2-phone-container .PhoneInputInput::placeholder,
 .wizard-v2-phone-input::placeholder {
-  color: var(--color-victorian-peacock-600);
+  color: var(--color-victorian-peacock-100);
 }
 
 .wizard-v2-phone-container .PhoneInputInput:disabled {

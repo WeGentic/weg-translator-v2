@@ -1,5 +1,7 @@
 import { type ChangeEvent } from "react";
-import { Plus, Search, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
+import { MdPersonSearch } from "react-icons/md";
+
 
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -37,7 +39,7 @@ export function ClientsToolbar({
             <label htmlFor="clients-search-input" className="sr-only">
               Search clients
             </label>
-            <Search className="
+            <MdPersonSearch className="
             pointer-events-none
             absolute left-3
             top-1/2 h-3.5 w-3.5 -translate-y-1/2

@@ -4,7 +4,11 @@
 
 import { useCallback, useMemo, type DragEvent as ReactDragEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 
-import { FileText, FileUp, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { LuFilePlus2 } from "react-icons/lu";
+import { LuFileMinus2 } from "react-icons/lu";
+
+
 
 import { Badge } from "@/shared/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
@@ -158,29 +162,15 @@ export function WizardFilesStep({
         <span className="wizard-v2-dropzone-glow" aria-hidden="true" />
         <div className="wizard-v2-dropzone-body">
           <div className="wizard-v2-dropzone-icon" aria-hidden="true">
-            <FileUp className="h-6 w-6" />
+            <LuFilePlus2 className="h-12 w-12" />
           </div>
           <div className="wizard-v2-dropzone-copy">
             <h3 className="wizard-v2-dropzone-title">Drop project files</h3>
-            <p className="wizard-v2-dropzone-subtitle">Drag documents here or browse to pick from your device.</p>
+            <p className="wizard-v2-dropzone-subtitle">Drag documents here or click to browse to pick from your device.</p>
           </div>
-          <div className="wizard-v2-dropzone-actions">
-            <button
-              type="button"
-              className="wizard-v2-dropzone-browse"
-              onClick={(event) => {
-                event.stopPropagation();
-                onBrowseClick();
-              }}
-            >
-              <FileText className="h-4 w-4" aria-hidden="true" />
-              <span>Browse files</span>
-            </button>
-          </div>
+          
         </div>
-        <p className="wizard-v2-dropzone-hint" id="wizard-v2-dropzone-hint">
-          Tip: Press Enter or Space to browse. Dropped files keep their order.
-        </p>
+        
       </div>
       {fileCount === 0 ? (
         <div className="wizard-v2-files-empty" role="status">
@@ -203,10 +193,10 @@ export function WizardFilesStep({
           </header>
           <div className="wizard-v2-file-table-scroll">
             <Table>
-              <TableHeader>
+              <TableHeader className="text-(--color-victorian-peacock-950)">
                 <TableRow>
-                  <TableHead className="w-[60px] text-center">File n.</TableHead>
-                  <TableHead className="w-[55%]">File name</TableHead>
+                  <TableHead className="w-[130px] text-center">File n.</TableHead>
+                  <TableHead className="w-[50%]">File name</TableHead>
                   <TableHead className="w-[130px]">File type</TableHead>
                   <TableHead className="w-[150px]">File role</TableHead>
                   <TableHead className="w-[60px] text-right">Actions</TableHead>
@@ -244,7 +234,7 @@ export function WizardFilesStep({
                             >
                               <SelectValue placeholder="Select role" />
                             </SelectTrigger>
-                            <SelectContent className="wizard-v2-role-menu">
+                            <SelectContent className="wizard-v2-role-menu mt-2">
                               {EDITABLE_FILE_ROLE_OPTIONS.map((option) => (
                                 <SelectItem key={option.value} value={option.value} className="wizard-v2-role-item">
                                   {option.label}
@@ -261,7 +251,7 @@ export function WizardFilesStep({
                           onClick={() => onRemoveFile(entry.id)}
                           aria-label={`Remove ${entry.name}`}
                         >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          <LuFileMinus2 className="h-5 w-5 text-(--color-destructive)" aria-hidden="true" />
                         </button>
                       </TableCell>
                     </TableRow>

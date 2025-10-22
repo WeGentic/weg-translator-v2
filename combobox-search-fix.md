@@ -1,7 +1,7 @@
 # combobox-search-fix
 
 ## Current User Request Analysis
-- Review `.wizard-v2-combobox-search` styles in `src/modules/wizards/project/project-wizard-combobox.css`.
+- Review `.wizard-v2-combobox-search` styles in `src/modules/wizards/project/css/project-wizard-combobox.css`.
 - Compare against `.client-search-input` styles in `src/modules/clients/view/client-search.css` to identify mismatches (padding, background, placeholder, vendor overrides).
 
 ## Problem Breakdown
@@ -12,7 +12,7 @@
 - Maintainability: keep scope limited to combobox search selectors to comply with single-responsibility.
 
 ## User Request
-S1: Fix combobox search in `src/modules/wizards/project/project-wizard-combobox.css` -> It must replicate exactly `src/modules/clients/view/client-search.css`
+S1: Fix combobox search in `src/modules/wizards/project/css/project-wizard-combobox.css` -> It must replicate exactly `src/modules/clients/view/client-search.css`
 Completed: NOT COMPLETED
 
 ## Coding implementation

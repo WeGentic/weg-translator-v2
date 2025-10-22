@@ -36,15 +36,15 @@ import { useWizardFinalize } from "./hooks/useWizardFinalize";
 import { clearWizardDraftSnapshot, loadWizardDraftSnapshot, persistWizardDraftSnapshot } from "./draftStorage";
 import type { WizardDraftSnapshot, WizardStep } from "./types";
 
-import "./project-wizard-shell.css";
-import "./project-wizard-form.css";
-import "./project-wizard-autocomplete.css";
-import "./project-wizard-combobox.css";
-import "./project-wizard-language.css";
-import "./project-wizard-actions.css";
-import "./project-wizard-dropzone.css";
-import "./project-wizard-files.css";
-import "./project-wizard-feedback.css";
+import "./css/project-wizard-shell.css";
+import "./css/project-wizard-form.css";
+import "./css/project-wizard-autocomplete.css";
+import "./css/project-wizard-combobox.css";
+import "./css/project-wizard-language.css";
+import "./css/project-wizard-actions.css";
+import "./css/project-wizard-dropzone.css";
+import "./css/project-wizard-files.css";
+import "./css/project-wizard-feedback.css";
 
 interface CreateProjectWizardV2Props {
   open: boolean;
@@ -344,7 +344,7 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
 
   const trimmedProjectName = projectName.trim();
   const wizardHeaderTitle =
-    step === "files" ? `${trimmedProjectName || "Unnamed Project"} - FILE MANAGER` : "Create New Project";
+    step === "files" ? `${trimmedProjectName || "Unnamed Project"} - Add Files` : "Create New Project";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

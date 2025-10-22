@@ -1,6 +1,6 @@
 /* Custom styling for the clients search input */
 .client-search-input {
-  padding-inline-start: 1.25rem;
+  padding-inline-start: 2.25rem;
   padding-inline-end: 2.25rem;
   background-color: var(--color-writers-parchment-50);
   color: var(--color-neverything-900);

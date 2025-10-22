@@ -26,7 +26,7 @@
 }
 
 .client-form-input::placeholder {
-  color: var(-color-victorian-peacock-600);
+  color: var(--color-victorian-peacock-100);
 }
 
 .client-form-input::-webkit-form-decoration,
