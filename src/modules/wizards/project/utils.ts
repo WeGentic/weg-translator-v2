@@ -44,8 +44,26 @@ export function extractFileExtension(fileName: string): string {
  * Guesses a reasonable default file role using the extension alone. Image files
  * are auto-tagged as "image" while every other format defaults to "processable".
  */
-export function inferDefaultRoleFromExtension(_extension: string): FileRoleValue {
-  return "undefined";
+export function inferDefaultRoleFromExtension(extension: string): FileRoleValue {
+  const normalized = extension.toLowerCase();
+
+  const imageExtensions = new Set([
+    "png",
+    "jpg",
+    "jpeg",
+    "gif",
+    "bmp",
+    "webp",
+    "tif",
+    "tiff",
+    "svg",
+  ]);
+
+  if (imageExtensions.has(normalized)) {
+    return "image";
+  }
+
+  return "processable";
 }
 
 /**

@@ -12,7 +12,8 @@ import { safeInvoke } from "../../request";
 const mockSafeInvoke = vi.mocked(safeInvoke);
 
 const getPayload = () => {
-  const call = mockSafeInvoke.mock.calls.at(-1);
+  const calls = mockSafeInvoke.mock.calls;
+  const call = calls[calls.length - 1];
   if (!call) {
     throw new Error("safeInvoke was not called");
   }

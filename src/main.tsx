@@ -18,7 +18,7 @@ declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
   }
-  interface RouterContext extends AppRouterContext {}
+  type RouterContext = AppRouterContext;
 }
 
 function InnerApp() {

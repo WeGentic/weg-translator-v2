@@ -16,6 +16,10 @@ export type ProjectRow = {
   clientName: string | null;
   created: DateParts;
   updated: DateParts;
+  createdTimestamp: number;
+  updatedTimestamp: number;
+  createdIso: string;
+  updatedIso: string;
 };
 
 export const PROGRESS_FILTER_OPTIONS = ["all", "pending", "running", "completed", "failed"] as const;

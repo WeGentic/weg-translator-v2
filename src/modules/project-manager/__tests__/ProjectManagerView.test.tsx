@@ -5,8 +5,6 @@ import { AuthProvider } from "@/app/providers/auth/AuthProvider";
 import { ProjectManagerView } from "@/modules/project-manager/ProjectManagerView";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-/* eslint-disable @eslint-react/hooks-extra/no-unnecessary-use-prefix */
-
 type ListProjectsArgs = { limit?: number; offset?: number } | undefined;
 type ToastPayload = { title?: string; description?: string; variant?: string };
 type SidebarSyncArgs = {

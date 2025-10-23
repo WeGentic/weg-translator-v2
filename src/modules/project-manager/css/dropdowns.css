@@ -1,0 +1,27 @@
+:root {
+  --project-dropdown-radius: 8px;
+  --project-dropdown-border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  --project-dropdown-shadow: 0 10px 30px rgba(7, 15, 29, 0.16);
+}
+
+.project-dropdown-surface {
+  border-radius: var(--project-dropdown-radius);
+  border: var(--project-dropdown-border);
+  box-shadow: var(--project-dropdown-shadow);
+  background-color: var(--color-surface);
+}
+
+.project-dropdown-item {
+  border-radius: calc(var(--project-dropdown-radius) - 4px);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.project-dropdown-item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.project-dropdown-item[aria-selected="true"] {
+  background-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  color: var(--color-primary-foreground);
+}

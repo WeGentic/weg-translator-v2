@@ -1,4 +1,4 @@
-import { type ChangeEvent } from "react";
+import { type ChangeEvent, useCallback } from "react";
 import { Filter, Search, X } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
@@ -17,10 +17,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shar
 import {
   applyTableFiltersPatch,
   countActiveFilters,
+  DATE_PRESET_OPTIONS,
+  PROGRESS_FILTER_OPTIONS,
+  PROJECT_TYPE_FILTER_OPTIONS,
   type DatePreset,
   type ProgressFilter,
-  type TableFilterKey,
   type TableFilters,
+  type TableFiltersPatch,
   type TypeFilter,
 } from "./state/types";
 
@@ -45,30 +48,60 @@ export function ProjectManagerToolbar({
   filters,
   onFiltersChange,
 }: ProjectManagerToolbarProps) {
-  function applyFilterUpdate<TKey extends TableFilterKey>(key: TKey, value: TableFilters[TKey]) {
-    const nextFilters = applyTableFiltersPatch(filters, { kind: "set", key, value });
+  const applyFilters = useCallback((patch: TableFiltersPatch) => {
+    const nextFilters = applyTableFiltersPatch(filters, patch);
     if (nextFilters !== filters) {
       onFiltersChange(nextFilters);
     }
-  }
+  }, [filters, onFiltersChange]);
 
-  function handleResetFilters() {
-    const resetFilters = applyTableFiltersPatch(filters, { kind: "reset" });
-    if (resetFilters !== filters) {
-      onFiltersChange(resetFilters);
+  const handleResetFilters = useCallback(() => {
+    applyFilters({ kind: "reset" });
+  }, [applyFilters]);
+
+  const handleProgressChange = useCallback(
+    (value: ProgressFilter) => {
+      applyFilters({ kind: "set", key: "progress", value });
+    },
+    [applyFilters],
+  );
+
+  const handleProjectTypeChange = useCallback(
+    (value: TypeFilter) => {
+      applyFilters({ kind: "set", key: "projectType", value });
+    },
+    [applyFilters],
+  );
+
+  const handleDatePresetChange = useCallback(
+    (value: DatePreset) => {
+      applyFilters({ kind: "set", key: "updatedWithin", value });
+    },
+    [applyFilters],
+  );
+
+  const commitSearch = useCallback(
+    (value: string) => {
+      if (value !== search) {
+        onSearchChange(value);
+      }
+    },
+    [onSearchChange, search],
+  );
+
+  const handleSearchInputChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      commitSearch(event.target.value);
+    },
+    [commitSearch],
+  );
+
+  const handleClearSearch = useCallback(() => {
+    if (!search) {
+      return;
     }
-  }
-
-  function handleSearchInputChange(event: ChangeEvent<HTMLInputElement>) {
-    const value = event.target.value;
-    if (value === search) return;
-    onSearchChange(value);
-  }
-
-  function handleClearSearch() {
-    if (!search) return;
-    onSearchChange("");
-  }
+    commitSearch("");
+  }, [commitSearch, search]);
 
   const activeFiltersCount = countActiveFilters(filters);
   const hasActiveFilters = activeFiltersCount > 0;
@@ -115,70 +148,49 @@ export function ProjectManagerToolbar({
             <div className="flex items-center gap-1.5">
               <Select
                 value={filters.progress}
-                onValueChange={(value: ProgressFilter) => applyFilterUpdate("progress", value)}
+                onValueChange={handleProgressChange}
               >
                 <SelectTrigger className={filterTriggerClassName}>
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent className={filterContentClassName}>
-                  <SelectItem value="all" className={filterItemClassName}>
-                    All Status
-                  </SelectItem>
-                  <SelectItem value="pending" className={filterItemClassName}>
-                    Pending
-                  </SelectItem>
-                  <SelectItem value="running" className={filterItemClassName}>
-                    Running
-                  </SelectItem>
-                  <SelectItem value="completed" className={filterItemClassName}>
-                    Completed
-                  </SelectItem>
-                  <SelectItem value="failed" className={filterItemClassName}>
-                    Failed
-                  </SelectItem>
+                  {PROGRESS_FILTER_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option} className={filterItemClassName}>
+                      {option === "all" ? "All Status" : option.charAt(0).toUpperCase() + option.slice(1)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
               <Select
                 value={filters.projectType}
-                onValueChange={(value: TypeFilter) => applyFilterUpdate("projectType", value)}
+                onValueChange={handleProjectTypeChange}
               >
                 <SelectTrigger className={filterTriggerClassName}>
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent className={filterContentClassName}>
-                  <SelectItem value="all" className={filterItemClassName}>
-                    All Types
-                  </SelectItem>
-                  <SelectItem value="translation" className={filterItemClassName}>
-                    Translation
-                  </SelectItem>
-                  <SelectItem value="rag" className={filterItemClassName}>
-                    RAG
-                  </SelectItem>
+                  {PROJECT_TYPE_FILTER_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option} className={filterItemClassName}>
+                      {option === "all" ? "All Types" : option.toUpperCase()}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
               <Select
                 value={filters.updatedWithin}
-                onValueChange={(value: DatePreset) => applyFilterUpdate("updatedWithin", value)}
+                onValueChange={handleDatePresetChange}
               >
                 <SelectTrigger className={filterTriggerClassName}>
                   <SelectValue placeholder="Date" />
                 </SelectTrigger>
                 <SelectContent className={filterContentClassName}>
-                  <SelectItem value="any" className={filterItemClassName}>
-                    Any time
-                  </SelectItem>
-                  <SelectItem value="24h" className={filterItemClassName}>
-                    Last 24h
-                  </SelectItem>
-                  <SelectItem value="7d" className={filterItemClassName}>
-                    Last 7d
-                  </SelectItem>
-                  <SelectItem value="30d" className={filterItemClassName}>
-                    Last 30d
-                  </SelectItem>
+                  {DATE_PRESET_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option} className={filterItemClassName}>
+                      {option === "any" ? "Any time" : `Last ${option}`}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -243,27 +255,17 @@ export function ProjectManagerToolbar({
                       <label className="text-xs font-medium text-muted-foreground">Status</label>
                       <Select
                         value={filters.progress}
-                        onValueChange={(value: ProgressFilter) => applyFilterUpdate("progress", value)}
+                        onValueChange={handleProgressChange}
                       >
                         <SelectTrigger className={filterTriggerClassName}>
                           <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent className={filterContentClassName}>
-                          <SelectItem value="all" className={filterItemClassName}>
-                            All Status
-                          </SelectItem>
-                          <SelectItem value="pending" className={filterItemClassName}>
-                            Pending
-                          </SelectItem>
-                          <SelectItem value="running" className={filterItemClassName}>
-                            Running
-                          </SelectItem>
-                          <SelectItem value="completed" className={filterItemClassName}>
-                            Completed
-                          </SelectItem>
-                          <SelectItem value="failed" className={filterItemClassName}>
-                            Failed
-                          </SelectItem>
+                          {PROGRESS_FILTER_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option} className={filterItemClassName}>
+                              {option === "all" ? "All Status" : option.charAt(0).toUpperCase() + option.slice(1)}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -272,21 +274,17 @@ export function ProjectManagerToolbar({
                       <label className="text-xs font-medium text-muted-foreground">Type</label>
                       <Select
                         value={filters.projectType}
-                        onValueChange={(value: TypeFilter) => applyFilterUpdate("projectType", value)}
+                        onValueChange={handleProjectTypeChange}
                       >
                         <SelectTrigger className={filterTriggerClassName}>
                           <SelectValue placeholder="Type" />
                         </SelectTrigger>
                         <SelectContent className={filterContentClassName}>
-                          <SelectItem value="all" className={filterItemClassName}>
-                            All Types
-                          </SelectItem>
-                          <SelectItem value="translation" className={filterItemClassName}>
-                            Translation
-                          </SelectItem>
-                          <SelectItem value="rag" className={filterItemClassName}>
-                            RAG
-                          </SelectItem>
+                          {PROJECT_TYPE_FILTER_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option} className={filterItemClassName}>
+                              {option === "all" ? "All Types" : option.toUpperCase()}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -295,24 +293,17 @@ export function ProjectManagerToolbar({
                       <label className="text-xs font-medium text-muted-foreground">Updated</label>
                       <Select
                         value={filters.updatedWithin}
-                        onValueChange={(value: DatePreset) => applyFilterUpdate("updatedWithin", value)}
+                        onValueChange={handleDatePresetChange}
                       >
                         <SelectTrigger className={filterTriggerClassName}>
                           <SelectValue placeholder="Date" />
                         </SelectTrigger>
                         <SelectContent className={filterContentClassName}>
-                          <SelectItem value="any" className={filterItemClassName}>
-                            Any time
-                          </SelectItem>
-                          <SelectItem value="24h" className={filterItemClassName}>
-                            Last 24 hours
-                          </SelectItem>
-                          <SelectItem value="7d" className={filterItemClassName}>
-                            Last 7 days
-                          </SelectItem>
-                          <SelectItem value="30d" className={filterItemClassName}>
-                            Last 30 days
-                          </SelectItem>
+                          {DATE_PRESET_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option} className={filterItemClassName}>
+                              {option === "any" ? "Any time" : `Last ${option}`}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

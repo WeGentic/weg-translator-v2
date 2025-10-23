@@ -20,7 +20,6 @@ vi.mock("@/core/ipc", async (importOriginal) => {
 });
 
 vi.mock("@/shared/ui/use-toast", () => ({
-  // eslint-disable-next-line @eslint-react/hooks-extra/no-unnecessary-use-prefix -- mocking hook signature
   useToast: () => ({ toast: toastMock }),
 }));
 

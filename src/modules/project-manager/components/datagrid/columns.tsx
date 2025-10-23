@@ -1,5 +1,3 @@
-"use no memo";
-
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { ChevronDown, ChevronUp, Trash2, FolderOpen } from "lucide-react";
 
@@ -61,16 +59,24 @@ function formatDateTimeParts(dateString: string | undefined) {
   return { dateLabel, timeLabel };
 }
 
-export function buildColumns(
-  handlers: {
-    onOpenProject?: (id: string) => void;
-    onRequestDelete?: (id: string, name: string) => void;
-    onRowSelectionChange?: (selectedRows: Set<string>) => void;
-    selectedRows?: ReadonlySet<string>;
-    rawItems?: Array<{ createdAt: string; updatedAt: string; projectId: string }>;
-  } = {},
-  breakpoint: ResponsiveBreakpoint = { isMobile: false, isTablet: false, isDesktop: true, isWide: true },
-): ColumnDef<ProjectRow, unknown>[] {
+export interface ProjectColumnHandlers {
+  onOpenProject?: (id: string) => void;
+  onRequestDelete?: (id: string, name: string) => void;
+  onSelectionChange: (nextSelection: ReadonlyArray<string>) => void;
+  selectedIds: ReadonlyArray<string>;
+}
+
+export function createProjectColumns({
+  handlers,
+  breakpoint = { isMobile: false, isTablet: false, isDesktop: true, isWide: true },
+}: {
+  handlers: ProjectColumnHandlers;
+  breakpoint?: ResponsiveBreakpoint;
+}): ColumnDef<ProjectRow, unknown>[] {
+  // Normalise the selection array into a Set once so we can answer lookups
+  // cheaply without mutating the original handler payload.
+  const selectedSet = new Set(handlers.selectedIds);
+
   const columns: ColumnDef<ProjectRow, unknown>[] = [
     /**
      * Checkbox Selection Column
@@ -95,13 +101,11 @@ export function buildColumns(
               checked={isAllSelected || (isSomeSelected ? "indeterminate" : false)}
               onCheckedChange={(checked) => {
                 if (checked) {
-                  // Select all visible rows
-                  const allIds = new Set(table.getRowModel().rows.map(row => row.original.id));
-                  handlers.onRowSelectionChange?.(allIds);
-                } else {
-                  // Clear all selections
-                  handlers.onRowSelectionChange?.(new Set());
+                  const allVisibleIds = table.getRowModel().rows.map((row) => row.original.id);
+                  handlers.onSelectionChange(allVisibleIds);
+                  return;
                 }
+                handlers.onSelectionChange([]);
               }}
               aria-label="Select all projects"
             />
@@ -109,19 +113,19 @@ export function buildColumns(
         );
       },
       cell: ({ row }) => {
-        const isSelected = handlers.selectedRows?.has(row.original.id) ?? false;
+        const isSelected = selectedSet.has(row.original.id);
         return (
           <div className="flex items-center justify-center">
             <Checkbox
               checked={isSelected}
               onCheckedChange={(checked) => {
-                const currentSelection = new Set(handlers.selectedRows);
+                const currentSelection = new Set(selectedSet);
                 if (checked) {
                   currentSelection.add(row.original.id);
                 } else {
                   currentSelection.delete(row.original.id);
                 }
-                handlers.onRowSelectionChange?.(currentSelection);
+                handlers.onSelectionChange(Array.from(currentSelection));
               }}
               aria-label={`Select project ${row.original.name}`}
             />
@@ -282,14 +286,13 @@ export function buildColumns(
         );
       },
       cell: ({ row }) => {
-        const rawItem = handlers.rawItems?.find(item => item.projectId === row.original.id);
-        const createdAt = rawItem?.createdAt ?? "";
-        const { dateLabel, timeLabel } = formatDateTimeParts(createdAt);
+        const { createdIso } = row.original;
+        const { dateLabel, timeLabel } = formatDateTimeParts(createdIso);
         return (
           <div className="flex flex-col items-center text-center leading-tight">
             <span
               className="text-[10px] font-normal text-foreground/80 transition-colors duration-200 hover:text-foreground"
-              title={createdAt}
+              title={row.original.created.detail}
             >
               {dateLabel}
             </span>
@@ -300,8 +303,8 @@ export function buildColumns(
         );
       },
       sortingFn: (a, b) => {
-        const va = (a.original as ProjectRow & { createdRaw: number }).createdRaw;
-        const vb = (b.original as ProjectRow & { createdRaw: number }).createdRaw;
+        const va = a.original.createdTimestamp;
+        const vb = b.original.createdTimestamp;
         if (typeof va === "number" && typeof vb === "number") return va - vb;
         const av = a.original.created.label;
         const bv = b.original.created.label;
@@ -336,14 +339,13 @@ export function buildColumns(
         );
       },
       cell: ({ row }) => {
-        const rawItem = handlers.rawItems?.find(item => item.projectId === row.original.id);
-        const updatedAt = rawItem?.updatedAt ?? "";
-        const { dateLabel, timeLabel } = formatDateTimeParts(updatedAt);
+        const { updatedIso } = row.original;
+        const { dateLabel, timeLabel } = formatDateTimeParts(updatedIso);
         return (
           <div className="flex flex-col items-center text-center leading-tight">
             <span
               className="text-[10px] font-normal text-foreground/80 transition-colors duration-200 hover:text-foreground"
-              title={updatedAt}
+              title={row.original.updated.detail}
             >
               {dateLabel}
             </span>
@@ -354,8 +356,8 @@ export function buildColumns(
         );
       },
       sortingFn: (a, b) => {
-        const va = (a.original as ProjectRow & { updatedRaw: number }).updatedRaw;
-        const vb = (b.original as ProjectRow & { updatedRaw: number }).updatedRaw;
+        const va = a.original.updatedTimestamp;
+        const vb = b.original.updatedTimestamp;
         if (typeof va === "number" && typeof vb === "number") return va - vb;
         const av = a.original.updated.label;
         const bv = b.original.updated.label;

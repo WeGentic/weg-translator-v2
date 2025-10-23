@@ -2,7 +2,7 @@
 import { Plus } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 
-import "./EmptyProjectsState.css";
+import "../css/empty-projects-state.css";
 
 export function EmptyProjectsState({ onCreate }: { onCreate: () => void }) {
   return (
