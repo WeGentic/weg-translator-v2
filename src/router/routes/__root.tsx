@@ -1,4 +1,4 @@
-import { Fragment, useCallback } from "react";
+import { Fragment, useCallback, useState } from "react";
 import {
   Outlet,
   createRootRouteWithContext,
@@ -11,6 +11,7 @@ import { MainLayout } from "@/app/shell";
 import { WorkspaceFooter } from "@/app/shell/main_elements";
 import { useAppHealth } from "@/app/hooks/useAppHealth";
 import { queueWorkspaceMainViewIfNeeded } from "@/modules/workspace/navigation/main-view-persist";
+import { UserAccountDialog } from "@/modules/auth";
 import type { RouterContext as AppRouterContext } from "@/router/router-context";
 
 const BASE_LAYOUT_CONFIG = {
@@ -37,6 +38,7 @@ function dispatchNavigationEvent(view: "dashboard" | "projects" | "resource" | "
 function RootComponent() {
   const navigate = useNavigate();
   const { health } = useAppHealth();
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
 
   const handleDashboardClick = useCallback(() => {
     navigate({ to: "/dashboard" }).catch(() => undefined);
@@ -66,6 +68,10 @@ function RootComponent() {
     dispatchNavigationEvent("settings");
   }, [navigate]);
 
+  const handleUserAccountClick = useCallback(() => {
+    setAccountDialogOpen(true);
+  }, []);
+
   return (
     <Fragment>
       <MainLayout.Root config={BASE_LAYOUT_CONFIG}>
@@ -76,6 +82,7 @@ function RootComponent() {
           onEditorClick={handleEditorClick}
           onResourceClick={handleResourcesClick}
           onSettingsClick={handleSettingsClick}
+          onUserAccountClick={handleUserAccountClick}
         />
         <MainLayout.SidebarTwo />
         <MainLayout.Main>
@@ -85,6 +92,7 @@ function RootComponent() {
           <WorkspaceFooter health={health} />
         </MainLayout.Footer>
       </MainLayout.Root>
+      <UserAccountDialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen} />
       {import.meta.env.DEV ? <TanStackRouterDevtools position="bottom-right" /> : null}
     </Fragment>
   );

@@ -1,0 +1,182 @@
+.user-account-dialog {
+  max-width: min(550px, calc(100vw - 2rem));
+  width: 100%;
+  border: none;
+  background: linear-gradient(
+    90deg,
+    var(--color-gradient-parchment-peacock-800) 0%,
+    var(--color-gradient-parchment-peacock-600) 100%
+  );
+  color: var(--color-gradient-parchment-peacock-100);
+  border-radius: 18px;
+  padding: clamp(24px, 4vw, 28px);
+  display: grid;
+  gap: 20px;
+}
+
+.user-account-dialog__header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+.user-account-dialog__title {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--color-victorian-peacock-100);
+}
+
+.user-account-dialog__description {
+  font-size: 0.9375rem;
+  color: var(--color-victorian-peacock-100);
+}
+
+.user-account-dialog__profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--color-victorian-peacock-100) 25%, transparent 75%);
+  backdrop-filter: blur(8px);
+  border: none;
+}
+
+.user-account-dialog__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 9999px;
+  font-size: 1.75rem;
+  font-weight: 600;
+  border: 1.5px solid var(--color-victorian-peacock-900);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--color-secondary);
+  color: var(--color-primary);
+}
+
+.user-account-dialog__avatar-icon {
+  width: 42px;
+  height: 42px;
+  color: var(--color-primary);
+}
+
+.user-account-dialog__details {
+  display: grid;
+  gap: 6px;
+}
+
+.user-account-dialog__name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-victorian-peacock-950);
+}
+
+.user-account-dialog__email {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9375rem;
+  color: color-mix(in oklab, var(--color-victorian-peacock-950) 72%, transparent);
+  word-break: break-all;
+}
+
+.user-account-dialog__email-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-victorian-peacock-950);
+}
+
+.user-account-dialog__status {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-victorian-peacock-950);
+}
+
+.user-account-dialog__footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.user-account-dialog__logout-icon {
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.5rem;
+}
+
+.user-account-divider {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 clamp(18px, 3vw, 24px) 16px;
+  position: relative;
+}
+
+.user-account-divider-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.user-account-divider:after {
+  content: '';
+  position: absolute;
+  inset: auto 0 -2px;
+  height: 1px;
+  border-radius: 999px;
+  background: linear-gradient(
+    -90deg,
+    color-mix(in oklab, var(--color-primary) 65%, transparent),
+    color-mix(in oklab, var(--color-secondary) 75%, transparent)
+  );
+}
+
+.user-account-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: none;
+  background: var(--color-victorian-peacock-400);
+  color: var(--color-victorian-peacock-950);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease,
+    color 150ms ease;
+}
+
+.user-account-close:hover {
+  border: 1px solid var(--color-secondary);
+  background: var(--color-victorian-peacock-300);
+}
+
+.user-account-close:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in oklab, var(--color-ring) 55%, transparent),
+    0 8px 18px -8px color-mix(in oklab, black 25%, transparent);
+}
+
+
+.user-account-dialog__close {
+  background: var(--color-victorian-peacock-200);
+  outline: none;
+  border: none;
+  color: var(--color-victorian-peacock-950);
+}
+
+.user-account-dialog__logout {
+  background: var(--color-victorian-peacock-200);
+  outline: none;
+  border: none;
+  color: var(--color-destructive);
+}

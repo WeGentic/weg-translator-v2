@@ -25,8 +25,16 @@ function DialogOverlay({ className, ref: forwardedRef, ...props }: DialogOverlay
 }
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
-type DialogContentProps = ComponentProps<typeof DialogPrimitive.Content>;
-function DialogContent({ className, children, ref: forwardedRef, ...props }: DialogContentProps) {
+type DialogContentProps = ComponentProps<typeof DialogPrimitive.Content> & {
+  hideCloseButton?: boolean;
+};
+function DialogContent({
+  className,
+  children,
+  hideCloseButton = false,
+  ref: forwardedRef,
+  ...props
+}: DialogContentProps) {
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -39,12 +47,14 @@ function DialogContent({ className, children, ref: forwardedRef, ...props }: Dia
         )}
       >
         {children}
-        <DialogPrimitive.Close
-          className="absolute right-3 top-3 rounded-sm p-1 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          aria-label="Close dialog"
-        >
-          <X className="h-4 w-4" aria-hidden="true" />
-        </DialogPrimitive.Close>
+        {!hideCloseButton ? (
+          <DialogPrimitive.Close
+            className="absolute right-3 top-3 rounded-sm p-1 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            aria-label="Close dialog"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </DialogPrimitive.Close>
+        ) : null}
       </DialogPrimitive.Content>
     </DialogPortal>
   );

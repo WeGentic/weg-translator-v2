@@ -6,6 +6,7 @@ import PhoneInput, { getCountryCallingCode, isValidPhoneNumber } from "react-pho
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -36,6 +37,7 @@ import "../css/client-wizard-autocomplete.css";
 import "../css/client-wizard-feedback.css";
 import "../css/client-wizard-input.css";
 import "react-phone-number-input/style.css";
+import { X } from "lucide-react";
 
 interface WizardPhoneContainerProps extends HTMLAttributes<HTMLDivElement> {
   countryCode?: string;
@@ -217,12 +219,25 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("wizard-v2-client-dialog")}>
-        <DialogHeader>
-          <DialogTitle className="text-(--color-victorian-peacock-900)">Add new client</DialogTitle>
-          <DialogDescription className="text-(--color-victorian-peacock-700)">Provide basic information to create a client profile.</DialogDescription>
-        </DialogHeader>
+      <DialogContent
+        className={cn("wizard-v2-client-dialog")}
+        hideCloseButton
+        onInteractOutside={(event) => {
+          event.preventDefault();
+        }}
+        onEscapeKeyDown={(event) => {
+          event.preventDefault();
+        }}
+      >
+        <div className="wizard-client-divider-bar">
+          <h2 className="text-(--color-victorian-peacock-900) text-[20px]">Add new client</h2>
+          <DialogClose type="button" className="wizard-v2-close" aria-label="Close wizard">
+            <X className="h-4 w-4" aria-hidden="true" />
+          </DialogClose>
+        </div>
+
         <form className="wizard-v2-client-form" onSubmit={handleSubmit}>
+          <div className="wizard-client-divider"></div>
           <div className="wizard-v2-client-body">
             <div className="wizard-v2-client-grid">
               <div className="wizard-v2-client-field">

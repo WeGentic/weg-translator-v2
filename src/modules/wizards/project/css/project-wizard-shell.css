@@ -98,8 +98,6 @@
 .wizard-v2-close:hover {
   border: 1px solid var(--color-secondary);
   background: var(--color-victorian-peacock-300);
-  
-  
 }
 
 .wizard-v2-close:focus-visible {
@@ -150,3 +148,4 @@
     box-shadow: none;
   }
 }
+
