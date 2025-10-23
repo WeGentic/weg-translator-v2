@@ -19,4 +19,24 @@ if (typeof window !== "undefined" && window.matchMedia == null) {
   });
 }
 
+if (typeof window !== "undefined" && (window as typeof window & { ResizeObserver?: unknown }).ResizeObserver == null) {
+  class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+
+  Object.defineProperty(window, "ResizeObserver", {
+    configurable: true,
+    writable: true,
+    value: ResizeObserverMock,
+  });
+
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    configurable: true,
+    writable: true,
+    value: ResizeObserverMock,
+  });
+}
+
 export * from "../utils/providers";

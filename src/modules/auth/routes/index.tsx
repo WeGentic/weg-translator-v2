@@ -1,58 +1,45 @@
-import { useEffect } from "react";
+import { useMemo, type CSSProperties } from "react";
 
-import { BlankBackground, useLayoutStoreApi } from "@/app/shell";
+import LogoMark from "@/assets/LOGO-SVG.svg";
+import LoginBackground from "@/assets/LOGIN_BACKGROUND_.png";
 
 import { LoginForm } from "../components/LoginForm";
 
-export function LoginRoute() {
-  const layoutStore = useLayoutStoreApi();
+import "./login-page.css";
 
-  useEffect(() => {
-    const store = layoutStore;
-    const state = store.getState();
-    state.setFooter({ mounted: true, visible: true });
-    state.setFooterContent(null);
-    state.setBackground({ mounted: true, visible: true, element: <BlankBackground tone="default" /> });
-    return () => {
-      store.getState().setBackground({ element: null, mounted: false });
-    };
-  }, [layoutStore]);
+export function LoginRoute() {
+  const backgroundStyle = useMemo(
+    () =>
+      ({
+        "--login-background-image": `url(${LoginBackground})`,
+      }) as CSSProperties,
+    [],
+  );
 
   return (
-    <div className="flex min-h-full items-center justify-center p-4">
-      <div className="w-full max-w-6xl rounded-3xl border border-border/40 bg-background/85 p-6 shadow-xl backdrop-blur">
-        <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2">
-          <div className="hidden flex-col items-center space-y-8 text-center lg:flex">
-            <div className="space-y-4">
-              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary shadow-lg">
-                <span className="text-3xl font-bold text-white">W</span>
-              </div>
-              <h1 className="text-4xl font-bold text-foreground">Weg Translator</h1>
-              <p className="text-xl text-muted-foreground">
-                Transform your documents with AI-powered translation technology
-              </p>
-            </div>
-            <div className="space-y-3 text-sm text-muted-foreground">
-              <div className="flex items-center justify-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-primary" />
-                <span>Real-time translation</span>
-              </div>
-              <div className="flex items-center justify-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-secondary" />
-                <span>Multiple file formats</span>
-              </div>
-              <div className="flex items-center justify-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-accent" />
-                <span>Secure & private</span>
-              </div>
+    <div className="login-page">
+      <div className="login-page__background" style={backgroundStyle} aria-hidden="true" />
+      <main className="login-page__main">
+        <section className="login-page__panel">
+          <div className="login-page__brand" data-testid="login-brand">
+            <img
+              src={LogoMark}
+              alt="Weg Translator logo"
+              className="login-page__brand-logo"
+              width={88}
+              height={88}
+              loading="eager"
+            />
+            <div className="login-page__brand-copy">
+              <h1 className="login-page__brand-title">Weg Translator</h1>
+              <p className="login-page__brand-subtitle">AI-powered localization for your documents</p>
             </div>
           </div>
-
-          <div className="mx-auto w-full max-w-md">
+          <div className="login-page__panel-form">
             <LoginForm />
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }

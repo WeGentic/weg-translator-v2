@@ -2,6 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { WorkspaceRoute } from "@/modules/workspace";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_app/")({
   component: WorkspaceRoute,
 });
