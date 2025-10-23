@@ -9,7 +9,7 @@ import { getProjectBundle, getProjectStatistics } from "@/core/ipc";
 import type { ProjectBundle, ProjectRecord } from "@/shared/types/database";
 import type { ProjectStatistics } from "@/shared/types/statistics";
 
-export const Route = createFileRoute("/projects/$projectId")({
+export const Route = createFileRoute("/_app/projects/$projectId")({
   loader: async ({ params }) => loadProjectView(params.projectId),
   pendingComponent: ProjectViewPending,
   errorComponent: ProjectViewError,

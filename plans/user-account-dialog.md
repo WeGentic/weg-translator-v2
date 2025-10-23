@@ -17,7 +17,8 @@ Completed: NOT COMPLETED
 
 ## Coding implementation
 - Added `src/modules/auth/components/UserAccountDialog.tsx` implementing the centered dialog with profile details, logout handling, toast feedback, and navigation to `/login`.
-- Updated the primary action copy to surface a visible `Logout` button per feedback.
+- Introduced a staged logout flow with an in-dialog confirmation state, focus management, and inline error feedback.
+- Crafted dedicated confirmation styling in `src/modules/auth/components/css/user-account-dialog.css` to highlight the destructive action while staying within theme tokens.
 - Created companion styles in `src/modules/auth/components/css/user-account-dialog.css` using theme tokens for consistent branding.
 - Wired the sidebar account button in `src/router/routes/__root.tsx` to toggle the dialog and render it within the layout tree; exported the component via `src/modules/auth/index.ts`.
 

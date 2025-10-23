@@ -180,3 +180,94 @@
   border: none;
   color: var(--color-destructive);
 }
+
+.user-account-dialog__confirm {
+  display: grid;
+  gap: 16px;
+  text-align: center;
+  padding: clamp(20px, 3.4vw, 28px);
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--color-victorian-peacock-100) 30%, transparent),
+    color-mix(in oklab, var(--color-victorian-peacock-200) 55%, transparent)
+  );
+  box-shadow:
+    0 12px 32px -20px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.18) inset;
+}
+
+.user-account-dialog__confirm-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  margin: 0 auto;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--color-secondary) 68%, transparent),
+    color-mix(in oklab, var(--color-primary) 42%, transparent)
+  );
+  box-shadow:
+    0 10px 24px -18px rgba(0, 0, 0, 0.45),
+    0 0 0 1px color-mix(in oklab, var(--color-victorian-peacock-700) 40%, transparent);
+}
+
+.user-account-dialog__confirm-icon-symbol {
+  width: 28px;
+  height: 28px;
+  color: var(--color-onSecondary);
+}
+
+.user-account-dialog__confirm-message {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-victorian-peacock-950);
+}
+
+.user-account-dialog__confirm-note {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: color-mix(in oklab, var(--color-victorian-peacock-900) 70%, transparent);
+}
+
+.user-account-dialog__error {
+  margin-top: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-destructive);
+}
+
+.user-account-dialog__logout--confirm {
+  background: var(--color-destructive);
+  color: var(--color-destructive-foreground);
+  box-shadow:
+    0 12px 30px -18px rgba(0, 0, 0, 0.5),
+    0 0 0 1px color-mix(in oklab, var(--color-destructive) 65%, transparent);
+}
+
+.user-account-dialog__logout--confirm:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--color-destructive) 92%, white 8%);
+}
+
+.user-account-dialog__logout--confirm:disabled {
+  opacity: 0.8;
+}
+
+.user-account-dialog__spinner {
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.5rem;
+  animation: user-account-dialog-spin 1s linear infinite;
+}
+
+@keyframes user-account-dialog-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
