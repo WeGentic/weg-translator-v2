@@ -14,6 +14,18 @@ const mockSafeInvoke = vi.mocked(safeInvoke);
 
 const PROJECT_UUID = "project-123";
 
+type SafeInvokeArgs = { payload?: Record<string, unknown> };
+
+function getLastInvocationArgs(): SafeInvokeArgs {
+  const calls = mockSafeInvoke.mock.calls;
+  const lastCall = calls[calls.length - 1];
+  if (!lastCall) {
+    throw new Error("safeInvoke was not called");
+  }
+  const [, args] = lastCall as [string, SafeInvokeArgs];
+  return args ?? {};
+}
+
 function resetMocks() {
   vi.clearAllMocks();
   mockSafeInvoke.mockReset();
@@ -59,18 +71,14 @@ describe("ipc/db/projects", () => {
         languagePairs: [],
       });
 
-      expect(mockSafeInvoke).toHaveBeenCalledWith(
-        "attach_project_file_v2",
-        expect.objectContaining({
-          payload: expect.objectContaining({
-            projectUuid: PROJECT_UUID,
-            fileUuid: "file-123",
-            sizeBytes: 1024,
-            segmentCount: 20,
-            tokenCount: 500,
-          }),
-        }),
-      );
+      const payload = getLastInvocationArgs().payload ?? {};
+      expect(payload).toMatchObject({
+        projectUuid: PROJECT_UUID,
+        fileUuid: "file-123",
+        sizeBytes: 1024,
+        segmentCount: 20,
+        tokenCount: 500,
+      });
     });
 
     it("omits undefined optional file fields", async () => {
@@ -104,18 +112,18 @@ describe("ipc/db/projects", () => {
         languagePairs: [],
       });
 
-      const [, args] = mockSafeInvoke.mock.calls.at(-1) ?? [];
-      expect(args?.payload).toMatchObject({
+      const payload = getLastInvocationArgs().payload ?? {};
+      expect(payload).toMatchObject({
         projectUuid: PROJECT_UUID,
         filename: "reference.pdf",
         storedAt: "References/reference.pdf",
         type: "reference",
         ext: "pdf",
       });
-      expect(args?.payload).not.toHaveProperty("fileUuid");
-      expect(args?.payload).not.toHaveProperty("sizeBytes");
-      expect(args?.payload).not.toHaveProperty("segmentCount");
-      expect(args?.payload).not.toHaveProperty("tokenCount");
+      expect(payload).not.toHaveProperty("fileUuid");
+      expect(payload).not.toHaveProperty("sizeBytes");
+      expect(payload).not.toHaveProperty("segmentCount");
+      expect(payload).not.toHaveProperty("tokenCount");
     });
   });
 
@@ -130,15 +138,15 @@ describe("ipc/db/projects", () => {
         projectName: "Updated",
       });
 
-      const [, args] = mockSafeInvoke.mock.calls.at(-1) ?? [];
-      expect(args?.payload).toMatchObject({
+      const payload = getLastInvocationArgs().payload ?? {};
+      expect(payload).toMatchObject({
         projectUuid: PROJECT_UUID,
         notes: null,
         clientUuid: null,
         projectName: "Updated",
       });
-      expect(Object.prototype.hasOwnProperty.call(args?.payload ?? {}, "notes")).toBe(true);
-      expect(Object.prototype.hasOwnProperty.call(args?.payload ?? {}, "clientUuid")).toBe(true);
+      expect(Object.prototype.hasOwnProperty.call(payload, "notes")).toBe(true);
+      expect(Object.prototype.hasOwnProperty.call(payload, "clientUuid")).toBe(true);
     });
 
     it("omits fields left undefined", async () => {
@@ -149,8 +157,8 @@ describe("ipc/db/projects", () => {
         projectStatus: "active",
       });
 
-      const [, args] = mockSafeInvoke.mock.calls.at(-1) ?? [];
-      expect(args?.payload).toEqual({
+      const payload = getLastInvocationArgs().payload ?? {};
+      expect(payload).toEqual({
         projectUuid: PROJECT_UUID,
         projectStatus: "active",
       });

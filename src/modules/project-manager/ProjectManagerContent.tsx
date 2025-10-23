@@ -1,6 +1,6 @@
-"use no memo";
+"use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { getCoreRowModel, getSortedRowModel, useReactTable, type SortingState } from "@tanstack/react-table";
 
 import { useBreakpoint } from "@/shared/hooks/use-media-query";
@@ -8,7 +8,7 @@ import { formatDateParts } from "@/shared/utils/datetime";
 
 import { ProjectManagerFooter } from "./components/ProjectManagerFooter";
 import { ProjectsTableGrid } from "./components/datagrid/ProjectsTableGrid";
-import { buildColumns, DEFAULT_SORT_COLUMN_ID } from "./components/datagrid/columns";
+import { createProjectColumns, DEFAULT_SORT_COLUMN_ID } from "./components/datagrid/columns";
 import type { ProjectManagerContentProps, ProjectRow } from "./state/types";
 import { resolveProjectSubjectLabel } from "./constants";
 
@@ -19,8 +19,8 @@ type ExtendedProps = ProjectManagerContentProps & {
 };
 
 function toProjectRow(item: ProjectManagerContentProps["items"][number]): ProjectRow & {
-  createdRaw: number;
-  updatedRaw: number;
+  createdTimestamp: number;
+  updatedTimestamp: number;
 } {
   const created = formatDateParts(item.createdAt);
   const updated = formatDateParts(item.updatedAt);
@@ -42,8 +42,10 @@ function toProjectRow(item: ProjectManagerContentProps["items"][number]): Projec
     clientName,
     created,
     updated,
-    createdRaw: Date.parse(item.createdAt),
-    updatedRaw: Date.parse(item.updatedAt),
+    createdTimestamp: Date.parse(item.createdAt),
+    updatedTimestamp: Date.parse(item.updatedAt),
+    createdIso: item.createdAt,
+    updatedIso: item.updatedAt,
   };
 }
 
@@ -60,29 +62,59 @@ export function ProjectManagerContent({
   search: controlledSearch,
 }: ExtendedProps) {
   const [localSorting, setLocalSorting] = useState<SortingState>(DEFAULT_SORTING);
-  const [localSelectedRows, setLocalSelectedRows] = useState<Set<string>>(() => new Set());
+  const [localSelectedIds, setLocalSelectedIds] = useState<string[]>([]);
 
-  const selectedRows = controlledSelectedRows ?? localSelectedRows;
-  const setSelectedRows = setControlledSelectedRows ?? setLocalSelectedRows;
+  const controlledSelectedIds = useMemo(
+    () => (controlledSelectedRows ? Array.from(controlledSelectedRows) : null),
+    [controlledSelectedRows],
+  );
+
+  const selectedIds = controlledSelectedIds ?? localSelectedIds;
+  // Convert to a Set only where the table API requires it; the source of truth stays immutable.
+  const selectedRows = useMemo(() => new Set(selectedIds), [selectedIds]);
+
+  const setSelectedIds = useCallback(
+    (nextIds: ReadonlyArray<string>) => {
+      if (setControlledSelectedRows) {
+        setControlledSelectedRows(new Set(nextIds));
+        return;
+      }
+      setLocalSelectedIds(Array.from(nextIds));
+    },
+    [setControlledSelectedRows],
+  );
+
   const sorting = controlledSorting ?? localSorting;
   const setSorting = setControlledSorting ?? setLocalSorting;
   const search = controlledSearch ?? "";
   const tableRows = useMemo(() => items.map(toProjectRow), [items]);
   const breakpoint = useBreakpoint();
 
+  const columnHandlers = useMemo(
+    () => ({
+      onOpenProject,
+      onRequestDelete,
+      onSelectionChange: setSelectedIds,
+      selectedIds,
+    }),
+    [onOpenProject, onRequestDelete, setSelectedIds, selectedIds],
+  );
+
   const columns = useMemo(
     () =>
-      buildColumns(
-        {
-          onOpenProject,
-          onRequestDelete,
-          onRowSelectionChange: setSelectedRows,
-          selectedRows,
-          rawItems: items,
-        },
+      createProjectColumns({
+        handlers: columnHandlers,
         breakpoint,
-      ),
-    [onOpenProject, onRequestDelete, setSelectedRows, selectedRows, items, breakpoint],
+      }),
+    [columnHandlers, breakpoint],
+  );
+
+  const handleSortingChange = useCallback(
+    (updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+      const nextState = typeof updaterOrValue === "function" ? updaterOrValue(sorting) : updaterOrValue;
+      setSorting(nextState);
+    },
+    [sorting, setSorting],
   );
 
   const table = useReactTable({
@@ -91,11 +123,7 @@ export function ProjectManagerContent({
     state: {
       sorting,
     },
-    onSortingChange: (updaterOrValue) => {
-      const nextState =
-        typeof updaterOrValue === "function" ? updaterOrValue(sorting) : updaterOrValue;
-      setSorting(nextState);
-    },
+    onSortingChange: handleSortingChange,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
@@ -108,7 +136,7 @@ export function ProjectManagerContent({
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <ProjectsTableGrid table={table} rows={tableDisplayRows} selectedRows={selectedRows} search={search} />
       </div>
-      <ProjectManagerFooter totalProjects={items.length} selectedCount={selectedRows.size} />
+      <ProjectManagerFooter totalProjects={items.length} selectedCount={selectedIds.length} />
     </section>
   );
 }

@@ -6,8 +6,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
-import { useToast } from "@/shared/ui/use-toast";
-import { deleteProject, listProjects } from "@/core/ipc";
 
 type Target = { id: string; name: string } | null;
 
@@ -15,10 +13,10 @@ type DeleteProjectDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   target: Target;
-  onAfterDelete?: () => void; // optional hook to refresh parent if desired
+  onConfirmDelete?: (projectId: string) => Promise<void>;
 };
 
-export function DeleteProjectDialog({ open, onOpenChange, target, onAfterDelete }: DeleteProjectDialogProps) {
+export function DeleteProjectDialog({ open, onOpenChange, target, onConfirmDelete }: DeleteProjectDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -33,7 +31,7 @@ export function DeleteProjectDialog({ open, onOpenChange, target, onAfterDelete 
           key={`${target?.id ?? "no-target"}-${open ? "open" : "closed"}`}
           target={target}
           onOpenChange={onOpenChange}
-          onAfterDelete={onAfterDelete}
+          onConfirmDelete={onConfirmDelete}
         />
       </DialogContent>
     </Dialog>
@@ -43,18 +41,18 @@ export function DeleteProjectDialog({ open, onOpenChange, target, onAfterDelete 
 type DeleteProjectFormProps = {
   target: Target;
   onOpenChange: (open: boolean) => void;
-  onAfterDelete?: () => void;
+  onConfirmDelete?: (projectId: string) => Promise<void>;
 };
 
-function DeleteProjectForm({ target, onOpenChange, onAfterDelete }: DeleteProjectFormProps) {
+function DeleteProjectForm({ target, onOpenChange, onConfirmDelete }: DeleteProjectFormProps) {
   const [confirmName, setConfirmName] = useState("");
-  const { toast } = useToast();
 
   const [errorMessage, submitAction] = useActionState<
     string | null,
     FormData
   >(async (_prev, formData) => {
     if (!target) return "No project selected.";
+    if (!onConfirmDelete) return "Delete action unavailable.";
 
     const confirmField = formData.get("confirm");
     const typedName = typeof confirmField === "string" ? confirmField.trim() : "";
@@ -63,24 +61,12 @@ function DeleteProjectForm({ target, onOpenChange, onAfterDelete }: DeleteProjec
     }
 
     try {
-      const deleted = await deleteProject(target.id);
-
-      // Verify it's actually gone (same as original)
-      const refreshed = await listProjects({ limit: 100 });
-      const exists = refreshed.some((p) => p.projectId === target.id);
-
-      if (deleted > 0 && !exists) {
-        toast({ title: "Project deleted", description: `Deleted "${target.name}".` });
-        onOpenChange(false);
-        onAfterDelete?.();
-        return null;
-      } else {
-        toast({ variant: "destructive", title: "Deletion failed", description: `Could not delete "${target.name}".` });
-        return "Deletion failed.";
-      }
+      await onConfirmDelete(target.id);
+      setConfirmName("");
+      onOpenChange(false);
+      return null;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Deletion failed.";
-      toast({ variant: "destructive", title: "Deletion failed", description: message });
       return message;
     }
   }, null);

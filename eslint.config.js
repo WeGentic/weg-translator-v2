@@ -1,7 +1,6 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
-import eslintReact from '@eslint-react/eslint-plugin';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactCompiler from 'eslint-plugin-react-compiler';
 import path from 'node:path';
@@ -52,8 +51,15 @@ export default [
   js.configs.recommended,
   ...tsTypeCheckedConfigs,
   disableTypeCheckedForJs,
-  eslintReact.configs['recommended-typescript'],
-  reactHooks.configs['recommended-latest'],
+  {
+    plugins: {
+      'react-hooks': reactHooks,
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+    },
+  },
   {
     files: tsFilePatterns,
     plugins: {

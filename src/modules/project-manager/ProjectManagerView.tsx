@@ -3,14 +3,16 @@ import "@/modules/project-manager/css/dropdowns.css";
 import "@/modules/project-manager/css/project-manager.css";
 import "@/modules/project-manager/css/new-project-button.css";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import type { SortingState } from "@tanstack/react-table";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
+import { Button } from "@/shared/ui/button";
 import { useToast } from "@/shared/ui/use-toast";
 import { ProjectsTableSkeleton } from "@/modules/project-manager/ui/table/ProjectsTableSkeleton";
-import { deleteProject, listProjects, type ProjectListItem } from "@/core/ipc";
+import { deleteProject, type ProjectListItem } from "@/core/ipc";
+import { useProjectListResource } from "./data/projectsResource";
 import { filterProjects } from "@/modules/project-manager/state/filterProjects";
 
 import { ProjectManagerHeader } from "./ProjectManagerHeader";
@@ -29,7 +31,6 @@ import {
 } from "./state/types";
 
 const DEFAULT_SORTING: SortingState = [{ id: "updated", desc: true }];
-const POLLING_INTERVAL_MS = 1500;
 const LIST_LIMIT = 100;
 
 export type ProjectManagerViewProps = {
@@ -39,12 +40,6 @@ export type ProjectManagerViewProps = {
 
 type DeleteTarget = { id: string; name: string } | null;
 
-type RefreshOptions = {
-  showSpinner?: boolean;
-};
-
-type RefreshProjectsFn = (options?: RefreshOptions) => Promise<void>;
-
 function resolveErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && typeof error.message === "string" && error.message.length > 0) {
     return error.message;
@@ -52,138 +47,42 @@ function resolveErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-export function ProjectManagerView({
+export function ProjectManagerView(props: ProjectManagerViewProps = {}) {
+  return (
+    <Suspense fallback={<ProjectManagerViewSkeleton />}>
+      <ProjectManagerViewInner {...props} />
+    </Suspense>
+  );
+}
+
+function ProjectManagerViewInner({
   onOpenProject,
   onCreateProject,
-}: ProjectManagerViewProps = {}) {
-  const [projects, setProjects] = useState<ProjectListItem[]>([]);
+}: ProjectManagerViewProps) {
+  const { projects, status, error: resourceError, refresh, mutate } = useProjectListResource({
+    limit: LIST_LIMIT,
+  });
+
   const [isWizardOpen, setWizardOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
   const [controls, setControls] = useState<TableControlsState>(createDefaultTableControlsState);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(() => new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
-  const refreshProjectsRef = useRef<RefreshProjectsFn>(() => Promise.resolve());
 
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  async function refreshProjects({ showSpinner }: RefreshOptions = {}) {
-    if (showSpinner) {
-      setIsLoading(true);
-    }
+  const projectList = useMemo(() => Array.from(projects), [projects]);
 
-    try {
-      setError(null);
-      const response = await listProjects({ limit: LIST_LIMIT });
-      setProjects(response);
-    } catch (unknownError) {
-      setError(resolveErrorMessage(unknownError, "Unable to load projects."));
-    } finally {
-      if (showSpinner) {
-        setIsLoading(false);
-      }
-    }
-  }
+  const resourceErrorMessage = resourceError
+    ? resolveErrorMessage(resourceError, "Unable to load projects.")
+    : null;
 
-  refreshProjectsRef.current = refreshProjects;
-
-  useEffect(() => {
-    void refreshProjectsRef.current({ showSpinner: true });
-
-    const intervalId = window.setInterval(() => {
-      void refreshProjectsRef.current();
-    }, POLLING_INTERVAL_MS);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, []);
-
-  function handleDeleteDialogOpenChange(open: boolean) {
-    setDeleteDialogOpen(open);
-    if (!open) {
-      setDeleteTarget(null);
-    }
-  }
-
-  function clearSelection() {
-    setSelectedRows(new Set());
-  }
-
-  function handleOpenProjectById(projectId: string) {
-    if (!projectId) {
-      return;
-    }
-
-    navigate({
-      to: "/projects/$projectId",
-      params: { projectId },
-    }).catch((error) => {
-      console.error(`Failed to navigate to project ${projectId}`, error);
-    });
-
-    if (!onOpenProject) {
-      return;
-    }
-
-    const project = projects.find((item) => item.projectId === projectId);
-    if (project) {
-      onOpenProject(project);
-    }
-  }
-
-  function handleProjectCreated() {
-    void refreshProjects();
-  }
-
-  function handleCreateProjectClick() {
-    onCreateProject?.();
-    setWizardOpen(true);
-  }
-
-  function handleRequestDelete(projectId: string, projectName: string) {
-    setDeleteTarget({ id: projectId, name: projectName });
-    setDeleteDialogOpen(true);
-  }
-
-  function handleAfterDelete() {
-    setDeleteTarget(null);
-    clearSelection();
-    void refreshProjects();
-  }
-
-  async function handleBatchDelete(projectIds: string[]) {
-    try {
-      const results = await Promise.all(projectIds.map((id) => deleteProject(id)));
-      const successCount = results.filter((count) => count > 0).length;
-
-      await refreshProjects();
-      clearSelection();
-
-      toast({
-        title: "Projects deleted",
-        description: `Successfully deleted ${successCount} project${successCount === 1 ? "" : "s"}.`,
-      });
-    } catch (err) {
-      const message = resolveErrorMessage(err, "Batch deletion failed");
-      toast({ variant: "destructive", title: "Deletion failed", description: message });
-    }
-  }
-
-  function handleSearchChange(nextSearch: string) {
-    setControls((current) => (current.search === nextSearch ? current : { ...current, search: nextSearch }));
-  }
-
-  function handleFiltersChange(nextFilters: TableFilters) {
-    setControls((current) =>
-      tableFiltersEqual(current.filters, nextFilters) ? current : { ...current, filters: nextFilters },
-    );
-  }
-
-  const visibleProjects = filterProjects(projects, controls.filters, controls.search);
+  const visibleProjects = useMemo(
+    () => filterProjects(projectList, controls.filters, controls.search),
+    [projectList, controls.filters, controls.search],
+  );
 
   useEffect(() => {
     setSelectedRows((current) => {
@@ -202,14 +101,157 @@ export function ProjectManagerView({
     });
   }, [visibleProjects]);
 
+  const handleDeleteDialogOpenChange = useCallback((open: boolean) => {
+    setDeleteDialogOpen(open);
+    if (!open) {
+      setDeleteTarget(null);
+    }
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedRows(new Set());
+  }, []);
+
+  const handleOpenProjectById = useCallback(
+    (projectId: string) => {
+      if (!projectId) {
+        return;
+      }
+
+      navigate({
+        to: "/projects/$projectId",
+        params: { projectId },
+      }).catch((error) => {
+        console.error(`Failed to navigate to project ${projectId}`, error);
+      });
+
+      if (!onOpenProject) {
+        return;
+      }
+
+      const project = projectList.find((item) => item.projectId === projectId);
+      if (project) {
+        onOpenProject(project);
+      }
+    },
+    [navigate, onOpenProject, projectList],
+  );
+
+  const handleProjectCreated = useCallback(() => {
+    void refresh({ immediate: true }).catch((error) => {
+      console.error("Failed to refresh projects after creation", error);
+    });
+  }, [refresh]);
+
+  const handleCreateProjectClick = useCallback(() => {
+    onCreateProject?.();
+    setWizardOpen(true);
+  }, [onCreateProject]);
+
+  const handleRequestDelete = useCallback((projectId: string, projectName: string) => {
+    setDeleteTarget({ id: projectId, name: projectName });
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const deleteProjectsOptimistically = useCallback(
+    async (projectIds: string[]) => {
+      if (projectIds.length === 0) {
+        return { successCount: 0, affectedNames: [] as string[] };
+      }
+
+      // Keep a snapshot so we can roll back the optimistic removal if any IPC call fails.
+      const snapshot = projectList.map((item) => ({ ...item }));
+      const targetIds = new Set(projectIds);
+      const affectedNames = snapshot
+        .filter((item) => targetIds.has(item.projectId))
+        .map((item) => item.name);
+
+      mutate((current) => current.filter((item) => !targetIds.has(item.projectId)));
+
+      try {
+        const results = await Promise.all(projectIds.map((id) => deleteProject(id)));
+        const successCount = results.filter((count) => count > 0).length;
+
+        if (successCount !== projectIds.length) {
+          throw new Error("One or more projects could not be deleted.");
+        }
+
+        await refresh({ immediate: true });
+
+        return { successCount, affectedNames };
+      } catch (error) {
+        mutate(() => snapshot);
+        throw error;
+      }
+    },
+    [mutate, projectList, refresh],
+  );
+
+  const handleBatchDelete = useCallback(
+    async (projectIds: string[]) => {
+      try {
+        const { successCount } = await deleteProjectsOptimistically(projectIds);
+        clearSelection();
+        toast({
+          title: "Projects deleted",
+          description: `Successfully deleted ${successCount} project${successCount === 1 ? "" : "s"}.`,
+        });
+      } catch (error) {
+        const message = resolveErrorMessage(error, "Batch deletion failed");
+        toast({ variant: "destructive", title: "Deletion failed", description: message });
+        try {
+          await refresh({ immediate: true });
+        } catch (refreshError) {
+          console.error("Failed to refresh projects after failed batch deletion", refreshError);
+        }
+      }
+    },
+    [clearSelection, deleteProjectsOptimistically, refresh, toast],
+  );
+
+  const handleConfirmDelete = useCallback(
+    async (projectId: string) => {
+      try {
+        const { affectedNames } = await deleteProjectsOptimistically([projectId]);
+        clearSelection();
+        toast({
+          title: "Project deleted",
+          description:
+            affectedNames.length > 0
+              ? `Deleted "${affectedNames[0]}".`
+              : "Project deleted.",
+        });
+      } catch (error) {
+        const message = resolveErrorMessage(error, "Deletion failed");
+        toast({ variant: "destructive", title: "Deletion failed", description: message });
+        throw new Error(message);
+      }
+    },
+    [clearSelection, deleteProjectsOptimistically, toast],
+  );
+
+  function handleSearchChange(nextSearch: string) {
+    setControls((current) => (current.search === nextSearch ? current : { ...current, search: nextSearch }));
+  }
+
+  function handleFiltersChange(nextFilters: TableFilters) {
+    setControls((current) =>
+      tableFiltersEqual(current.filters, nextFilters) ? current : { ...current, filters: nextFilters },
+    );
+  }
+
   const hasSelection = selectedRows.size > 0;
+  const showInitialSkeleton = status === "pending" && projectList.length === 0;
+  const shouldRenderEmptyState = !resourceErrorMessage && !showInitialSkeleton && projectList.length === 0;
+
+  const selectedProjectIds = useMemo(() => Array.from(selectedRows), [selectedRows]);
 
   useSidebarTwoContentSync({
-    selectedRows,
-    projects,
+    selectedProjectIds,
+    projects: projectList,
     onBatchDelete: handleBatchDelete,
     onOpenProject: handleOpenProjectById,
-    clearSelection,
+    onClearSelection: clearSelection,
   });
 
   return (
@@ -230,26 +272,38 @@ export function ProjectManagerView({
           <ProjectsSelectionFooter
             selectedProjects={visibleProjects.filter((item) => selectedRows.has(item.projectId))}
             onClearSelection={clearSelection}
-            onDeleteSelection={(projectIds) => {
-              void handleBatchDelete(projectIds);
-            }}
+            onDeleteSelection={handleBatchDelete}
           />
         ) : null
       }
     >
       <div className="flex flex-1 flex-col">
-        {error ? (
+        {resourceErrorMessage ? (
           <div className="flex flex-1 items-center justify-center px-4 pb-4 pt-2">
             <Alert variant="destructive" className="max-w-md">
               <AlertTitle>Unable to load projects</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{resourceErrorMessage}</AlertDescription>
+              <div className="mt-4 flex justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    void refresh({ immediate: true }).catch((error) => {
+                      console.error("Retrying projects refresh failed", error);
+                    });
+                  }}
+                >
+                  Retry
+                </Button>
+              </div>
             </Alert>
           </div>
-        ) : isLoading ? (
+        ) : showInitialSkeleton ? (
           <div className="flex flex-1 flex-col gap-4 px-4 py-6">
             <ProjectsTableSkeleton />
           </div>
-        ) : projects.length === 0 ? (
+        ) : shouldRenderEmptyState ? (
           <EmptyProjectsState onCreate={handleCreateProjectClick} />
         ) : (
           <ProjectManagerContent
@@ -275,8 +329,32 @@ export function ProjectManagerView({
         open={deleteDialogOpen}
         onOpenChange={handleDeleteDialogOpenChange}
         target={deleteTarget}
-        onAfterDelete={handleAfterDelete}
+        onConfirmDelete={handleConfirmDelete}
       />
+    </ProjectManagerLayout>
+  );
+}
+
+function ProjectManagerViewSkeleton() {
+  const fallbackControls = createDefaultTableControlsState();
+
+  return (
+    <ProjectManagerLayout
+      id="ProjectManager-view"
+      ariaLabelledBy="ProjectManager-view-heading"
+      header={<ProjectManagerHeader onCreateProject={() => {}} />}
+      toolbar={
+        <ProjectManagerToolbar
+          search={fallbackControls.search}
+          onSearchChange={() => {}}
+          filters={fallbackControls.filters}
+          onFiltersChange={() => {}}
+        />
+      }
+    >
+      <div className="flex flex-1 flex-col gap-4 px-4 py-6">
+        <ProjectsTableSkeleton />
+      </div>
     </ProjectManagerLayout>
   );
 }

@@ -42,7 +42,9 @@ import {
 } from "@/modules/project-manager/data/projectsResource";
 import type {
   DraftFileEntry,
+  WizardConversionPlan,
   WizardFinalizeFeedback,
+  WizardFinalizeProgressEventPayload,
   WizardStep,
 } from "../types";
 import { sanitizeProjectFolderName } from "../utils/projectFolder";
@@ -59,7 +61,7 @@ interface UseWizardFinalizeParams {
   files: readonly DraftFileEntry[];
   fileCount: number;
   submissionPending: boolean;
-  startSubmission: (task: () => void) => void;
+  startSubmission: (task: () => void | Promise<void>) => void;
   authenticatedUserId: string | null;
   setStep: (step: WizardStep) => void;
   onProjectCreated?: (project: ProjectBundle) => void;
@@ -358,7 +360,7 @@ export function useWizardFinalize({
 
         try {
           try {
-            unlistenProgress = await listen(
+            unlistenProgress = await listen<WizardFinalizeProgressEventPayload>(
               PROJECT_CREATE_PROGRESS_EVENT,
               (event) => {
                 const eventPayload = event.payload;

@@ -2,6 +2,7 @@ import { Fragment, useCallback } from "react";
 import {
   Outlet,
   createRootRouteWithContext,
+  defaultStringifySearch,
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
@@ -98,9 +99,9 @@ export const Route = createRootRouteWithContext<AppRouterContext>()({
 
     const auth = context.auth;
     if (!auth?.isAuthenticated) {
-      const search = location.search ?? "";
-      const hash = location.hash ?? "";
-      const redirectTarget = `${location.pathname}${search}${hash}` || "/";
+      const searchString = defaultStringifySearch(location.search ?? {});
+      const hash = typeof location.hash === "string" ? location.hash : "";
+      const redirectTarget = `${location.pathname}${searchString}${hash}` || "/";
 
       throw redirect({
         to: "/login",
