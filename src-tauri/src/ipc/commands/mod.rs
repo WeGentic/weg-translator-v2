@@ -1,6 +1,7 @@
 mod artifacts_v2;
 mod clients_v2;
 mod jobs_v2;
+mod places;
 pub mod projects_v2;
 mod settings;
 mod shared;
@@ -29,6 +30,7 @@ pub use clients_v2::{
 pub use jobs_v2::{
     delete_job_record_v2, list_jobs_for_project_v2, update_job_status_v2, upsert_job_record_v2,
 };
+pub use places::{GooglePlacesService, places_autocomplete, places_resolve_details};
 pub use projects_v2::{
     attach_project_file_v2, convert_xliff_to_jliff_v2, create_project_bundle_v2,
     create_project_with_assets_v2, delete_project_bundle_v2, detach_project_file_v2,

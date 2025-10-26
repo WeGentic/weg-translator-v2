@@ -1,31 +1,32 @@
-.wizard-v2-client-grid {
+.wizard-project-manager-client-grid {
   display: grid;
   gap: 16px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
 }
 
-.wizard-v2-client-field {
+.wizard-project-manager-client-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 5px;
 }
 
-.wizard-v2-client-field--address,
-.wizard-v2-client-field--notes {
+.wizard-project-manager-client-field--address,
+.wizard-project-manager-client-field--notes {
   grid-column: span 2;
 }
 
-.wizard-v2-client-label {
-  font-size: 0.8rem;
+.wizard-project-manager-client-label {
+  font-size: 0.95rem;
   font-weight: 400;
-  letter-spacing: 0.01em;
-  text-transform: none;
-  color: var(--color-victorian-peacock-900);
+  color: var(--color-victorian-peacock-100);
+  text-shadow:
+    rgba(0, 0, 0, 0.16) 0px 3px 6px,
+    rgba(0, 0, 0, 0.23) 0px 3px 6px;
 }
 
-.wizard-v2-client-field-error {
+.wizard-project-manager-client-field-error {
   margin: 2px 2px 0;
   font-size: 0.75rem;
   line-height: 1.3;
@@ -33,12 +34,12 @@
 }
 
 @media (max-width: 720px) {
-  .wizard-v2-client-grid {
+  .wizard-project-manager-client-grid {
     grid-template-columns: 1fr;
   }
 
-  .wizard-v2-client-field--address,
-  .wizard-v2-client-field--notes {
+  .wizard-project-manager-client-field--address,
+  .wizard-project-manager-client-field--notes {
     grid-column: span 1;
   }
 }
@@ -79,8 +80,11 @@
   height: 36px;
   border-radius: 6px;
   border: none;
-  background: var(--color-victorian-peacock-400);
-  color: var(--color-victorian-peacock-950);
+  background: var(--color-primary);
+  color: var(--color-secondary);
+  text-shadow:
+    rgba(0, 0, 0, 0.16) 0px 3px 6px,
+    rgba(0, 0, 0, 0.23) 0px 3px 6px;
   transition:
     border-color 150ms ease,
     background-color 150ms ease,

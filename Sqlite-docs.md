@@ -1,6 +1,6 @@
 # SQLite Data Layer Documentation
 
-This document explains how the Weg Translator desktop application manages its SQLite database, how the Rust-side modules fit together, and the conventions you should follow when changing or extending the data layer.
+This document explains how the Tr-entic desktop application manages its SQLite database, how the Rust-side modules fit together, and the conventions you should follow when changing or extending the data layer.
 
 ## Technology Stack
 

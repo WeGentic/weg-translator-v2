@@ -1,40 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEventHandler, MutableRefObject } from "react";
 
-import { supabase } from "@/core/config";
+import {
+  autocompleteAddress,
+  resolveAddressDetails,
+  type AddressSuggestion,
+  type StructuredSuggestion,
+} from "@/core/ipc/places";
+
+export type { AddressSuggestion } from "@/core/ipc/places";
 
 import { generatePlacesSessionToken } from "./addressUtils";
 
 type AddressFieldElement = HTMLInputElement | HTMLTextAreaElement;
 
-interface AutocompleteResponse {
-  readonly sessionToken: string | null;
-  readonly suggestions: AddressSuggestion[];
+export interface ResolvedAddressContext {
+  suggestion: AddressSuggestion;
+  countryCode?: string;
 }
 
-interface PlaceDetailsResponse {
-  readonly place: {
-    readonly formattedAddress: string | null;
-  } | null;
-}
-
-export interface AddressSuggestion {
-  readonly id: string;
-  readonly primaryText: string;
-  readonly secondaryText: string | null;
-  readonly structured: {
-    readonly formattedAddress?: string | null;
-    readonly placeId?: string | null;
-    readonly resourceName?: string | null;
-    readonly location?: {
-      readonly latitude: number;
-      readonly longitude: number;
-    } | null;
-    readonly [key: string]: unknown;
-  };
-  readonly resourceName: string | null;
-  readonly types?: readonly string[];
-  readonly distanceMeters: number | null;
+interface ResolvedAddressResult {
+  formattedAddress: string | null;
+  countryCode?: string;
 }
 
 interface UseAddressAutocompleteOptions<T extends AddressFieldElement> {
@@ -42,19 +29,21 @@ interface UseAddressAutocompleteOptions<T extends AddressFieldElement> {
   language: string;
   countryBias?: readonly string[];
   fieldRef: MutableRefObject<T | null>;
-  onResolve: (address: string) => void;
+  onResolve: (address: string, context?: ResolvedAddressContext) => void;
 }
 
 interface UseAddressAutocompleteResult<T extends AddressFieldElement> {
   suggestions: AddressSuggestion[];
   loading: boolean;
   error: string | null;
+  lockedValue: string | null;
   clearError: () => void;
   focused: boolean;
   handleFocus: () => void;
   handleBlur: () => void;
   handleKeyDown: KeyboardEventHandler<T>;
   handleSuggestionSelect: (suggestion: AddressSuggestion) => void;
+  clearSelection: () => void;
   activeIndex: number;
   setActiveIndex: (index: number) => void;
   showPanel: boolean;
@@ -72,6 +61,7 @@ export function useAddressAutocomplete<T extends AddressFieldElement>({
   const [error, setError] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [lockedValue, setLockedValue] = useState<string | null>(null);
 
   const searchTimeoutRef = useRef<number | null>(null);
   const blurTimeoutRef = useRef<number | null>(null);
@@ -85,7 +75,7 @@ export function useAddressAutocomplete<T extends AddressFieldElement>({
     }
   };
 
-  const getSupabaseErrorMessage = useCallback((error: unknown, fallback: string) => {
+  const getErrorMessage = useCallback((error: unknown, fallback: string) => {
     if (typeof error === "object" && error !== null && "message" in error) {
       const message = (error as { message?: unknown }).message;
       if (typeof message === "string" && message.trim().length > 0) {
@@ -95,56 +85,83 @@ export function useAddressAutocomplete<T extends AddressFieldElement>({
     return fallback;
   }, []);
 
-  const runAutocomplete = useCallback(
-    async (input: string, token: string) => {
-      const response = await supabase.functions.invoke<AutocompleteResponse>("address-autocomplete", {
-        body: {
-          mode: "autocomplete",
-          query: input,
-          sessionToken: token,
-          languageCode: language,
-          countryBias: countryBias && countryBias.length > 0 ? [...countryBias] : undefined,
-        },
-      });
-
-      const invokeError: unknown = response.error;
-      if (invokeError) {
-        throw new Error(getSupabaseErrorMessage(invokeError, "Autocomplete failed."));
-      }
-
-      const payload: AutocompleteResponse | null = response.data ?? null;
-
-      return {
-        suggestions: payload?.suggestions ?? [],
-        sessionToken: payload?.sessionToken ?? token,
-      };
-    },
-    [countryBias, language, getSupabaseErrorMessage],
-  );
-
-  const fetchPlaceDetails = useCallback(async (placeId: string) => {
-    const token = sessionTokenRef.current ?? generatePlacesSessionToken();
-    sessionTokenRef.current = token;
-    const response = await supabase.functions.invoke<PlaceDetailsResponse>("address-autocomplete", {
-      body: {
-        mode: "place-details",
-        placeId,
-        sessionToken: token,
-      },
-    });
-
-    const invokeError: unknown = response.error;
-    if (invokeError) {
-      throw new Error(getSupabaseErrorMessage(invokeError, "Place details lookup failed."));
+  const normalizePlacesError = useCallback((message: string) => {
+    const normalized = message.trim();
+    if (!normalized.length) {
+      return "Address suggestions are temporarily unavailable. Try again in a few moments.";
     }
 
-    return response.data?.place?.formattedAddress ?? null;
-  }, [getSupabaseErrorMessage]);
+    if (
+      /temporarily rate limited/i.test(normalized) ||
+      /quota was reached/i.test(normalized) ||
+      /too many requests/i.test(normalized) ||
+      /quota exceeded/i.test(normalized)
+    ) {
+      return "Address suggestions are temporarily rate limited. Please wait a moment and retry.";
+    }
+
+    if (/not configured/i.test(normalized)) {
+      return "Address suggestions are unavailable. Ask your administrator to configure the Google Places API key.";
+    }
+
+    return normalized;
+  }, []);
+
+  const runAutocomplete = useCallback(
+    async (input: string, token: string) => {
+      try {
+        const response = await autocompleteAddress({
+          query: input,
+          sessionToken: token,
+          language,
+          countryBias,
+        });
+
+        return {
+          suggestions: response.suggestions,
+          sessionToken: response.sessionToken ?? token,
+        };
+      } catch (cause) {
+        throw new Error(getErrorMessage(cause, "Autocomplete failed."));
+      }
+    },
+    [countryBias, language, getErrorMessage],
+  );
+
+  const fetchPlaceDetails = useCallback(async (suggestion: AddressSuggestion) => {
+    const token = sessionTokenRef.current ?? generatePlacesSessionToken();
+    sessionTokenRef.current = token;
+    const reference = suggestion.resourceName ?? suggestion.structured?.placeId ?? suggestion.id;
+    if (!reference) {
+      return null;
+    }
+
+    const payload = {
+      placeId:
+        suggestion.structured?.placeId ?? (reference.startsWith("places/") ? undefined : reference),
+      resourceName:
+        suggestion.resourceName ?? (reference.startsWith("places/") ? reference : undefined),
+      sessionToken: token,
+    };
+
+    try {
+      const result = await resolveAddressDetails(payload);
+      if (!result) {
+        return null;
+      }
+      return {
+        formattedAddress: result.formattedAddress ?? null,
+        countryCode: result.components.countryCode ?? result.components.country ?? undefined,
+      } satisfies ResolvedAddressResult;
+    } catch (cause) {
+      throw new Error(getErrorMessage(cause, "Place details lookup failed."));
+    }
+  }, [getErrorMessage]);
 
   const countryBiasKey = countryBias?.join(",") ?? "";
 
   useEffect(() => {
-    if (!focused) {
+    if (!focused || lockedValue) {
       setSuggestions([]);
       setActiveIndex(-1);
       sessionTokenRef.current = null;
@@ -185,9 +202,15 @@ export function useAddressAutocomplete<T extends AddressFieldElement>({
           if (requestIdRef.current !== requestId) {
             return;
           }
-          const message =
-            cause instanceof Error && cause.message ? cause.message : "Unable to fetch address suggestions.";
-          setError(message);
+          const rawMessage =
+            cause instanceof Error && cause.message
+              ? cause.message
+              : "Unable to fetch address suggestions.";
+          const friendlyMessage = normalizePlacesError(rawMessage);
+          if (process.env.NODE_ENV !== "production") {
+            console.error("[autocomplete] request failed:", rawMessage);
+          }
+          setError(friendlyMessage);
           setSuggestions([]);
           setActiveIndex(-1);
         })
@@ -201,7 +224,7 @@ export function useAddressAutocomplete<T extends AddressFieldElement>({
     return () => {
       clearTimers();
     };
-  }, [countryBiasKey, focused, query, runAutocomplete]);
+  }, [countryBiasKey, focused, lockedValue, query, runAutocomplete, normalizePlacesError]);
 
   useEffect(() => {
     return () => {
@@ -246,19 +269,29 @@ export function useAddressAutocomplete<T extends AddressFieldElement>({
       setActiveIndex(-1);
       setError(null);
 
-      const identifier =
-        (typeof suggestion.structured.placeId === "string" && suggestion.structured.placeId) ||
-        suggestion.resourceName ||
-        suggestion.id;
+      const structured =
+        suggestion.structured ?? ({ components: {} } satisfies StructuredSuggestion);
+      let resolvedAddress =
+        structured.formattedAddress ?? suggestion.primaryText ?? suggestion.secondaryText ?? "";
+      let resolvedCountryCode =
+        structured.components?.countryCode ?? structured.components?.country ?? undefined;
 
-      let resolvedAddress = suggestion.structured.formattedAddress ?? suggestion.primaryText;
+      const hasResolvableIdentifier =
+        (typeof structured.placeId === "string" && structured.placeId.length > 0) ||
+        (typeof suggestion.resourceName === "string" && suggestion.resourceName.length > 0) ||
+        suggestion.id.startsWith("places/");
 
-      if (identifier) {
+      if (hasResolvableIdentifier) {
         setLoading(true);
         try {
-          const formatted = await fetchPlaceDetails(identifier);
-          if (formatted) {
-            resolvedAddress = formatted;
+          const details = await fetchPlaceDetails(suggestion);
+          if (details) {
+            if (details.formattedAddress) {
+              resolvedAddress = details.formattedAddress;
+            }
+            if (details.countryCode) {
+              resolvedCountryCode = details.countryCode;
+            }
           }
         } catch (cause) {
           const message =
@@ -270,8 +303,12 @@ export function useAddressAutocomplete<T extends AddressFieldElement>({
       }
 
       sessionTokenRef.current = null;
+      setLockedValue(resolvedAddress);
       setFocused(false);
-      onResolve(resolvedAddress);
+      onResolve(resolvedAddress, {
+        suggestion,
+        countryCode: resolvedCountryCode?.toUpperCase(),
+      });
 
       requestAnimationFrame(() => {
         const element = fieldRef.current;
@@ -294,6 +331,9 @@ export function useAddressAutocomplete<T extends AddressFieldElement>({
 
   const handleKeyDown: KeyboardEventHandler<AddressFieldElement> = useCallback(
     (event) => {
+      if (lockedValue) {
+        return;
+      }
       if (suggestions.length === 0) {
         return;
       }
@@ -336,18 +376,28 @@ export function useAddressAutocomplete<T extends AddressFieldElement>({
 
   const clearError = useCallback(() => setError(null), []);
 
+  const clearSelection = useCallback(() => {
+    setLockedValue(null);
+    setSuggestions([]);
+    setActiveIndex(-1);
+    setError(null);
+    sessionTokenRef.current = null;
+  }, []);
+
   return {
     suggestions,
     loading,
     error,
+    lockedValue,
     clearError,
     focused,
     handleFocus,
     handleBlur,
     handleKeyDown,
     handleSuggestionSelect,
+    clearSelection,
     activeIndex,
     setActiveIndex,
-    showPanel: focused && (suggestions.length > 0 || loading || Boolean(error)),
+    showPanel: focused && !lockedValue && (suggestions.length > 0 || loading || Boolean(error)),
   };
 }

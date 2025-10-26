@@ -27,23 +27,23 @@ export function WizardFeedbackOverlay({ feedback, onDismiss, onRetry }: WizardFe
   const canRetry = !isProgress && typeof onRetry === "function";
 
   return (
-    <div className="wizard-v2-feedback-overlay" role="status" aria-live="polite">
-      <div className={cn("wizard-v2-feedback-card", isProgress && "is-loading")} data-state={feedback.status}>
-        <div className="wizard-v2-feedback-icon" aria-hidden="true">
+    <div className="wizard-project-manager-feedback-overlay" role="status" aria-live="polite">
+      <div className={cn("wizard-project-manager-feedback-card", isProgress && "is-loading")} data-state={feedback.status}>
+        <div className="wizard-project-manager-feedback-icon" aria-hidden="true">
           {isProgress ? <Loader2 className="h-8 w-8 animate-spin" /> : null}
           {!isProgress ? <XCircle className="h-8 w-8" /> : null}
         </div>
-        <h3 className="wizard-v2-feedback-title">{headline}</h3>
-        <p className="wizard-v2-feedback-message">{description}</p>
-        {detail ? <p className="wizard-v2-feedback-detail">{detail}</p> : null}
-        {hint ? <p className="wizard-v2-feedback-detail">{hint}</p> : null}
-        <div className="wizard-v2-feedback-actions">
+        <h3 className="wizard-project-manager-feedback-title">{headline}</h3>
+        <p className="wizard-project-manager-feedback-message">{description}</p>
+        {detail ? <p className="wizard-project-manager-feedback-detail">{detail}</p> : null}
+        {hint ? <p className="wizard-project-manager-feedback-detail">{hint}</p> : null}
+        <div className="wizard-project-manager-feedback-actions">
           {canRetry ? (
-            <button type="button" className="wizard-v2-feedback-button" onClick={onRetry}>
+            <button type="button" className="wizard-project-manager-feedback-button" onClick={onRetry}>
               Try again
             </button>
           ) : null}
-          <button type="button" className="wizard-v2-feedback-button" onClick={onDismiss} disabled={isProgress}>
+          <button type="button" className="wizard-project-manager-feedback-button" onClick={onDismiss} disabled={isProgress}>
             {actionLabel}
           </button>
         </div>

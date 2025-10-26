@@ -4,9 +4,9 @@
     --layout-header-height: 56px;
 
     /* WeGentic palette (base tokens) */
-    --color-background: #f9f8ef;
+    --color-background: #F9F8EFFF;
     --color-onBackground: #13181b;
-    --color-primary: #104a65;
+    --color-primary: #104A65FF;
     --color-onprimary: ##e9d6bd;
     --color-secondary: #fb4f14;
     --color-onSecondary: #f9f8ef;
@@ -42,7 +42,7 @@
     --color-victorian-peacock-600: #3f6eb3;
     --color-victorian-peacock-700: #225b70;
     --color-victorian-peacock-800: #0e4159;
-    --color-victorian-peacock-900: #0a2d3d;
+    --color-victorian-peacock-900: #0A2D3DFF;
     --color-victorian-peacock-950: #061923;
 
     /* Aquaverde */

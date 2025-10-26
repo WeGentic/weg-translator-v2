@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PropsWithChildren } from "react";
+import { useEffect, useMemo, useRef, useState, type PropsWithChildren } from "react";
 import { ChevronLeft } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
@@ -9,10 +9,11 @@ import {
   CLIENT_FOCUS_EVENT,
   type ClientFocusDetail,
 } from "@/modules/clients/events";
-import { useLayoutSelector, useLayoutStoreApi } from "./layout-context";
-import { DashboardQuickActions } from "./sidebar-two-content/DashboardQuickActions";
-import { EditorMenu } from "./sidebar-two-content/EditorMenu";
-import { ComingSoon } from "./sidebar-two-content/ComingSoon";
+import { PROJECT_CLEAR_EVENT, PROJECT_FOCUS_EVENT } from "@/modules/projects/events";
+import { useLayoutSelector, useLayoutStoreApi, useSidebarTwoRegistrySelector } from "./layout-context";
+import type { SidebarTwoActivationSource } from "./sidebar-two-registry/types";
+import { useSidebarTwoEventBridge } from "./sidebar-two-registry/useSidebarTwoEventBridge";
+import { useRegisterCoreSidebarTwoModules } from "./sidebar-two-modules/registerCoreSidebarTwoModules";
 
 import "@/shared/styles/layout/layout-sidebar-two.css";
 
@@ -36,7 +37,6 @@ export function LayoutSidebarTwo({
 }: LayoutSidebarTwoProps) {
   const layoutStore = useLayoutStoreApi();
   const sidebarTwo = useLayoutSelector((state) => state.sidebarTwo);
-  const sidebarTwoContent = useLayoutSelector((state) => state.sidebarTwoContent);
   type SidebarView =
     | "projects"
     | "dashboard"
@@ -49,12 +49,16 @@ export function LayoutSidebarTwo({
 
   const [currentPage, setCurrentPage] = useState<string>("Projects");
   const [currentView, setCurrentView] = useState<SidebarView>("projects");
-  const [focusedClient, setFocusedClient] = useState<ClientFocusDetail | null>(null);
+  const focusedProject = useLayoutSelector((state) => state.focusedProject);
   const currentViewRef = useRef<SidebarView>("projects");
+  const projectViewTitle = "Project Workspace";
 
   useEffect(() => {
     currentViewRef.current = currentView;
   }, [currentView]);
+
+  useSidebarTwoEventBridge(currentViewRef);
+  useRegisterCoreSidebarTwoModules();
 
   useEffect(() => {
     const store = layoutStore;
@@ -71,7 +75,9 @@ export function LayoutSidebarTwo({
   // Listen for navigation events to update the page title and current view
   useEffect(() => {
     const handler: EventListener = (event) => {
-      const custom = event as CustomEvent<{ view?: string; clientName?: string } | undefined>;
+      const custom = event as CustomEvent<
+        { view?: string; clientName?: string; projectName?: string } | undefined
+      >;
       const view = custom.detail?.view;
 
       if (view === "projects") {
@@ -87,15 +93,10 @@ export function LayoutSidebarTwo({
         setCurrentPage("Quick Actions");
         setCurrentView("clients");
       } else if (view?.startsWith(CLIENT_VIEW_PREFIX)) {
-        const clientId = view.slice(CLIENT_VIEW_PREFIX.length);
         const clientName = custom.detail?.clientName;
         setCurrentPage(clientName ? `Client: ${clientName}` : "Client");
         setCurrentView("client-detail");
         currentViewRef.current = "client-detail";
-        setFocusedClient((previous) => ({
-          clientUuid: clientId,
-          clientName: clientName ?? previous?.clientName ?? "Client",
-        }));
       } else if (view === "settings") {
         setCurrentPage("Settings");
         setCurrentView("settings");
@@ -103,10 +104,9 @@ export function LayoutSidebarTwo({
         setCurrentPage("Editor Menu");
         setCurrentView("editor");
       } else if (view?.startsWith("project:")) {
-        // Extract project name if available
-        const projectName = view.split(":")[1];
-        setCurrentPage(projectName ? `Project: ${projectName}` : "Project");
+        setCurrentPage(projectViewTitle);
         setCurrentView("project");
+        currentViewRef.current = "project";
       } else if (view) {
         setCurrentPage(view.charAt(0).toUpperCase() + view.slice(1));
         setCurrentView("projects");
@@ -134,7 +134,6 @@ export function LayoutSidebarTwo({
   useEffect(() => {
     const handleFocus = (event: Event) => {
       const custom = event as CustomEvent<ClientFocusDetail>;
-      setFocusedClient(custom.detail);
       setCurrentPage(
         custom.detail.clientName.length > 0 ? `Client: ${custom.detail.clientName}` : "Client",
       );
@@ -143,7 +142,6 @@ export function LayoutSidebarTwo({
     };
 
     const handleClear = () => {
-      setFocusedClient(null);
       const wasFocused = currentViewRef.current === "client-detail";
       if (wasFocused) {
         currentViewRef.current = "clients";
@@ -160,6 +158,47 @@ export function LayoutSidebarTwo({
       window.removeEventListener(CLIENT_CLEAR_EVENT, handleClear);
     };
   }, []);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      setCurrentPage(projectViewTitle);
+      currentViewRef.current = "project";
+      setCurrentView("project");
+    };
+
+    const handleClear = () => {
+      if (currentViewRef.current === "project") {
+        currentViewRef.current = "projects";
+        setCurrentPage("Projects");
+        setCurrentView("projects");
+      }
+    };
+
+    window.addEventListener(PROJECT_FOCUS_EVENT, handleFocus as EventListener);
+    window.addEventListener(PROJECT_CLEAR_EVENT, handleClear);
+
+    return () => {
+      window.removeEventListener(PROJECT_FOCUS_EVENT, handleFocus as EventListener);
+      window.removeEventListener(PROJECT_CLEAR_EVENT, handleClear);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (focusedProject) {
+      setCurrentPage(projectViewTitle);
+      if (currentViewRef.current === "projects" || currentViewRef.current === "project") {
+        currentViewRef.current = "project";
+        setCurrentView("project");
+      }
+      return;
+    }
+
+    if (currentViewRef.current === "project") {
+      currentViewRef.current = "projects";
+      setCurrentPage("Projects");
+      setCurrentView("projects");
+    }
+  }, [focusedProject]);
 
   // Auto-hide sidebar when on Settings view
   useEffect(() => {
@@ -178,48 +217,95 @@ export function LayoutSidebarTwo({
     store.getState().setSidebarTwo({ visible: !currentVisible });
   };
 
-  /**
-   * Get dynamic content based on current view
-   */
-  const getDynamicContent = () => {
-    // Children prop always takes highest priority
+  const registryModules = useSidebarTwoRegistrySelector((state) => state.activeModules);
+  const registryLegacyContent = useSidebarTwoRegistrySelector((state) => state.legacyContent);
+const routeBindings = useSidebarTwoRegistrySelector((state) => state.routeBindings);
+const deactivateSidebarTwoModule = useLayoutSelector((state) => state.deactivateSidebarTwoModule);
+const requestSidebarFocus = useLayoutSelector((state) => state.requestSidebarTwoFocus);
+
+  useEffect(() => {
+    const store = layoutStore.getState();
+    const moduleIds = routeBindings[currentView] ?? [];
+    for (const moduleId of moduleIds) {
+      store.activateSidebarTwoModule({
+        id: moduleId,
+        view: currentView,
+        activatedBy: "route",
+      });
+    }
+    store.clearSidebarTwoModules({ scope: "route", viewKey: currentView });
+  }, [currentView, layoutStore, routeBindings]);
+
+  const modulesForCurrentView = useMemo(() => {
+    const filtered = registryModules.filter((module) => {
+      const allowed = module.context.allowedViews;
+      return (
+        allowed.includes("*") ||
+        allowed.includes(currentView) ||
+        module.context.view === currentView
+      );
+    });
+
+    const priority = (source: SidebarTwoActivationSource) => {
+      if (source === "route") {
+        return 0;
+      }
+      if (source === "manual") {
+        return 1;
+      }
+      if (source === "event") {
+        return 2;
+      }
+      return 3;
+    };
+
+    return filtered
+      .slice()
+      .sort((a, b) => {
+        const sourceComparison = priority(a.context.activatedBy) - priority(b.context.activatedBy);
+        if (sourceComparison !== 0) {
+          return sourceComparison;
+        }
+        if (a.order !== b.order) {
+          return a.order - b.order;
+        }
+        return a.id.localeCompare(b.id);
+      });
+  }, [registryModules, currentView]);
+
+  const renderedModules = useMemo(
+    () =>
+      modulesForCurrentView.map((module) => {
+        const ModuleComponent = module.component;
+        const handleDeactivate = () =>
+          deactivateSidebarTwoModule(module.id, module.persist ? "cache" : "remove");
+        return (
+          <ModuleComponent
+            key={module.id}
+            context={module.context}
+            payload={module.payload}
+            deactivate={handleDeactivate}
+            requestFocus={requestSidebarFocus}
+          />
+        );
+      }),
+    [modulesForCurrentView, deactivateSidebarTwoModule, requestSidebarFocus],
+  );
+
+  useEffect(() => {
+    const focusTarget = modulesForCurrentView.find((module) => module.focusTargetId)?.focusTargetId ?? null;
+    layoutStore.getState().setSidebarTwoFocusTarget(focusTarget);
+  }, [layoutStore, modulesForCurrentView]);
+
+  const content = useMemo(() => {
     if (children) {
       return children;
     }
-
-    // Return view-specific content based on current route
-    switch (currentView) {
-      case "dashboard":
-        return <DashboardQuickActions activeView="dashboard" />;
-      case "clients":
-        return (
-          <DashboardQuickActions
-            activeView="clients"
-            focusedClient={focusedClient}
-          />
-        );
-      case "client-detail":
-        return (
-          <DashboardQuickActions
-            activeView="client-detail"
-            focusedClient={focusedClient}
-          />
-        );
-      case "editor":
-        return <EditorMenu />;
-      case "resource":
-        return <ComingSoon />;
-      case "projects":
-      case "project":
-        // Projects view uses sidebarTwoContent from context (the project manager content)
-        return sidebarTwoContent;
-      default:
-        // Fallback to sidebarTwoContent for any other view
-        return sidebarTwoContent;
+    if (renderedModules.length > 0) {
+      return renderedModules;
     }
-  };
-
-  const content = getDynamicContent();
+    return registryLegacyContent;
+  }, [children, renderedModules, registryLegacyContent]);
 
   if (!sidebarTwo.mounted) {
     return null;

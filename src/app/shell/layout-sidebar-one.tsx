@@ -2,7 +2,6 @@ import { useEffect, useState, type PropsWithChildren } from "react";
 import { ChevronRight, FolderOpen, Settings, UserCircle, Plus, LayoutDashboard, FileText, Database } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
-import { Card } from "@/shared/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 import { cn } from "@/shared/utils/class-names";
 import { useLayoutSelector, useLayoutStoreApi } from "./layout-context";
@@ -267,37 +266,30 @@ export function LayoutSidebarOne({
 
           {/* Quick Action zone */}
           <div className="sidebar-one__quick-action-container">
-            <Card className="sidebar-one__quick-action-card">
-              {/* Quick Actions text label - inside card */}
-              <div className="sidebar-one__section-label">
-                <span className="sidebar-one__section-text">Quick Actions</span>
-              </div>
-
+            {onCreateProjectClick ? (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="sidebar-one__quick-action-button"
+                    className="sidebar-one__button sidebar-one__button--quick-action"
                     onClick={onCreateProjectClick}
-                    aria-label="Create New Project"
+                    aria-label="Create project"
                     type="button"
                   >
-                    <div className="sidebar-one__quick-action-button-container">
+                    <div className="sidebar-one__button-container">
                       <Plus className="size-5" aria-hidden="true" />
                     </div>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={8}>
-                  Create New Project
+                  New project
                 </TooltipContent>
               </Tooltip>
-            </Card>
+            ) : null}
           </div>
 
-          {/* Divider above user account */}
-          <div className="sidebar-one__divider-subtle" aria-hidden="true" />
-
+        
           {/* User Account button */}
           <div className="sidebar-one__user-account-container">
             <Tooltip>

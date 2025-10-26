@@ -469,18 +469,7 @@ export function DashboardQuickActions({
 
       {/* Apply sidebar-two-zone class */}
       <div className="sidebar-two-zone">
-        <div className="sidebar-two-zone__content">
-          {/* Apply sidebar-two-dropzone class */}
-          <div className="sidebar-two-dropzone">
-            <div className="sidebar-two-dropzone__text sidebar-two-dropzone__text--primary">
-              Quick-Create a Project from files
-            </div>
-            <FileUp className="sidebar-two-dropzone__icon" />
-            <div className="sidebar-two-dropzone__text sidebar-two-dropzone__text--secondary">
-              Drop file(s) here or click
-            </div>
-          </div>
-        </div>
+        
       </div>
     </div>
   );

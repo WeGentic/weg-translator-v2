@@ -3,9 +3,13 @@
   min-height: 0;
   overflow: hidden;
   margin: 0.5rem;
-  border: 1px solid var(--color-victorian-peacock-200);
   border-radius: 12px;
-  background: var(--color-victorian-peacock-50);
+  border: 1px solid color-mix(in oklab, var(--color-secondary) 40%, transparent);
+  background: linear-gradient(
+    -90deg,
+    color-mix(in oklab, var(--color-victorian-peacock-100) 65%, transparent),
+    color-mix(in oklab, var(--color-victorian-peacock-200) 75%, transparent)
+  );
 }
 
 .clients-table-main-zone table {

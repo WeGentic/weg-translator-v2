@@ -1,12 +1,11 @@
-.wizard-v2-language-header {
+.wizard-project-manager-language-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  color: var(--color-victorian-peacock-600);
 }
 
-.wizard-v2-chip-label {
+.wizard-project-manager-chip-label {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -16,55 +15,55 @@
   text-overflow: ellipsis;
 }
 
-.wizard-v2-language-grid {
+.wizard-project-manager-language-grid {
   display: grid;
   gap: 18px;
 }
 
 @media (min-width: 768px) {
-  .wizard-v2-language-grid {
+  .wizard-project-manager-language-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-.wizard-v2-language-panel {
+.wizard-project-manager-language-panel {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border-radius: 12px;
+  border-radius: 0.5rem;
   padding: clamp(12px, 2.8vw, 16px);
-  border: 1px solid var(--color-victorian-peacock-300);
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;
   background: linear-gradient(
       140deg,
-      color-mix(in oklab, var(--color-victorian-peacock-200) 30%, transparent),
+      color-mix(in oklab, var(--color-primary) 30%, transparent),
       transparent 70%
     )
-    color-mix(in oklab, var(--color-victorian-peacock-400) 55%, transparent);
+    color-mix(in oklab, var(--color-primary) 55%, transparent);
   min-height: 200px;
 }
 
-.wizard-v2-language-count {
+.wizard-project-manager-language-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 22px;
   height: 22px;
   padding: 2px;
-  border-radius: 5px;
+  border-radius: 999px;
   background: color-mix(in oklab, var(--color-victorian-peacock-200) 94%, transparent);
   color: var(--color-neverything-600);
   font-size: 0.7rem;
   font-weight: 600;
 }
 
-.wizard-v2-target-stack {
+.wizard-project-manager-target-stack {
   display: flex;
   flex-direction: column;
   gap: 10px;
   flex: 1;
 }
 
-.wizard-v2-chip-scroll {
+.wizard-project-manager-chip-scroll {
   flex: 1;
   min-height: var(--wizard-control-height);
   max-height: 148px;
@@ -72,7 +71,7 @@
   padding: 2px;
 }
 
-.wizard-v2-chip-group {
+.wizard-project-manager-chip-group {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
@@ -80,41 +79,41 @@
   min-height: 28px;
 }
 
-.wizard-v2-chip-placeholder {
+.wizard-project-manager-chip-placeholder {
   font-size: 0.72rem;
   color: var(--color-victorian-peacock-600);
   font-style: italic;
 }
 
-.wizard-v2-chip {
+.wizard-project-manager-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--color-border) 45%, transparent);
-  background: color-mix(in oklab, var(--color-background) 48%, transparent);
+  border: none;
+  background: var(--color-victorian-peacock-950);
+  color: var(--color-secondary);
   padding: 2px 6px;
   font-size: 0.64rem;
   line-height: 1.1;
-  box-shadow:
-    0 6px 14px -12px color-mix(in oklab, black 24%, transparent),
-    0 1px 0 0 color-mix(in oklab, white 16%, transparent) inset;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;
+
 }
 
-.wizard-v2-chip-flag {
+.wizard-project-manager-chip-flag {
   font-size: 0.78rem;
   line-height: 1;
   flex-shrink: 0;
 }
 
-.wizard-v2-chip-text {
+.wizard-project-manager-chip-text {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-weight: 600;
+  font-weight: 400;
 }
 
-.wizard-v2-chip-remove {
+.wizard-project-manager-chip-remove {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -122,26 +121,20 @@
   height: 16px;
   border-radius: 999px;
   border: 1px solid transparent;
-  background: color-mix(in oklab, var(--color-onprimary) 25%, transparent);
-  color: color-mix(in oklab, var(--color-sidebar-primary) 30%, var(--color-antiwhite) 20%);
+  background: var(--color-primary);
+  color: var(--color-secondary);
   transition:
     border-color 160ms ease,
     background-color 160ms ease,
     color 160ms ease;
 }
 
-.wizard-v2-chip-remove:hover {
-  border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
-  background: color-mix(in oklab, var(--color-accent) 22%, transparent);
-  color: color-mix(in oklab, var(--color-sidebar-primary) 10%, black 20%);
+.wizard-project-manager-chip-remove:hover {
+  background: var(--color-secondary);
+  color: var(--color-primary);
 }
 
-.wizard-v2-chip-remove:focus-visible {
+.wizard-project-manager-chip-remove:focus-visible {
   outline: none;
   border-color: color-mix(in oklab, var(--color-ring) 45%, transparent);
-}
-
-.wizard-v2-chip-remove svg {
-  width: 0.65rem;
-  height: 0.65rem;
 }

@@ -1,25 +1,28 @@
-.wizard-v2-actions {
+.wizard-project-manager-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: clamp(18px, 3vw, 24px) 6px;
   margin-top: 0;
-  border-top: 1px solid color-mix(in oklab, var(--color-border) 45%, transparent);
+  border-top: 1px solid var(--color-victorian-peacock-600);
 }
 
-.wizard-v2-action {
+.wizard-project-manager-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: calc(var(--wizard-control-height) - 4px);
+  height: 2.9rem;
   padding: 0 18px;
-  border-radius: 8px;
+  border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  
+  cursor: pointer;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;
   transition:
     background-color 160ms ease,
     box-shadow 160ms ease,
@@ -28,33 +31,30 @@
     transform 160ms ease;
 }
 
-.wizard-v2-action:disabled {
+.wizard-project-manager-action:disabled {
+  border: 1px solid var(--color-victorian-peacock-950);
   opacity: 0.45;
   pointer-events: none;
 }
 
-.wizard-v2-action svg {
-  width: 0.95rem;
-  height: 0.95rem;
-}
-
-.wizard-v2-tooltip-anchor {
+.wizard-project-manager-tooltip-anchor {
   display: inline-flex;
 }
 
-.wizard-v2-action--back {
+.wizard-project-manager-action--back {
   border: 1px solid var(--color-victorian-peacock-950);
-  background: color-mix(in oklab, var(--color-sidebar-accent) 60%, transparent);
-  color: color-mix(in oklab, var(--color-sidebar-primary) 35%, var(--color-antiwhite) 15%);
+  background: transparent;
+  color: var(--color-secondary);
 }
 
-.wizard-v2-action--back:hover {
-  border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
-  background: color-mix(in oklab, var(--color-accent) 18%, var(--color-sidebar-accent) 60%);
+.wizard-project-manager-action--back:hover {
+  border: 1px solid var(--color-victorian-peacock-950);
+  background: transparent;
+  color: var(--color-secondary);
   transform: translateY(-1px);
 }
 
-.wizard-v2-action--back:focus-visible {
+.wizard-project-manager-action--back:focus-visible {
   outline: none;
   border-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
   box-shadow:
@@ -62,36 +62,37 @@
     0 10px 28px -22px color-mix(in oklab, black 24%, transparent);
 }
 
-.wizard-v2-action--clear {
+.wizard-project-manager-action--clear {
   border: 1px solid var(--color-victorian-peacock-950);
   background: transparent;
-  color: var(--color-gradient-parchment-peacock-800);
+  color: var(--color-secondary);
+  box-shadow: none;
+  border: none;
 }
 
-.wizard-v2-action--clear:hover {
-  border: 1px solid var(--color-secondary);
-  background: var(--color-victorian-peacock-300);
+.wizard-project-manager-action--clear:hover {
+  background: var(--color-secondary);
   transform: translateY(-1px);
-  color: color-mix(in oklab, var(--color-destructive) 95%, var(--color-antiwhite) 10%);
+  color: var(--color-primary);
 }
 
-.wizard-v2-action--clear:focus-visible {
+.wizard-project-manager-action--clear:focus-visible {
   outline: none;
   border-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
 }
 
-.wizard-v2-action--next {
+.wizard-project-manager-action--next {
   border: none;
   background: var(--color-victorian-peacock-950);
   color: var(--color-victorian-peacock-50);
 }
 
-.wizard-v2-action--next:hover:not(:disabled) {
+.wizard-project-manager-action--next:hover:not(:disabled) {
   background: var(--color-victorian-peacock-800);
   transform: translateY(-1px);
 }
 
-.wizard-v2-action--next:focus-visible {
+.wizard-project-manager-action--next:focus-visible {
   outline: none;
   border-color: color-mix(in oklab, var(--color-ring) 60%, transparent);
   box-shadow:
@@ -99,9 +100,8 @@
     0 18px 42px -24px color-mix(in oklab, var(--color-primary) 55%, transparent);
 }
 
-.wizard-v2-action--next:disabled {
-  border: 1px solid var(--color-victorian-peacock-900);
-  background: color-mix(in oklab, var(--color-muted) 85%, transparent);
-  color: color-mix(in oklab, var(--color-muted-foreground) 60%, var(--color-sidebar-primary) 15%);
+.wizard-project-manager-action--next:disabled {
+  background: var(--color-victorian-peacock-950);
+  color: var(--color-accent);
   box-shadow: none;
 }

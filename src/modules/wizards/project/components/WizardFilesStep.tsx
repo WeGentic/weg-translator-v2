@@ -19,23 +19,23 @@ import type { AssignableFileRoleValue, DraftFileEntry, FileRoleValue } from "../
 type FileTypeVariant = "document" | "spreadsheet" | "presentation" | "image" | "archive" | "media" | "code" | "other";
 
 const TYPE_VARIANT_CLASS_MAP: Record<FileTypeVariant, string> = {
-  document: "wizard-v2-type-badge--document",
-  spreadsheet: "wizard-v2-type-badge--spreadsheet",
-  presentation: "wizard-v2-type-badge--presentation",
-  image: "wizard-v2-type-badge--image",
-  archive: "wizard-v2-type-badge--archive",
-  media: "wizard-v2-type-badge--media",
-  code: "wizard-v2-type-badge--code",
-  other: "wizard-v2-type-badge--other",
+  document: "wizard-project-manager-type-badge--document",
+  spreadsheet: "wizard-project-manager-type-badge--spreadsheet",
+  presentation: "wizard-project-manager-type-badge--presentation",
+  image: "wizard-project-manager-type-badge--image",
+  archive: "wizard-project-manager-type-badge--archive",
+  media: "wizard-project-manager-type-badge--media",
+  code: "wizard-project-manager-type-badge--code",
+  other: "wizard-project-manager-type-badge--other",
 };
 
 const ROLE_VARIANT_CLASS_MAP: Record<FileRoleValue, string> = {
-  undefined: "wizard-v2-role-variant--undefined",
-  processable: "wizard-v2-role-variant--processable",
-  reference: "wizard-v2-role-variant--reference",
-  instructions: "wizard-v2-role-variant--instructions",
-  image: "wizard-v2-role-variant--image",
-  ocr: "wizard-v2-role-variant--ocr",
+  undefined: "wizard-project-manager-role-variant--undefined",
+  processable: "wizard-project-manager-role-variant--processable",
+  reference: "wizard-project-manager-role-variant--reference",
+  instructions: "wizard-project-manager-role-variant--instructions",
+  image: "wizard-project-manager-role-variant--image",
+  ocr: "wizard-project-manager-role-variant--ocr",
 };
 
 const DOCUMENT_EXTENSIONS = new Set(["DOC", "DOCX", "PDF", "TXT", "RTF", "ODT", "MD"]);
@@ -146,10 +146,10 @@ export function WizardFilesStep({
   }, [files]);
 
   return (
-    <section className="wizard-v2-files-step" aria-label="Project files configuration">
+    <section className="wizard-project-manager-files-step" aria-label="Project files configuration">
       <div
-        className={cn("wizard-v2-dropzone", isDragActive && "is-active", isDragOver && "is-over")}
-        aria-describedby="wizard-v2-dropzone-hint"
+        className={cn("wizard-project-manager-dropzone", isDragActive && "is-active", isDragOver && "is-over")}
+        aria-describedby="wizard-project-manager-dropzone-hint"
         onClick={onBrowseClick}
         onKeyDown={handleDropZoneKeyDown}
         onDragEnter={onDragEnter}
@@ -159,39 +159,39 @@ export function WizardFilesStep({
         role="button"
         tabIndex={0}
       >
-        <span className="wizard-v2-dropzone-glow" aria-hidden="true" />
-        <div className="wizard-v2-dropzone-body">
-          <div className="wizard-v2-dropzone-icon" aria-hidden="true">
+        <span className="wizard-project-manager-dropzone-glow" aria-hidden="true" />
+        <div className="wizard-project-manager-dropzone-body">
+          <div className="wizard-project-manager-dropzone-icon" aria-hidden="true">
             <LuFilePlus2 className="h-12 w-12" />
           </div>
-          <div className="wizard-v2-dropzone-copy">
-            <h3 className="wizard-v2-dropzone-title">Drop project files</h3>
-            <p className="wizard-v2-dropzone-subtitle">Drag documents here or click to browse to pick from your device.</p>
+          <div className="wizard-project-manager-dropzone-copy">
+            <h3 className="wizard-project-manager-dropzone-title">Drop project files</h3>
+            <p className="wizard-project-manager-dropzone-subtitle">Drag documents here or click to browse to pick from your device.</p>
           </div>
           
         </div>
         
       </div>
       {fileCount === 0 ? (
-        <div className="wizard-v2-files-empty" role="status">
-          <p className="wizard-v2-files-empty-title">No files queued yet</p>
-          <p className="wizard-v2-files-empty-copy">
+        <div className="wizard-project-manager-files-empty" role="status">
+          <p className="wizard-project-manager-files-empty-title">No files queued yet</p>
+          <p className="wizard-project-manager-files-empty-copy">
             Add source documents, reference packs, or guidance notes now so everything is ready when conversion opens up.
           </p>
         </div>
       ) : (
-        <div className="wizard-v2-file-table" role="region" aria-live="polite">
-          <header className="wizard-v2-file-table-header">
-            <span className="wizard-v2-file-count">
+        <div className="wizard-project-manager-file-table" role="region" aria-live="polite">
+          <header className="wizard-project-manager-file-table-header">
+            <span className="wizard-project-manager-file-count">
               {fileCount} file{fileCount > 1 ? "s" : ""} queued
             </span>
             {fileRoleSummary !== "" ? (
-              <span className="wizard-v2-file-role-summary" aria-label="Files grouped by role">
+              <span className="wizard-project-manager-file-role-summary" aria-label="Files grouped by role">
                 {fileRoleSummary}
               </span>
             ) : null}
           </header>
-          <div className="wizard-v2-file-table-scroll">
+          <div className="wizard-project-manager-file-table-scroll">
             <Table>
               <TableHeader className="text-(--color-victorian-peacock-950)">
                 <TableRow>
@@ -228,43 +228,43 @@ export function WizardFilesStep({
                   }
 
                   return (
-                    <TableRow key={entry.id} className="wizard-v2-file-row">
+                    <TableRow key={entry.id} className="wizard-project-manager-file-row">
                       <TableCell className="text-center font-medium text-foreground/80">
                         {index + 1}
                       </TableCell>
-                      <TableCell className="wizard-v2-file-name" title={entry.name}>
+                      <TableCell className="wizard-project-manager-file-name" title={entry.name}>
                         <span>{entry.name}</span>
                       </TableCell>
-                      <TableCell className="wizard-v2-file-type">
-                        <Badge variant="outline" className={cn("wizard-v2-type-badge", fileTypeClass)}>
+                      <TableCell className="wizard-project-manager-file-type">
+                        <Badge variant="outline" className={cn("wizard-project-manager-type-badge", fileTypeClass)}>
                           {extensionLabel}
                         </Badge>
                       </TableCell>
-                      <TableCell className="wizard-v2-file-role">
+                      <TableCell className="wizard-project-manager-file-role">
                         <Select
                           value={entry.role === "undefined" ? undefined : entry.role}
                           onValueChange={(value) => onRoleChange(entry.id, value as FileRoleValue)}
                         >
                           <SelectTrigger
-                            className={cn("wizard-v2-role-trigger", roleVariantClass)}
+                            className={cn("wizard-project-manager-role-trigger", roleVariantClass)}
                             aria-label={`Select role for ${entry.name}`}
                             data-role-state={entry.role}
                           >
                             <SelectValue placeholder={FILE_ROLE_LABELS.undefined} />
                           </SelectTrigger>
-                          <SelectContent className="wizard-v2-role-menu mt-2">
+                          <SelectContent className="wizard-project-manager-role-menu mt-2">
                             {selectableOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value} className="wizard-v2-role-item">
+                              <SelectItem key={option.value} value={option.value} className="wizard-project-manager-role-item">
                                 {option.label}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell className="wizard-v2-file-actions">
+                      <TableCell className="wizard-project-manager-file-actions">
                         <button
                           type="button"
-                          className="wizard-v2-file-remove"
+                          className="wizard-project-manager-file-remove"
                           onClick={() => onRemoveFile(entry.id)}
                           aria-label={`Remove ${entry.name}`}
                         >

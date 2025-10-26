@@ -2,8 +2,10 @@ import { act, cleanup, render, screen, waitFor, within } from "@testing-library/
 import userEvent from "@testing-library/user-event";
 import type { ProjectListItem } from "@/core/ipc";
 import { AuthProvider } from "@/app/providers/auth/AuthProvider";
-import { ProjectManagerView } from "@/modules/project-manager/ProjectManagerView";
+import { ProjectManagerView, type ProjectManagerViewProps } from "@/modules/project-manager/ProjectManagerView";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { MockInstance } from "vitest";
+import { PROJECT_FOCUS_EVENT, type ProjectFocusDetail } from "@/modules/projects/events";
 
 type ListProjectsArgs = { limit?: number; offset?: number } | undefined;
 type ToastPayload = { title?: string; description?: string; variant?: string };
@@ -15,7 +17,12 @@ type SidebarSyncArgs = {
   clearSelection: () => void;
 };
 
-
+const navigateMock = vi.hoisted(
+  () =>
+    vi.fn<(args: { to: string; params: { projectId: string } }) => Promise<void>>(() =>
+      Promise.resolve(),
+    ),
+);
 const unlistenMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@tauri-apps/api/event", () => ({
@@ -28,6 +35,9 @@ vi.mock("@tauri-apps/api/event", () => ({
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
+}));
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => navigateMock,
 }));
 const {
   listProjectsMock,
@@ -99,6 +109,8 @@ function buildProject(overrides: Partial<ProjectListItem> = {}): ProjectListItem
 }
 
 describe("ProjectManagerView", () => {
+  let dispatchEventSpy: MockInstance<(event: Event) => boolean> | undefined;
+
   beforeEach(() => {
     projectSequence = 0;
     if (typeof window !== "undefined") {
@@ -124,18 +136,23 @@ describe("ProjectManagerView", () => {
       if (!Element.prototype.scrollIntoView) {
         Element.prototype.scrollIntoView = () => {};
       }
+      dispatchEventSpy = vi.spyOn(window, "dispatchEvent");
+      dispatchEventSpy.mockClear();
     }
     listProjectsMock.mockReset();
     deleteProjectMock.mockReset();
     createProjectMock.mockReset();
     toastMock.mockReset();
     sidebarSyncMock.mockReset();
+    navigateMock.mockReset();
+    navigateMock.mockResolvedValue(undefined);
     listProjectsMock.mockResolvedValue([]);
     deleteProjectMock.mockResolvedValue(1);
     wizardState.current = null;
   });
 
   afterEach(() => {
+    dispatchEventSpy?.mockRestore();
     cleanup();
   });
 
@@ -143,47 +160,143 @@ function renderWithProviders(ui: React.ReactElement) {
   return render(<AuthProvider>{ui}</AuthProvider>);
 }
 
-async function renderView(projects: ProjectListItem[] = []) {
-    listProjectsMock.mockResolvedValue(projects);
-    renderWithProviders(<ProjectManagerView />);
-    await waitFor(() => expect(listProjectsMock).toHaveBeenCalled());
-    await act(async () => {
-      await Promise.resolve();
-    });
-    await screen.findByRole("table", { name: /projects table/i });
-  }
+async function renderView(projects: ProjectListItem[] = [], props: Partial<ProjectManagerViewProps> = {}) {
+  listProjectsMock.mockResolvedValue(projects);
+  await act(async () => {
+    renderWithProviders(<ProjectManagerView {...props} />);
+  });
+  await waitFor(() => expect(listProjectsMock).toHaveBeenCalled());
+  await screen.findByRole("table", { name: /projects table/i });
+}
 
-  it("loads projects with the expected limit and schedules polling", async () => {
+  it("loads projects with the expected limit", async () => {
     const projects = [
       buildProject({ projectId: "alpha", name: "Alpha", activityStatus: "completed" }),
     ];
-    const intervalSpy = vi.spyOn(window, "setInterval");
 
     await renderView(projects);
 
-    expect(listProjectsMock).toHaveBeenCalledWith({ limit: 100 });
+    expect(listProjectsMock).toHaveBeenCalledWith(expect.objectContaining({ limit: 100 }));
     await screen.findByText("Alpha");
+    expect(listProjectsMock).toHaveBeenCalledTimes(1);
+  });
 
-    const pollingCall = intervalSpy.mock.calls.find(([, delay]) => delay === 1500);
-    expect(pollingCall).toBeDefined();
-    const intervalCallback = pollingCall?.[0] as (() => void) | undefined;
-    expect(typeof intervalCallback).toBe("function");
+  it("opens a project via row action, navigates, and hands off the project", async () => {
+    const project = buildProject({ projectId: "alpha", name: "Alpha" });
+    const onOpenProject = vi.fn();
+
+    await renderView([project], { onOpenProject });
+
+    const user = userEvent.setup();
+    const openButton = await screen.findByRole("button", { name: /Open project Alpha/i });
+
+    await user.click(openButton);
+
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledTimes(1));
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: "/projects/$projectId",
+      params: { projectId: "alpha" },
+    });
+    expect(onOpenProject).toHaveBeenCalledTimes(1);
+    expect(onOpenProject).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: "alpha", name: "Alpha" }),
+    );
+
+    expect(dispatchEventSpy).toBeDefined();
+    const focusCall = dispatchEventSpy!.mock.calls.find(
+      ([event]: [Event]) => event instanceof CustomEvent && event.type === PROJECT_FOCUS_EVENT,
+    );
+    expect(focusCall).toBeDefined();
+    const focusEvent = focusCall?.[0] as CustomEvent<ProjectFocusDetail>;
+    expect(focusEvent?.detail).toMatchObject({
+      projectId: "alpha",
+      projectName: "Alpha",
+      source: "navigation",
+    });
+
+    expect(
+      toastMock.mock.calls.some(([payload]) => payload?.title === "Failed to open project"),
+    ).toBe(false);
+  });
+
+  it("surfaces a toast when the requested project cannot be resolved", async () => {
+    const project = buildProject({ projectId: "alpha", name: "Alpha" });
+    await renderView([project]);
+
+    await waitFor(() => expect(sidebarSyncMock.mock.calls.length).toBeGreaterThan(0));
+    const sidebarCalls = sidebarSyncMock.mock.calls;
+    const sidebarArgs =
+      sidebarCalls.length > 0 ? (sidebarCalls[sidebarCalls.length - 1]?.[0] as SidebarSyncArgs | undefined) : undefined;
+    expect(sidebarArgs).toBeDefined();
+
+    act(() => {
+      sidebarArgs?.onOpenProject("ghost-project");
+    });
+
+    expect(navigateMock).not.toHaveBeenCalled();
+    const toastCalls = toastMock.mock.calls;
+    const lastToast = toastCalls.length > 0 ? toastCalls[toastCalls.length - 1]?.[0] : undefined;
+    expect(lastToast).toMatchObject({
+      variant: "destructive",
+      title: "Project unavailable",
+    });
+  });
+
+  it("prevents concurrent opens and informs the user while pending", async () => {
+    let resolveNavigate: (() => void) | undefined;
+    const pendingNavigate = new Promise<void>((resolve) => {
+      resolveNavigate = resolve;
+    });
+    navigateMock.mockImplementation(() => pendingNavigate);
+
+    const projects = [
+      buildProject({ projectId: "alpha", name: "Alpha" }),
+      buildProject({ projectId: "beta", name: "Beta" }),
+    ];
+    await renderView(projects);
+
+    await waitFor(() => expect(sidebarSyncMock.mock.calls.length).toBeGreaterThan(0));
+    const user = userEvent.setup();
+    const openAlpha = await screen.findByRole("button", { name: /Open project Alpha/i });
+    await user.click(openAlpha);
+
+    expect(navigateMock).toHaveBeenCalledTimes(1);
+    expect(openAlpha).toBeDisabled();
+
+    const sidebarCalls = sidebarSyncMock.mock.calls;
+    const sidebarArgs =
+      sidebarCalls.length > 0 ? (sidebarCalls[sidebarCalls.length - 1]?.[0] as SidebarSyncArgs | undefined) : undefined;
+    expect(sidebarArgs).toBeDefined();
+
+    act(() => {
+      sidebarArgs?.onOpenProject("beta");
+    });
+
+    expect(navigateMock).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(
+        toastMock.mock.calls.some(
+          ([payload]) =>
+            payload?.title === "Opening project" &&
+            typeof payload?.description === "string" &&
+            payload.description.includes("Please wait"),
+        ),
+      ).toBe(true),
+    );
 
     await act(async () => {
-      intervalCallback?.();
-      await Promise.resolve();
+      resolveNavigate?.();
+      await pendingNavigate;
     });
 
-    await waitFor(() => {
-      expect(listProjectsMock).toHaveBeenCalledTimes(2);
-    });
-
-    intervalSpy.mockRestore();
+    await waitFor(() => expect(openAlpha).not.toBeDisabled());
   });
 
   it("surfaces load errors in the alert banner", async () => {
     listProjectsMock.mockRejectedValueOnce(new Error("Network unreachable"));
-    renderWithProviders(<ProjectManagerView />);
+    await act(async () => {
+      renderWithProviders(<ProjectManagerView />);
+    });
 
     await screen.findByText("Unable to load projects");
     expect(screen.getByText("Network unreachable")).toBeInTheDocument();
@@ -282,7 +395,9 @@ async function renderView(projects: ProjectListItem[] = []) {
     listProjectsMock.mockResolvedValueOnce(projects);
     const onCreateProject = vi.fn();
 
-    renderWithProviders(<ProjectManagerView onCreateProject={onCreateProject} />);
+    await act(async () => {
+      renderWithProviders(<ProjectManagerView onCreateProject={onCreateProject} />);
+    });
     await waitFor(() => expect(listProjectsMock).toHaveBeenCalled());
 
     const user = userEvent.setup();

@@ -8,10 +8,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
@@ -50,14 +47,14 @@ function WizardPhoneContainer({ children, className, countryCode, disabled, ...r
   return (
     <div
       {...rest}
-      className={cn("wizard-v2-phone-container", className, disabled && "wizard-v2-phone-container--disabled")}
+      className={cn("wizard-project-manager-phone-container", className, disabled && "wizard-project-manager-phone-container--disabled")}
       aria-disabled={disabled ? true : undefined}
     >
       {countrySelect}
-      <div className="wizard-v2-phone-input-shell">
+      <div className="wizard-project-manager-phone-input-shell">
         {countryCode ? (
           <>
-            <span className="wizard-v2-phone-prefix" aria-hidden="true">
+            <span className="wizard-project-manager-phone-prefix" aria-hidden="true">
               {countryCode}
             </span>
             <span className="sr-only">Selected country code {countryCode}</span>
@@ -131,7 +128,7 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
     language: languageCode,
     countryBias,
     fieldRef: addressInputRef,
-    onResolve: setAddress,
+    onResolve: (resolvedAddress) => setAddress(resolvedAddress),
   });
   const addressSuggestionListId = useId();
 
@@ -220,7 +217,7 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn("wizard-v2-client-dialog")}
+        className={cn("wizard-project-manager-client-dialog")}
         hideCloseButton
         onInteractOutside={(event) => {
           event.preventDefault();
@@ -230,22 +227,22 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
         }}
       >
         <div className="wizard-client-divider-bar">
-          <h2 className="text-(--color-victorian-peacock-900) text-[20px]">Add new client</h2>
-          <DialogClose type="button" className="wizard-v2-close" aria-label="Close wizard">
+          <h2 className="wizard-client-header__text">Add new client</h2>
+          <DialogClose type="button" className="wizard-project-manager-close" aria-label="Close wizard">
             <X className="h-4 w-4" aria-hidden="true" />
           </DialogClose>
         </div>
 
-        <form className="wizard-v2-client-form" onSubmit={handleSubmit}>
+        <form className="wizard-project-manager-client-form" onSubmit={handleSubmit}>
           <div className="wizard-client-divider"></div>
-          <div className="wizard-v2-client-body">
-            <div className="wizard-v2-client-grid">
-              <div className="wizard-v2-client-field">
-                <label className="wizard-v2-client-label" htmlFor="wizard-v2-client-name">
+          <div className="wizard-project-manager-client-body">
+            <div className="wizard-project-manager-client-grid">
+              <div className="wizard-project-manager-client-field">
+                <label className="wizard-project-manager-client-label" htmlFor="wizard-project-manager-client-name">
                   Client name
                 </label>
                 <Input
-                  id="wizard-v2-client-name"
+                  id="wizard-project-manager-client-name"
                   className="client-form-input"
                   value={name}
                   autoFocus
@@ -262,17 +259,17 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                   autoCapitalize="words"
                 />
                 {fieldErrors.name ? (
-                  <p className="wizard-v2-client-field-error" role="alert">
+                  <p className="wizard-project-manager-client-field-error" role="alert">
                     {fieldErrors.name}
                   </p>
                 ) : null}
               </div>
-              <div className="wizard-v2-client-field">
-                <label className="wizard-v2-client-label" htmlFor="wizard-v2-client-email">
+              <div className="wizard-project-manager-client-field">
+                <label className="wizard-project-manager-client-label" htmlFor="wizard-project-manager-client-email">
                   Contact email
                 </label>
                 <Input
-                  id="wizard-v2-client-email"
+                  id="wizard-project-manager-client-email"
                   className="client-form-input"
                   value={email}
                   onChange={(event) => {
@@ -299,17 +296,17 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                   aria-invalid={fieldErrors.email ? "true" : "false"}
                 />
                 {fieldErrors.email ? (
-                  <p className="wizard-v2-client-field-error" role="alert">
+                  <p className="wizard-project-manager-client-field-error" role="alert">
                     {fieldErrors.email}
                   </p>
                 ) : null}
               </div>
-              <div className="wizard-v2-client-field">
-                <label className="wizard-v2-client-label" htmlFor="wizard-v2-client-phone">
+              <div className="wizard-project-manager-client-field">
+                <label className="wizard-project-manager-client-label" htmlFor="wizard-project-manager-client-phone">
                   Phone
                 </label>
                 <PhoneInput
-                  id="wizard-v2-client-phone"
+                  id="wizard-project-manager-client-phone"
                   name="phone"
                   value={phoneValue}
                   onChange={handlePhoneChange}
@@ -320,7 +317,7 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                   placeholder="555 555 1234"
                   autoComplete="tel"
                   aria-invalid={fieldErrors.phone ? true : undefined}
-                  className={cn("wizard-v2-phone-control", fieldErrors.phone && "wizard-v2-phone-control--error")}
+                  className={cn("wizard-project-manager-phone-control", fieldErrors.phone && "wizard-project-manager-phone-control--error")}
                   onBlur={handlePhoneBlur}
                   containerComponent={WizardPhoneContainer}
                   containerComponentProps={{
@@ -328,11 +325,11 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                     disabled: pending,
                   }}
                   countrySelectProps={{
-                    className: "wizard-v2-phone-select",
+                    className: "wizard-project-manager-phone-select",
                     disabled: pending,
                   }}
                   numberInputProps={{
-                    className: "wizard-v2-phone-input",
+                    className: "wizard-project-manager-phone-input",
                     inputMode: "tel",
                   }}
                   inputRef={(element: HTMLInputElement | null) => {
@@ -340,17 +337,17 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                   }}
                 />
                 {fieldErrors.phone ? (
-                  <p className="wizard-v2-client-field-error" role="alert">
+                  <p className="wizard-project-manager-client-field-error" role="alert">
                     {fieldErrors.phone}
                   </p>
                 ) : null}
               </div>
-              <div className="wizard-v2-client-field">
-                <label className="wizard-v2-client-label" htmlFor="wizard-v2-client-vat">
+              <div className="wizard-project-manager-client-field">
+                <label className="wizard-project-manager-client-label" htmlFor="wizard-project-manager-client-vat">
                   VAT number
                 </label>
                 <Input
-                  id="wizard-v2-client-vat"
+                  id="wizard-project-manager-client-vat"
                   className="client-form-input"
                   value={vatNumber}
                   onChange={(event) => {
@@ -363,20 +360,20 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                   aria-invalid={fieldErrors.vatNumber ? "true" : "false"}
                 />
                 {fieldErrors.vatNumber ? (
-                  <p className="wizard-v2-client-field-error" role="alert">
+                  <p className="wizard-project-manager-client-field-error" role="alert">
                     {fieldErrors.vatNumber}
                   </p>
                 ) : null}
               </div>
-              <div className="wizard-v2-client-field wizard-v2-client-field--address">
-                <label className="wizard-v2-client-label" htmlFor="wizard-v2-client-address">
+              <div className="wizard-project-manager-client-field wizard-project-manager-client-field--address">
+                <label className="wizard-project-manager-client-label" htmlFor="wizard-project-manager-client-address">
                   Address
                 </label>
-                <div className="wizard-v2-client-autocomplete">
+                <div className="wizard-project-manager-client-autocomplete">
                   <Input
-                    id="wizard-v2-client-address"
+                    id="wizard-project-manager-client-address"
                     ref={addressInputRef}
-                    className="client-form-input wizard-v2-client-address-input"
+                    className="client-form-input wizard-project-manager-client-address-input"
                     type="text"
                     value={address}
                     onChange={(event) => {
@@ -404,12 +401,12 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                   {addressShowPanel ? (
                     <div
                       id={addressSuggestionListId}
-                      className="wizard-v2-client-suggestions"
+                      className="wizard-project-manager-client-suggestions"
                       role="listbox"
                       aria-label="Address suggestions"
                     >
                       {addressLoading ? (
-                        <div className="wizard-v2-client-suggestion-status">Searching addresses…</div>
+                        <div className="wizard-project-manager-client-suggestion-status">Searching addresses…</div>
                       ) : null}
                       {addressSuggestions.map((suggestion, index) => {
                         const isActive = index === addressActiveIndex;
@@ -419,8 +416,8 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                             type="button"
                             id={`${addressSuggestionListId}-option-${index}`}
                             className={cn(
-                              "wizard-v2-client-suggestion",
-                              isActive && "wizard-v2-client-suggestion--active",
+                              "wizard-project-manager-client-suggestion",
+                              isActive && "wizard-project-manager-client-suggestion--active",
                             )}
                             onMouseDown={(event) => {
                               event.preventDefault();
@@ -430,9 +427,9 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                             aria-selected={isActive}
                             onMouseEnter={() => setAddressActiveIndex(index)}
                           >
-                            <span className="wizard-v2-client-suggestion-primary">{suggestion.primaryText}</span>
+                            <span className="wizard-project-manager-client-suggestion-primary">{suggestion.primaryText}</span>
                             {suggestion.secondaryText ? (
-                              <span className="wizard-v2-client-suggestion-secondary">
+                              <span className="wizard-project-manager-client-suggestion-secondary">
                                 {suggestion.secondaryText}
                               </span>
                             ) : null}
@@ -440,10 +437,10 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                         );
                       })}
                       {!addressLoading && addressSuggestions.length === 0 && !addressError ? (
-                        <div className="wizard-v2-client-suggestion-status">No matches found.</div>
+                        <div className="wizard-project-manager-client-suggestion-status">No matches found.</div>
                       ) : null}
                       {addressError ? (
-                        <div className="wizard-v2-client-suggestion-error" role="alert">
+                        <div className="wizard-project-manager-client-suggestion-error" role="alert">
                           {addressError}
                         </div>
                       ) : null}
@@ -451,14 +448,14 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
                   ) : null}
                 </div>
               </div>
-              <div className="wizard-v2-client-field wizard-v2-client-field--notes">
-                <label className="wizard-v2-client-label" htmlFor="wizard-v2-client-notes">
+              <div className="wizard-project-manager-client-field wizard-project-manager-client-field--notes">
+                <label className="wizard-project-manager-client-label" htmlFor="wizard-project-manager-client-notes">
                   Notes
                 </label>
                 <Textarea
-                  id="wizard-v2-client-notes"
+                  id="wizard-project-manager-client-notes"
                   value={notes}
-                  className="client-form-input wizard-v2-client-notes-textarea"
+                  className="client-form-input wizard-project-manager-client-notes-textarea"
                   onChange={(event) => setNotes(event.target.value)}
                   placeholder="Internal notes, key contacts, style guides…"
                   rows={4}
@@ -467,11 +464,11 @@ export function WizardNewClientDialog({ open, onOpenChange, initialName, onSubmi
             </div>
           </div>
           {submissionError ? (
-            <p className="wizard-v2-client-error" role="alert">
+            <p className="wizard-project-manager-client-error" role="alert">
               {submissionError}
             </p>
           ) : null}
-          <DialogFooter className="wizard-v2-client-footer">
+          <DialogFooter className="wizard-project-manager-client-footer">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
               Cancel
             </Button>

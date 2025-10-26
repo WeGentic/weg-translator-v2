@@ -1,0 +1,96 @@
+.dashboard-emails-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dashboard-emails-card__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.dashboard-emails-card__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-victorian-peacock-400) 22%, transparent);
+}
+
+.dashboard-emails-card__item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.dashboard-emails-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dashboard-emails-card__sender {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-onBackground) 85%, transparent);
+}
+
+.dashboard-emails-card__tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dashboard-emails-card__subject {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-onBackground);
+}
+
+.dashboard-emails-card__preview {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--color-onBackground) 65%, transparent);
+  line-height: 1.4;
+}
+
+.dashboard-emails-card__footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--color-onBackground) 60%, transparent);
+}
+
+.dashboard-emails-card__attachment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.25rem;
+  width: 1.25rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-victorian-peacock-100) 50%, transparent);
+  color: color-mix(in srgb, var(--color-victorian-peacock-700) 80%, transparent);
+}
+
+.dashboard-emails-card__empty {
+  padding: 1.25rem;
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--color-background) 70%, transparent);
+  text-align: center;
+  font-size: 0.9rem;
+  color: color-mix(in srgb, var(--color-onBackground) 60%, transparent);
+}
+
+@media (max-width: 700px) {
+  .dashboard-emails-card__item {
+    gap: 0.3rem;
+  }
+
+  .dashboard-emails-card__subject {
+    font-size: 0.9rem;
+  }
+
+  .dashboard-emails-card__preview {
+    font-size: 0.78rem;
+  }
+}

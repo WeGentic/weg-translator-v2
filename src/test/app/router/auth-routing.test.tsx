@@ -1,10 +1,5 @@
 import { render, waitFor, cleanup } from "@testing-library/react";
-import {
-  RouterProvider,
-  createMemoryHistory,
-  createRouter,
-  type MemoryHistory,
-} from "@tanstack/react-router";
+import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { routeTree } from "@/router";
@@ -17,8 +12,10 @@ interface RenderOptions {
   auth?: MockAuthOverrides;
 }
 
+type AppMemoryHistory = ReturnType<typeof createMemoryHistory>;
+
 interface RenderResult {
-  history: MemoryHistory;
+  history: AppMemoryHistory;
 }
 
 const authState = {

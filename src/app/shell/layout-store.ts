@@ -1,6 +1,25 @@
 import type { ReactNode } from "react";
 import { createStore } from "zustand/vanilla";
 
+import {
+  activateSidebarTwoModule,
+  clearSidebarTwoModules,
+  createSidebarTwoRegistryState,
+  deactivateSidebarTwoModule,
+  hydrateSidebarTwoRegistry,
+  registerSidebarTwoModule,
+  serializeSidebarTwoRegistry,
+  setSidebarTwoLegacyContent,
+  unregisterSidebarTwoModule,
+} from "./sidebar-two-registry/mutations";
+import type {
+  SidebarTwoModuleActivateOptions,
+  SidebarTwoModuleClearFilter,
+  SidebarTwoModuleDeactivateStrategy,
+  SidebarTwoModuleDefinition,
+  SidebarTwoRegistrySnapshot,
+  SidebarTwoRegistryState,
+} from "./sidebar-two-registry/types";
 export const DEFAULT_FOOTER_HEIGHT = 50;
 
 export interface FooterState {
@@ -30,6 +49,11 @@ export interface MainState {
   scrollable: boolean;
 }
 
+export interface FocusedProjectState {
+  projectId: string;
+  projectName: string;
+}
+
 export interface LayoutConfig {
   footer?: Partial<FooterState>;
   background?: Partial<BackgroundState>;
@@ -46,7 +70,9 @@ export interface LayoutState {
   main: MainState;
   footerContent: ReactNode | null;
   sidebarOneContent: ReactNode | null;
-  sidebarTwoContent: ReactNode | null;
+  focusedProject: FocusedProjectState | null;
+  sidebarTwoRegistry: SidebarTwoRegistryState;
+  sidebarTwoFocusTarget: string | null;
   setFooter(partial: Partial<FooterState>): void;
   setBackground(partial: Partial<BackgroundState>): void;
   setSidebarOne(partial: Partial<SidebarOneState>): void;
@@ -54,8 +80,21 @@ export interface LayoutState {
   setMain(partial: Partial<MainState>): void;
   setFooterContent(content: ReactNode | null): void;
   setSidebarOneContent(content: ReactNode | null): void;
-  setSidebarTwoContent(content: ReactNode | null): void;
+  setFocusedProject(focused: FocusedProjectState): void;
+  clearFocusedProject(): void;
   applyConfig(config: LayoutConfig): void;
+  registerSidebarTwoModule(definition: SidebarTwoModuleDefinition): void;
+  unregisterSidebarTwoModule(id: string): void;
+  activateSidebarTwoModule(options: SidebarTwoModuleActivateOptions): void;
+  deactivateSidebarTwoModule(id: string, strategy?: SidebarTwoModuleDeactivateStrategy): void;
+  clearSidebarTwoModules(filter: SidebarTwoModuleClearFilter): void;
+  setSidebarTwoLegacyContent(content: ReactNode | null): void;
+  setSidebarTwoFocusTarget(target: string | null): void;
+  requestSidebarTwoFocus(): void;
+  setSidebarTwoFocusTarget(target: string | null): void;
+  requestSidebarTwoFocus(): void;
+  serializeSidebarTwoModules(): SidebarTwoRegistrySnapshot;
+  hydrateSidebarTwoModules(snapshot: SidebarTwoRegistrySnapshot | null | undefined): void;
   reset(): void;
 }
 
@@ -68,8 +107,19 @@ export type LayoutActions = {
   setMain: LayoutState["setMain"];
   setFooterContent: LayoutState["setFooterContent"];
   setSidebarOneContent: LayoutState["setSidebarOneContent"];
-  setSidebarTwoContent: LayoutState["setSidebarTwoContent"];
+  setFocusedProject: LayoutState["setFocusedProject"];
+  clearFocusedProject: LayoutState["clearFocusedProject"];
   applyConfig: LayoutState["applyConfig"];
+  registerSidebarTwoModule: LayoutState["registerSidebarTwoModule"];
+  unregisterSidebarTwoModule: LayoutState["unregisterSidebarTwoModule"];
+  activateSidebarTwoModule: LayoutState["activateSidebarTwoModule"];
+  deactivateSidebarTwoModule: LayoutState["deactivateSidebarTwoModule"];
+  clearSidebarTwoModules: LayoutState["clearSidebarTwoModules"];
+  setSidebarTwoLegacyContent: LayoutState["setSidebarTwoLegacyContent"];
+  setSidebarTwoFocusTarget: LayoutState["setSidebarTwoFocusTarget"];
+  requestSidebarTwoFocus: LayoutState["requestSidebarTwoFocus"];
+  serializeSidebarTwoModules: LayoutState["serializeSidebarTwoModules"];
+  hydrateSidebarTwoModules: LayoutState["hydrateSidebarTwoModules"];
   reset: LayoutState["reset"];
 };
 
@@ -99,7 +149,9 @@ function createSnapshot(): Omit<LayoutState, keyof LayoutActions> {
     },
     footerContent: null,
     sidebarOneContent: null,
-    sidebarTwoContent: null,
+    focusedProject: null,
+    sidebarTwoRegistry: createSidebarTwoRegistryState(),
+    sidebarTwoFocusTarget: null,
   };
 }
 
@@ -141,7 +193,7 @@ function mergeMain(current: MainState, patch: Partial<MainState>): MainState {
 }
 
 export function createLayoutStore(initialConfig?: LayoutConfig) {
-  const store = createStore<LayoutState>((set) => ({
+  const store = createStore<LayoutState>((set, get) => ({
     ...createSnapshot(),
     setFooter: (partial) =>
       set((state) => ({
@@ -165,7 +217,17 @@ export function createLayoutStore(initialConfig?: LayoutConfig) {
       })),
     setFooterContent: (content) => set({ footerContent: content }),
     setSidebarOneContent: (content) => set({ sidebarOneContent: content }),
-    setSidebarTwoContent: (content) => set({ sidebarTwoContent: content }),
+    setFocusedProject: (focused) =>
+      set(() => ({
+        focusedProject: {
+          projectId: focused.projectId,
+          projectName: focused.projectName,
+        },
+      })),
+    clearFocusedProject: () =>
+      set(() => ({
+        focusedProject: null,
+      })),
     applyConfig: (config) => {
       if (config.footer) {
         set((state) => ({ footer: mergeFooter(state.footer, config.footer!) }));
@@ -183,6 +245,48 @@ export function createLayoutStore(initialConfig?: LayoutConfig) {
         set((state) => ({ main: mergeMain(state.main, config.main!) }));
       }
     },
+    registerSidebarTwoModule: (definition) =>
+      set((state) => ({
+        sidebarTwoRegistry: registerSidebarTwoModule(state.sidebarTwoRegistry, definition),
+      })),
+    unregisterSidebarTwoModule: (id) =>
+      set((state) => ({
+        sidebarTwoRegistry: unregisterSidebarTwoModule(state.sidebarTwoRegistry, id),
+      })),
+    activateSidebarTwoModule: (options) =>
+      set((state) => ({
+        sidebarTwoRegistry: activateSidebarTwoModule(state.sidebarTwoRegistry, options),
+      })),
+    deactivateSidebarTwoModule: (id, strategy) =>
+      set((state) => ({
+        sidebarTwoRegistry: deactivateSidebarTwoModule(state.sidebarTwoRegistry, id, strategy),
+      })),
+    clearSidebarTwoModules: (filter) =>
+      set((state) => ({
+        sidebarTwoRegistry: clearSidebarTwoModules(state.sidebarTwoRegistry, filter),
+      })),
+    setSidebarTwoLegacyContent: (content) =>
+      set((state) => ({
+        sidebarTwoRegistry: setSidebarTwoLegacyContent(state.sidebarTwoRegistry, content),
+      })),
+    setSidebarTwoFocusTarget: (target) => set({ sidebarTwoFocusTarget: target }),
+    requestSidebarTwoFocus: () => {
+      const { sidebarTwoFocusTarget } = get();
+      if (!sidebarTwoFocusTarget) {
+        return;
+      }
+      if (typeof document !== "undefined") {
+        const element = document.getElementById(sidebarTwoFocusTarget);
+        if (element) {
+          element.focus();
+        }
+      }
+    },
+    serializeSidebarTwoModules: () => serializeSidebarTwoRegistry(get().sidebarTwoRegistry),
+    hydrateSidebarTwoModules: (snapshot) =>
+      set((state) => ({
+        sidebarTwoRegistry: hydrateSidebarTwoRegistry(state.sidebarTwoRegistry, snapshot),
+      })),
     reset: () => {
       set(() => createSnapshot());
     },

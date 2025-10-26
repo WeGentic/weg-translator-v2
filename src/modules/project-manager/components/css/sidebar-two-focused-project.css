@@ -1,0 +1,7 @@
+/* Placeholder styles for the focused project shortcut.
+ * Detailed theming will be added in Task 5 to align with sidebar token guidelines.
+ */
+.sidebar-two-focused-project {
+  display: flex;
+  flex-direction: column;
+}

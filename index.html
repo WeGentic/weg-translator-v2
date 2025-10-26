@@ -2,16 +2,111 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <title>Tauri + React + Typescript</title>
+    <title>Weg Translator</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+
+      body {
+        margin: 0;
+        background-color: #f9f8ef;
+        color: #0a2d3d;
+        font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        min-height: 100vh;
+      }
+
+      #root {
+        min-height: 100vh;
+      }
+
+      #app-placeholder {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 48px 24px;
+        background-image: linear-gradient(
+          160deg,
+          rgba(226, 194, 125, 0.22),
+          rgba(16, 74, 101, 0.18)
+        );
+        transition: opacity 0.2s ease;
+      }
+
+      #app-placeholder[aria-busy="false"] {
+        opacity: 0;
+      }
+
+      .placeholder-indicator {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        border: 4px solid rgba(16, 74, 101, 0.2);
+        border-top-color: #fb4f14;
+        animation: spin 0.9s linear infinite;
+      }
+
+      .placeholder-message {
+        margin: 0;
+        font-size: 0.95rem;
+        letter-spacing: 0.02em;
+        color: rgba(10, 45, 61, 0.85);
+      }
+
+      .sr-only {
+        border: 0;
+        clip: rect(0 0 0 0);
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        padding: 0;
+        position: absolute;
+        width: 1px;
+        white-space: nowrap;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #app-placeholder {
+          background-image: none;
+        }
+
+        .placeholder-indicator {
+          animation: none;
+          border-color: rgba(10, 45, 61, 0.35);
+          border-top-color: rgba(10, 45, 61, 0.6);
+        }
+      }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div
+        id="app-placeholder"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        data-testid="app-placeholder"
+      >
+        <div class="placeholder-indicator" aria-hidden="true"></div>
+        <p class="placeholder-message">Loading Weg Translator…</p>
+        <span class="sr-only">Initializing application shell</span>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

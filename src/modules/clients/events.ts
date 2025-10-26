@@ -6,6 +6,9 @@ export interface ClientFocusDetail {
   clientName: string;
 }
 
+export type ClientFocusEvent = CustomEvent<ClientFocusDetail>;
+export type ClientClearEvent = CustomEvent<void>;
+
 export function dispatchClientFocus(detail: ClientFocusDetail) {
   if (typeof window === "undefined") {
     return;

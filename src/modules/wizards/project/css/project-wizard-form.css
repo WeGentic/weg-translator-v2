@@ -1,4 +1,4 @@
-.wizard-v2-form {
+.wizard-project-manager-form {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -8,20 +8,72 @@
   scrollbar-gutter: stable;
 }
 
-.wizard-v2-field {
+.wizard-project-manager-field {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.wizard-v2-label-row {
+.wizard-project-manager-label-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
-.wizard-v2-client-hint {
+.wizard-project-manager-label-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wizard-project-manager-label-link {
+  border: 1px solid color-mix(in oklab, var(--color-victorian-peacock-500) 45%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklab, var(--color-victorian-peacock-100) 75%, transparent) 0%,
+    color-mix(in oklab, var(--color-victorian-peacock-200) 85%, transparent) 100%
+  );
+  color: color-mix(in oklab, var(--color-victorian-peacock-800) 88%, var(--color-antiwhite) 12%);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.wizard-project-manager-label-link:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--color-secondary) 65%, transparent);
+  box-shadow:
+    0 18px 32px -24px color-mix(in oklab, var(--color-secondary) 55%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--color-secondary) 25%, transparent);
+  color: color-mix(in oklab, var(--color-secondary) 80%, var(--color-antiwhite) 20%);
+}
+
+.wizard-project-manager-label-link:focus-visible {
+  outline: none;
+  border-color: color-mix(in oklab, var(--color-ring) 65%, transparent);
+  box-shadow:
+    0 0 0 2px color-mix(in oklab, var(--color-ring) 45%, transparent),
+    0 22px 44px -26px color-mix(in oklab, var(--color-ring) 55%, transparent);
+}
+
+.wizard-project-manager-label-link:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.wizard-project-manager-client-hint {
   align-self: flex-start;
   border: none;
   background: transparent;
@@ -34,35 +86,36 @@
   transition: color 150ms ease;
 }
 
-.wizard-v2-client-hint:hover {
+.wizard-project-manager-client-hint:hover {
   color: var(--color-secondary);
   text-decoration: underline;
 }
 
-.wizard-v2-field-grid {
+.wizard-project-manager-field-grid {
   display: grid;
   gap: 18px;
 }
 
 @media (min-width: 640px) {
-  .wizard-v2-field-grid {
+  .wizard-project-manager-field-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-.wizard-v2-field-grid--paired {
+.wizard-project-manager-field-grid--paired {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
-.wizard-v2-label {
-  font-size: 0.72rem;
-  line-height: 1.1;
-  font-weight: 600;
-  letter-spacing: 0.09em;
-  color: var(--color-victorian-peacock-800);
+.wizard-project-manager-label {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--color-victorian-peacock-100);
+  text-shadow:
+    rgba(0, 0, 0, 0.16) 0px 3px 6px,
+    rgba(0, 0, 0, 0.23) 0px 3px 6px;
 }
 
-.wizard-v2-label-darker {
+.wizard-project-manager-label-darker {
   font-size: 0.72rem;
   line-height: 1.1;
   font-weight: 600;
@@ -71,82 +124,81 @@
   color: color-mix(in oklab, var(--color-primary) 90%, var(--color-antiwhite) 10%);
 }
 
-.wizard-v2-control {
+.wizard-project-manager-control {
   min-height: var(--wizard-control-height);
   border-radius: 10px;
 }
 
-.wizard-v2-input,
-.wizard-v2-textarea {
-  padding-inline-start: 1.25rem;
-  padding-inline-end: 2.25rem;
-  background-color: var(--color-writers-parchment-50);
-  color: var(--color-neverything-900);
-  border-color: var(--color-victorian-peacock-200);
-  padding: 10px 12px;
-  font-size: 0.88rem;
-  transition:
-    border-color 180ms ease,
-    box-shadow 180ms ease,
-    background-color 180ms ease;
+.wizard-project-manager-input,
+.wizard-project-manager-textarea {
+  width: 100%;
+  height: 2.9rem;
+  border-radius: 0.5rem;
+  border: none;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;
+  background-color: var(--color-victorian-peacock-300);
+  color: var(--color-victorian-peacock-950);
+  font-size: 0.95rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
 }
 
 .wizard-input-field {
-  height: 40px;
-  padding-inline-start: 1.25rem;
-  background-color: var(--color-writers-parchment-50);
-  color: var(--color-neverything-900);
-  border-color: var(--color-victorian-peacock-200);
+  width: 100%;
+  height: 2.9rem;
+  border-radius: 0.5rem;
+  border: none;
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;
+  background-color: var(--color-victorian-peacock-300);
+  color: var(--color-victorian-peacock-950);
+  font-size: 0.95rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
 }
 
 .wizard-input-field:hover {
-  background-color: var(--color-victorian-peacock-100);
+  border: 1px solid;
   border-color: var(--color-secondary);
+  box-shadow: none;
 }
 
 .wizard-input-field:focus-visible,
 .wizard-input-field:active {
-  background-color: var(--color-victorian-peacock-100);
-  border-color: var(--color-secondary);
-  border-width: 2px;
-  color: var(--color-neverything-900);
   outline: none;
+  border: 1px solid;
+  border-color: var(--color-secondary);
   box-shadow: none;
-  --tw-ring-offset-shadow: 0 0 #0000;
-  --tw-ring-shadow: 0 0 #0000;
-  --tw-shadow: 0 0 #0000;
 }
 
+.wizard-project-manager-textarea::placeholder,
 .wizard-input-field::placeholder {
-  color: var(--color-neverything-600);
+  color: var(--color-victorian-peacock-400);
 }
 
-.wizard-v2-input {
+.wizard-project-manager-input {
   display: flex;
   align-items: center;
 }
 
-.wizard-v2-input:hover,
-.wizard-v2-textarea:hover {
-  background-color: var(--color-victorian-peacock-100);
+.wizard-project-manager-input:hover,
+.wizard-project-manager-textarea:hover {
+  border: 1px solid;
   border-color: var(--color-secondary);
+  box-shadow: none;
 }
 
-.wizard-v2-input:focus-visible,
-.wizard-v2-textarea:focus-visible {
+.wizard-project-manager-input:focus-visible,
+.wizard-project-manager-textarea:focus-visible {
   outline: none;
-  border-color: color-mix(in oklab, var(--color-ring) 55%, transparent);
-  box-shadow:
-    0 24px 42px -24px color-mix(in oklab, var(--color-ring) 35%, transparent),
-    0 0 0 2px color-mix(in oklab, var(--color-ring) 45%, transparent);
+  border: 1px solid;
+  border-color: var(--color-secondary);
+  box-shadow: none;
 }
 
-.wizard-v2-textarea {
+.wizard-project-manager-textarea {
   min-height: 120px;
   resize: vertical;
 }
 
-.wizard-v2-input--primary {
+.wizard-project-manager-input--primary {
   background: linear-gradient(
       135deg,
       color-mix(in oklab, var(--color-accent) 28%, transparent),
@@ -157,6 +209,6 @@
   border-color: color-mix(in oklab, var(--color-accent) 55%, transparent);
 }
 
-.wizard-v2-input--primary::placeholder {
-  color: color-mix(in oklab, var(--color-muted-foreground) 70%, var(--color-sidebar-primary) 15%);
+.wizard-project-manager-input--primary::placeholder {
+  color: var(--color-victorian-peacock-400);
 }

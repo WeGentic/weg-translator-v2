@@ -18,8 +18,8 @@ if (typeof window !== "undefined" && window.matchMedia == null) {
   });
 }
 
-import { Route as DashboardRoute } from "@/router/routes/dashboard/index";
-import { Route as ResourcesRoute } from "@/router/routes/resources/index";
+import { dashboardRouteComponent } from "@/modules/dashboard";
+import { resourcesRouteComponent } from "@/modules/resources";
 import { EnhancedAppSettingsPanel } from "@/modules/settings";
 import { EditorPanel } from "@/modules/editor";
 
@@ -77,7 +77,7 @@ afterEach(() => {
 
 describe("workspace panels", () => {
   it("renders dashboard scaffolding", async () => {
-    const DashboardComponent = DashboardRoute.options.component!;
+    const DashboardComponent = dashboardRouteComponent;
 
     render(<DashboardComponent />);
 
@@ -93,7 +93,7 @@ describe("workspace panels", () => {
   });
 
   it("renders resources scaffolding", async () => {
-    const ResourcesComponent = ResourcesRoute.options.component!;
+    const ResourcesComponent = resourcesRouteComponent;
 
     render(<ResourcesComponent />);
 
@@ -159,7 +159,7 @@ describe("workspace panels", () => {
   });
 
   it("uses the shared main view container", () => {
-    const DashboardComponent = DashboardRoute.options.component!;
+    const DashboardComponent = dashboardRouteComponent;
 
     render(<DashboardComponent />);
 

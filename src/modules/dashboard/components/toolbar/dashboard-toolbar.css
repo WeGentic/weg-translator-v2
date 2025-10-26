@@ -1,0 +1,142 @@
+.dashboard-toolbar {
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-victorian-peacock-400) 30%, transparent);
+  background: linear-gradient(
+      120deg,
+      color-mix(in srgb, var(--color-writers-parchment-50) 80%, transparent) 0%,
+      color-mix(in srgb, var(--color-aquaverde-100) 35%, transparent) 100%
+    )
+    no-repeat padding-box;
+}
+
+.dashboard-toolbar__inner {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0 0.75rem;
+}
+
+.dashboard-toolbar__search {
+  position: relative;
+  flex: 1 1 320px;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-toolbar__search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 1rem;
+  width: 1rem;
+  color: color-mix(in srgb, var(--color-victorian-peacock-700) 70%, transparent);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.dashboard-toolbar__search-input {
+  padding-left: 2.5rem;
+  border-radius: 999px;
+  border-color: color-mix(in srgb, var(--color-victorian-peacock-500) 25%, transparent);
+  background: color-mix(in srgb, var(--color-background) 85%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-writers-parchment-50) 70%, transparent);
+}
+
+.dashboard-toolbar__search-input:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+.dashboard-toolbar__controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dashboard-toolbar__select {
+  min-width: 160px;
+  border-radius: 999px;
+  border-color: color-mix(in srgb, var(--color-victorian-peacock-500) 22%, transparent);
+  background: color-mix(in srgb, var(--color-background) 88%, transparent);
+}
+
+.dashboard-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dashboard-toolbar__timestamp {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--color-onBackground) 55%, transparent);
+}
+
+.dashboard-toolbar__action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  border-color: color-mix(in srgb, var(--color-victorian-peacock-500) 28%, transparent);
+  background: color-mix(in srgb, var(--color-victorian-peacock-100) 60%, transparent);
+  color: color-mix(in srgb, var(--color-victorian-peacock-800) 80%, transparent);
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.dashboard-toolbar__action-button:hover,
+.dashboard-toolbar__action-button:focus-visible {
+  background: color-mix(in srgb, var(--color-victorian-peacock-200) 65%, transparent);
+  border-color: color-mix(in srgb, var(--color-victorian-peacock-500) 48%, transparent);
+  transform: translateY(-1px);
+}
+
+.dashboard-toolbar__primary-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--color-gradient-parchment-orange-500) 85%, transparent),
+    color-mix(in srgb, var(--color-orioles-orange-500) 70%, transparent)
+  );
+  border: none;
+  color: var(--color-onSecondary);
+  font-weight: 600;
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--color-orioles-orange-500) 25%, transparent);
+  transition: box-shadow 150ms ease, transform 150ms ease;
+}
+
+.dashboard-toolbar__primary-action:hover,
+.dashboard-toolbar__primary-action:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px color-mix(in srgb, var(--color-orioles-orange-500) 35%, transparent);
+}
+
+@media (max-width: 920px) {
+  .dashboard-toolbar__inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .dashboard-toolbar__controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .dashboard-toolbar__actions {
+    justify-content: space-between;
+  }
+
+  .dashboard-toolbar__timestamp {
+    order: 2;
+  }
+}

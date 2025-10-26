@@ -1,19 +1,24 @@
 /* New Project Button Styles */
 .new-project-button {
-  height: 40px;
+  height: 2.5rem;
   padding: 0 1rem;
   gap: 0.5rem;
+  border-radius: 999rem;
   background: var(--color-victorian-peacock-950);
   color: var(--color-victorian-peacock-50);
   border-color: none
   transition-property: all;
   transition-duration: 300ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;
+
 }
 
 .new-project-button:hover {
   transform: scale(1.05);
-  background: var(--color-victorian-peacock-800);
+  background: var(--color-primary);
+  color: var(--color-secondary);
+
 }
 
 .new-project-button:focus-visible {

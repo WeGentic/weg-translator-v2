@@ -12,7 +12,7 @@ Your highest priority is accuracy and reliability. When you are unsure, you must
 
 **ANY CODE YOU WRITE MUST PERFECTLY INTEGRATE WITH THE EXISTING CODEBASE AND FOLLOW THE PROJECT GUIDELINES. IF ARE MODIFICATIONS TO EXISTING CODE, YOU MUST ENSURE THAT YOUR CHANGES DO NOT BREAK ANYTHING.**
 
-## Weg Translator Desktop
+## Tr-entic Desktop
 
 Tauri 2.8.5 desktop application with a **React 19.2** frontend and **Rust 1.89** backend that wraps the OpenXLIFF command-line tools as sidecars. The app ships a minimal Java 21 runtime, exposes convert/merge/validate flows in the UI, and showcases secured IPC between React and Tauri.
 

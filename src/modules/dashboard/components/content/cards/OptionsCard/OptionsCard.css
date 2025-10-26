@@ -1,0 +1,57 @@
+.dashboard-options-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dashboard-options-card__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dashboard-options-card__item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--color-background) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-aquaverde-300) 18%, transparent);
+  align-items: center;
+}
+
+.dashboard-options-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dashboard-options-card__title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-onBackground);
+}
+
+.dashboard-options-card__description {
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--color-onBackground) 60%, transparent);
+}
+
+.dashboard-options-card__empty {
+  padding: 1rem;
+  border-radius: 0.8rem;
+  text-align: center;
+  background: color-mix(in srgb, var(--color-background) 70%, transparent);
+  color: color-mix(in srgb, var(--color-onBackground) 60%, transparent);
+}
+
+@media (max-width: 820px) {
+  .dashboard-options-card__item {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-options-card__item > *:not(.dashboard-options-card__text) {
+    justify-self: start;
+  }
+}

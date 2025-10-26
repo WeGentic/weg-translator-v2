@@ -5,6 +5,7 @@ import { IconTooltipButton } from "@/shared/icons";
 import { Checkbox } from "@/shared/ui/checkbox";
 import type { ProjectRow } from "../../state/types";
 import { StatusBadge, resolveProjectStatusPresentation } from "./presentation";
+import { ensureProjectName } from "@/modules/projects/events";
 
 // Column priority levels for responsive design
 export const COLUMN_PRIORITIES = {
@@ -64,6 +65,7 @@ export interface ProjectColumnHandlers {
   onRequestDelete?: (id: string, name: string) => void;
   onSelectionChange: (nextSelection: ReadonlyArray<string>) => void;
   selectedIds: ReadonlyArray<string>;
+  openingProjectId: string | null;
 }
 
 export function createProjectColumns({
@@ -399,12 +401,14 @@ export function createProjectColumns({
       id: "actions",
       header: () => <span className="text-[12px] font-medium text-foreground">Actions</span>,
       cell: ({ row }) => {
+        const accessibleName = ensureProjectName(row.original.name);
         return (
           <div className="flex items-center justify-end gap-1.5">
             <div className="transition-transform duration-200 hover:scale-105">
               <IconTooltipButton
                 label="Open project"
-                ariaLabel={`Open project ${row.original.name}`}
+                ariaLabel={`Open project ${accessibleName}`}
+                disabled={Boolean(handlers.openingProjectId)}
                 onClick={() => handlers.onOpenProject?.(row.original.id)}
               >
                 <FolderOpen className="h-4 w-4" aria-hidden />
@@ -414,7 +418,7 @@ export function createProjectColumns({
               <IconTooltipButton
                 tone="destructive"
                 label="Delete project"
-                ariaLabel={`Delete project ${row.original.name}`}
+                ariaLabel={`Delete project ${accessibleName}`}
                 onClick={() => handlers.onRequestDelete?.(row.original.id, row.original.name)}
               >
                 <Trash2 className="h-4 w-4" aria-hidden />

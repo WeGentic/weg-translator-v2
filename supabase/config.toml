@@ -1,0 +1,7 @@
+# Primary Supabase project configuration for CLI operations.
+# See https://supabase.com/docs/guides/cli/config for full schema.
+
+project_id = "wnohgxkujwnuoqtibsss"
+
+[remotes.production]
+project_id = "wnohgxkujwnuoqtibsss"

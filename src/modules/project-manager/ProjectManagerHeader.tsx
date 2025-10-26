@@ -12,7 +12,7 @@ export function ProjectManagerHeader({ onCreateProject }: ProjectManagerHeaderPr
     <>
       {/* Header Zone - 54px fixed height */}
       <div className="projects-table-header-zone flex items-center justify-between px-4">
-        <h2 className="text-base font-semibold text-foreground">Project Manager</h2>
+        <h2 className="content-main-header-text">Project Manager</h2>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>

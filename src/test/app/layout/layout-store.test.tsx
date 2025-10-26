@@ -36,8 +36,6 @@ describe("layout store", () => {
     store.getState().setSidebarTwo({ visible: false });
     expect(store.getState().sidebarTwo.visible).toBe(false);
 
-    store.getState().setSidebarTwoContent(<div>secondary</div>);
-    expect(store.getState().sidebarTwoContent).not.toBeNull();
   });
 
   it("resets to defaults", () => {
@@ -48,7 +46,6 @@ describe("layout store", () => {
 
     store.getState().setFooterContent(<div>footer</div>);
     store.getState().setSidebarOneContent(<div>primary</div>);
-    store.getState().setSidebarTwoContent(<div>secondary</div>);
 
     store.getState().reset();
 
@@ -58,6 +55,6 @@ describe("layout store", () => {
     expect(state.sidebarTwo.visible).toBe(true);
     expect(state.footerContent).toBeNull();
     expect(state.sidebarOneContent).toBeNull();
-    expect(state.sidebarTwoContent).toBeNull();
+    expect(state.sidebarTwoRegistry.activeModules.length).toBe(0);
   });
 });

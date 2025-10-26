@@ -24,6 +24,7 @@ src-tauri/demo-appdata/
 *.sln
 *.sw?
 .env*
+!.env.example
 .mcp.json
 dist/
 

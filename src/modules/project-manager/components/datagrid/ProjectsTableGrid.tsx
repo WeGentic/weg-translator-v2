@@ -24,19 +24,15 @@ export function ProjectsTableGrid({ table, rows, selectedRows, search }: Project
 
   return (
     <div className="project-manager-main-zone">
-      <Table aria-label="Projects table" className="text-[14px] leading-6 text-foreground table-fixed">
+      <Table aria-label="Projects table">
         <TableHeader
-        className="
-            bg-(--color-gradient-parchment-peacock-400)
-            text-(--color-gradient-parchment-peacock-800)
+        className="project-manager-table-header
             ">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow
               key={headerGroup.id}
               className={cn(
-                "border-b-2 border-(--color-aquaverde-500)",
-                "backdrop-blur-sm",
-                "shadow-sm",
+                
               )}
             >
               {headerGroup.headers.map((header) => (
@@ -45,6 +41,7 @@ export function ProjectsTableGrid({ table, rows, selectedRows, search }: Project
                   className={cn(
                     "px-3 py-3 text-[14px] font-semibold normal-case",
                     "text-(--color-victorian-peacock-950)",
+                    
                     (header.column.columnDef.meta as ColumnMetaShape | undefined)?.headerClassName,
                   )}
                 >

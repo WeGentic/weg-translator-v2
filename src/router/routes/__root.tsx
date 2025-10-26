@@ -1,14 +1,15 @@
-import { Fragment, useCallback } from "react";
+
 import {
   Outlet,
   createRootRouteWithContext,
   defaultStringifySearch,
   redirect,
-  useNavigate,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import type { RouterContext as AppRouterContext } from "@/router/router-context";
+
+const PUBLIC_PATHS = new Set(["/login", "/register"]);
 
 function RootComponent() {
   return (
@@ -21,7 +22,7 @@ function RootComponent() {
 
 export const Route = createRootRouteWithContext<AppRouterContext>()({
   beforeLoad: ({ context, location }) => {
-    if (location.pathname === LOGIN_PATH) {
+    if (PUBLIC_PATHS.has(location.pathname)) {
       return;
     }
 

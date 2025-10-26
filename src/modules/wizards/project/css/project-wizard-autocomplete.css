@@ -1,11 +1,48 @@
-.wizard-v2-autocomplete {
+.wizard-project-manager-autocomplete {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.wizard-v2-autocomplete-menu {
+.wizard-project-manager-autocomplete-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.wizard-project-manager-autocomplete-clear {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: color-mix(in oklab, var(--color-victorian-peacock-700) 80%, var(--color-antiwhite) 20%);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.wizard-project-manager-autocomplete-clear:hover {
+  background: color-mix(in oklab, var(--color-victorian-peacock-100) 80%, transparent);
+  color: color-mix(in oklab, var(--color-secondary) 70%, var(--color-antiwhite) 30%);
+}
+
+.wizard-project-manager-autocomplete-clear:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in oklab, var(--color-ring) 50%, transparent),
+    0 10px 20px -12px color-mix(in oklab, var(--color-ring) 35%, transparent);
+}
+
+.wizard-project-manager-autocomplete-menu {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
@@ -22,7 +59,7 @@
   padding: 8px;
 }
 
-.wizard-v2-autocomplete-item {
+.wizard-project-manager-autocomplete-item {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -41,28 +78,28 @@
     transform 150ms ease;
 }
 
-.wizard-v2-autocomplete-item.is-highlighted {
+.wizard-project-manager-autocomplete-item.is-highlighted {
   transform: translateY(-1px);
   border-color: var(--color-secondary);
   background: var(--color-victorian-peacock-200);
   color: var(--color-victorian-peacock-900);
 }
 
-.wizard-v2-autocomplete-item.is-selected {
+.wizard-project-manager-autocomplete-item.is-selected {
   border-color: var(--color-secondary);
   background: color-mix(in oklab, var(--color-victorian-peacock-950) 55%, transparent);
   color: var(--color-victorian-peacock-50);
 }
 
-.wizard-v2-autocomplete-primary {
+.wizard-project-manager-autocomplete-primary {
   font-weight: 600;
 }
 
-.wizard-v2-autocomplete-secondary {
+.wizard-project-manager-autocomplete-secondary {
   font-size: 0.72rem;
 }
 
-.wizard-v2-autocomplete-status {
+.wizard-project-manager-autocomplete-status {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -71,7 +108,7 @@
   color: color-mix(in oklab, var(--color-muted-foreground) 80%, var(--color-sidebar-primary) 15%);
 }
 
-.wizard-v2-autocomplete-error {
+.wizard-project-manager-autocomplete-error {
   margin: 0;
   font-size: 0.72rem;
   color: color-mix(in oklab, var(--color-destructive) 55%, var(--color-antiwhite) 25%);

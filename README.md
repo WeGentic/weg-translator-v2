@@ -1,4 +1,4 @@
-# Weg Translator Desktop
+# Tr-entic Desktop
 
 Tauri 2.8.5 desktop application with a **React 19.1** frontend and **Rust 1.89** backend that wraps the OpenXLIFF command-line tools as sidecars. The app ships a minimal Java 21 runtime, exposes convert/merge/validate flows in the UI, and showcases secured IPC between React and Tauri.
 
@@ -57,6 +57,40 @@ pnpm tauri dev
 
 During development `tauri dev` launches Vite together with the Tauri backend. Logs are streamed to the in-app console (powered by `tauri-plugin-log`).
 
+## Supabase configuration
+
+The client uses Supabase Auth during registration and **only the anon key** should be exposed to the renderer. Configure the required variables before running any Supabase-backed workflow.
+
+### Local development
+
+```bash
+cp .env.example .env.local
+```
+
+Then edit `.env.local` and replace the placeholders with values from your Supabase project (**Project Settings → API**):
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `GOOGLE_MAPS_API_KEY` (existing Places autocomplete integration)
+
+Missing variables cause the app to crash on startup with a descriptive error referring back to this section.
+
+### Continuous integration (GitHub Actions)
+
+Store the values in repository or organization secrets (`SUPABASE_URL`, `SUPABASE_ANON_KEY`). Export them before launching any build step:
+
+```yaml
+    steps:
+      - name: Export Supabase env
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> "$GITHUB_ENV"
+          echo "VITE_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> "$GITHUB_ENV"
+      - name: Install dependencies
+        run: pnpm install
+```
+
+Never inject the Supabase service role key into the client. Edge Functions or secured server-side code must handle privileged operations.
+
 ## Building
 
 Debug build (bundles the macOS `.app` / `.dmg` or Windows `.msi`/`.exe` depending on host):
@@ -87,6 +121,13 @@ Rust integration tests exercise the SQLite persistence layer:
 ```bash
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
+
+## Google Places configuration
+
+- Set `GOOGLE_MAPS_API_KEY` in your runtime environment (e.g. `.env`, shell export, or the `tauri.conf.json > tauri > bundle > windows > wix` environment map) before launching the desktop app. Restart the app after rotating the key.
+- Restrict the key to the **Places API** in Google Cloud and limit allowed domains/IPs; coordinates and autocomplete traffic remain server-side, so the renderer never receives the secret.
+- When the key is missing or revoked, address suggestions are disabled and the UI surfaces a friendly banner (`GOOGLE_MAPS_API_KEY` is required). Rate limits are enforced in-process (per-second and per-minute windows) to guard quotas; the UI shows a “temporarily rate limited” message if users type too quickly.
+- To rotate the key, update the environment variable, revoke the old key in Google Cloud, and relaunch Tauri. No rebuild is required because the backend reads the variable at startup.
 
 ## SQLite persistence
 
@@ -150,6 +191,9 @@ APP=src-tauri/target/debug/bundle/macos/weg-translator.app/Contents/MacOS/conver
 - `src/modules/projects/ui/tools/OpenXliffPanel.tsx`: convert/validate/merge UI backed by the Tauri sidecars.
 - `src/core/ipc/openxliff.ts`: typed wrappers over `@tauri-apps/plugin-shell` for OpenXLIFF commands.
 - `src/core/ipc/fs.ts`: path validation helper invoking the Rust `path_exists` command.
+- `src/core/ipc/splash.ts`: typed IPC helper for the `notify_shell_ready` command that closes the splash window once React is ready.
+- `src/app/providers/useShellReadyEmitter.ts`: emits the shell-readiness event after providers mount, retries on failure, and clears the HTML placeholder from `index.html`.
+- `src/shared/transitions/`: houses `PageTransitionProvider`, `TransitionOverlay`, and `TransitionSuspenseFallback` for SPA navigation loaders and Suspense-aligned fallbacks.
 - `src/shared/logging/LogConsole.tsx`: live log viewer fed by `LogProvider` streaming events from the backend.
 
 ## IPC / backend

@@ -16,15 +16,33 @@ export type AuthContextValue = ReturnType<typeof useAuth>;
 export type MockAuthOverrides = Partial<AuthContextValue>;
 
 export function createMockAuth(overrides: MockAuthOverrides = {}): AuthContextValue {
-  return {
+  const base: AuthContextValue = {
     user: null,
     isAuthenticated: false,
+    isVerified: false,
     login: vi.fn(),
     logout: vi.fn(),
     isLoading: false,
     session: null,
+  } as AuthContextValue;
+
+  const merged = {
+    ...base,
     ...overrides,
-  };
+  } as AuthContextValue;
+
+  if (overrides.isAuthenticated && overrides.isVerified === undefined) {
+    merged.isVerified = true;
+  }
+
+  if (merged.user && (merged.user as any).emailVerified === undefined) {
+    merged.user = {
+      ...merged.user,
+      emailVerified: merged.isVerified,
+    } as AuthContextValue["user"];
+  }
+
+  return merged;
 }
 
 export interface CreateTestRouterOptions {

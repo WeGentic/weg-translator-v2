@@ -1,4 +1,4 @@
-.wizard-v2-dropzone-title {
+.wizard-project-manager-dropzone-title {
   font-size: 0.86rem;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -7,14 +7,14 @@
   margin: 0;
 }
 
-.wizard-v2-dropzone-subtitle {
+.wizard-project-manager-dropzone-subtitle {
   margin: 0;
   font-size: 1rem;
   line-height: 1.45;
   color: var(--color-victorian-peacock-100);
 }
 
-.wizard-v2-file-input {
+.wizard-project-manager-file-input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -25,14 +25,14 @@
   border: 0;
 }
 
-.wizard-v2-dropzone-actions {
+.wizard-project-manager-dropzone-actions {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
 }
 
-.wizard-v2-dropzone {
+.wizard-project-manager-dropzone {
   position: relative;
   height: 180px;
   gap: 10px;
@@ -45,10 +45,10 @@
   outline-offset: 10px;
   outline: 2px dashed var(--color-gradient-parchment-peacock-800);
   background: linear-gradient(
-      45deg,
-      var(--color-gradient-parchment-peacock-800) 0%,
-      var(--color-gradient-parchment-peacock-600) 100%
-    );
+    45deg,
+    var(--color-gradient-parchment-peacock-800) 0%,
+    var(--color-gradient-parchment-peacock-600) 100%
+  );
   cursor: pointer;
   transition:
     border-color 160ms ease,
@@ -58,25 +58,25 @@
   overflow: hidden;
 }
 
-.wizard-v2-dropzone:hover {
+.wizard-project-manager-dropzone:hover {
   border: 1px solid var(--color-secondary);
   background: linear-gradient(
-      45deg,
-      var(--color-gradient-parchment-peacock-800) 0%,
-      var(--color-gradient-parchment-peacock-800) 100%
-    );
+    45deg,
+    var(--color-gradient-parchment-peacock-800) 0%,
+    var(--color-gradient-parchment-peacock-800) 100%
+  );
   transform: translateY(-1px);
 }
 
-.wizard-v2-dropzone:focus-visible {
+.wizard-project-manager-dropzone:focus-visible {
   border-color: color-mix(in oklab, var(--color-ring) 55%, transparent);
   box-shadow:
     0 0 0 2px color-mix(in oklab, var(--color-ring) 35%, transparent),
     0 22px 48px -28px color-mix(in oklab, black 35%, transparent);
 }
 
-.wizard-v2-dropzone.is-active,
-.wizard-v2-dropzone.is-over {
+.wizard-project-manager-dropzone.is-active,
+.wizard-project-manager-dropzone.is-over {
   border-color: color-mix(in oklab, var(--color-ring) 60%, transparent);
   background: linear-gradient(
       135deg,
@@ -89,7 +89,7 @@
     0 1px 0 0 color-mix(in oklab, white 22%, transparent) inset;
 }
 
-.wizard-v2-dropzone-glow {
+.wizard-project-manager-dropzone-glow {
   position: absolute;
   inset: 1px;
   border-radius: inherit;
@@ -105,13 +105,13 @@
   z-index: 0;
 }
 
-.wizard-v2-dropzone:hover .wizard-v2-dropzone-glow,
-.wizard-v2-dropzone.is-active .wizard-v2-dropzone-glow,
-.wizard-v2-dropzone.is-over .wizard-v2-dropzone-glow {
+.wizard-project-manager-dropzone:hover .wizard-project-manager-dropzone-glow,
+.wizard-project-manager-dropzone.is-active .wizard-project-manager-dropzone-glow,
+.wizard-project-manager-dropzone.is-over .wizard-project-manager-dropzone-glow {
   opacity: 0.45;
 }
 
-.wizard-v2-dropzone-body {
+.wizard-project-manager-dropzone-body {
   position: relative;
   z-index: 1;
   display: flex;
@@ -122,7 +122,7 @@
   gap: 14px;
 }
 
-.wizard-v2-dropzone-icon {
+.wizard-project-manager-dropzone-icon {
   flex-shrink: 0;
   width: 60px;
   height: 60px;
@@ -138,8 +138,7 @@
     0 1px 0 0 color-mix(in oklab, white 18%, transparent) inset;
 }
 
-
-.wizard-v2-dropzone-copy {
+.wizard-project-manager-dropzone-copy {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -147,7 +146,7 @@
   max-width: 420px;
 }
 
-.wizard-v2-dropzone-browse {
+.wizard-project-manager-dropzone-browse {
   align-self: center;
   display: inline-flex;
   align-items: center;
@@ -168,20 +167,20 @@
     transform 150ms ease;
 }
 
-.wizard-v2-dropzone-browse:hover {
+.wizard-project-manager-dropzone-browse:hover {
   border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
   background: color-mix(in oklab, var(--color-accent) 22%, var(--color-sidebar-accent) 60%);
   color: color-mix(in oklab, var(--color-primary) 95%, var(--color-antiwhite) 8%);
   transform: translateY(-1px);
 }
 
-.wizard-v2-dropzone-browse:focus-visible {
+.wizard-project-manager-dropzone-browse:focus-visible {
   outline: none;
   border-color: color-mix(in oklab, var(--color-ring) 45%, transparent);
   box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-ring) 30%, transparent);
 }
 
-.wizard-v2-dropzone-hint {
+.wizard-project-manager-dropzone-hint {
   position: relative;
   z-index: 1;
   margin: 0;

@@ -1,9 +1,15 @@
 // features/projects/hooks/useSidebarTwoContentSync.tsx
 import { useEffect, useMemo } from "react";
 import type { ProjectListItem } from "@/core/ipc";
-import { useLayoutStoreApi } from "@/app/shell/layout-context";
-import { ProjectsBatchActionsPanel } from "../components/ProjectsBatchActionsPanel";
+import { useLayoutSelector, useLayoutStoreApi } from "@/app/shell/layout-context";
 import { ProjectsOverviewCard } from "../components/ProjectsOverviewCard";
+import { FocusedProjectShortcut } from "../components/FocusedProjectShortcut";
+import {
+  dispatchProjectClear,
+  dispatchProjectSelection,
+  dispatchProjectSelectionClear,
+} from "@/modules/projects/events";
+import { useRegisterProjectSidebarModules } from "../sidebar/registerProjectSidebarModules";
 
 interface SidebarSyncArgs {
   selectedProjectIds: ReadonlyArray<string>;
@@ -11,33 +17,7 @@ interface SidebarSyncArgs {
   onBatchDelete: (ids: string[]) => Promise<void>;
   onOpenProject: (projectId: string) => void;
   onClearSelection: () => void;
-}
-
-function SidebarBatchActionsContent({
-  selectedCount,
-  selectedNames,
-  selectedIds,
-  onBatchDelete,
-  onClearSelection,
-  onOpenProject,
-}: {
-  selectedCount: number;
-  selectedNames: string[];
-  selectedIds: ReadonlyArray<string>;
-  onBatchDelete: (ids: string[]) => Promise<void>;
-  onClearSelection: () => void;
-  onOpenProject: (projectId: string) => void;
-}) {
-  return (
-    <ProjectsBatchActionsPanel
-      selectedCount={selectedCount}
-      selectedProjectNames={selectedNames}
-      selectedProjectIds={[...selectedIds]}
-      onBatchDelete={onBatchDelete}
-      onClearSelection={onClearSelection}
-      onOpenProject={onOpenProject}
-    />
-  );
+  openingProjectId: string | null;
 }
 
 function SidebarOverviewContent({
@@ -67,8 +47,11 @@ export function useSidebarTwoContentSync({
   onBatchDelete,
   onOpenProject,
   onClearSelection,
+  openingProjectId,
 }: SidebarSyncArgs) {
+  const focusedProject = useLayoutSelector((state) => state.focusedProject);
   const layoutStore = useLayoutStoreApi();
+  useRegisterProjectSidebarModules();
 
   const projectLookup = useMemo(() => {
     const lookup = new Map<string, ProjectListItem>();
@@ -124,22 +107,22 @@ export function useSidebarTwoContentSync({
     };
   }, [projects]);
 
-  const batchActionsContent = useMemo(() => {
+  const selectionPayload = useMemo(() => {
     if (selectionSummary.count === 0) {
       return null;
     }
-    return (
-      <SidebarBatchActionsContent
-        key="sidebar-selected-projects"
-        selectedCount={selectionSummary.count}
-        selectedNames={selectionSummary.names}
-        selectedIds={selectedProjectIds}
-        onBatchDelete={onBatchDelete}
-        onClearSelection={onClearSelection}
-        onOpenProject={onOpenProject}
-      />
-    );
-  }, [onBatchDelete, onClearSelection, onOpenProject, selectedProjectIds, selectionSummary]);
+    return {
+      count: selectionSummary.count,
+      selectedIds: [...selectedProjectIds],
+      selectedNames: [...selectionSummary.names],
+      onBatchDelete,
+      onClearSelection,
+      onOpenProject,
+      openingProjectId,
+      view: "projects" as const,
+      allowedViews: ["projects", "dashboard"] as const,
+    };
+  }, [onBatchDelete, onClearSelection, onOpenProject, openingProjectId, selectedProjectIds, selectionSummary]);
 
   const overviewContent = useMemo(() => {
     if (selectionSummary.count > 0) {
@@ -157,28 +140,54 @@ export function useSidebarTwoContentSync({
     );
   }, [overviewSummary, selectionSummary.count]);
 
-  // Sync layout slot whenever either memoised React node changes; cleanup only clears
-  // our content if it is still the active entry to avoid stomping other sidebar updates.
+  const focusedProjectContent = useMemo(() => {
+    if (selectionSummary.count > 0 || !focusedProject) {
+      return null;
+    }
+    return (
+      <FocusedProjectShortcut
+        key={`sidebar-focused-project-${focusedProject.projectId}`}
+        projectId={focusedProject.projectId}
+        projectName={focusedProject.projectName}
+        isOpening={openingProjectId === focusedProject.projectId}
+        onOpen={onOpenProject}
+        onDismiss={dispatchProjectClear}
+      />
+    );
+  }, [dispatchProjectClear, focusedProject, onOpenProject, openingProjectId, selectionSummary.count]);
+
   useEffect(() => {
-    const store = layoutStore.getState();
-    const content = batchActionsContent ?? overviewContent ?? null;
-
-    if (!content) {
-      store.setSidebarTwoContent(null);
-      return;
+    const store = layoutStore;
+    if (selectionSummary.count > 0) {
+      store.getState().setSidebarTwoLegacyContent(null);
+      return () => {
+        store.getState().setSidebarTwoLegacyContent(null);
+      };
     }
 
-    if (!store.sidebarTwo.visible) {
-      store.setSidebarTwo({ visible: true });
-    }
-
-    store.setSidebarTwoContent(content);
-
+    const content = focusedProjectContent ?? overviewContent ?? null;
+    store.getState().setSidebarTwoLegacyContent(content);
     return () => {
-      const currentContent = layoutStore.getState().sidebarTwoContent;
-      if (currentContent === content) {
-        layoutStore.getState().setSidebarTwoContent(null);
-      }
+      store.getState().setSidebarTwoLegacyContent(null);
     };
-  }, [batchActionsContent, overviewContent, layoutStore]);
+  }, [focusedProjectContent, layoutStore, overviewContent, selectionSummary.count]);
+
+  useEffect(() => {
+    if (selectionPayload) {
+      dispatchProjectSelection(selectionPayload);
+      return () => {
+        dispatchProjectSelectionClear();
+      };
+    }
+
+    dispatchProjectSelectionClear();
+    return undefined;
+  }, [selectionPayload]);
+
+  useEffect(() => {
+    if (!selectionPayload && !focusedProject) {
+      // Overview content remains on legacy path for now; ensure selection module clears.
+      dispatchProjectSelectionClear();
+    }
+  }, [selectionPayload, focusedProject]);
 }

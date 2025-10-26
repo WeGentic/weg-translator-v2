@@ -5,3 +5,4 @@ export * from "./events";
 export * from "./fs";
 export * from "./openxliff";
 export * from "./jliff";
+export * from "./places";

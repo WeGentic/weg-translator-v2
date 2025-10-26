@@ -8,6 +8,17 @@ import {
 import { useStore } from "zustand";
 
 import { createLayoutStore, type LayoutConfig, type LayoutState, type LayoutStore } from "./layout-store";
+import type { SidebarTwoRegistryState } from "./sidebar-two-registry/types";
+
+let layoutStoreInstance: LayoutStore | null = null;
+
+export function setLayoutStoreInstance(store: LayoutStore | null) {
+  layoutStoreInstance = store;
+}
+
+export function getLayoutStoreInstance(): LayoutStore | null {
+  return layoutStoreInstance;
+}
 
 /**
  * Props accepted by the {@link LayoutProvider}. The optional {@link LayoutConfig}
@@ -57,6 +68,13 @@ export function LayoutProvider({ children, config }: LayoutProviderProps) {
   const store = storeRef.current;
 
   useEffect(() => {
+    setLayoutStoreInstance(store);
+    return () => {
+      setLayoutStoreInstance(null);
+    };
+  }, [store]);
+
+  useEffect(() => {
     if (config) {
       store.getState().applyConfig(config);
     }
@@ -93,6 +111,33 @@ export function useLayoutActions<T>(selector: (state: LayoutState) => T): T {
  */
 export function useLayoutStoreApi(): LayoutStore {
   return useLayoutStoreContext();
+}
+
+/**
+ * Selects data from the sidebar_two registry slice. This keeps consumers decoupled
+ * from the broader layout state surface.
+ */
+export function useSidebarTwoRegistrySelector<T>(selector: (state: SidebarTwoRegistryState) => T): T {
+  return useLayoutSelector((state) => selector(state.sidebarTwoRegistry));
+}
+
+/**
+ * Exposes registry actions in a memo-friendly shape so feature modules can
+ * register/activate/deactivate sidebar content.
+ */
+export function useSidebarTwoRegistryActions() {
+  return useLayoutActions((state) => ({
+    registerSidebarTwoModule: state.registerSidebarTwoModule,
+    unregisterSidebarTwoModule: state.unregisterSidebarTwoModule,
+    activateSidebarTwoModule: state.activateSidebarTwoModule,
+    deactivateSidebarTwoModule: state.deactivateSidebarTwoModule,
+    clearSidebarTwoModules: state.clearSidebarTwoModules,
+    setSidebarTwoLegacyContent: state.setSidebarTwoLegacyContent,
+    serializeSidebarTwoModules: state.serializeSidebarTwoModules,
+    hydrateSidebarTwoModules: state.hydrateSidebarTwoModules,
+    setSidebarTwoFocusTarget: state.setSidebarTwoFocusTarget,
+    requestSidebarTwoFocus: state.requestSidebarTwoFocus,
+  }));
 }
 
 export { LayoutStoreContext };

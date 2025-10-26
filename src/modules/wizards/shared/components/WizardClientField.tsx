@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 
 import type { ClientRecord } from "@/shared/types/database";
 import { Input } from "@/shared/ui/input";
@@ -34,6 +34,7 @@ export function WizardClientField({
   const SEARCH_THRESHOLD = 3;
   const listboxId = useId();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const inputContainerRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
 
@@ -76,6 +77,15 @@ export function WizardClientField({
     if (!isOpen) {
       setIsOpen(true);
     }
+  };
+
+  const handleClearSelection = () => {
+    onResetSelection();
+    onValueChange("");
+    setIsOpen(false);
+    setHighlightedIndex(null);
+    const input = inputContainerRef.current?.querySelector("input");
+    input?.focus();
   };
 
   const handleSelect = (client: ClientRecord) => {
@@ -149,29 +159,42 @@ export function WizardClientField({
     isOpen && highlightedIndex !== null && highlightedIndex < filteredOptions.length ? highlightedIndex : null;
 
   const activeDescendantId = activeIndex !== null ? `${listboxId}-option-${activeIndex}` : undefined;
+  const showClearButton = Boolean(selectedClientUuid);
 
   return (
-    <div className="wizard-v2-autocomplete" ref={containerRef}>
-      <Input
-        id={inputId}
-        role="combobox"
-        aria-expanded={isOpen}
-        aria-controls={isOpen ? listboxId : undefined}
-        aria-autocomplete="list"
-        aria-activedescendant={activeDescendantId}
-        value={value}
-        onChange={(event) => handleValueChange(event.target.value)}
-        onFocus={() => setIsOpen(true)}
-        onKeyDown={handleKeyDown}
-        placeholder="Search clients…"
-        className="wizard-input-field"
-        autoComplete="off"
-      />
+    <div className="wizard-project-manager-autocomplete" ref={containerRef}>
+      <div className="wizard-project-manager-autocomplete-input" ref={inputContainerRef}>
+        <Input
+          id={inputId}
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={isOpen ? listboxId : undefined}
+          aria-autocomplete="list"
+          aria-activedescendant={activeDescendantId}
+          value={value}
+          onChange={(event) => handleValueChange(event.target.value)}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder="Search clients…"
+          className="wizard-input-field"
+          autoComplete="off"
+        />
+        {showClearButton ? (
+          <button
+            type="button"
+            className="wizard-project-manager-autocomplete-clear"
+            onClick={handleClearSelection}
+            aria-label="Clear selected client"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
 
       {isOpen ? (
-        <div className="wizard-v2-autocomplete-menu" role="listbox" id={listboxId}>
+        <div className="wizard-project-manager-autocomplete-menu" role="listbox" id={listboxId}>
           {isLoading ? (
-            <div className="wizard-v2-autocomplete-status">
+            <div className="wizard-project-manager-autocomplete-status">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               <span>Loading clients…</span>
             </div>
@@ -188,7 +211,7 @@ export function WizardClientField({
                     role="option"
                     aria-selected={isSelected}
                     className={cn(
-                      "wizard-v2-autocomplete-item",
+                      "wizard-project-manager-autocomplete-item",
                       isHighlighted && "is-highlighted",
                       isSelected && "is-selected",
                     )}
@@ -196,24 +219,24 @@ export function WizardClientField({
                     onMouseLeave={() => setHighlightedIndex(null)}
                     onClick={() => handleSelect(option)}
                   >
-                    <span className="wizard-v2-autocomplete-primary">{option.name}</span>
-                    {option.email ? <span className="wizard-v2-autocomplete-secondary">{option.email}</span> : null}
+                    <span className="wizard-project-manager-autocomplete-primary">{option.name}</span>
+                    {option.email ? <span className="wizard-project-manager-autocomplete-secondary">{option.email}</span> : null}
                   </button>
                 );
               })
             ) : (
-              <div className="wizard-v2-autocomplete-status">
+              <div className="wizard-project-manager-autocomplete-status">
                 No saved clients match yet. Use the hint below to add one.
               </div>
             )
           ) : (
-            <div className="wizard-v2-autocomplete-status">Start typing at least three characters to search.</div>
+            <div className="wizard-project-manager-autocomplete-status">Start typing at least three characters to search.</div>
           )}
         </div>
       ) : null}
 
       {errorMessage ? (
-        <p className="wizard-v2-autocomplete-error" role="status">
+        <p className="wizard-project-manager-autocomplete-error" role="status">
           {errorMessage}
         </p>
       ) : null}
@@ -221,7 +244,7 @@ export function WizardClientField({
       {showCreateHint ? (
         <button
           type="button"
-          className="wizard-v2-client-hint"
+          className="wizard-project-manager-client-hint"
           onClick={() => onCreateRequested(value.trim())}
         >
           Can&apos;t find &quot;{value.trim()}&quot;? Click to add a new Client.

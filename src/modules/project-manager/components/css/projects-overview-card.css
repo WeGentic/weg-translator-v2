@@ -1,0 +1,42 @@
+.projects-overview-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--color-background);
+  border: 1px solid color-mix(in srgb, var(--color-neverything-900) 8%, transparent);
+  box-shadow: 0 12px 24px -18px color-mix(in srgb, var(--color-neverything-900) 40%, transparent);
+}
+
+@media (min-width: 480px) {
+  .projects-overview-card {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.projects-overview-card__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.projects-overview-card__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-victorian-peacock-900);
+  line-height: 1;
+}
+
+.projects-overview-card__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-neverything-800);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.projects-overview-card__hint {
+  font-size: 0.75rem;
+  color: var(--color-neverything-600);
+}

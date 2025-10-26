@@ -1,11 +1,11 @@
-.wizard-v2-client-footer {
+.wizard-project-manager-client-footer {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   padding-top: 12px;
 }
 
-.wizard-v2-client-error {
+.wizard-project-manager-client-error {
   margin: 0;
   font-size: 0.78rem;
   color: color-mix(in oklab, var(--color-destructive) 55%, var(--color-antiwhite) 15%);

@@ -95,17 +95,17 @@ export function EditClientDialog({ open, onOpenChange, target, onAfterSave }: Ed
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("wizard-v2-client-dialog")}>
+      <DialogContent className={cn("wizard-project-manager-client-dialog")}>
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription>Update client details and save your changes.</DialogDescription>
         </DialogHeader>
 
-        <form className="wizard-v2-client-form" onSubmit={handleSubmit}>
-          <div className="wizard-v2-client-body">
-            <div className="wizard-v2-client-grid">
-              <div className="wizard-v2-client-field">
-                <label className="wizard-v2-client-label" htmlFor="edit-client-name">
+        <form className="wizard-project-manager-client-form" onSubmit={handleSubmit}>
+          <div className="wizard-project-manager-client-body">
+            <div className="wizard-project-manager-client-grid">
+              <div className="wizard-project-manager-client-field">
+                <label className="wizard-project-manager-client-label" htmlFor="edit-client-name">
                   Client name
                 </label>
                 <Input
@@ -118,8 +118,8 @@ export function EditClientDialog({ open, onOpenChange, target, onAfterSave }: Ed
                   autoFocus
                 />
               </div>
-              <div className="wizard-v2-client-field">
-                <label className="wizard-v2-client-label" htmlFor="edit-client-email">
+              <div className="wizard-project-manager-client-field">
+                <label className="wizard-project-manager-client-label" htmlFor="edit-client-email">
                   Contact email
                 </label>
                 <Input
@@ -131,8 +131,8 @@ export function EditClientDialog({ open, onOpenChange, target, onAfterSave }: Ed
                   disabled={disabled}
                 />
               </div>
-              <div className="wizard-v2-client-field">
-                <label className="wizard-v2-client-label" htmlFor="edit-client-phone">
+              <div className="wizard-project-manager-client-field">
+                <label className="wizard-project-manager-client-label" htmlFor="edit-client-phone">
                   Phone
                 </label>
                 <Input
@@ -144,8 +144,8 @@ export function EditClientDialog({ open, onOpenChange, target, onAfterSave }: Ed
                   disabled={disabled}
                 />
               </div>
-              <div className="wizard-v2-client-field">
-                <label className="wizard-v2-client-label" htmlFor="edit-client-vat">
+              <div className="wizard-project-manager-client-field">
+                <label className="wizard-project-manager-client-label" htmlFor="edit-client-vat">
                   VAT number
                 </label>
                 <Input
@@ -156,8 +156,8 @@ export function EditClientDialog({ open, onOpenChange, target, onAfterSave }: Ed
                   disabled={disabled}
                 />
               </div>
-              <div className="wizard-v2-client-field wizard-v2-client-field--address">
-                <label className="wizard-v2-client-label" htmlFor="edit-client-address">
+              <div className="wizard-project-manager-client-field wizard-project-manager-client-field--address">
+                <label className="wizard-project-manager-client-label" htmlFor="edit-client-address">
                   Address
                 </label>
                 <Textarea
@@ -169,8 +169,8 @@ export function EditClientDialog({ open, onOpenChange, target, onAfterSave }: Ed
                   disabled={disabled}
                 />
               </div>
-              <div className="wizard-v2-client-field wizard-v2-client-field--notes">
-                <label className="wizard-v2-client-label" htmlFor="edit-client-notes">
+              <div className="wizard-project-manager-client-field wizard-project-manager-client-field--notes">
+                <label className="wizard-project-manager-client-label" htmlFor="edit-client-notes">
                   Notes
                 </label>
                 <Textarea
@@ -186,12 +186,12 @@ export function EditClientDialog({ open, onOpenChange, target, onAfterSave }: Ed
           </div>
 
           {error ? (
-            <p className="wizard-v2-client-error" role="alert">
+            <p className="wizard-project-manager-client-error" role="alert">
               {error}
             </p>
           ) : null}
 
-          <DialogFooter className="wizard-v2-client-footer">
+          <DialogFooter className="wizard-project-manager-client-footer">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
               Cancel
             </Button>

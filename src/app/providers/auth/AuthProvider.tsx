@@ -21,11 +21,13 @@ interface User {
   id: string;
   email: string;
   name?: string;
+  emailVerified: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isVerified: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
@@ -43,11 +45,13 @@ function mapUser(supabaseUser: SupabaseUser | null): User | null {
       ? supabaseUser.user_metadata.full_name
       : email.split("@")[0] ?? "";
   const name = derivedName || email || "Authenticated user";
+  const emailVerified = Boolean(supabaseUser.email_confirmed_at);
 
   return {
     id: supabaseUser.id,
     email,
     name,
+    emailVerified,
   };
 }
 
@@ -107,8 +111,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw error;
       }
 
+      const supabaseUser = data.user ?? data.session?.user ?? null;
+      const verified = Boolean(supabaseUser?.email_confirmed_at);
+      if (!verified || !supabaseUser) {
+        await supabase.auth.signOut();
+        setSession(null);
+        setUser(null);
+        void logger.warn("Blocked login for unverified user", { email });
+        throw new Error("Please verify your email before signing in. Check your inbox for the confirmation link.");
+      }
+
       setSession(data.session);
-      setUser(mapUser(data.session?.user ?? data.user ?? null));
+      setUser(mapUser(supabaseUser));
     } finally {
       setIsLoading(false);
     }
@@ -121,23 +135,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = useMemo<AuthContextType>(
-    () => ({
+  const value = useMemo<AuthContextType>(() => {
+    const isVerified = Boolean(user?.emailVerified);
+    const isAuthenticated = Boolean(session?.user && isVerified);
+
+    return {
       user,
-      isAuthenticated: !!session?.user,
+      isAuthenticated,
+      isVerified,
       login,
       logout,
       isLoading,
       session,
-    }),
-    [user, session, isLoading],
-  );
+    };
+  }, [user, session, isLoading, login, logout]);
 
   useEffect(() => {
     let disposed = false;
 
     async function ensureDomainUserProfile(currentUser: User | null) {
       if (!currentUser) {
+        lastSyncedUserRef.current = null;
+        return;
+      }
+
+      if (!currentUser.emailVerified) {
         lastSyncedUserRef.current = null;
         return;
       }

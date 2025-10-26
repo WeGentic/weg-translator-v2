@@ -1,13 +1,20 @@
-import { useMemo, type CSSProperties } from "react";
+import { useMemo, type CSSProperties, type MouseEvent } from "react";
+import { Link } from "@tanstack/react-router";
 
 import LogoMark from "@/assets/LOGO-SVG.svg";
 import LoginBackground from "@/assets/LOGIN_BACKGROUND_.png";
 
+import { buttonVariants } from "@/shared/ui/button";
+import { cn } from "@/shared/utils/class-names";
+import { usePageTransition } from "@/shared/transitions/PageTransitionProvider";
+
 import { LoginForm } from "../components/LoginForm";
 
-import "./login-page.css";
+import "./css/login-page.css";
 
 export function LoginRoute() {
+  const { setMessage } = usePageTransition();
+
   const backgroundStyle = useMemo(
     () =>
       ({
@@ -15,6 +22,23 @@ export function LoginRoute() {
       }) as CSSProperties,
     [],
   );
+
+  const toggleHelperText = "Create an account for your Organization.";
+
+  const handleNavigateToRegister = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.shiftKey
+    ) {
+      return;
+    }
+
+    setMessage("Preparing registration form…");
+  };
 
   return (
     <div className="login-page">
@@ -24,19 +48,34 @@ export function LoginRoute() {
           <div className="login-page__brand" data-testid="login-brand">
             <img
               src={LogoMark}
-              alt="Weg Translator logo"
-              className="login-page__brand-logo"
-              width={88}
-              height={88}
+              alt="Tr-entic logo"
+              className="login-page__brand-logo mt-6"
+              width={77}
+              height={77}
               loading="eager"
             />
             <div className="login-page__brand-copy">
-              <h1 className="login-page__brand-title">Weg Translator</h1>
-              <p className="login-page__brand-subtitle">AI-powered localization for your documents</p>
+              <h1 className="login-page__brand-title">Tr-entic</h1>
+              <p className="login-page__brand-subtitle">Next-Gen AI-powered Translation and Localization Framework</p>
             </div>
           </div>
-          <div className="login-page__panel-form">
+          <div id="login-panel-card">
             <LoginForm />
+          </div>
+          <div className="login-page__panel-toggle">
+            <span className="login-page__divider" role="presentation" />
+            <p className="login-page__toggle-copy" aria-live="polite">
+              {toggleHelperText}
+            </p>
+            <Link
+              to="/register"
+              preload="intent"
+              onClick={handleNavigateToRegister}
+              aria-label="Navigate to registration page"
+              className={cn(buttonVariants({ variant: "default", size: "lg" }), "login-page__toggle-button mb-6")}
+            >
+              Create a new Account
+            </Link>
           </div>
         </section>
       </main>

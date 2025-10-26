@@ -26,6 +26,7 @@ import { WizardNewClientDialog, type WizardNewClientFormValues } from "@/modules
 
 import { WizardDetailsStep } from "./components/WizardDetailsStep";
 import { WizardFeedbackOverlay } from "./components/WizardFeedbackOverlay";
+import { WizardClientTableDialog } from "./components/WizardClientTableDialog";
 import { WizardFilesStep } from "./components/WizardFilesStep";
 import { WizardFooter } from "./components/WizardFooter";
 import { createErrorFeedback } from "./feedback";
@@ -67,6 +68,7 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
   const [isClientDialogOpen, setClientDialogOpen] = useState(false);
   const [clientDialogInitialName, setClientDialogInitialName] = useState(() => initialDraftRef.current?.clientName ?? "");
   const [clientDialogSession, setClientDialogSession] = useState(0);
+  const [isClientTableOpen, setClientTableOpen] = useState(false);
   const [projectField, setProjectField] = useState(() => initialDraftRef.current?.projectField ?? "");
   const [notes, setNotes] = useState(() => initialDraftRef.current?.notes ?? "");
   const [sourceLanguage, setSourceLanguage] = useState<string | null>(
@@ -164,6 +166,14 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
     }
   }, []);
 
+  const openClientTableDialog = useCallback(() => {
+    setClientTableOpen(true);
+  }, []);
+
+  const handleClientTableOpenChange = useCallback((nextOpen: boolean) => {
+    setClientTableOpen(nextOpen);
+  }, []);
+
   const openClientDialog = useCallback((initialName: string) => {
     setClientDialogInitialName(initialName.trim());
     setClientDialogSession((value) => value + 1);
@@ -205,6 +215,18 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
       }
     },
     [handleClientSelect, toast, upsert],
+  );
+
+  const handleClientTableSelect = useCallback(
+    (client: ClientRecord | null) => {
+      if (client) {
+        handleClientSelect(client);
+      } else {
+        setSelectedClientUuid(null);
+        setClientName("");
+      }
+    },
+    [handleClientSelect],
   );
 
   const canClear = useMemo(() => {
@@ -314,6 +336,7 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
     setClientDialogInitialName("");
     setClientDialogOpen(false);
     setClientDialogSession(0);
+    setClientTableOpen(false);
     resetFiles();
     resetDragState();
     setLocalResetCounter((value) => value + 1);
@@ -331,6 +354,7 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
   useEffect(() => {
     if (!open) {
       setClientDialogOpen(false);
+      setClientTableOpen(false);
       resetDragState();
       dismissFeedback();
     }
@@ -350,7 +374,7 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         aria-label="Create new project"
-        className={cn("wizard-v2-dialog")}
+        className={cn("wizard-project-manager-dialog")}
         onInteractOutside={(event) => {
           event.preventDefault();
         }}
@@ -358,17 +382,17 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
           event.preventDefault();
         }}
       >
-        <div className="wizard-v2-modal">
-          <header className="wizard-v2-header">
-            <div className="wizard-v2-header-bar">
-              <h2 className="wizard-v2-title">{wizardHeaderTitle}</h2>
-              <DialogClose type="button" className="wizard-v2-close" aria-label="Close wizard">
+      
+          <header className="wizard-project-manager-header">
+            <div className="wizard-project-manager-header-bar">
+              <h2 className="wizard-project-manager-title">{wizardHeaderTitle}</h2>
+              <DialogClose type="button" className="wizard-project-manager-close" aria-label="Close wizard">
                 <X className="h-4 w-4" aria-hidden="true" />
               </DialogClose>
             </div>
           </header>
 
-          <form className="wizard-v2-form mt-4" aria-label="New project details">
+          <form className="wizard-project-manager-form mt-4" aria-label="New project details">
             {step === "details" ? (
               <WizardDetailsStep
                 key={localResetCounter}
@@ -382,6 +406,7 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
                 selectedClientUuid={selectedClientUuid}
                 onClientSelect={handleClientSelect}
                 onRequestClientCreate={openClientDialog}
+                onRequestClientTable={openClientTableDialog}
                 projectField={projectField}
                 onProjectFieldChange={setProjectField}
                 notes={notes}
@@ -428,7 +453,7 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
             onDismiss={dismissFeedback}
             onRetry={!submissionPending ? handleRetryFinalizeClick : undefined}
           />
-        </div>
+     
       </DialogContent>
 
       <WizardNewClientDialog
@@ -437,6 +462,17 @@ export function CreateProjectWizardV2({ open, onOpenChange, onProjectCreated }: 
         onOpenChange={closeClientDialog}
         initialName={clientDialogInitialName || clientName}
         onSubmit={handleClientDialogSubmit}
+      />
+
+      <WizardClientTableDialog
+        open={isClientTableOpen}
+        onOpenChange={handleClientTableOpenChange}
+        clients={clients}
+        selectedClientUuid={selectedClientUuid}
+        onSelectClient={handleClientTableSelect}
+        isLoading={clientsLoading}
+        errorMessage={clientsError}
+        onRefresh={refreshClients}
       />
     </Dialog>
   );

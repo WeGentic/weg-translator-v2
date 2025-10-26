@@ -102,4 +102,5 @@ export interface ProjectManagerContentProps {
   onRequestDelete?: (projectId: string, projectName: string) => void;
   selectedRows?: ReadonlySet<string>;
   onRowSelectionChange?: (selectedRows: Set<string>) => void;
+  openingProjectId?: string | null;
 }

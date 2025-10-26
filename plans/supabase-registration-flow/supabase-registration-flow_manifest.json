@@ -1,0 +1,13 @@
+{
+  "project_name": "supabase-registration-flow",
+  "mode": "GenerateArtifacts",
+  "artifacts": [
+    {"path": "plans/supabase-registration-flow/supabase-registration-flow_CodebaseAnalysis.md", "status": "created"},
+    {"path": "plans/supabase-registration-flow/supabase-registration-flow_Requirements.md", "status": "created"},
+    {"path": "plans/supabase-registration-flow/supabase-registration-flow_Design.md", "status": "created"},
+    {"path": "plans/supabase-registration-flow/supabase-registration-flow_TaskList.md", "status": "created"},
+    {"path": "plans/supabase-registration-flow/supabase-registration-flow_Report.md", "status": "created"},
+    {"path": "plans/supabase-registration-flow/supabase-registration-flow_Mindmap.mm", "status": "created"}
+  ],
+  "notes": []
+}

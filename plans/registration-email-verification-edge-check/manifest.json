@@ -1,0 +1,33 @@
+{
+  "project_name": "registration-email-verification-edge-check",
+  "mode": "GenerateArtifacts",
+  "artifacts": [
+    {
+      "path": "registration-email-verification-edge-check_CodebaseAnalysis.md",
+      "status": "created"
+    },
+    {
+      "path": "registration-email-verification-edge-check_Requirements.md",
+      "status": "created"
+    },
+    {
+      "path": "registration-email-verification-edge-check_Design.md",
+      "status": "created"
+    },
+    {
+      "path": "registration-email-verification-edge-check_TaskList.md",
+      "status": "created"
+    },
+    {
+      "path": "registration-email-verification-edge-check_Report.md",
+      "status": "created"
+    },
+    {
+      "path": "registration-email-verification-edge-check_Mindmap.mm",
+      "status": "created"
+    }
+  ],
+  "notes": [
+    "Assumed admin email field is the primary value to probe; adjust if company email needs similar handling."
+  ]
+}

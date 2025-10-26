@@ -28,14 +28,16 @@
   height: 100%;
   flex-direction: column;
   overflow: hidden;
-  border-top-left-radius: var(--radius-xl);
-  border-bottom-left-radius: var(--radius-xl);
-  border-top-width: 1px;
-  border-left-width: 1px;
-  border-bottom-width: 1px;
-  border-color: var(--color-primary);
-  background-color: var(--color-writers-parchment-100);
-  box-shadow: var(--color-onBackground);
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+
+  border-color: none  ;
+   background: linear-gradient(
+    135deg,
+    var(--color-accent) 0%,
+    color-mix(in oklch, var(--color-accent) 25%, transparent) 100%
+  );
+  box-shadow: rgba(0, 0, 255, 0.16) 0px 3px 6px, rgba(0, 0, 255, 0.23) 0px 3px 6px;
 }
 
 .dashboard-header-zone {
@@ -117,4 +119,11 @@
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.content-main-header-text {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-neverything-950);
+  text-shadow: rgba(0, 0, 0, 0.16) 0px 3px 3px, rgba(0, 0, 0, 0.23) 0px 3px 3px;
 }

@@ -39,10 +39,10 @@ export function WizardFooter({
 }: WizardFooterProps) {
   if (step === "details") {
     return (
-      <footer className="wizard-v2-actions">
+      <footer className="wizard-project-manager-actions">
         <button
           type="button"
-          className="wizard-v2-action wizard-v2-action--clear"
+          className="wizard-project-manager-action wizard-project-manager-action--clear"
           onClick={onClear}
           disabled={!canClear}
         >
@@ -51,17 +51,17 @@ export function WizardFooter({
         </button>
 
         {isNextEnabled ? (
-          <button type="button" className="wizard-v2-action wizard-v2-action--next" onClick={onNext}>
+          <button type="button" className="wizard-project-manager-action wizard-project-manager-action--next" onClick={onNext}>
             <span>Next</span>
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </button>
         ) : (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="wizard-v2-tooltip-anchor">
+              <span className="wizard-project-manager-tooltip-anchor">
                 <button
                   type="button"
-                  className="wizard-v2-action wizard-v2-action--next"
+                  className="wizard-project-manager-action wizard-project-manager-action--next"
                   onClick={onNext}
                   disabled
                   aria-disabled="true"
@@ -79,8 +79,8 @@ export function WizardFooter({
   }
 
   return (
-    <footer className="wizard-v2-actions">
-      <button type="button" className="wizard-v2-action wizard-v2-action--back" onClick={onBack}>
+    <footer className="wizard-project-manager-actions">
+      <button type="button" className="wizard-project-manager-action wizard-project-manager-action--back" onClick={onBack}>
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         <span>Back</span>
       </button>
@@ -88,10 +88,10 @@ export function WizardFooter({
       {finalizeDisabled ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="wizard-v2-tooltip-anchor">
+            <span className="wizard-project-manager-tooltip-anchor">
               <button
                 type="button"
-                className="wizard-v2-action wizard-v2-action--next"
+                className="wizard-project-manager-action wizard-project-manager-action--next"
                 disabled
                 aria-disabled="true"
               >
@@ -107,7 +107,7 @@ export function WizardFooter({
       ) : (
         <button
           type="button"
-          className="wizard-v2-action wizard-v2-action--next"
+          className="wizard-project-manager-action wizard-project-manager-action--next"
           onClick={onFinalize}
           disabled={submissionPending || finalizeBusy}
         >

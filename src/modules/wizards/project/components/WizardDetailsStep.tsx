@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import { Check, ChevronDown, Plus, Search, X } from "lucide-react";
+import { PiUserList } from "react-icons/pi";
 
 import { COMMON_LANGUAGES } from "@/modules/project-manager/config";
 import type { EnhancedLanguageOption } from "../types";
@@ -39,6 +40,7 @@ interface WizardDetailsStepProps {
   selectedClientUuid: string | null;
   onClientSelect: (client: ClientRecord | null) => void;
   onRequestClientCreate: (initialName: string) => void;
+  onRequestClientTable: () => void;
   projectField: string;
   onProjectFieldChange: (value: string) => void;
   notes: string;
@@ -61,6 +63,7 @@ export function WizardDetailsStep({
   selectedClientUuid,
   onClientSelect,
   onRequestClientCreate,
+  onRequestClientTable,
   projectField,
   onProjectFieldChange,
   notes,
@@ -106,13 +109,13 @@ export function WizardDetailsStep({
       return (
         <>
           {option.flag ? (
-            <span aria-hidden="true" className="wizard-v2-option-flag">
+            <span aria-hidden="true" className="wizard-project-manager-option-flag">
               {option.flag}
             </span>
           ) : null}
-          <span className="wizard-v2-option-text">
-            <span className="wizard-v2-option-primary">{option.compactLabel || option.label}</span>
-            <span className="wizard-v2-option-secondary">{option.code}</span>
+          <span className="wizard-project-manager-option-text">
+            <span className="wizard-project-manager-option-primary">{option.compactLabel || option.label}</span>
+            <span className="wizard-project-manager-option-secondary">{option.code}</span>
           </span>
         </>
       );
@@ -121,7 +124,7 @@ export function WizardDetailsStep({
   );
 
   const renderLanguageChipLabel = useCallback((code: string) => {
-    return <span className="wizard-v2-chip-text">{code.toUpperCase()}</span>;
+    return <span className="wizard-project-manager-chip-text">{code.toUpperCase()}</span>;
   }, []);
 
   const renderProjectFieldLabel = useCallback((value: string) => {
@@ -152,12 +155,12 @@ export function WizardDetailsStep({
 
   return (
     <>
-      <div className="wizard-v2-field">
-        <Label htmlFor="wizard-v2-project-name" className="wizard-v2-label">
+      <div className="wizard-project-manager-field">
+        <Label htmlFor="wizard-project-manager-project-name" className="wizard-project-manager-label">
           Project name
         </Label>
         <Input
-          id="wizard-v2-project-name"
+          id="wizard-project-manager-project-name"
           value={projectName}
           onChange={(event) => onProjectNameChange(event.target.value)}
           placeholder="Provide a name for your project"
@@ -166,12 +169,12 @@ export function WizardDetailsStep({
         />
       </div>
 
-      <div className="wizard-v2-language-grid" role="group" aria-label="Language selection">
-        <section className="wizard-v2-language-panel" aria-labelledby="wizard-v2-source-label">
-          <div className="wizard-v2-language-header pt-[2.5px]">
-            <Label id="wizard-v2-source-label" 
-              htmlFor="wizard-v2-source-language"
-              className="wizard-v2-label mb-2">
+      <div className="wizard-project-manager-language-grid" role="group" aria-label="Language selection">
+        <section className="wizard-project-manager-language-panel" aria-labelledby="wizard-project-manager-source-label">
+          <div className="wizard-project-manager-language-header pt-[2.5px] h-[1.5rem]">
+            <Label id="wizard-project-manager-source-label" 
+              htmlFor="wizard-project-manager-source-language"
+              className="wizard-project-manager-label mb-2">
               Source language
             </Label>
           </div>
@@ -179,34 +182,34 @@ export function WizardDetailsStep({
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="wizard-v2-combobox-trigger wizard-v2-control"
-                id="wizard-v2-source-language"
+                className="wizard-project-manager-combobox-trigger wizard-project-manager-control"
+                id="wizard-project-manager-source-language"
                 aria-required="true"
               >
-                <span className="wizard-v2-combobox-content">
+                <span className="wizard-project-manager-combobox-content">
                   {sourceLanguage ? (
-                    <span className="wizard-v2-combobox-value">{renderLanguageLabel(sourceLanguage)}</span>
+                    <span className="wizard-project-manager-combobox-value">{renderLanguageLabel(sourceLanguage)}</span>
                   ) : (
-                    <span className="wizard-v2-combobox-placeholder">Select a source language</span>
+                    <span className="wizard-project-manager-combobox-placeholder">Select a source language</span>
                   )}
                 </span>
                 <ChevronDown className="h-4 w-4 opacity-70" aria-hidden="true" />
               </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="wizard-v2-combobox">
-              <div className="wizard-v2-combobox-search">
-                <Search className="wizard-v2-search-icon" aria-hidden="true" />
+            <PopoverContent align="start" className="wizard-project-manager-combobox">
+              <div className="wizard-project-manager-combobox-search">
+                <Search className="wizard-project-manager-search-icon" aria-hidden="true" />
                 <Input
                   autoFocus
                   value={sourceSearch}
                   onChange={(event) => setSourceSearch(event.target.value)}
                   placeholder="Search languages…"
-                  className="wizard-v2-search-input"
+                  className="wizard-project-manager-search-input-language"
                 />
               </div>
               <div
                 role="listbox"
-                className="wizard-v2-option-list"
+                className="wizard-project-manager-option-list"
                 aria-label="Source language options"
                 onWheel={(event) => event.stopPropagation()}
               >
@@ -216,7 +219,7 @@ export function WizardDetailsStep({
                     <button
                       type="button"
                       key={option.code}
-                      className={cn("wizard-v2-option", isSelected && "is-selected")}
+                      className={cn("wizard-project-manager-option", isSelected && "is-selected")}
                       role="option"
                       aria-selected={isSelected}
                       onClick={() => {
@@ -224,7 +227,7 @@ export function WizardDetailsStep({
                         setSourceOpen(false);
                       }}
                     >
-                      <span className="wizard-v2-option-main">{renderLanguageLabel(option.code)}</span>
+                      <span className="wizard-project-manager-option-main">{renderLanguageLabel(option.code)}</span>
                       {isSelected ? <Check className="h-4 w-4" aria-hidden="true" /> : null}
                     </button>
                   );
@@ -234,47 +237,47 @@ export function WizardDetailsStep({
           </Popover>
         </section>
 
-        <section className="wizard-v2-language-panel" aria-labelledby="wizard-v2-target-label">
-          <div className="wizard-v2-language-header">
-            <Label id="wizard-v2-target-label" 
-              htmlFor="wizard-v2-target-language-trigger"
-              className="wizard-v2-label">
+        <section className="wizard-project-manager-language-panel" aria-labelledby="wizard-project-manager-target-label">
+          <div className="wizard-project-manager-language-header pt-[2.5px] h-[1.5rem]">
+            <Label id="wizard-project-manager-target-label" 
+              htmlFor="wizard-project-manager-target-language-trigger"
+              className="wizard-project-manager-label">
               Target languages
             </Label>
-            <span className="wizard-v2-language-count" aria-live="polite">
+            <span className="wizard-project-manager-language-count" aria-live="polite">
               {targetLanguages.length}
             </span>
           </div>
 
-          <div className="wizard-v2-target-stack">
+          <div className="wizard-project-manager-target-stack">
             <Popover open={targetOpen} onOpenChange={setTargetOpen}>
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  id="wizard-v2-target-language-trigger"
-                  className="wizard-v2-combobox-trigger wizard-v2-combobox-trigger--ghost wizard-v2-control"
+                  id="wizard-project-manager-target-language-trigger"
+                  className="wizard-project-manager-combobox-trigger wizard-project-manager-combobox-trigger--ghost wizard-project-manager-control"
                   aria-required="true"
                 >
-                  <span className="wizard-v2-combobox-content">
+                  <span className="wizard-project-manager-combobox-content">
                     <Plus className="h-4 w-4" aria-hidden="true" />
                     <span>Add target languages</span>
                   </span>
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="start" className="wizard-v2-combobox">
-                <div className="wizard-v2-combobox-search">
-                  <Search className="wizard-v2-search-icon" aria-hidden="true" />
+              <PopoverContent align="start" className="wizard-project-manager-combobox">
+                <div className="wizard-project-manager-combobox-search">
+                  <Search className="wizard-project-manager-search-icon" aria-hidden="true" />
                   <Input
                     autoFocus
                     value={targetSearch}
                     onChange={(event) => setTargetSearch(event.target.value)}
                     placeholder="Search languages…"
-                    className="wizard-v2-search-input"
+                    className="wizard-project-manager-search-input-language"
                   />
                 </div>
                 <div
                   role="listbox"
-                  className="wizard-v2-option-list"
+                  className="wizard-project-manager-option-list"
                   aria-label="Target language options"
                   onWheel={(event) => event.stopPropagation()}
                 >
@@ -284,34 +287,34 @@ export function WizardDetailsStep({
                       <button
                         type="button"
                         key={option.code}
-                        className={cn("wizard-v2-option", isSelected && "is-selected")}
+                        className={cn("wizard-project-manager-option", isSelected && "is-selected")}
                         role="option"
                         aria-selected={isSelected}
                         onClick={() => onToggleTargetLanguage(option.code)}
                       >
-                        <span className="wizard-v2-option-main">{renderLanguageLabel(option.code)}</span>
+                        <span className="wizard-project-manager-option-main">{renderLanguageLabel(option.code)}</span>
                         {isSelected ? <Check className="h-4 w-4" aria-hidden="true" /> : null}
                       </button>
                     );
                   })}
                 </div>
-                <button type="button" className="wizard-v2-option-done" onClick={() => setTargetOpen(false)}>
+                <button type="button" className="wizard-project-manager-option-done" onClick={() => setTargetOpen(false)}>
                   Done
                 </button>
               </PopoverContent>
             </Popover>
 
-            <div className="wizard-v2-chip-scroll" role="presentation">
-              <div className="wizard-v2-chip-group" role="list">
+            <div className="wizard-project-manager-chip-scroll" role="presentation">
+              <div className="wizard-project-manager-chip-group" role="list">
                 {targetLanguages.length === 0 ? (
-                  <span className="wizard-v2-chip-placeholder">No languages selected yet</span>
+                  <span className="wizard-project-manager-chip-placeholder">No languages selected yet</span>
                 ) : null}
                 {targetLanguages.map((code) => (
-                  <span key={code} className="wizard-v2-chip" role="listitem">
-                    <span className="wizard-v2-chip-label">{renderLanguageChipLabel(code)}</span>
+                  <span key={code} className="wizard-project-manager-chip" role="listitem">
+                    <span className="wizard-project-manager-chip-label">{renderLanguageChipLabel(code)}</span>
                     <button
                       type="button"
-                      className="wizard-v2-chip-remove"
+                      className="wizard-project-manager-chip-remove"
                       onClick={() => onRemoveTargetLanguage(code)}
                       aria-label={`Remove ${code}`}
                     >
@@ -325,15 +328,15 @@ export function WizardDetailsStep({
         </section>
       </div>
 
-      <div className="wizard-v2-field-grid wizard-v2-field-grid--paired">
-        <div className="wizard-v2-field">
-          <div className="wizard-v2-label-row">
-            <Label htmlFor="wizard-v2-project-field" className="wizard-v2-label">
+      <div className="wizard-project-manager-field-grid wizard-project-manager-field-grid--paired">
+        <div className="wizard-project-manager-field">
+          <div className="wizard-project-manager-label-row pt-[3.5px] h-[2rem]">
+            <Label htmlFor="wizard-project-manager-project-field" className="wizard-project-manager-label">
               Subject
             </Label>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button type="button" className="wizard-v2-icon-button" aria-label="Add project field">
+                <button type="button" className="wizard-project-manager-icon-button" aria-label="Add project field">
                   <Plus className="h-4 w-4" aria-hidden="true" />
                 </button>
               </TooltipTrigger>
@@ -346,29 +349,29 @@ export function WizardDetailsStep({
             <PopoverTrigger asChild>
               <button
                 type="button"
-                id="wizard-v2-project-field"
-                className="wizard-v2-combobox-trigger wizard-v2-combobox-trigger--compact wizard-v2-control"
+                id="wizard-project-manager-project-field"
+                className="wizard-project-manager-combobox-trigger wizard-project-manager-combobox-trigger--compact wizard-project-manager-control"
                 aria-required="true"
               >
-                <span className="wizard-v2-combobox-content">
+                <span className="wizard-project-manager-combobox-content">
                   {projectField ? (
-                    <span className="wizard-v2-combobox-value">{renderProjectFieldLabel(projectField)}</span>
+                    <span className="wizard-project-manager-combobox-value">{renderProjectFieldLabel(projectField)}</span>
                   ) : (
-                    <span className="wizard-v2-combobox-placeholder">Select specialisation</span>
+                    <span className="wizard-project-manager-combobox-placeholder">Select specialisation</span>
                   )}
                 </span>
                 <ChevronDown className="h-4 w-4 opacity-70" aria-hidden="true" />
               </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="wizard-v2-combobox wizard-v2-combobox--compact">
-              <div role="listbox" className="wizard-v2-option-list" aria-label="Project field options">
+            <PopoverContent align="start" className="wizard-project-manager-combobox wizard-project-manager-combobox--compact">
+              <div role="listbox" className="wizard-project-manager-option-list" aria-label="Project field options">
                 {PROJECT_SUBJECT_OPTIONS.map((option) => {
                   const isSelected = option.value === projectField;
                   return (
                     <button
                       type="button"
                       key={option.value}
-                      className={cn("wizard-v2-option", "wizard-v2-option--tight", isSelected && "is-selected")}
+                      className={cn("wizard-project-manager-option", "wizard-project-manager-option--tight", isSelected && "is-selected")}
                       role="option"
                       aria-selected={isSelected}
                       onClick={() => {
@@ -376,7 +379,7 @@ export function WizardDetailsStep({
                         setFieldOpen(false);
                       }}
                     >
-                      <span className="wizard-v2-option-main">{option.label}</span>
+                      <span className="wizard-project-manager-option-main">{option.label}</span>
                       {isSelected ? <Check className="h-4 w-4" aria-hidden="true" /> : null}
                     </button>
                   );
@@ -385,29 +388,47 @@ export function WizardDetailsStep({
             </PopoverContent>
           </Popover>
         </div>
-        <div className="wizard-v2-field">
-          <div className="wizard-v2-label-row">
-            <Label htmlFor="wizard-v2-client" className="wizard-v2-label">
+        <div className="wizard-project-manager-field">
+          <div className="wizard-project-manager-label-row pt-[3.5px] h-[2rem]">
+            <Label htmlFor="wizard-project-manager-client" className="wizard-project-manager-label">
               Client (optional)
             </Label>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="wizard-v2-icon-button"
-                  aria-label="Add client"
-                  onClick={() => handleClientCreateRequest(clientName.trim())}
-                >
-                  <Plus className="h-4 w-4" aria-hidden="true" />
-                </button>
+            <div className="wizard-project-manager-label-actions">
+              <Tooltip>
+                <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onRequestClientTable}
+                aria-haspopup="dialog"
+                aria-label="Open client manager"
+                className="wizard-project-manager-icon-button"
+              >
+                <PiUserList />
+              </button>
               </TooltipTrigger>
               <TooltipContent side="top" align="end">
-                Add new client
-              </TooltipContent>
-            </Tooltip>
+                  Show Client manager
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="wizard-project-manager-icon-button"
+                    aria-label="Add client"
+                    onClick={() => handleClientCreateRequest(clientName.trim())}
+                  >
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="end">
+                  Add new client
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
           <WizardClientField
-            inputId="wizard-v2-client"
+            inputId="wizard-project-manager-client"
             value={clientName}
             options={clientOptions}
             onValueChange={handleClientValueChange}
@@ -421,16 +442,16 @@ export function WizardDetailsStep({
         </div>
       </div>
 
-      <div className="wizard-v2-field">
-        <Label htmlFor="wizard-v2-notes" className="wizard-v2-label">
+      <div className="wizard-project-manager-field">
+        <Label htmlFor="wizard-project-manager-notes" className="wizard-project-manager-label">
           Notes
         </Label>
         <Textarea
-          id="wizard-v2-notes"
+          id="wizard-project-manager-notes"
           value={notes}
           onChange={(event) => onNotesChange(event.target.value)}
           placeholder="Additional context, deliverables, style notes…"
-          className="wizard-v2-textarea"
+          className="wizard-project-manager-textarea"
           rows={3}
         />
       </div>

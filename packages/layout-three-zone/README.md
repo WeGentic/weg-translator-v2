@@ -1,10 +1,10 @@
 # @wegentic/layout-three-zone
 
-Reusable three-zone panel layout (header, toolbar, content, optional footer) shared across Weg Translator workspaces.
+Reusable three-zone panel layout (header, toolbar, content, optional footer) shared across Tr-entic workspaces.
 
 ## Installation
 
-This package is part of the Weg Translator npm workspace and is consumed via the workspace path:
+This package is part of the Tr-entic npm workspace and is consumed via the workspace path:
 
 ```tsx
 import { ThreeZonePanel } from "@wegentic/layout-three-zone";

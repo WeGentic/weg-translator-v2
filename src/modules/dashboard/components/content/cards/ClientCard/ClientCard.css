@@ -1,0 +1,59 @@
+.dashboard-client-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.dashboard-client-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dashboard-client-card__name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-onBackground);
+}
+
+.dashboard-client-card__industry {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--color-onBackground) 62%, transparent);
+}
+
+.dashboard-client-card__status {
+  text-transform: capitalize;
+}
+
+.dashboard-client-card__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.85rem;
+}
+
+.dashboard-client-card__meta dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--color-onBackground) 58%, transparent);
+}
+
+.dashboard-client-card__meta dd {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--color-onBackground);
+  font-weight: 600;
+}
+
+.dashboard-client-card__contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--color-primary) 80%, transparent);
+}
+
+.dashboard-client-card__contact .dashboard-card__link {
+  font-size: 0.85rem;
+}

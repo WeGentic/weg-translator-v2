@@ -46,6 +46,8 @@ export interface ProjectsBatchActionsPanelProps {
   onClearSelection: () => void;
   /** Callback to open a specific project */
   onOpenProject?: (projectId: string) => void;
+  /** Identifier currently being opened to disable repeated triggers */
+  openingProjectId?: string | null;
 }
 
 export function ProjectsBatchActionsPanel({
@@ -55,6 +57,7 @@ export function ProjectsBatchActionsPanel({
   onBatchDelete,
   onClearSelection,
   onOpenProject,
+  openingProjectId,
 }: ProjectsBatchActionsPanelProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -183,7 +186,7 @@ export function ProjectsBatchActionsPanel({
           <ul className="space-y-2">
             {selectedProjectIds.map((projectId, index) => {
               const name = selectedProjectNames[index] ?? "Untitled project";
-              const isInteractive = Boolean(onOpenProject);
+              const isInteractive = Boolean(onOpenProject) && !openingProjectId;
 
               return (
                 <li key={projectId} className="sidebar-two-focused-project">

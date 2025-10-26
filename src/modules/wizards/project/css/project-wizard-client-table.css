@@ -1,0 +1,331 @@
+.wizard-project-manager-client-table-dialog {
+  box-sizing: border-box;
+  width: min(720px, calc(100vw - 32px));
+  max-width: min(720px, calc(100vw - 32px));
+  max-height: min(85vh, 720px);
+  padding: clamp(22px, 3vw, 28px);
+  border-radius: 18px;
+  border: none;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(18px, 3vw, 22px);
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--color-victorian-peacock-100) 80%, transparent) 0%,
+    color-mix(in oklab, var(--color-victorian-peacock-200) 85%, transparent) 40%,
+    color-mix(in oklab, var(--color-victorian-peacock-300) 90%, transparent) 100%
+  );
+  box-shadow:
+    0 32px 68px -32px color-mix(in oklab, black 35%, transparent),
+    0 1px 0 0 color-mix(in oklab, white 25%, transparent) inset,
+    0 -1px 0 0 color-mix(in oklab, var(--color-antiwhite) 12%, transparent) inset;
+  backdrop-filter: blur(24px) saturate(140%);
+  overflow: hidden;
+}
+
+.wizard-project-manager-client-table-header {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  text-align: left;
+  row-gap: 0;
+}
+
+.wizard-project-manager-client-table-header > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.wizard-project-manager-client-table-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 70%;
+  min-width: 0;
+}
+
+.wizard-project-manager-client-table-heading h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: color-mix(in oklab, var(--color-victorian-peacock-950) 90%, var(--color-antiwhite) 10%);
+}
+
+.wizard-project-manager-client-table-header-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.wizard-project-manager-client-table-refresh {
+  color: color-mix(in oklab, var(--color-victorian-peacock-800) 85%, var(--color-antiwhite) 15%);
+  background: color-mix(in oklab, var(--color-victorian-peacock-200) 70%, transparent);
+  border-radius: 999px;
+  padding-inline: 14px;
+  transition:
+    transform 150ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.wizard-project-manager-client-table-refresh:hover {
+  transform: translateY(-1px);
+  background: color-mix(in oklab, var(--color-victorian-peacock-300) 85%, transparent);
+  color: color-mix(in oklab, var(--color-secondary) 70%, var(--color-antiwhite) 30%);
+}
+
+.wizard-project-manager-client-table-refresh:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in oklab, var(--color-ring) 45%, transparent),
+    0 16px 26px -18px color-mix(in oklab, var(--color-ring) 35%, transparent);
+}
+
+.wizard-project-manager-client-table-refresh:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.wizard-project-manager-client-table-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 12px;
+  padding: 0;
+}
+
+.wizard-project-manager-client-table-empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 8px;
+  color: color-mix(in oklab, var(--color-victorian-peacock-700) 80%, var(--color-antiwhite) 20%);
+}
+
+.wizard-project-manager-client-table-empty-icon {
+  width: 40px;
+  height: 40px;
+  color: color-mix(in oklab, var(--color-victorian-peacock-500) 80%, var(--color-antiwhite) 20%);
+}
+
+.wizard-project-manager-client-table-empty-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.wizard-project-manager-client-table-empty-copy {
+  font-size: 0.78rem;
+  color: color-mix(in oklab, var(--color-victorian-peacock-600) 70%, var(--color-antiwhite) 30%);
+}
+
+.wizard-project-manager-client-table-scroll {
+  position: relative;
+  flex: 1;
+  max-height: min(360px, 55vh);
+  overflow: auto;
+  padding-block: clamp(2px, 1vw, 6px);
+}
+
+.wizard-project-manager-client-table-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.wizard-project-manager-client-table-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--color-victorian-peacock-400) 55%, transparent);
+  border-radius: 999px;
+}
+
+.wizard-project-manager-client-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  border-radius: 12px;
+}
+
+.wizard-project-manager-client-table caption {
+  display: none;
+}
+
+.wizard-project-manager-client-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: color-mix(in oklab, var(--color-victorian-peacock-200) 85%, transparent);
+  box-shadow: 0 1px 0 0 color-mix(in oklab, var(--color-victorian-peacock-400) 35%, transparent);
+}
+
+.wizard-project-manager-client-table th,
+.wizard-project-manager-client-table td {
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  text-align: left;
+  color: color-mix(in oklab, var(--color-victorian-peacock-800) 90%, var(--color-antiwhite) 10%);
+  vertical-align: top;
+}
+
+.wizard-project-manager-client-table th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--color-victorian-peacock-700) 88%, var(--color-antiwhite) 12%);
+}
+
+.wizard-project-manager-client-table tbody tr:nth-child(even) {
+  background: color-mix(in oklab, var(--color-writers-parchment-100) 85%, transparent);
+}
+
+.wizard-project-manager-client-table-row {
+  cursor: pointer;
+  position: relative;
+  transition:
+    transform 150ms ease,
+    background-color 150ms ease,
+    box-shadow 180ms ease;
+}
+
+.wizard-project-manager-client-table-row:hover,
+.wizard-project-manager-client-table-row:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  background: color-mix(in oklab, var(--color-victorian-peacock-100) 70%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--color-victorian-peacock-300) 45%, transparent);
+}
+
+.wizard-project-manager-client-table-row.is-active {
+  background: color-mix(in oklab, var(--color-victorian-peacock-100) 60%, transparent);
+}
+
+.wizard-project-manager-client-table-row.is-picked {
+  background: color-mix(in oklab, var(--color-victorian-peacock-200) 75%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--color-secondary) 35%, transparent),
+    0 10px 24px -18px color-mix(in oklab, var(--color-secondary) 45%, transparent);
+}
+
+.wizard-project-manager-client-table-row.is-assigned:not(.is-picked) {
+  background: color-mix(in oklab, var(--color-writers-parchment-100) 85%, transparent);
+}
+
+.wizard-project-manager-client-table-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wizard-project-manager-client-table-name-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--color-victorian-peacock-900) 92%, var(--color-antiwhite) 8%);
+}
+
+.wizard-project-manager-client-table-row.is-picked .wizard-project-manager-client-table-name-text {
+  color: color-mix(in oklab, var(--color-victorian-peacock-950) 90%, var(--color-antiwhite) 10%);
+}
+
+.wizard-project-manager-client-table-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-secondary) 20%, transparent);
+  color: color-mix(in oklab, var(--color-secondary) 70%, var(--color-antiwhite) 30%);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid color-mix(in oklab, var(--color-secondary) 35%, transparent);
+}
+
+.wizard-project-manager-client-table-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: color-mix(in oklab, var(--color-victorian-peacock-700) 80%, var(--color-antiwhite) 20%);
+}
+
+.wizard-project-manager-client-table-meta.muted {
+  color: color-mix(in oklab, var(--color-victorian-peacock-500) 70%, var(--color-antiwhite) 30%);
+}
+
+.wizard-project-manager-client-table-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: color-mix(in oklab, var(--color-victorian-peacock-100) 70%, transparent);
+  color: color-mix(in oklab, var(--color-victorian-peacock-800) 88%, var(--color-antiwhite) 12%);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+}
+
+.wizard-project-manager-client-table-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in oklab, var(--color-victorian-peacock-200) 45%, transparent);
+}
+
+@media (min-width: 640px) {
+  .wizard-project-manager-client-table-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.wizard-project-manager-client-table-selection {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+  font-size: 0.82rem;
+}
+
+.wizard-project-manager-client-table-selection-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: color-mix(in oklab, var(--color-victorian-peacock-600) 70%, var(--color-antiwhite) 30%);
+}
+
+.wizard-project-manager-client-table-selection-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--color-victorian-peacock-900) 92%, var(--color-antiwhite) 8%);
+}
+
+.wizard-project-manager-client-table-selection-placeholder {
+  font-size: 0.8rem;
+  color: color-mix(in oklab, var(--color-victorian-peacock-600) 65%, var(--color-antiwhite) 35%);
+}
+
+.wizard-project-manager-client-table-footer-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.wizard-project-manager-client-table-footer-actions button {
+  min-width: 128px;
+}
+
+.wizard-project-manager-client-table-button-confirm {
+  min-width: 120px;
+}

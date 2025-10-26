@@ -1,0 +1,39 @@
+.dashboard-content {
+  flex: 1;
+  overflow: auto;
+  padding: 1.75rem;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-background) 65%, transparent) 0%,
+    color-mix(in srgb, var(--color-aquaverde-100) 32%, transparent) 100%
+  );
+}
+
+.dashboard-content__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  align-content: start;
+}
+
+.dashboard-content__item {
+  height: 100%;
+}
+
+.dashboard-content__item--span-2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 960px) {
+  .dashboard-content {
+    padding: 1.25rem;
+  }
+
+  .dashboard-content__grid {
+    gap: 1.25rem;
+  }
+
+  .dashboard-content__item--span-2 {
+    grid-column: span 1;
+  }
+}

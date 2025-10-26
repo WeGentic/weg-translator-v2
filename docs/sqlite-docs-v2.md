@@ -1,6 +1,6 @@
 # SQLite v2 Architecture & Operations Guide
 
-This guide describes the production SQLite stack that powers the Weg Translator desktop application. It supplements historic notes in `docs/db-refactor-summary.md` with the current schema, migration workflow, operational guarantees, and troubleshooting procedures introduced in the v2 revamp. All instructions apply to Tauri 2.8.5 + Rust 1.89 deployments unless otherwise noted.
+This guide describes the production SQLite stack that powers the Tr-entic desktop application. It supplements historic notes in `docs/db-refactor-summary.md` with the current schema, migration workflow, operational guarantees, and troubleshooting procedures introduced in the v2 revamp. All instructions apply to Tauri 2.8.5 + Rust 1.89 deployments unless otherwise noted.
 
 ## 1. Overview
 

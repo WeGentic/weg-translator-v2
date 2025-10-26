@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Tr-entic — Loading</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 16px;
+        box-sizing: border-box;
+        overflow: hidden;
+        background: linear-gradient(
+            140deg,
+            rgba(226, 194, 125, 0.22),
+            rgba(16, 74, 101, 0.22)
+          ),
+          #f9f8ef;
+        color: #0a2d3d;
+      }
+
+      .splash {
+        width: min(340px, 100%);
+        padding: 36px 28px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 24px 60px rgba(16, 74, 101, 0.2);
+        border: 1px solid rgba(16, 74, 101, 0.12);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        max-height: calc(100vh - 48px);
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+
+      .splash.is-closing {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      .branding {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .logo {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+        padding: 12px;
+        background: rgba(249, 248, 239, 0.96);
+        box-shadow: 0 16px 26px rgba(16, 74, 101, 0.18);
+      }
+
+      .title {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      .status {
+        font-size: 0.95rem;
+        color: rgba(10, 45, 61, 0.82);
+        margin: 0;
+      }
+
+      .loader {
+        width: 48px;
+        height: 48px;
+        margin: 8px auto 0;
+        border-radius: 50%;
+        border: 3px solid rgba(16, 74, 101, 0.2);
+        border-top-color: #fb4f14;
+        animation: spin 0.9s linear infinite;
+      }
+
+      .fallback {
+        margin: 0 auto;
+        padding: 10px 14px;
+        border-radius: 12px;
+        background-color: rgba(251, 79, 20, 0.08);
+        color: #4c1b06;
+        font-size: 0.88rem;
+        line-height: 1.35;
+        display: none;
+        max-width: 280px;
+        text-align: center;
+        word-break: break-word;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .loader {
+          animation: none;
+          border-color: rgba(16, 74, 101, 0.35);
+          border-top-color: rgba(16, 74, 101, 0.75);
+        }
+
+        .splash {
+          transition: opacity 0.12s linear;
+        }
+
+        .splash.is-closing {
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="splash" aria-labelledby="loader-title">
+      <div class="branding">
+        <img
+          src="tauri.svg"
+          alt="Tr-entic logo"
+          class="logo"
+          width="72"
+          height="72"
+          loading="eager"
+        />
+        <h1 id="loader-title" class="title">Tr-entic</h1>
+        <p id="status-message" class="status" role="status" aria-live="polite">
+          Preparing your Tr-entic workspace…
+        </p>
+      </div>
+      <div class="loader" aria-hidden="true"></div>
+      <p id="fallback-message" class="fallback" role="alert">
+        The app is taking longer than expected. You can close this window and relaunch the
+        application if the main screen does not appear shortly.
+      </p>
+    </main>
+    <script>
+      const container = document.querySelector(".splash");
+      const fallback = document.getElementById("fallback-message");
+      const status = document.getElementById("status-message");
+
+      const showFallback = () => {
+        if (fallback) {
+          fallback.style.display = "block";
+        }
+        if (status) {
+          status.textContent = "Finalizing startup…";
+        }
+      };
+
+      try {
+        const tauri = window.__TAURI__;
+        if (tauri?.event?.listen) {
+          tauri.event.listen("splash:timeout", showFallback);
+          tauri.event.listen("splash:closing", () => {
+            if (container) {
+              container.classList.add("is-closing");
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Unable to register timeout listener", error);
+      }
+    </script>
+  </body>
+</html>

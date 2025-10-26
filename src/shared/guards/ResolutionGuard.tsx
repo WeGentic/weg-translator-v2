@@ -102,7 +102,7 @@ export function ResolutionGuard({
                 Give us a little more space
               </h2>
               <p id={descriptionId} className="resolution-guard__subtitle">
-                Weg Translator works best on larger viewports. Grow the window or connect to a bigger
+                Tr-entic works best on larger viewports. Grow the window or connect to a bigger
                 display to unlock the full workspace.
               </p>
             </div>

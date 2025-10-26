@@ -1,0 +1,92 @@
+.dashboard-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  border-radius: calc(var(--radius-xl, 18px));
+  border: 1px solid color-mix(in srgb, var(--color-victorian-peacock-400) 40%, transparent);
+  background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-writers-parchment-100) 70%, transparent) 0%,
+      color-mix(in srgb, var(--color-aquaverde-100) 45%, transparent) 100%
+    )
+    no-repeat padding-box;
+  backdrop-filter: blur(18px);
+  box-shadow:
+    0 18px 32px color-mix(in srgb, var(--color-neverything-900) 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-writers-parchment-50) 80%, transparent);
+  color: var(--color-onBackground);
+  min-height: 0;
+}
+
+.dashboard-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dashboard-card__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.dashboard-card__title {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-onBackground);
+}
+
+.dashboard-card__description {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--color-onBackground) 62%, transparent);
+}
+
+.dashboard-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dashboard-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.dashboard-card__link {
+  color: var(--color-victorian-peacock-700);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: color 150ms ease, text-decoration-color 150ms ease;
+}
+
+.dashboard-card__link:hover,
+.dashboard-card__link:focus-visible {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-decoration-color: var(--color-primary);
+}
+
+.dashboard-card__action {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 24%, transparent);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.dashboard-card__action:hover,
+.dashboard-card__action:focus-visible {
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  border-color: var(--color-primary);
+  color: color-mix(in srgb, var(--color-onprimary) 80%, transparent);
+}

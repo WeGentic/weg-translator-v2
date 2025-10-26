@@ -1,0 +1,66 @@
+.dashboard-time-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.dashboard-time-card__primary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-aquaverde-100) 60%, transparent),
+    color-mix(in srgb, var(--color-victorian-peacock-100) 50%, transparent)
+  );
+  color: var(--color-onBackground);
+}
+
+.dashboard-time-card__time {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.dashboard-time-card__timezone {
+  font-size: 0.9rem;
+  color: color-mix(in srgb, var(--color-onBackground) 70%, transparent);
+}
+
+.dashboard-time-card__offset {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--color-onBackground) 55%, transparent);
+}
+
+.dashboard-time-card__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.dashboard-time-card__meta dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--color-onBackground) 58%, transparent);
+}
+
+.dashboard-time-card__meta dd {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-onBackground);
+}
+
+.dashboard-time-card__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-victorian-peacock-800) 80%, transparent);
+}

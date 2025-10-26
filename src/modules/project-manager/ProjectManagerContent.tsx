@@ -16,6 +16,7 @@ type ExtendedProps = ProjectManagerContentProps & {
   sorting?: SortingState;
   onSortingChange?: (next: SortingState) => void;
   search?: string;
+  openingProjectId?: string | null;
 };
 
 function toProjectRow(item: ProjectManagerContentProps["items"][number]): ProjectRow & {
@@ -60,6 +61,7 @@ export function ProjectManagerContent({
   sorting: controlledSorting,
   onSortingChange: setControlledSorting,
   search: controlledSearch,
+  openingProjectId,
 }: ExtendedProps) {
   const [localSorting, setLocalSorting] = useState<SortingState>(DEFAULT_SORTING);
   const [localSelectedIds, setLocalSelectedIds] = useState<string[]>([]);
@@ -96,8 +98,9 @@ export function ProjectManagerContent({
       onRequestDelete,
       onSelectionChange: setSelectedIds,
       selectedIds,
+      openingProjectId: openingProjectId ?? null,
     }),
-    [onOpenProject, onRequestDelete, setSelectedIds, selectedIds],
+    [onOpenProject, onRequestDelete, setSelectedIds, selectedIds, openingProjectId],
   );
 
   const columns = useMemo(

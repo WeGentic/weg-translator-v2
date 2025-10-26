@@ -14,6 +14,7 @@ import { ProjectsTableSkeleton } from "@/modules/project-manager/ui/table/Projec
 import { deleteProject, type ProjectListItem } from "@/core/ipc";
 import { useProjectListResource } from "./data/projectsResource";
 import { filterProjects } from "@/modules/project-manager/state/filterProjects";
+import { dispatchProjectFocus, ensureProjectName } from "@/modules/projects/events";
 
 import { ProjectManagerHeader } from "./ProjectManagerHeader";
 import { ProjectManagerToolbar } from "./ProjectManagerToolbar";
@@ -69,11 +70,19 @@ function ProjectManagerViewInner({
   const [selectedRows, setSelectedRows] = useState<Set<string>>(() => new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const [openingProjectId, setOpeningProjectId] = useState<string | null>(null);
 
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const projectList = useMemo(() => Array.from(projects), [projects]);
+  const projectLookup = useMemo(() => {
+    const lookup = new Map<string, ProjectListItem>();
+    for (const project of projectList) {
+      lookup.set(project.projectId, project);
+    }
+    return lookup;
+  }, [projectList]);
 
   const resourceErrorMessage = resourceError
     ? resolveErrorMessage(resourceError, "Unable to load projects.")
@@ -115,26 +124,63 @@ function ProjectManagerViewInner({
   const handleOpenProjectById = useCallback(
     (projectId: string) => {
       if (!projectId) {
+        toast({
+          variant: "destructive",
+          title: "Cannot open project",
+          description: "Missing project reference. Refresh the list and try again.",
+        });
         return;
       }
 
-      navigate({
-        to: "/projects/$projectId",
-        params: { projectId },
-      }).catch((error) => {
-        console.error(`Failed to navigate to project ${projectId}`, error);
+      if (openingProjectId) {
+        if (openingProjectId === projectId) {
+          return;
+        }
+        toast({
+          title: "Opening project",
+          description: "Please wait for the current project to finish opening.",
+        });
+        return;
+      }
+
+      const project = projectLookup.get(projectId);
+      if (!project) {
+        toast({
+          variant: "destructive",
+          title: "Project unavailable",
+          description: "The selected project is no longer available. Refresh to update the list.",
+        });
+        return;
+      }
+
+      setOpeningProjectId(projectId);
+      const projectName = ensureProjectName(project.name);
+      dispatchProjectFocus({
+        projectId,
+        projectName,
+        source: "navigation",
       });
 
-      if (!onOpenProject) {
-        return;
-      }
+      void navigate({
+        to: "/projects/$projectId",
+        params: { projectId },
+      })
+        .catch((error) => {
+          console.error(`Failed to navigate to project ${projectId}`, error);
+          const description = resolveErrorMessage(error, "Unable to open the project. Please try again.");
+          toast({
+            variant: "destructive",
+            title: "Failed to open project",
+            description,
+          });
+        })
+        .finally(() => {
+          setOpeningProjectId((current) => (current === projectId ? null : current));
+        });
 
-      const project = projectList.find((item) => item.projectId === projectId);
-      if (project) {
-        onOpenProject(project);
-      }
+      onOpenProject?.(project);
     },
-    [navigate, onOpenProject, projectList],
+    [navigate, onOpenProject, openingProjectId, projectLookup, toast],
   );
 
   const handleProjectCreated = useCallback(() => {
@@ -252,6 +298,7 @@ function ProjectManagerViewInner({
     onBatchDelete: handleBatchDelete,
     onOpenProject: handleOpenProjectById,
     onClearSelection: clearSelection,
+    openingProjectId: openingProjectId ?? null,
   });
 
   return (
@@ -315,6 +362,7 @@ function ProjectManagerViewInner({
             onRequestDelete={handleRequestDelete}
             selectedRows={selectedRows}
             onRowSelectionChange={setSelectedRows}
+            openingProjectId={openingProjectId}
           />
         )}
       </div>
