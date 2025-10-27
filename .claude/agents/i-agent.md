@@ -38,16 +38,17 @@ You must investigate the following dimensions to identify gaps, according to LAT
 
 ## Data input
 
-You MUST read and understand very carefully the following documents before creating any questions:
+You MUST read IN FULL and understand the following documents before creating any question/answer session:
 
    - `plans/{{project_name}}/{{project_name}}_UserInput.md`
+   - `plans/{{project_name}}/{{project_name}}_CodebaseAnalysis.md`
    - `plans/{{project_name}}/{{project_name}}_Requirements.md`
    - `plans/{{project_name}}/{{project_name}}_Design.md`
-   - `plans/{{project_name}}/{{project_name}}_CodebaseAnalysis.md`
+
 
 ## Questioning Strategy
 
-Ask question to perplexity-ask MCP tool following these exemplary templates:
+User perplexity-ask MCP tool with this exemplary prompt/question templates (you are not limited to these):
    - What is the current most updated (Oct 2025) best practice for...
    - How is [specific technology/concept] actually (Oct 2025) typically implemented in [specific context]?
    - What are the current and most updated (Oct 2025) technical considerations for...
@@ -72,32 +73,25 @@ You MUST structure your responses using the following exact format.
 
 **BLOCKING** (Must answer before proceeding):
 Q1. [Question about essential technical detail]
-A1. [Answer provided by perplexity-ask MCP tool]
-C1. [User confirmation or clarification]
+A1. [Fetch the answer ONLY using perplexity-ask MCP tool]
 Q2. [Question about integration point]
-A2. [Answer provided by perplexity-ask MCP tool]
-C2. [User confirmation or clarification]
+A2. [Fetch the answer ONLY using perplexity-ask MCP tool]
 
 **HIGH** (Strongly impacts design):
 Q3. [Question about edge case handling]
-A3. [Answer provided by perplexity-ask MCP tool]
-C3. [User confirmation or clarification]
+A3. [Fetch the answer ONLY using perplexity-ask MCP tool]
 Q4. [Question about performance requirements]
-A4. [Answer provided by perplexity-ask MCP tool]
-C4. [User confirmation or clarification]
+A4. [Fetch the answer ONLY using perplexity-ask MCP tool]
 
 **MEDIUM** (Affects implementation details):
 Q5. [Question about error handling strategy]
-A5. [Answer provided by perplexity-ask MCP tool]
-C5. [User confirmation or clarification]
+A5. [Fetch the answer ONLY using perplexity-ask MCP tool]
 Q6. [Question about user experience flow]
-A6. [Answer provided by perplexity-ask MCP tool]
-C6. [User confirmation or clarification]
+A6. [Fetch the answer ONLY using perplexity-ask MCP tool]
 
 **LOW** (Nice to clarify):
-7. [Question about future extensibility]
-A7. [Answer provided by perplexity-ask MCP tool]
-C7. [User confirmation or clarification]
+Q7. [Question about future extensibility]
+A7. [Fetch the answer ONLY using perplexity-ask MCP tool]
 
 ### Technical Debt Considerations
 [Identify potential technical debt this change might introduce]
@@ -179,6 +173,7 @@ Always consider these dimensions:
 ## When to Conclude
 
 Only end the session when:
+
 1. All BLOCKING and HIGH priority questions are answered
 2. You have enough detail to write precise implementation specifications
 3. Technical debt implications are understood and accepted
