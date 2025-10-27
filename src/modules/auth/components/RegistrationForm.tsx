@@ -2,7 +2,7 @@
  * Registration form view composed from controller state and step-specific sections.
  * Handles only presentation concerns; business logic lives in `useRegistrationForm`.
  */
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@/shared/ui/button";
@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
 import { RiLoader4Line, RiMailSendLine } from "react-icons/ri";
 
 import LogoMark from "@/assets/LOGO-SVG.svg";
+import { logger } from "@/core/logging";
 import { RegistrationCompanyStep } from "./forms/RegistrationCompanyStep";
 import { RegistrationAdminStep } from "./forms/RegistrationAdminStep";
 import {
@@ -37,6 +38,7 @@ export function RegistrationForm() {
   const {
     values,
     touched,
+    emailStatusProbe,
     isSubmitting,
     isSubmissionLocked,
     stepIndex,
@@ -76,6 +78,8 @@ export function RegistrationForm() {
     handleManualVerificationCheck,
     resetSubmission,
   }: UseRegistrationFormResult = useRegistrationForm();
+  const [probeVerificationOpen, setProbeVerificationOpen] = useState(false);
+  const [probeResendCooldown, setProbeResendCooldown] = useState(0);
   const { setMessage } = usePageTransition();
   const awaitingVerification = submissionPhase === "awaitingVerification";
   const submitButtonDisabled = isSubmissionLocked;
@@ -85,6 +89,30 @@ export function RegistrationForm() {
     submissionPhase === "awaitingVerification" || submissionPhase === "failed";
   const organizationName =
     submissionResult?.payload.company.name ?? values.companyName;
+
+  useEffect(() => {
+    if (emailStatusProbe.status === "registered_unverified") {
+      setProbeVerificationOpen(true);
+    } else if (emailStatusProbe.status !== "registered_unverified") {
+      setProbeVerificationOpen(false);
+    }
+  }, [emailStatusProbe.status]);
+
+  useEffect(() => {
+    if (emailStatusProbe.status !== "registered_unverified") {
+      setProbeResendCooldown(0);
+    }
+  }, [emailStatusProbe.status]);
+
+  useEffect(() => {
+    if (probeResendCooldown <= 0) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setProbeResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [probeResendCooldown]);
 
   const handleVerificationDialogClose = useCallback(() => {
     if (submissionPhase === "succeeded") {
@@ -134,10 +162,95 @@ export function RegistrationForm() {
     [formBlockingLabels, submitTooltipMessage],
   );
 
-  const handleNavigateToLogin = () => {
+  const probeResendHint =
+    probeResendCooldown > 0
+      ? `You can resend again in ${probeResendCooldown}s.`
+      : undefined;
+
+  const handleNavigateToLogin = useCallback(() => {
+    void logger.info("registration.email_probe.cta_login", {
+      status: emailStatusProbe.status,
+      attempt_id: emailStatusProbe.result?.attemptId ?? "<none>",
+      correlation_id: emailStatusProbe.result?.correlationId ?? "<none>",
+    });
     setMessage("Returning to login…");
     void navigate({ to: "/login" });
-  };
+    setProbeVerificationOpen(false);
+    setProbeResendCooldown(0);
+    emailStatusProbe.reset();
+  }, [emailStatusProbe, navigate, setMessage]);
+
+  const handleRecoverPassword = useCallback(() => {
+    void logger.info("registration.email_probe.cta_recover", {
+      status: emailStatusProbe.status,
+      attempt_id: emailStatusProbe.result?.attemptId ?? "<none>",
+      correlation_id: emailStatusProbe.result?.correlationId ?? "<none>",
+    });
+    setMessage("Redirecting to login so you can recover your password.");
+    void navigate({ to: "/login" });
+    setProbeVerificationOpen(false);
+    setProbeResendCooldown(0);
+    emailStatusProbe.reset();
+  }, [emailStatusProbe, navigate, setMessage]);
+
+  const handleResumeVerification = useCallback(() => {
+    if (emailStatusProbe.status === "registered_unverified") {
+      void logger.info("registration.email_probe.cta_resume_verification", {
+        attempt_id: emailStatusProbe.result?.attemptId ?? "<none>",
+        correlation_id: emailStatusProbe.result?.correlationId ?? "<none>",
+      });
+      setProbeVerificationOpen(true);
+      void emailStatusProbe.forceCheck();
+      return;
+    }
+    void handleManualVerificationCheck();
+  }, [emailStatusProbe, handleManualVerificationCheck]);
+
+  const handleProbeManualCheck = useCallback(() => {
+    void emailStatusProbe.forceCheck();
+  }, [emailStatusProbe]);
+
+  const handleProbeResend = useCallback(() => {
+    if (probeResendCooldown > 0) {
+      return;
+    }
+    void emailStatusProbe.resendVerification();
+    setProbeResendCooldown(30);
+  }, [emailStatusProbe, probeResendCooldown]);
+
+  const isSubmissionDialogOpen = verificationDialogOpen;
+  const isReturningDialogOpen = !verificationDialogOpen && probeVerificationOpen;
+  const dialogOpen = isSubmissionDialogOpen || isReturningDialogOpen;
+  const dialogContext = isSubmissionDialogOpen ? "registration" : "returning";
+  const dialogPhase = isSubmissionDialogOpen ? submissionPhase : "awaitingVerification";
+  const dialogAttemptId = isSubmissionDialogOpen
+    ? submissionAttemptId
+    : emailStatusProbe.result?.attemptId ?? null;
+  const dialogManualCheck = isSubmissionDialogOpen
+    ? handleManualVerificationCheck
+    : handleProbeManualCheck;
+  const dialogCanManualCheck = isSubmissionDialogOpen ? canManualVerification : true;
+  const dialogError = isSubmissionDialogOpen ? submissionError : null;
+  const dialogResult = isSubmissionDialogOpen ? submissionResult : null;
+  const dialogOrganizationName = isSubmissionDialogOpen ? organizationName : undefined;
+  const dialogPendingEmail = isReturningDialogOpen
+    ? emailStatusProbe.lastCheckedEmail ?? undefined
+    : undefined;
+  const dialogOnClose = isSubmissionDialogOpen
+    ? handleVerificationDialogClose
+    : () => {
+        setProbeVerificationOpen(false);
+      };
+  const dialogOnOpenChange = isSubmissionDialogOpen
+    ? handleVerificationDialogOpenChange
+    : (nextOpen: boolean) => {
+        if (!nextOpen) {
+          setProbeVerificationOpen(false);
+        }
+      };
+  const dialogResend = isReturningDialogOpen ? handleProbeResend : undefined;
+  const dialogResendDisabled = isReturningDialogOpen ? probeResendCooldown > 0 : false;
+  const dialogResendHint = isReturningDialogOpen ? probeResendHint : undefined;
 
   return (
     <Card className="registration-form-card">
@@ -200,6 +313,13 @@ export function RegistrationForm() {
                 handleFieldChange={handleFieldChange}
                 handleFieldBlur={handleFieldBlur}
                 passwordEvaluation={passwordEvaluation}
+                emailStatusProbe={emailStatusProbe}
+                onNavigateToLogin={handleNavigateToLogin}
+                onRecoverPassword={handleRecoverPassword}
+                onResumeVerification={handleResumeVerification}
+                onResendVerification={handleProbeResend}
+                isResendDisabled={probeResendCooldown > 0}
+                resendHint={probeResendHint}
               />
             </>
           ) : null}
@@ -296,16 +416,21 @@ export function RegistrationForm() {
         </form>
       </CardContent>
       <RegistrationVerificationDialog
-        open={verificationDialogOpen}
-        phase={submissionPhase}
-        attemptId={submissionAttemptId}
-        error={submissionError}
-        result={submissionResult}
-        canManualCheck={canManualVerification}
-        onManualCheck={handleManualVerificationCheck}
-        onClose={handleVerificationDialogClose}
-        onOpenChange={handleVerificationDialogOpenChange}
-        organizationName={organizationName}
+        open={dialogOpen}
+        phase={dialogPhase}
+        context={dialogContext}
+        attemptId={dialogAttemptId}
+        error={dialogError}
+        result={dialogResult}
+        canManualCheck={dialogCanManualCheck}
+        onManualCheck={dialogManualCheck}
+        onClose={dialogOnClose}
+        onOpenChange={dialogOnOpenChange}
+        organizationName={dialogOrganizationName}
+        pendingEmail={dialogPendingEmail}
+        onResend={dialogResend}
+        resendDisabled={dialogResendDisabled}
+        resendHint={dialogResendHint}
       />
     </Card>
   );

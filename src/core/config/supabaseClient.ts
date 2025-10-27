@@ -4,7 +4,7 @@ type SupabaseUrl = string & { __brand?: "SupabaseUrl" };
 type SupabaseKey = string & { __brand?: "SupabaseAnonKey" };
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as SupabaseUrl | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as SupabaseKey | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY as SupabaseKey | undefined;
 
 if (!supabaseUrl) {
   throw new Error(
@@ -14,7 +14,7 @@ if (!supabaseUrl) {
 
 if (!supabaseAnonKey) {
   throw new Error(
-    "Missing VITE_SUPABASE_ANON_KEY environment variable. Add it to your .env.local (see README > Supabase configuration).",
+    "Missing VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY environment variable. Add it to your .env.local (see README > Supabase configuration).",
   );
 }
 
@@ -26,3 +26,5 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storageKey: "weg-translator-auth",
   },
 });
+
+export const VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY = supabaseAnonKey;

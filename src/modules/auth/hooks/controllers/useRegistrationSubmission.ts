@@ -5,6 +5,7 @@ import {
   FunctionsHttpError,
   FunctionsRelayError,
 } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 
 import { supabase } from "@/core/config";
 import { logger } from "@/core/logging";
@@ -157,6 +158,19 @@ function mapAuthError(error: AuthError): SubmissionError {
     source: "supabase",
     details: { status: error.status },
   };
+}
+
+function isEmailNotConfirmedError(error: AuthError): boolean {
+  const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
+  const status = typeof (error as { status?: number | undefined }).status === "number"
+    ? (error as { status?: number }).status
+    : undefined;
+
+  if (status === 400 && message.includes("not confirmed")) {
+    return true;
+  }
+
+  return message.includes("email not confirmed");
 }
 
 function createSubmissionError(params: SubmissionError): SubmissionError {
@@ -435,29 +449,79 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
 
       const verificationPromise = (async () => {
         try {
-          const { data, error } = await supabase.auth.getUser();
-          if (error) {
-            throw error;
+          const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+          if (sessionError) {
+            throw sessionError;
           }
 
-          const supabaseUser = data.user;
-          const emailConfirmed = Boolean(supabaseUser?.email_confirmed_at);
+          const sessionUser = sessionData?.session?.user ?? null;
+          let supabaseUser: User | null = sessionUser;
 
-          if (!emailConfirmed || !supabaseUser) {
-            if (manual) {
-              pollAttemptsRef.current = 0;
-            }
-            dispatch({
-              type: "await-verification",
-              adminUuid: supabaseUser?.id ?? currentState.adminUuid ?? null,
+          if (!supabaseUser) {
+            const { data, error } = await supabase.auth.signInWithPassword({
+              email: payload.admin.email,
+              password: payload.admin.password,
             });
 
+            if (error) {
+              if (isEmailNotConfirmedError(error)) {
+                if (manual) {
+                  pollAttemptsRef.current = 0;
+                  toast({
+                    title: "Still waiting for verification",
+                    description: "Check your inbox for the confirmation email, then try again.",
+                  });
+                }
+
+                dispatch({
+                  type: "await-verification",
+                  adminUuid: currentState.adminUuid ?? null,
+                });
+
+                scheduleVerificationPoll();
+                return;
+              }
+
+              throw error;
+            }
+
+            supabaseUser = data?.user ?? null;
+          }
+
+          if (!supabaseUser) {
             if (manual) {
+              pollAttemptsRef.current = 0;
               toast({
                 title: "Still waiting for verification",
                 description: "Check your inbox for the confirmation email, then try again.",
               });
             }
+
+            dispatch({
+              type: "await-verification",
+              adminUuid: currentState.adminUuid ?? null,
+            });
+
+            scheduleVerificationPoll();
+            return;
+          }
+
+          const emailConfirmed = Boolean(supabaseUser.email_confirmed_at);
+
+          if (!emailConfirmed) {
+            if (manual) {
+              pollAttemptsRef.current = 0;
+              toast({
+                title: "Still waiting for verification",
+                description: "Check your inbox for the confirmation email, then try again.",
+              });
+            }
+
+            dispatch({
+              type: "await-verification",
+              adminUuid: supabaseUser.id ?? currentState.adminUuid ?? null,
+            });
 
             scheduleVerificationPoll();
             return;

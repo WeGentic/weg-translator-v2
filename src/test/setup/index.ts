@@ -1,6 +1,9 @@
 import "@testing-library/jest-dom/vitest";
-import { vi } from "vitest";
+import "vitest-axe/extend-expect";
+import * as vitestAxeMatchers from "vitest-axe/matchers";
+import { expect, vi } from "vitest";
 
+expect.extend(vitestAxeMatchers);
 if (typeof window !== "undefined" && window.matchMedia == null) {
   const createMatchMedia = (query: string) => ({
     matches: false,

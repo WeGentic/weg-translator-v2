@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useRegistrationForm } from "@/modules/auth/hooks/controllers/useRegistrationForm";
+import type { EmailStatusProbeApi } from "@/modules/auth/hooks/controllers/useEmailStatusProbe";
 
 vi.mock("@/modules/wizards/client/components/phoneUtils", () => ({
   resolveDefaultCountry: vi.fn(() => "DE"),
@@ -35,9 +36,38 @@ vi.mock("@/shared/ui/toast", () => ({
   }),
 }));
 
+const { probeState, useEmailStatusProbeMock } = vi.hoisted(() => {
+  const state: EmailStatusProbeApi = {
+    status: "idle",
+    result: null,
+    isLoading: false,
+    error: null,
+    lastCheckedEmail: null,
+    reset: vi.fn(),
+    forceCheck: vi.fn(),
+    resendVerification: vi.fn(),
+  };
+
+  return {
+    probeState: state,
+    useEmailStatusProbeMock: vi.fn(() => state),
+  };
+});
+
+vi.mock("@/modules/auth/hooks/controllers/useEmailStatusProbe", () => ({
+  useEmailStatusProbe: useEmailStatusProbeMock,
+}));
+
 describe("useRegistrationForm", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    probeState.status = "idle";
+    probeState.result = null;
+    probeState.error = null;
+    probeState.lastCheckedEmail = null;
+    probeState.reset.mockClear();
+    probeState.forceCheck.mockClear();
+    probeState.resendVerification.mockClear();
   });
 
   afterEach(() => {
@@ -112,6 +142,7 @@ describe("useRegistrationForm", () => {
     });
 
     act(() => {
+      vi.advanceTimersByTime(500);
       result.current.handleNextStep();
     });
 
@@ -219,5 +250,91 @@ describe("useRegistrationForm", () => {
     });
 
     expect(result.current.errors.companyPhone).not.toBe("Company phone is required.");
+  });
+
+  it("resets email probe when admin email changes", () => {
+    const { result } = renderHook(() => useRegistrationForm());
+
+    act(() => {
+      result.current.handleFieldChange("companyName")({
+        target: { value: "Acme Corp" },
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+      result.current.handleFieldChange("companyAddress")({
+        target: { value: "123 Example Rd" },
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+      result.current.handleFieldChange("companyEmail")({
+        target: { value: "team@acme.test" },
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+      result.current.handlePhoneChange("+4912345678");
+      result.current.handleFieldChange("companyTaxNumber")({
+        target: { value: "DE136695976" },
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+    });
+
+    act(() => {
+      result.current.handleNextStep();
+    });
+
+    act(() => {
+      result.current.handleFieldChange("adminEmail")({
+        target: { value: "admin@acme.test" },
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+    });
+
+    expect(probeState.reset).toHaveBeenCalled();
+  });
+
+  it("blocks admin step when probe reports a registered account", () => {
+    const { result, rerender } = renderHook(() => useRegistrationForm());
+
+    act(() => {
+      result.current.handleFieldChange("companyName")({
+        target: { value: "Acme Corp" },
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+      result.current.handleFieldChange("companyAddress")({
+        target: { value: "123 Example Rd" },
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+      result.current.handleFieldChange("companyEmail")({
+        target: { value: "team@acme.test" },
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+      result.current.handlePhoneChange("+4912345678");
+      result.current.handleFieldChange("companyTaxNumber")({
+        target: { value: "DE136695976" },
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+      result.current.handleNextStep();
+    });
+
+    expect(result.current.currentStepKey).toBe("admin");
+
+    probeState.status = "registered_verified";
+    probeState.result = {
+      status: "registered_verified",
+      verifiedAt: new Date().toISOString(),
+      lastSignInAt: null,
+      correlationId: "corr-123",
+      attemptId: "attempt-123",
+      checkedAt: Date.now(),
+    };
+
+    act(() => {
+      result.current.handleFieldChange("adminEmail")({
+        target: { value: "admin@acme.test" },
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+      result.current.handleFieldBlur("adminEmail");
+    });
+
+    rerender();
+
+    expect(result.current.emailStatusProbe.status).toBe("registered_verified");
+    expect(result.current.currentStepBlockingLabels).toContain(
+      "Administrator email is already registered.",
+    );
+    expect(result.current.formBlockingLabels).toContain(
+      "Administrator email is already registered.",
+    );
   });
 });

@@ -4,37 +4,58 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useRegistrationSubmission } from "@/modules/auth/hooks/controllers/useRegistrationSubmission";
 import type { NormalizedRegistrationPayload } from "@/modules/auth/hooks/controllers/useRegistrationSubmission";
 
-const signUpMock = vi.fn();
-const getUserMock = vi.fn();
-const functionsInvokeMock = vi.fn();
-const toastMock = vi.fn();
-const loggerInfoMock = vi.fn();
-const loggerWarnMock = vi.fn();
-const loggerErrorMock = vi.fn();
+const supabaseMocks = vi.hoisted(() => ({
+  signUpMock: vi.fn(),
+  getUserMock: vi.fn(),
+  getSessionMock: vi.fn(),
+  signInWithPasswordMock: vi.fn(),
+  functionsInvokeMock: vi.fn(),
+  toastMock: vi.fn(),
+  loggerInfoMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
+  loggerDebugMock: vi.fn(),
+}));
 
 vi.mock("@/core/config", () => ({
   supabase: {
     auth: {
-      signUp: signUpMock,
-      getUser: getUserMock,
+      signUp: supabaseMocks.signUpMock,
+      getUser: supabaseMocks.getUserMock,
+      getSession: supabaseMocks.getSessionMock,
+      signInWithPassword: supabaseMocks.signInWithPasswordMock,
     },
     functions: {
-      invoke: functionsInvokeMock,
+      invoke: supabaseMocks.functionsInvokeMock,
     },
   },
 }));
 
 vi.mock("@/shared/ui/toast", () => ({
-  useToast: () => ({ toast: toastMock }),
+  useToast: () => ({ toast: supabaseMocks.toastMock }),
 }));
 
 vi.mock("@/core/logging", () => ({
   logger: {
-    info: loggerInfoMock,
-    warn: loggerWarnMock,
-    error: loggerErrorMock,
+    info: supabaseMocks.loggerInfoMock,
+    warn: supabaseMocks.loggerWarnMock,
+    error: supabaseMocks.loggerErrorMock,
+    debug: supabaseMocks.loggerDebugMock,
   },
 }));
+
+const {
+  signUpMock,
+  getUserMock,
+  getSessionMock,
+  signInWithPasswordMock,
+  functionsInvokeMock,
+  toastMock,
+  loggerInfoMock,
+  loggerWarnMock,
+  loggerErrorMock,
+  loggerDebugMock,
+} = supabaseMocks;
 
 const payload: NormalizedRegistrationPayload = {
   admin: {
@@ -76,11 +97,17 @@ describe("useRegistrationSubmission", () => {
     vi.useFakeTimers();
     signUpMock.mockReset();
     getUserMock.mockReset();
+    getSessionMock.mockReset();
+    signInWithPasswordMock.mockReset();
     functionsInvokeMock.mockReset();
     toastMock.mockReset();
     loggerInfoMock.mockReset();
     loggerWarnMock.mockReset();
     loggerErrorMock.mockReset();
+    loggerDebugMock.mockReset();
+
+    getSessionMock.mockResolvedValue({ data: { session: null }, error: null });
+    signInWithPasswordMock.mockResolvedValue({ data: { user: verifiedSupabaseUser, session: {} }, error: null });
   });
 
   afterEach(() => {
@@ -136,9 +163,14 @@ describe("useRegistrationSubmission", () => {
 
   it("completes verification and persistence on manual check", async () => {
     signUpMock.mockResolvedValueOnce({ data: { user: { id: "admin-uuid-1" } }, error: null });
-    getUserMock
-      .mockResolvedValueOnce({ data: { user: unverifiedSupabaseUser }, error: null })
-      .mockResolvedValueOnce({ data: { user: verifiedSupabaseUser }, error: null });
+    getSessionMock
+      .mockResolvedValueOnce({ data: { session: null }, error: null })
+      .mockResolvedValueOnce({ data: { session: { user: verifiedSupabaseUser } }, error: null });
+
+    signInWithPasswordMock.mockResolvedValueOnce({
+      data: { user: null, session: null },
+      error: { message: "Email not confirmed", status: 400 },
+    });
 
     functionsInvokeMock.mockResolvedValueOnce({
       data: {
@@ -169,7 +201,9 @@ describe("useRegistrationSubmission", () => {
       await result.current.confirmVerification({ manual: true });
     });
 
-    expect(getUserMock).toHaveBeenCalledTimes(2);
+    expect(getSessionMock).toHaveBeenCalledTimes(2);
+    expect(signInWithPasswordMock).toHaveBeenCalledTimes(1);
+    expect(getUserMock).not.toHaveBeenCalled();
     expect(functionsInvokeMock).toHaveBeenCalledWith("register-organization", {
       body: expect.objectContaining({
         attemptId: result.current.attemptId,

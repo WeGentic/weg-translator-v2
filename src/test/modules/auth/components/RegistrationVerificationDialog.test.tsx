@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { axe } from "vitest-axe";
 
 import { RegistrationVerificationDialog } from "@/modules/auth/components/dialog/RegistrationVerificationDialog";
 import type { NormalizedRegistrationPayload } from "@/modules/auth/hooks/controllers/useRegistrationSubmission";
@@ -77,5 +78,27 @@ describe("RegistrationVerificationDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));
     expect(closeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("has no common accessibility violations", async () => {
+    const { container } = render(
+      <RegistrationVerificationDialog
+        open
+        phase="awaitingVerification"
+        attemptId="attempt-789"
+        error={null}
+        result={null}
+        canManualCheck
+        onManualCheck={vi.fn()}
+        onClose={vi.fn()}
+        onOpenChange={vi.fn()}
+        pendingEmail="pending@example.com"
+        onResendVerification={vi.fn()}
+        resendDisabled={false}
+      />,
+    );
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });

@@ -180,3 +180,10 @@
   transform: none;
   box-shadow: none;
 }
+
+.registration-verification-dialog__hint {
+  margin-left: auto;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-neverything-600);
+}

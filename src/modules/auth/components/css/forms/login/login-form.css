@@ -213,9 +213,10 @@
 }
 
 .login-form__submit:hover:not(:disabled) {
-  border: 1px solid;
-  border-color: var(--color-secondary);
-  background: var(--color-victorian-peacock-900);
+  border: none;
+  background: var(--color-secondary);
+  color: var(--color-victorian-peacock-950);
+  box-shadow: none;
 }
 
 .login-form__submit:active:not(:disabled) {

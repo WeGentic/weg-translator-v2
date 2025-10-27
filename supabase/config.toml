@@ -5,3 +5,7 @@ project_id = "wnohgxkujwnuoqtibsss"
 
 [remotes.production]
 project_id = "wnohgxkujwnuoqtibsss"
+
+[functions.check-email-status]
+# Email probe runs before users authenticate, so disable JWT enforcement on this function.
+verify_jwt = false

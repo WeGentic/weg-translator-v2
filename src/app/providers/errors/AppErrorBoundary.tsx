@@ -41,7 +41,7 @@ function arrayChanged(a: Array<unknown> = [], b: Array<unknown> = []) {
   return a.some((value, index) => Object.is(value, b[index]) === false);
 }
 
-const isDev = import.meta.env.DEV;
+//onst isDev = import.meta.env.DEV;
 
 export class AppErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   public state: ErrorBoundaryState = {
@@ -135,7 +135,7 @@ function DefaultErrorFallback({
   resetErrorBoundary,
 }: ErrorBoundaryFallbackProps) {
   const details = stringifyErrorDetails(error, errorInfo);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(isDev);
+  //const [isDetailsOpen, setIsDetailsOpen] = useState(isDev);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const titleId = useId();
   const descriptionId = useId();
@@ -225,13 +225,6 @@ function DefaultErrorFallback({
         </header>
 
         <div className="app-error-boundary__body">
-          <div className="app-error-boundary__summary">
-            <h3 className="app-error-boundary__heading">What you can do</h3>
-            <p className="app-error-boundary__text">
-              We restored everything we could. Try reloading this view to continue, and if the
-              problem persists share the log with the team so we can investigate quickly.
-            </p>
-          </div>
           <div
             role="group"
             aria-labelledby={metaTitleId}
@@ -266,9 +259,6 @@ function DefaultErrorFallback({
             <h3 id={diagnosticsId} className="app-error-boundary__heading">
               Diagnostics
             </h3>
-            <p className="app-error-boundary__text">
-              Share the captured log or expand the technical trace for deeper debugging.
-            </p>
           </header>
 
           <div className="app-error-boundary__diagnostics-actions">
@@ -281,6 +271,7 @@ function DefaultErrorFallback({
               <Copy className="size-4" aria-hidden="true" />
               Copy log
             </Button>
+            {/*
             <Button
               type="button"
               variant="ghost"
@@ -291,6 +282,7 @@ function DefaultErrorFallback({
             >
               {isDetailsOpen ? "Hide technical details" : "Show technical details"}
             </Button>
+            */}
           </div>
 
         <div
@@ -305,12 +297,12 @@ function DefaultErrorFallback({
               ? "Unable to copy. Please try again."
               : "\u00a0"}
         </div>
-
+{/*
         {isDetailsOpen ? (
           <pre id={detailsId} className="app-error-boundary__details">
             {details}
           </pre>
-          ) : null}
+          ) : null} */}
         </section>
       </article>
     </section>

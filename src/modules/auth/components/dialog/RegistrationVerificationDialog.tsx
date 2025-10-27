@@ -39,7 +39,23 @@ interface RegistrationVerificationDialogProps {
   organizationName?: string;
 }
 
-function resolveTitle(phase: SubmissionPhase): string {
+function resolveTitle(phase: SubmissionPhase, context: "registration" | "returning"): string {
+  if (context === "returning") {
+    switch (phase) {
+      case "awaitingVerification":
+        return "Finish verifying your email";
+      case "verifying":
+        return "Checking verification status";
+      case "persisting":
+        return "Finalizing verification";
+      case "succeeded":
+        return "Email verified";
+      case "failed":
+        return "Verification check failed";
+      default:
+        return "Email verification";
+    }
+  }
   switch (phase) {
     case "awaitingVerification":
       return "Verify your email";
@@ -56,7 +72,29 @@ function resolveTitle(phase: SubmissionPhase): string {
   }
 }
 
-function resolveDescription(phase: SubmissionPhase): string {
+function resolveDescription(
+  phase: SubmissionPhase,
+  context: "registration" | "returning",
+  pendingEmail?: string,
+): string {
+  if (context === "returning") {
+    switch (phase) {
+      case "awaitingVerification":
+        return pendingEmail
+          ? `We found an unfinished registration for ${pendingEmail}. Resend the confirmation email if needed, then confirm once you've clicked the link.`
+          : "We found an unfinished registration. Resend the confirmation email if needed, then confirm once you've clicked the link.";
+      case "verifying":
+        return "Hang tight while we confirm that your email is verified.";
+      case "persisting":
+        return "Almost done—confirming your account status.";
+      case "succeeded":
+        return "Your email is verified. You can continue to sign in.";
+      case "failed":
+        return "We couldn’t confirm your email yet. Try again or resend the confirmation email.";
+      default:
+        return "Check your inbox for the confirmation email.";
+    }
+  }
   switch (phase) {
     case "awaitingVerification":
       return "We sent a confirmation link to your email. Confirm it to continue.";
@@ -96,9 +134,35 @@ function renderBody(
   attemptId: string | null,
   error: SubmissionError | null,
   result: { companyId: string; adminUuid: string; payload: NormalizedRegistrationPayload } | null,
-  organizationName?: string,
+  organizationName: string | undefined,
+  context: "registration" | "returning",
+  pendingEmail?: string,
 ) {
   if (phase === "awaitingVerification") {
+    if (context === "returning") {
+      return (
+        <div className="registration-verification-dialog__body">
+          <p className="registration-verification-dialog__copy">
+            We sent a confirmation email earlier. Resend it if you need a fresh copy, then choose <strong>“I verified my email”</strong> once you’ve clicked the link.
+          </p>
+          <ul className="registration-verification-dialog__checklist">
+            <li>Look for the Weg Translator confirmation email in your inbox or spam folder.</li>
+            <li>Use the button in that email to confirm your account.</li>
+            <li>Return here and choose “I verified my email”.</li>
+          </ul>
+          {pendingEmail ? (
+            <p className="registration-verification-dialog__meta">
+              Email: <code>{pendingEmail}</code>
+            </p>
+          ) : null}
+          {attemptId ? (
+            <p className="registration-verification-dialog__meta">
+              Attempt ID: <code>{attemptId}</code>
+            </p>
+          ) : null}
+        </div>
+      );
+    }
     return (
       <div className="registration-verification-dialog__body">
         <p className="registration-verification-dialog__copy">
@@ -140,6 +204,15 @@ function renderBody(
   }
 
   if (phase === "succeeded") {
+    if (context === "returning") {
+      return (
+        <div className="registration-verification-dialog__body">
+          <p className="registration-verification-dialog__copy">
+            Your email is verified. You can close this dialog and sign in with your credentials.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="registration-verification-dialog__body">
         <p className="registration-verification-dialog__copy">
@@ -196,12 +269,24 @@ const RegistrationVerificationDialogComponent = ({
   onClose,
   onOpenChange,
   organizationName,
+  context = "registration",
+  pendingEmail,
+  onResend,
+  resendDisabled,
+  resendHint,
 }: RegistrationVerificationDialogProps) => {
   const showManualVerifyAction = canManualCheck;
   const manualButtonLabel = phase === "failed" ? "Try verification again" : "I verified my email";
   const showDismissAction =
     phase === "awaitingVerification" || phase === "succeeded" || phase === "failed";
   const hideCloseButton = phase === "verifying" || phase === "persisting";
+  const dismissLabel = context === "returning"
+    ? phase === "succeeded"
+      ? "Close"
+      : "Dismiss"
+    : phase === "succeeded"
+      ? "Continue"
+      : "Back to registration";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -210,15 +295,29 @@ const RegistrationVerificationDialogComponent = ({
           <span className={`registration-verification-dialog__status registration-verification-dialog__status--${phase}`}>
             {renderPhaseIcon(phase)}
           </span>
-          <DialogTitle className="registration-verification-dialog__title">{resolveTitle(phase)}</DialogTitle>
+          <DialogTitle className="registration-verification-dialog__title">{resolveTitle(phase, context)}</DialogTitle>
           <DialogDescription className="registration-verification-dialog__description">
-            {resolveDescription(phase)}
+            {resolveDescription(phase, context, pendingEmail)}
           </DialogDescription>
         </DialogHeader>
 
-        {renderBody(phase, attemptId, error, result, organizationName)}
+        {renderBody(phase, attemptId, error, result, organizationName, context, pendingEmail)}
 
         <DialogFooter className="registration-verification-dialog__footer">
+          {onResend ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="registration-verification-dialog__button"
+              disabled={resendDisabled}
+              aria-disabled={resendDisabled ? true : undefined}
+              onClick={() => {
+                void onResend();
+              }}
+            >
+              Resend email
+            </Button>
+          ) : null}
           {showDismissAction ? (
             <Button
               type="button"
@@ -226,7 +325,7 @@ const RegistrationVerificationDialogComponent = ({
               className="registration-verification-dialog__button"
               onClick={onClose}
             >
-              {phase === "succeeded" ? "Continue" : "Back to registration"}
+              {dismissLabel}
             </Button>
           ) : null}
           {showManualVerifyAction ? (
@@ -249,6 +348,11 @@ const RegistrationVerificationDialogComponent = ({
                 </>
               )}
             </Button>
+          ) : null}
+          {resendHint ? (
+            <p className="registration-verification-dialog__hint" aria-live="polite">
+              {resendHint}
+            </p>
           ) : null}
         </DialogFooter>
       </DialogContent>

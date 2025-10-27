@@ -53,6 +53,7 @@ import {
   type SubmissionPhase,
   useRegistrationSubmission,
 } from "./useRegistrationSubmission";
+import { useEmailStatusProbe } from "./useEmailStatusProbe";
 
 export interface RegistrationAddressState {
   listId: string;
@@ -75,6 +76,7 @@ export interface UseRegistrationFormResult {
   values: RegistrationValues;
   errors: RegistrationErrors;
   touched: RegistrationTouched;
+  emailStatusProbe: ReturnType<typeof useEmailStatusProbe>;
   isSubmitting: boolean;
   isSubmissionLocked: boolean;
   stepIndex: number;
@@ -154,6 +156,12 @@ export function useRegistrationForm(): UseRegistrationFormResult {
   const confirmVerification = submission.confirmVerification;
   const resetSubmission = submission.reset;
   const processedAttemptRef = useRef<string | null>(null);
+
+  const emailStatusProbe = useEmailStatusProbe({
+    email: values.adminEmail,
+    attemptId: submissionAttemptId,
+    enabled: touched.adminEmail,
+  });
 
   const localeCandidates = useMemo<readonly string[]>(() => {
     if (typeof navigator !== "undefined" && navigator.language) {
@@ -259,13 +267,16 @@ export function useRegistrationForm(): UseRegistrationFormResult {
       }
       const rawValue = event.target.value;
       const value = field === "companyTaxNumber" ? rawValue.toUpperCase() : rawValue;
+      if (field === "adminEmail") {
+        emailStatusProbe.reset();
+      }
       setValues((prev) => {
         const nextValues = { ...prev, [field]: value };
         setErrors(evaluateErrors(nextValues));
         return nextValues;
       });
     },
-    [evaluateErrors, isSubmissionLocked],
+    [emailStatusProbe, evaluateErrors, isSubmissionLocked],
   );
 
   const handlePhoneChange = useCallback(
@@ -497,6 +508,10 @@ export function useRegistrationForm(): UseRegistrationFormResult {
         return;
       }
 
+      if (emailStatusProbe.status === "registered_verified") {
+        return;
+      }
+
       const payload = buildSubmissionPayload();
       void submitRegistration(payload);
     },
@@ -506,6 +521,7 @@ export function useRegistrationForm(): UseRegistrationFormResult {
       getHasPhoneDigits,
       isSubmissionLocked,
       phoneValue,
+      emailStatusProbe.status,
       submitRegistration,
       values,
     ],
@@ -580,14 +596,30 @@ export function useRegistrationForm(): UseRegistrationFormResult {
     [hasFieldBlockingError],
   );
 
-  const currentStepBlockingLabels = useMemo(
-    () => currentStepBlockingFields.map((field) => FIELD_CONFIG_BY_KEY[field].label),
-    [currentStepBlockingFields],
-  );
-  const formBlockingLabels = useMemo(
-    () => formBlockingFields.map((field) => FIELD_CONFIG_BY_KEY[field].label),
-    [formBlockingFields],
-  );
+  const emailStatusBlockingLabel = useMemo(() => {
+    if (emailStatusProbe.status === "registered_verified") {
+      return "Administrator email is already registered.";
+    }
+    return null;
+  }, [emailStatusProbe.status]);
+
+  const currentStepBlockingLabels = useMemo(() => {
+    const labels = currentStepBlockingFields.map((field) => FIELD_CONFIG_BY_KEY[field].label);
+    if (currentStepKey === "admin" && emailStatusBlockingLabel) {
+      if (!labels.includes(emailStatusBlockingLabel)) {
+        labels.push(emailStatusBlockingLabel);
+      }
+    }
+    return labels;
+  }, [currentStepBlockingFields, currentStepKey, emailStatusBlockingLabel]);
+
+  const formBlockingLabels = useMemo(() => {
+    const labels = formBlockingFields.map((field) => FIELD_CONFIG_BY_KEY[field].label);
+    if (emailStatusBlockingLabel && !labels.includes(emailStatusBlockingLabel)) {
+      labels.push(emailStatusBlockingLabel);
+    }
+    return labels;
+  }, [formBlockingFields, emailStatusBlockingLabel]);
 
   const isCurrentStepValid = currentStepBlockingLabels.length === 0;
   const isFormValid = formBlockingLabels.length === 0;
@@ -606,6 +638,7 @@ export function useRegistrationForm(): UseRegistrationFormResult {
     values,
     errors,
     touched,
+    emailStatusProbe,
     isSubmitting,
     isSubmissionLocked,
     stepIndex,

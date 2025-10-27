@@ -382,6 +382,87 @@
   gap: 0.6rem;
 }
 
+.registration-form__email-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--color-victorian-peacock-300);
+  background: color-mix(in oklch, var(--color-victorian-peacock-50) 80%, transparent);
+  color: var(--color-victorian-peacock-900);
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.registration-form__email-status--success {
+  border-color: var(--color-success);
+  background: color-mix(in oklch, var(--color-success) 18%, white);
+  color: var(--color-victorian-peacock-900);
+}
+
+.registration-form__email-status--error {
+  border-color: var(--color-orioles-orange-500);
+  background: color-mix(in oklch, var(--color-orioles-orange-100) 70%, white);
+  color: var(--color-orioles-orange-900);
+}
+
+.registration-form__email-status--warning {
+  border-color: var(--color-orioles-orange-400);
+  background: color-mix(in oklch, var(--color-orioles-orange-100) 60%, white);
+  color: var(--color-orioles-orange-900);
+}
+
+.registration-form__email-status--info {
+  border-color: var(--color-victorian-peacock-400);
+  background: color-mix(in oklch, var(--color-victorian-peacock-100) 70%, white);
+  color: var(--color-victorian-peacock-900);
+}
+
+.registration-form__email-status--loading {
+  border-color: var(--color-victorian-peacock-300);
+  background: color-mix(in oklch, var(--color-victorian-peacock-50) 85%, white);
+  color: var(--color-victorian-peacock-800);
+}
+
+.registration-form__email-status-icon {
+  flex-shrink: 0;
+  font-size: 1.35rem;
+  margin-top: 0.1rem;
+}
+
+.registration-form__email-status-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.registration-form__email-status-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.registration-form__email-status-description {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: inherit;
+}
+
+.registration-form__email-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.registration-form__email-status-hint {
+  font-size: 0.75rem;
+  color: var(--color-neverything-600);
+  margin-top: 0.35rem;
+}
+
 .registration-form__input-shell {
   position: relative;
   display: flex;

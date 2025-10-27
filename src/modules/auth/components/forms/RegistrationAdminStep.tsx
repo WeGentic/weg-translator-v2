@@ -1,7 +1,7 @@
 /**
  * Admin account step presenting credential fields fed by the registration controller hook.
  */
-import { useId, useState, type ChangeEvent } from "react";
+import { useEffect, useId, useRef, useState, type ChangeEvent } from "react";
 
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -16,12 +16,21 @@ import {
   type RegistrationValues,
 } from "@/modules/auth/utils/validation/registration";
 import type { PasswordEvaluationResult } from "@/modules/auth/utils/passwordPolicy";
+import type { EmailStatusProbeApi } from "@/modules/auth/hooks/controllers/useEmailStatusProbe";
 import { PasswordRequirementsPanel } from "./PasswordRequirementsPanel";
 import { PasswordStrengthMeter } from "./PasswordStrengthMeter";
+import { EmailStatusBanner } from "./EmailStatusBanner";
 
 export interface RegistrationAdminStepProps {
   values: RegistrationValues;
   touched: RegistrationTouched;
+  emailStatusProbe: EmailStatusProbeApi;
+  onNavigateToLogin: () => void;
+  onRecoverPassword: () => void;
+  onResumeVerification: () => void;
+  onResendVerification: () => void;
+  isResendDisabled: boolean;
+  resendHint?: string;
   getFieldError: (field: RegistrationField) => string;
   handleFieldChange: (field: RegistrationField) => (event: ChangeEvent<HTMLInputElement>) => void;
   handleFieldBlur: (field: RegistrationField) => void;
@@ -31,6 +40,13 @@ export interface RegistrationAdminStepProps {
 export function RegistrationAdminStep({
   values,
   touched,
+  emailStatusProbe,
+  onNavigateToLogin,
+  onRecoverPassword,
+  onResumeVerification,
+  onResendVerification,
+  isResendDisabled,
+  resendHint,
   getFieldError,
   handleFieldChange,
   handleFieldBlur,
@@ -40,6 +56,7 @@ export function RegistrationAdminStep({
   const guidanceId = useId();
   const requirementsSummaryId = `${guidanceId}-requirements`;
   const strengthSummaryId = `${guidanceId}-strength`;
+  const emailStatusRef = useRef<HTMLDivElement | null>(null);
 
   const trimmedPassword = values.adminPassword.trim();
   const shouldShowStrength = isPasswordFieldFocused || trimmedPassword.length > 0;
@@ -51,6 +68,12 @@ export function RegistrationAdminStep({
   const handlePasswordBlur = () => {
     setPasswordFieldFocused(false);
   };
+
+  useEffect(() => {
+    if (emailStatusProbe.status === "registered_verified") {
+      emailStatusRef.current?.focus();
+    }
+  }, [emailStatusProbe.status]);
 
   const renderField = (field: RegistrationFieldConfig) => {
     const fieldError = touched[field.key] ? getFieldError(field.key) : "";
@@ -101,6 +124,18 @@ export function RegistrationAdminStep({
           <p id={errorId} className="registration-form__field-error" role="alert">
             {fieldError}
           </p>
+        ) : null}
+        {field.key === "adminEmail" ? (
+          <EmailStatusBanner
+            probe={emailStatusProbe}
+            onLogin={onNavigateToLogin}
+            onRecover={onRecoverPassword}
+            onResumeVerification={onResumeVerification}
+            onResend={onResendVerification}
+            resendDisabled={isResendDisabled}
+            resendHint={resendHint}
+            ref={emailStatusRef}
+          />
         ) : null}
       </div>
     );
