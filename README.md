@@ -129,7 +129,9 @@ cargo test --manifest-path src-tauri/Cargo.toml
 - When the key is missing or revoked, address suggestions are disabled and the UI surfaces a friendly banner (`GOOGLE_MAPS_API_KEY` is required). Rate limits are enforced in-process (per-second and per-minute windows) to guard quotas; the UI shows a “temporarily rate limited” message if users type too quickly.
 - To rotate the key, update the environment variable, revoke the old key in Google Cloud, and relaunch Tauri. No rebuild is required because the backend reads the variable at startup.
 
-## SQLite persistence
+## Database architecture
+
+### SQLite persistence (local)
 
 - Database file lives under the platform-specific app config directory (via
   `BaseDirectory::AppConfig`) as `weg_translator.db`.
@@ -139,6 +141,21 @@ cargo test --manifest-path src-tauri/Cargo.toml
   `src-tauri/capabilities/sqlite.json` manifest to avoid arbitrary URI access from the frontend.
 - In-memory integration tests (`src-tauri/tests/db_integration.rs`) verify migrations, duplicate
   insert handling, status updates, and the clear-history path.
+
+### Supabase PostgreSQL (cloud)
+
+- User profiles (extends `auth.users`)
+- Company data (multi-tenant entities with RLS)
+- Company memberships (role-based access control)
+- Schema managed through SQL migrations in `supabase/migrations/`
+
+**Important**: Application code does NOT contain schema manipulation capabilities. All schema changes MUST be performed through SQL migrations. See [Schema Management Guide](./docs/schema-management.md) for detailed documentation.
+
+**Security**:
+- Row-Level Security (RLS) enforces strict tenant isolation
+- Service role key used only in Edge Functions (never exposed to client)
+- Automated CI checks prevent schema manipulation code from being merged
+- See [Schema Manipulation Audit](./docs/schema-manipulation-audit.md) for compliance verification
 
 ## OpenXLIFF integration
 

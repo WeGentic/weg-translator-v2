@@ -1,0 +1,240 @@
+name: Schema Safety Check
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'src-tauri/src/**/*.rs'
+      - 'supabase/**/*.sql'
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  schema-safety-check:
+    runs-on: ubuntu-latest
+    name: Verify No Schema Manipulation in Application Code
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: DDL Keyword Scan - TypeScript Files
+        id: ddl-typescript
+        run: |
+          echo "🔍 Scanning TypeScript files for DDL keywords..."
+
+          # Search for DDL keywords in TypeScript files
+          if grep -rn "CREATE TABLE\|ALTER TABLE\|DROP TABLE\|CREATE SCHEMA\|DROP SCHEMA\|TRUNCATE TABLE" \
+            src/ --include="*.ts" --include="*.tsx" 2>/dev/null; then
+            echo "❌ FAILURE: DDL keywords found in TypeScript files!"
+            echo ""
+            echo "Schema changes MUST be performed through SQL migrations in supabase/migrations/"
+            echo "Application code MUST NOT contain DDL statements."
+            echo ""
+            echo "See: docs/schema-management.md for proper schema management workflow"
+            exit 1
+          else
+            echo "✅ No DDL keywords found in TypeScript files"
+          fi
+
+      - name: DDL Keyword Scan - Rust Application Files
+        id: ddl-rust
+        run: |
+          echo "🔍 Scanning Rust application files for DDL keywords..."
+
+          # Search for DDL keywords in Rust files (excluding migrations and tests)
+          if grep -rn "CREATE TABLE\|ALTER TABLE\|DROP TABLE\|CREATE SCHEMA\|DROP SCHEMA\|TRUNCATE TABLE" \
+            src-tauri/src/ --include="*.rs" \
+            --exclude-dir=migrations \
+            --exclude-dir=target 2>/dev/null; then
+            echo "❌ FAILURE: DDL keywords found in Rust application files!"
+            echo ""
+            echo "Schema changes MUST be performed through SQL migrations."
+            echo "Application code MUST NOT contain DDL statements."
+            echo ""
+            echo "See: docs/schema-management.md for proper schema management workflow"
+            exit 1
+          else
+            echo "✅ No DDL keywords found in Rust application files"
+          fi
+
+      - name: Raw SQL Execution Check - Rust
+        id: raw-sql-rust
+        run: |
+          echo "🔍 Checking for raw SQL execution functions in Rust..."
+
+          # Search for potentially unsafe raw SQL execution
+          if grep -rn "query_raw\|execute_raw\|sql::raw" \
+            src-tauri/src/ --include="*.rs" \
+            --exclude-dir=migrations \
+            --exclude-dir=target 2>/dev/null | grep -v "test"; then
+            echo "❌ FAILURE: Raw SQL execution found in application code!"
+            echo ""
+            echo "Raw SQL execution is prohibited. Use:"
+            echo "  - SQLx macros (sqlx::query!, sqlx::query_as!) for local SQLite"
+            echo "  - Supabase client methods for cloud database"
+            echo ""
+            echo "See: docs/schema-management.md for approved patterns"
+            exit 1
+          else
+            echo "✅ No raw SQL execution found in Rust application code"
+          fi
+
+      - name: String Concatenation in Queries Check
+        id: sql-injection-check
+        run: |
+          echo "🔍 Checking for potential SQL injection via string concatenation..."
+
+          # Check for format! or concat! near SQL keywords (potential SQL injection)
+          RESULTS=$(grep -rn "format!\|concat!" src-tauri/src/ --include="*.rs" \
+            --exclude-dir=migrations --exclude-dir=target 2>/dev/null | \
+            grep -i "select\|insert\|update\|delete\|where" | grep -v "test" || true)
+
+          if [ -n "$RESULTS" ]; then
+            echo "⚠️  WARNING: Potential SQL injection via string concatenation detected:"
+            echo "$RESULTS"
+            echo ""
+            echo "Use parameterized queries with placeholders (?) instead of string concatenation."
+            echo ""
+            echo "Example:"
+            echo "  ❌ format!(\"SELECT * FROM users WHERE id = '{}'\", user_id)"
+            echo "  ✅ sqlx::query!(\"SELECT * FROM users WHERE id = ?\", user_id)"
+            exit 1
+          else
+            echo "✅ No string concatenation in queries detected"
+          fi
+
+      - name: Supabase Client Usage Validation
+        id: supabase-usage
+        run: |
+          echo "🔍 Validating Supabase client usage patterns..."
+
+          # Check for potential misuse of Supabase RPC with DDL
+          RESULTS=$(grep -rn "supabase\.rpc\|supabase\.from.*\.rpc" \
+            src/ --include="*.ts" --include="*.tsx" 2>/dev/null | \
+            grep -i "create\|alter\|drop" || true)
+
+          if [ -n "$RESULTS" ]; then
+            echo "⚠️  WARNING: Potential schema manipulation via Supabase RPC detected:"
+            echo "$RESULTS"
+            echo ""
+            echo "Verify that RPC functions do not perform DDL operations."
+            exit 1
+          else
+            echo "✅ No suspicious Supabase RPC usage detected"
+          fi
+
+      - name: Migration File Validation
+        id: migration-validation
+        run: |
+          echo "🔍 Validating SQL migration files..."
+
+          # Check if new migrations follow idempotency patterns
+          if [ -d "supabase/migrations" ]; then
+            echo "Checking for idempotency patterns in migrations..."
+
+            # Get changed migration files in this PR
+            CHANGED_MIGRATIONS=$(git diff --name-only origin/${GITHUB_BASE_REF:-main} -- supabase/migrations/*.sql 2>/dev/null || true)
+
+            if [ -n "$CHANGED_MIGRATIONS" ]; then
+              echo "📝 Changed migration files:"
+              echo "$CHANGED_MIGRATIONS"
+
+              # Check each changed migration for idempotency patterns
+              for file in $CHANGED_MIGRATIONS; do
+                if [ -f "$file" ]; then
+                  echo ""
+                  echo "Checking: $file"
+
+                  # Look for idempotency keywords
+                  if grep -q "IF NOT EXISTS\|IF EXISTS\|CREATE OR REPLACE" "$file"; then
+                    echo "  ✅ Contains idempotency pattern"
+                  else
+                    echo "  ⚠️  WARNING: May not be idempotent - consider using IF NOT EXISTS, IF EXISTS, or CREATE OR REPLACE"
+                  fi
+                fi
+              done
+            else
+              echo "No migration files changed in this PR"
+            fi
+          else
+            echo "No supabase/migrations directory found"
+          fi
+
+      - name: Generate Report
+        if: success()
+        run: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ SCHEMA SAFETY CHECK PASSED"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "All checks passed:"
+          echo "  ✅ No DDL in TypeScript files"
+          echo "  ✅ No DDL in Rust application files"
+          echo "  ✅ No raw SQL execution in application code"
+          echo "  ✅ No SQL injection via string concatenation"
+          echo "  ✅ No suspicious Supabase RPC usage"
+          echo "  ✅ Migration files validated"
+          echo ""
+          echo "Schema changes are correctly managed through SQL migrations."
+          echo "See: docs/schema-management.md for guidelines"
+          echo ""
+
+      - name: Comment on PR (on failure)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `## ❌ Schema Safety Check Failed
+
+            The schema safety check has detected prohibited patterns in your code.
+
+            ### What This Means
+
+            Application code MUST NOT contain schema manipulation capabilities. All schema changes must be performed through SQL migrations in \`supabase/migrations/\`.
+
+            ### How to Fix
+
+            1. **Remove DDL statements** from TypeScript and Rust application code
+            2. **Create a SQL migration** instead:
+               \`\`\`bash
+               # Create new migration file
+               supabase migration new your_migration_name
+
+               # Write your schema changes in the migration file
+               # Use idempotent patterns (IF NOT EXISTS, CREATE OR REPLACE, etc.)
+               \`\`\`
+
+            3. **Review the migration locally**:
+               \`\`\`bash
+               supabase db reset
+               supabase db push
+               \`\`\`
+
+            4. **Push the migration** to version control and rerun this PR
+
+            ### Documentation
+
+            - [Schema Management Guide](/docs/schema-management.md)
+            - [Schema Manipulation Audit](/docs/schema-manipulation-audit.md)
+            - [CI Schema Checks](/docs/ci-schema-checks.md)
+
+            ### Need Help?
+
+            Review the [approved and prohibited patterns](/docs/schema-management.md#approved-patterns) in the documentation.
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });

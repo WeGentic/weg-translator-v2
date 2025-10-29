@@ -3,16 +3,17 @@
  *
  * This module provides functionality to detect "orphaned" users in the Tr-entic Desktop
  * registration flow. Orphaned users are those who exist in Supabase Auth (auth.users)
- * but have no corresponding company data in the application database.
+ * but have no corresponding profile or membership data in the application database.
  *
  * **Orphan Classifications**:
- * - Case 1.1 (Orphaned Unverified): User registered but never verified email. No company data.
+ * - Case 1.1 (Orphaned Unverified): User registered but never verified email. No profile/membership.
  * - Case 1.2 (Orphaned Verified): User verified email but registration flow interrupted before company creation.
  *
  * **Fail-Closed Security Policy**:
  * - Security over availability: If detection fails, BLOCK login (do not allow access)
- * - Retry strategy: 3 attempts with exponential backoff (0ms, 200ms, 500ms)
- * - Total timeout: 2.2 seconds maximum (500ms × 3 + 200ms + 500ms delays)
+ * - Retry strategy: 3 attempts with exponential backoff with jitter (0ms, 0-200ms, 0-500ms)
+ * - Jitter prevents thundering herd problem under load
+ * - Total timeout: 2.2 seconds maximum (500ms × 3 + max 200ms + max 500ms delays)
  * - On failure: Throw OrphanDetectionError (triggers user-facing error message)
  *
  * **Performance Targets**:
@@ -103,17 +104,18 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Checks if a user is "orphaned" by querying for associated company data with fail-closed retry logic.
+ * Checks if a user is "orphaned" by querying for associated profile and membership data with fail-closed retry logic.
  *
  * An orphaned user is one who exists in Supabase Auth (auth.users) but has no corresponding
- * data in the application's `companies` or `company_admins` tables. This typically happens when:
+ * profile in `profiles` table or no membership in `company_members` table. This typically happens when:
  * 1. User registers but never completes email verification (Case 1.1)
  * 2. User verifies email but registration flow is interrupted before company creation (Case 1.2)
  *
  * **Fail-Closed Retry Strategy**:
- * - Attempts: 3 retries with exponential backoff (0ms, 200ms, 500ms)
+ * - Attempts: 3 retries with exponential backoff with jitter (0ms, 0-200ms, 0-500ms)
+ * - Jitter randomizes delay to prevent coordinated retry storms under load
  * - Timeout: 500ms per attempt
- * - Total max duration: 2.2 seconds (500ms × 3 + 200ms + 500ms delays)
+ * - Total max duration: 2.2 seconds (500ms × 3 + max 200ms + max 500ms delays)
  * - On success: Return OrphanCheckResult with metrics
  * - On failure after all retries: Throw OrphanDetectionError (blocks login)
  *
@@ -121,11 +123,11 @@ function sleep(ms: number): Promise<void> {
  * - Target: <200ms at p95 (first attempt success)
  * - Timeout: 500ms per attempt (generous margin above p99 of 350ms)
  * - Queries execute in parallel using Promise.all()
- * - Indexed columns: companies(owner_admin_uuid), company_admins(admin_uuid)
+ * - Indexed columns: profiles(id), company_members(user_id)
  *
  * **Error Handling (Fail-Closed)**:
- * - On timeout: Retry with backoff, throw OrphanDetectionError after 3 attempts
- * - On query error: Retry with backoff, throw OrphanDetectionError after 3 attempts
+ * - On timeout: Retry with jittered backoff, throw OrphanDetectionError after 3 attempts
+ * - On query error: Retry with jittered backoff, throw OrphanDetectionError after 3 attempts
  * - Partial failure: Treat as total failure (cannot determine orphan status with partial data)
  * - All errors logged with correlation ID for monitoring and alerting
  *
@@ -145,7 +147,7 @@ function sleep(ms: number): Promise<void> {
  * try {
  *   const result = await checkIfOrphaned(user.id, { maxRetries: 3 });
  *   if (result.isOrphaned && result.classification === 'case_1_2') {
- *     // User verified email but no company data - trigger recovery flow
+ *     // User verified email but no profile/membership - trigger recovery flow
  *     throw new OrphanedUserError(user.email, result.metrics.correlationId);
  *   }
  * } catch (error) {
@@ -169,8 +171,13 @@ export async function checkIfOrphaned(
   const maxRetries = options.maxRetries ?? 3;
   const timeoutMs = options.timeoutMs ?? 500;
 
-  // Exponential backoff delays: 0ms (immediate), 200ms, 500ms
-  const delays = [0, 200, 500];
+  // Exponential backoff delays with jitter: 0ms (immediate), 0-200ms, 0-500ms
+  // Jitter prevents thundering herd problem under load by randomizing retry timing
+  const delays = [
+    0,                      // Attempt 1: immediate (no delay)
+    Math.random() * 200,    // Attempt 2: random 0-200ms
+    Math.random() * 500     // Attempt 3: random 0-500ms
+  ];
 
   // Generate correlation ID for end-to-end tracing
   const correlationId = crypto.randomUUID();
@@ -207,17 +214,19 @@ export async function checkIfOrphaned(
       const queryStartTime = performance.now();
 
       // Create parallel queries
+      // Query 1: Check if user has a profile
+      // Query 2: Check if user has company membership
       const queriesPromise = Promise.all([
         supabase
-          .from("companies")
+          .from("profiles")
           .select("id")
-          .eq("owner_admin_uuid", userId)
+          .eq("id", userId)
           .limit(1)
           .maybeSingle(),
         supabase
-          .from("company_admins")
-          .select("admin_uuid")
-          .eq("admin_uuid", userId)
+          .from("company_members")
+          .select("id")
+          .eq("user_id", userId)
           .limit(1)
           .maybeSingle(),
       ]);
@@ -228,7 +237,7 @@ export async function checkIfOrphaned(
       );
 
       // Race queries against timeout
-      const [companiesResult, adminsResult] = await Promise.race([
+      const [profileResult, membershipResult] = await Promise.race([
         queriesPromise,
         timeoutPromise,
       ]);
@@ -239,27 +248,28 @@ export async function checkIfOrphaned(
       cumulativeQueryDurationMs += queryDurationMs;
 
       // Check for query errors (excluding PGRST116 which means "no rows found")
-      // Treat PGRST116 as success (valid result indicating no company data)
-      if (companiesResult.error && companiesResult.error.code !== "PGRST116") {
+      // Treat PGRST116 as success (valid result indicating no profile/membership)
+      if (profileResult.error && profileResult.error.code !== "PGRST116") {
         throw new Error(
-          `Companies query error: ${companiesResult.error.message} (code: ${companiesResult.error.code})`
+          `Profile query error: ${profileResult.error.message} (code: ${profileResult.error.code})`
         );
       }
 
-      if (adminsResult.error && adminsResult.error.code !== "PGRST116") {
+      if (membershipResult.error && membershipResult.error.code !== "PGRST116") {
         throw new Error(
-          `Admins query error: ${adminsResult.error.message} (code: ${adminsResult.error.code})`
+          `Membership query error: ${membershipResult.error.message} (code: ${membershipResult.error.code})`
         );
       }
 
       // SUCCESS - Queries completed without timeout or error
 
-      // Determine if user has company data
-      const hasCompanyData = companiesResult.data !== null;
-      const hasAdminData = adminsResult.data !== null;
+      // Determine if user has profile and membership
+      const hasProfile = profileResult.data !== null;
+      const hasMembership = membershipResult.data !== null;
 
-      // User is orphaned if they have no company data AND no admin data
-      const isOrphaned = !hasCompanyData && !hasAdminData;
+      // User is orphaned if they have NO profile OR NO membership
+      // Both are required for a complete registration
+      const isOrphaned = !hasProfile || !hasMembership;
 
       // Calculate total operation duration and create final metrics
       const operationEndTime = performance.now();
@@ -302,15 +312,15 @@ export async function checkIfOrphaned(
           isOrphaned: true,
           classification: "case_1_2",
           metrics,
-          hasCompanyData,
-          hasAdminData,
+          hasCompanyData: hasProfile,
+          hasAdminData: hasMembership,
         };
       } else {
-        console.info("[orphanDetection] User has company data (not orphaned):", {
+        console.info("[orphanDetection] User has profile and membership (not orphaned):", {
           correlationId,
           userId,
-          hasCompanyData,
-          hasAdminData,
+          hasProfile,
+          hasMembership,
           attempt,
           metrics: {
             totalDurationMs: metrics.totalDurationMs,
@@ -332,8 +342,8 @@ export async function checkIfOrphaned(
           isOrphaned: false,
           classification: null,
           metrics,
-          hasCompanyData,
-          hasAdminData,
+          hasCompanyData: hasProfile,
+          hasAdminData: hasMembership,
         };
       }
     } catch (attemptError) {

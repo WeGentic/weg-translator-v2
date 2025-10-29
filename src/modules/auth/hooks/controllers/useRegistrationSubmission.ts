@@ -10,6 +10,7 @@ import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/core/config";
 import { logger } from "@/core/logging";
 import { useToast } from "@/shared/ui/toast";
+import { checkIfOrphaned } from "@/modules/auth/utils/orphanDetection";
 
 const POLL_BASE_DELAY_MS = 5_000;
 const POLL_MAX_DELAY_MS = 60_000;
@@ -57,6 +58,7 @@ export interface NormalizedRegistrationPayload {
 interface SubmissionSuccessResult {
   companyId: string;
   adminUuid: string;
+  membershipId: string;
   payload: NormalizedRegistrationPayload;
 }
 
@@ -246,6 +248,7 @@ interface PersistenceSuccess {
   kind: "success";
   companyId: string;
   adminUuid: string;
+  membershipId: string;
 }
 
 interface PersistenceFailure {
@@ -376,7 +379,7 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
 
         const parsed = data as
           | {
-              data?: { companyId: string; adminUuid?: string };
+              data?: { companyId: string; adminUuid?: string; membershipId?: string };
               error?: { code?: string; message: string; details?: unknown };
             }
           | null
@@ -395,6 +398,8 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
         }
 
         const resultCompanyId = parsed?.data?.companyId;
+        const resultMembershipId = parsed?.data?.membershipId;
+
         if (!resultCompanyId) {
           return {
             kind: "error",
@@ -407,10 +412,23 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
           };
         }
 
+        if (!resultMembershipId) {
+          return {
+            kind: "error",
+            error: createSubmissionError({
+              code: "edge_function_invalid_response",
+              message: "Edge Function response was missing the membership identifier.",
+              source: "network",
+              details: parsed,
+            }),
+          };
+        }
+
         return {
           kind: "success",
           companyId: resultCompanyId,
           adminUuid: parsed?.data?.adminUuid ?? adminUuid,
+          membershipId: resultMembershipId,
         };
       } catch (cause) {
         return { kind: "error", error: mapFunctionInvokeError(cause) };
@@ -548,7 +566,37 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
           const persistenceResult = {
             companyId: persistence.companyId,
             adminUuid: persistence.adminUuid,
+            membershipId: persistence.membershipId,
           };
+
+          // Post-registration orphan check: verify user has profile and membership
+          try {
+            const orphanCheck = await checkIfOrphaned(supabaseUser.id);
+
+            void logger.info("Post-registration orphan check completed", {
+              attempt_id: currentState.attemptId ?? "<none>",
+              company_id: persistenceResult.companyId,
+              admin_uuid: persistenceResult.adminUuid,
+              membership_id: persistenceResult.membershipId,
+              is_orphaned: orphanCheck.isOrphaned,
+              metrics: orphanCheck.metrics,
+            });
+
+            if (orphanCheck.isOrphaned) {
+              void logger.warn("Post-registration orphan detected (unexpected)", {
+                attempt_id: currentState.attemptId ?? "<none>",
+                admin_uuid: persistenceResult.adminUuid,
+                classification: orphanCheck.classification,
+              });
+            }
+          } catch (orphanError) {
+            // Log orphan check failure but don't block registration success
+            void logger.warn("Post-registration orphan check failed (non-blocking)", {
+              attempt_id: currentState.attemptId ?? "<none>",
+              admin_uuid: persistenceResult.adminUuid,
+              error: orphanError instanceof Error ? orphanError.message : String(orphanError),
+            });
+          }
 
           dispatch({
             type: "success",
@@ -559,13 +607,14 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
           });
           toast({
             title: "Registration complete",
-            description: "Your organization has been verified and created successfully.",
+            description: `Your organization "${payload.company.name}" has been verified and created successfully. You have been assigned as the owner.`,
           });
 
           void logger.info("Registration persisted", {
             attempt_id: currentState.attemptId ?? "<none>",
             company_id: persistenceResult.companyId,
             admin_uuid: persistenceResult.adminUuid,
+            membership_id: persistenceResult.membershipId,
           });
         } catch (cause) {
           const submissionError = mapVerificationError(cause);

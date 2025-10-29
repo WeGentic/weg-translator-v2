@@ -20,12 +20,15 @@ import { checkIfOrphaned } from "@/modules/auth/utils/orphanDetection";
 import { OrphanedUserError, OrphanDetectionError } from "@/modules/auth/errors";
 import { initiateCleanupFlow } from "@/modules/auth/utils/cleanupInitiation";
 import { useToast } from "@/shared/ui/toast";
+import { ProfileQueries } from "@/core/supabase/queries/profiles";
 
 interface User {
   id: string;
   email: string;
   name?: string;
   emailVerified: boolean;
+  fullName?: string | null;
+  avatarUrl?: string | null;
 }
 
 interface AuthContextType {
@@ -56,7 +59,43 @@ function mapUser(supabaseUser: SupabaseUser | null): User | null {
     email,
     name,
     emailVerified,
+    fullName: null,
+    avatarUrl: null,
   };
+}
+
+/**
+ * Maps Supabase user with profile data from profiles table.
+ * Fetches full_name and avatar_url from profiles table to enrich user context.
+ */
+async function mapUserWithProfile(supabaseUser: SupabaseUser | null): Promise<User | null> {
+  if (!supabaseUser) return null;
+
+  const baseUser = mapUser(supabaseUser);
+  if (!baseUser) return null;
+
+  try {
+    // Fetch profile data from profiles table
+    const profile = await ProfileQueries.getProfile(supabaseUser.id);
+
+    if (profile) {
+      return {
+        ...baseUser,
+        fullName: profile.full_name,
+        avatarUrl: profile.avatar_url,
+      };
+    }
+
+    // Profile not found - return base user without profile data
+    return baseUser;
+  } catch (error) {
+    // Log error but don't block authentication if profile fetch fails
+    void logger.warn("Failed to fetch profile data during login", {
+      userId: supabaseUser.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return baseUser;
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -205,9 +244,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new OrphanedUserError(email, correlationId);
         }
 
-        // User has company data - proceed with login
+        // User has profile and membership - proceed with login
+        // Fetch profile data to enrich user context
+        const userWithProfile = await mapUserWithProfile(supabaseUser);
         setSession(data.session);
-        setUser(mapUser(supabaseUser));
+        setUser(userWithProfile);
       } catch (orphanError) {
         // If orphanError is OrphanedUserError, rethrow it to trigger recovery flow
         if (orphanError instanceof OrphanedUserError) {
@@ -314,7 +355,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let disposed = false;
 
-    async function ensureDomainUserProfile(currentUser: User | null) {
+    /**
+     * Syncs local SQLite user profile for backward compatibility.
+     * Note: Cloud profiles are auto-created by database trigger (handle_new_user).
+     * This function only maintains local SQLite profiles for desktop-specific features.
+     */
+    async function syncLocalUserProfile(currentUser: User | null) {
       if (!currentUser) {
         lastSyncedUserRef.current = null;
         return;
@@ -339,6 +385,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
+        // Note: This only manages LOCAL SQLite profile for desktop app features
+        // Cloud profiles in Supabase are managed by database trigger
         if (!existingProfile) {
           await createUserProfile({
             userUuid: identifier,
@@ -347,7 +395,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             roles: ["owner"],
           });
           if (!disposed) {
-            void logger.info("Created local user profile", context);
+            void logger.info("Created local user profile (SQLite)", context);
           }
         } else {
           const needsNameUpdate = existingProfile.username !== preferredName;
@@ -360,7 +408,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: currentUser.email,
             });
             if (!disposed) {
-              void logger.info("Updated local user profile", context);
+              void logger.info("Updated local user profile (SQLite)", context);
             }
           }
         }
@@ -370,12 +418,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         if (!disposed) {
-          void logger.error("Failed to sync local user profile", error, context);
+          void logger.error("Failed to sync local user profile (SQLite)", error, context);
         }
       }
     }
 
-    void ensureDomainUserProfile(user);
+    void syncLocalUserProfile(user);
 
     return () => {
       disposed = true;

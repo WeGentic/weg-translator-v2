@@ -18,7 +18,8 @@
     "test:run": "vitest run --silent --reporter=dot",
     "test:coverage": "vitest run --coverage",
     "format": "prettier \"**/*.{cjs,js,jsx,mjs,ts,tsx,json,md,css}\" --write",
-    "format:check": "prettier \"**/*.{cjs,js,jsx,mjs,ts,tsx,json,md,css}\" --check"
+    "format:check": "prettier \"**/*.{cjs,js,jsx,mjs,ts,tsx,json,md,css}\" --check",
+    "generate:types": "supabase gen types typescript --project-id wnohgxkujwnuoqtibsss > src/shared/types/supabase.ts"
   },
   "dependencies": {
     "@openai/codex": "^0.50.0",

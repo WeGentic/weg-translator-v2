@@ -304,3 +304,138 @@ export interface UpdateJobStatusInput {
   jobStatus: JobStatus;
   errorLog?: OptionalNullable<string>;
 }
+
+// ===== Supabase Schema - Multi-tenant Company Management =====
+
+/**
+ * Address structure for JSONB storage in PostgreSQL.
+ * Supports flexible international address formats.
+ */
+export interface Address {
+  street?: string;
+  city?: string;
+  postal_code?: string;
+  country?: string;
+  state?: string;
+  line1?: string;
+  line2?: string;
+}
+
+/**
+ * Member role within a company.
+ * - owner: Full administrative control, can delete company
+ * - admin: Can manage members and update company settings
+ * - member: Standard user with read access
+ */
+export type MemberRole = 'owner' | 'admin' | 'member';
+
+// Company entity types
+
+/**
+ * Company record from the companies table.
+ * Represents an organization/business entity in the multi-tenant system.
+ */
+export interface Company {
+  id: string;
+  name: string;
+  vat_id: string;
+  email: string;
+  phone: string | null;
+  address: Address | null;
+  logo_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Payload for creating a new company.
+ * VAT ID must be unique across all companies.
+ */
+export interface CompanyCreatePayload {
+  name: string;
+  vat_id: string;
+  email: string;
+  phone?: string;
+  address?: Address;
+}
+
+/**
+ * Payload for updating an existing company.
+ * All fields except ID are optional for partial updates.
+ */
+export interface CompanyUpdatePayload {
+  id: string;
+  name?: string;
+  email?: string;
+  phone?: string | null;
+  address?: Address | null;
+  logo_url?: string | null;
+}
+
+// Profile entity types
+
+/**
+ * User profile record from the profiles table.
+ * Extends auth.users with application-specific user metadata.
+ */
+export interface Profile {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Payload for updating a user profile.
+ * Profiles are auto-created by trigger, only updates are exposed.
+ */
+export interface ProfileUpdatePayload {
+  id: string;
+  full_name?: string | null;
+  avatar_url?: string | null;
+}
+
+// Company membership types
+
+/**
+ * Company member record from the company_members junction table.
+ * Represents a many-to-many relationship between users and companies.
+ */
+export interface CompanyMember {
+  id: string;
+  company_id: string;
+  user_id: string;
+  role: MemberRole;
+  invited_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Payload for inviting a new member to a company.
+ * Requires owner or admin role to execute.
+ */
+export interface InviteMemberPayload {
+  company_id: string;
+  user_id: string;
+  role: MemberRole;
+}
+
+/**
+ * Payload for updating a member's role within a company.
+ * Only owners can change member roles.
+ */
+export interface UpdateMemberRolePayload {
+  member_id: string;
+  new_role: MemberRole;
+}
+
+/**
+ * Payload for removing a member from a company.
+ * Owners and admins can remove others, users can remove themselves.
+ */
+export interface RemoveMemberPayload {
+  member_id: string;
+  company_id: string;
+}

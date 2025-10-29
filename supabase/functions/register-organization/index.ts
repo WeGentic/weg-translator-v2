@@ -44,7 +44,7 @@ const registrationSchema = z.object({
 
 type RegistrationInput = z.infer<typeof registrationSchema>;
 type ErrorBody = { error: { code: string; message: string; details?: unknown } };
-type SuccessBody = { data: { companyId: string; adminUuid: string; correlationId: string } };
+type SuccessBody = { data: { companyId: string; adminUuid: string; membershipId: string; correlationId: string } };
 
 function jsonResponse(
   body: SuccessBody | ErrorBody | Record<string, unknown>,
@@ -218,6 +218,7 @@ async function handleRegistration(
 
   try {
     const result = await sql.begin(async (trx) => {
+      // Step 1: Create company record
       const [companyRow] = await trx<{ id: string }>`
         insert into public.companies (
           owner_admin_uuid,
@@ -260,6 +261,7 @@ async function handleRegistration(
 
       const companyId = companyRow.id;
 
+      // Step 2: Create company_admins record (legacy table)
       await trx`
         insert into public.company_admins (
           admin_uuid,
@@ -282,12 +284,34 @@ async function handleRegistration(
         returning admin_uuid;
       `;
 
-      return { companyId };
+      // Step 3: Create company_members record (new schema)
+      // First user is always the owner with role='owner'
+      // invited_by is NULL for self-registration
+      const [membershipRow] = await trx<{ id: string }>`
+        insert into public.company_members (
+          company_id,
+          user_id,
+          role,
+          invited_by
+        )
+        values (
+          ${companyId},
+          ${user.id},
+          'owner',
+          null
+        )
+        returning id;
+      `;
+
+      const membershipId = membershipRow.id;
+
+      return { companyId, membershipId };
     });
 
     console.info("[register_organization] Registration persisted.", {
       correlationId,
       companyId: result.companyId,
+      membershipId: result.membershipId,
     });
 
     return jsonResponse(
@@ -295,6 +319,7 @@ async function handleRegistration(
         data: {
           companyId: result.companyId,
           adminUuid: user.id,
+          membershipId: result.membershipId,
           correlationId,
         },
       },
