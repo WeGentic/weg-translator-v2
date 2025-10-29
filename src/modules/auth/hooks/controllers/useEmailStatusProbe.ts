@@ -22,6 +22,9 @@ interface EmailProbeResult {
   correlationId: string;
   attemptId?: string;
   checkedAt: number;
+  // NEW FIELDS from enhanced check-email-status edge function (Phase 2)
+  hasCompanyData: boolean | null;
+  isOrphaned: boolean | null;
 }
 
 interface EmailProbeError {
@@ -301,6 +304,9 @@ export function useEmailStatusProbe({
             lastSignInAt?: string | null;
             correlationId?: string;
             attemptId?: string;
+            // NEW FIELDS from enhanced check-email-status edge function (Phase 2)
+            hasCompanyData?: boolean | null;
+            isOrphaned?: boolean | null;
           };
         })?.data;
 
@@ -331,6 +337,9 @@ export function useEmailStatusProbe({
           attemptId: payload.attemptId ?? resolvedAttemptId ?? undefined,
           correlationId: payload.correlationId ?? correlationId,
           checkedAt: now,
+          // NEW FIELDS from enhanced check-email-status edge function (Phase 2)
+          hasCompanyData: payload.hasCompanyData ?? null,
+          isOrphaned: payload.isOrphaned ?? null,
         };
 
         cacheRef.current.set(cacheKey, { result, timestamp: now });

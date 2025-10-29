@@ -11,8 +11,10 @@
  */
 export { LoginRoute, loginRouteComponent } from "./routes";
 export { RegistrationRoute, registrationRouteComponent } from "./routes/RegistrationRoute";
+export { RecoveryRoute, recoveryRouteComponent } from "./routes/RecoveryRoute";
 export { LoginForm } from "./components/LoginForm";
 export { RegistrationForm } from "./components/RegistrationForm";
+export { RecoveryForm } from "./components/RecoveryForm";
 export { UserAccountDialog } from "./components/UserAccountDialog";
 export { useAuth } from "./hooks/useAuth";
 export { useRegistrationForm } from "./hooks/controllers/useRegistrationForm";

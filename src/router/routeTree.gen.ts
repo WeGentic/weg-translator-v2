@@ -13,6 +13,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as RegisterRecoverRouteImport } from './routes/register/recover'
 import { Route as AppResourcesIndexRouteImport } from './routes/_app/resources/index'
 import { Route as AppDashboardIndexRouteImport } from './routes/_app/dashboard/index'
 import { Route as AppProjectsProjectIdRouteImport } from './routes/_app/projects/$projectId'
@@ -36,6 +37,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const RegisterRecoverRoute = RegisterRecoverRouteImport.update({
+  id: '/recover',
+  path: '/recover',
+  getParentRoute: () => RegisterRoute,
+} as any)
 const AppResourcesIndexRoute = AppResourcesIndexRouteImport.update({
   id: '/resources/',
   path: '/resources/',
@@ -54,7 +60,8 @@ const AppProjectsProjectIdRoute = AppProjectsProjectIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
+  '/register': typeof RegisterRouteWithChildren
+  '/register/recover': typeof RegisterRecoverRoute
   '/': typeof AppIndexRoute
   '/projects/$projectId': typeof AppProjectsProjectIdRoute
   '/dashboard': typeof AppDashboardIndexRoute
@@ -62,7 +69,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
+  '/register': typeof RegisterRouteWithChildren
+  '/register/recover': typeof RegisterRecoverRoute
   '/': typeof AppIndexRoute
   '/projects/$projectId': typeof AppProjectsProjectIdRoute
   '/dashboard': typeof AppDashboardIndexRoute
@@ -72,7 +80,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
+  '/register': typeof RegisterRouteWithChildren
+  '/register/recover': typeof RegisterRecoverRoute
   '/_app/': typeof AppIndexRoute
   '/_app/projects/$projectId': typeof AppProjectsProjectIdRoute
   '/_app/dashboard/': typeof AppDashboardIndexRoute
@@ -83,6 +92,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/login'
     | '/register'
+    | '/register/recover'
     | '/'
     | '/projects/$projectId'
     | '/dashboard'
@@ -91,6 +101,7 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/register'
+    | '/register/recover'
     | '/'
     | '/projects/$projectId'
     | '/dashboard'
@@ -100,6 +111,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/register'
+    | '/register/recover'
     | '/_app/'
     | '/_app/projects/$projectId'
     | '/_app/dashboard/'
@@ -109,7 +121,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
-  RegisterRoute: typeof RegisterRoute
+  RegisterRoute: typeof RegisterRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -141,6 +153,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/register/recover': {
+      id: '/register/recover'
+      path: '/recover'
+      fullPath: '/register/recover'
+      preLoaderRoute: typeof RegisterRecoverRouteImport
+      parentRoute: typeof RegisterRoute
     }
     '/_app/resources/': {
       id: '/_app/resources/'
@@ -182,10 +201,22 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface RegisterRouteChildren {
+  RegisterRecoverRoute: typeof RegisterRecoverRoute
+}
+
+const RegisterRouteChildren: RegisterRouteChildren = {
+  RegisterRecoverRoute: RegisterRecoverRoute,
+}
+
+const RegisterRouteWithChildren = RegisterRoute._addFileChildren(
+  RegisterRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
-  RegisterRoute: RegisterRoute,
+  RegisterRoute: RegisterRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

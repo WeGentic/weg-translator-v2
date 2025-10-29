@@ -105,6 +105,18 @@ export function LoginForm() {
 
         router.history.push(redirectTo);
       } catch (err) {
+        // Check if this is a redirect error from orphan detection
+        if (err instanceof Error && err.message === "REDIRECT_TO_RECOVERY") {
+          // Extract redirectUrl from error object (set by AuthProvider)
+          const redirectUrl = (err as Error & { redirectUrl?: string }).redirectUrl;
+          if (redirectUrl) {
+            // Redirect to recovery route (toast notification already shown by AuthProvider)
+            await router.navigate({ to: redirectUrl as any });
+            return;
+          }
+        }
+
+        // Handle all other login errors normally
         setError(err instanceof Error ? err.message : "Login failed. Please try again.");
       }
     },

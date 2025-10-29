@@ -9,3 +9,7 @@ project_id = "wnohgxkujwnuoqtibsss"
 [functions.check-email-status]
 # Email probe runs before users authenticate, so disable JWT enforcement on this function.
 verify_jwt = false
+
+[functions.cleanup-orphaned-user]
+# Cleanup function is unauthenticated (uses verification codes for auth), disable JWT enforcement.
+verify_jwt = false

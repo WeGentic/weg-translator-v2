@@ -58,6 +58,8 @@ interface ClassificationResult {
   status: EmailStatus;
   verifiedAt: string | null;
   lastSignInAt: string | null;
+  hasCompanyData?: boolean | null;
+  isOrphaned?: boolean | null;
 }
 
 interface SuccessBody {
@@ -131,6 +133,7 @@ async function classifyEmail(
       data: {
         users: Array<
           {
+            id: string;
             email?: string | null;
             email_confirmed_at?: string | null;
             last_sign_in_at?: string | null;
@@ -185,17 +188,90 @@ async function classifyEmail(
         status: "not_registered",
         verifiedAt: null,
         lastSignInAt: null,
+        hasCompanyData: false,
+        isOrphaned: false,
       },
     };
   }
 
   const verified = Boolean(user.email_confirmed_at);
+
+  // Check if user has company data in the database (NFR-2: <100ms query time)
+  let hasCompanyData: boolean | null = null;
+  try {
+    // Query with 100ms timeout to prevent blocking
+    const timeoutPromise = new Promise<{data: null, error: Error}>((resolve) =>
+      setTimeout(() => resolve({
+        data: null,
+        error: new Error('Query timeout')
+      }), 100)
+    );
+
+    const queryResult = await Promise.race([
+      client
+        .from('companies')
+        .select('id')
+        .eq('owner_admin_uuid', user.id)
+        .limit(1)
+        .single(),
+      timeoutPromise
+    ]);
+
+    const { data: companyData, error: companyError } = queryResult;
+
+    if (companyError) {
+      // PGRST116 = no rows returned (expected for orphaned users)
+      if ('code' in companyError && companyError.code === 'PGRST116') {
+        hasCompanyData = false;
+      } else {
+        console.warn(JSON.stringify({
+          event: 'check_email_status.company_query_error',
+          correlationId: options.correlationId,
+          error: companyError.message,
+          code: ('code' in companyError) ? companyError.code : 'unknown',
+        }));
+        hasCompanyData = null; // Graceful degradation
+      }
+    } else {
+      hasCompanyData = !!companyData;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(JSON.stringify({
+      event: 'check_email_status.company_query_exception',
+      correlationId: options.correlationId,
+      message,
+    }));
+    hasCompanyData = null; // Graceful degradation on exception
+  }
+
+  // Calculate isOrphaned based on state matrix:
+  // - not_registered: isOrphaned = false (handled above)
+  // - registered_unverified with hasCompanyData = false: isOrphaned = true (Case 1.1)
+  // - registered_verified with hasCompanyData = false: isOrphaned = true (Case 1.2)
+  // - registered_verified with hasCompanyData = true: isOrphaned = false (fully registered)
+  // - If hasCompanyData is null (query error/timeout), isOrphaned is null (graceful degradation)
+  let isOrphaned: boolean | null = null;
+
+  if (hasCompanyData === null) {
+    // Graceful degradation: cannot determine orphan state if company query failed
+    isOrphaned = null;
+  } else if (hasCompanyData === false) {
+    // User exists in auth.users but has no company data → orphaned
+    isOrphaned = true;
+  } else {
+    // User has company data → not orphaned (fully registered)
+    isOrphaned = false;
+  }
+
   return {
     status: "ok",
     data: {
       status: verified ? "registered_verified" : "registered_unverified",
       verifiedAt: user.email_confirmed_at ?? null,
       lastSignInAt: user.last_sign_in_at ?? null,
+      hasCompanyData,
+      isOrphaned,
     },
   };
 }
