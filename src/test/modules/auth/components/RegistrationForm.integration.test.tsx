@@ -128,6 +128,9 @@ const baseProbeResult = {
   checkedAt: Date.now(),
   lastSignInAt: null,
   verifiedAt: null,
+  // NEW FIELDS from enhanced check-email-status edge function (Phase 2)
+  hasCompanyData: null,
+  isOrphaned: null,
 };
 
 let mockFormState: UseRegistrationFormResult;

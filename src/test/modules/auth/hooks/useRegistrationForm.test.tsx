@@ -318,6 +318,8 @@ describe("useRegistrationForm", () => {
       correlationId: "corr-123",
       attemptId: "attempt-123",
       checkedAt: Date.now(),
+      hasCompanyData: null,
+      isOrphaned: null,
     };
 
     act(() => {

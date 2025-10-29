@@ -1,0 +1,213 @@
+/**
+ * Recovery Form Styles
+ *
+ * Styles specific to the recovery flow UI components.
+ * Extends registration-form styles from parent.
+ *
+ * Related: Task 4.3 (Create Recovery Route Scaffold)
+ */
+
+/* Recovery Info Banner */
+.recovery-form__info {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  background-color: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+.recovery-form__info-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  color: hsl(var(--warning));
+  font-size: 1.5rem;
+}
+
+.recovery-form__info-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.recovery-form__info-email {
+  margin: 0;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+}
+
+.recovery-form__info-correlation {
+  margin: 0;
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Recovery Actions */
+.recovery-form__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.recovery-form__action-button {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Recovery Help Text */
+.recovery-form__help {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: hsl(var(--muted) / 0.5);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.recovery-form__help p {
+  margin: 0 0 0.5rem 0;
+}
+
+.recovery-form__help p:last-child {
+  margin-bottom: 0;
+}
+
+.recovery-form__help strong {
+  color: hsl(var(--foreground));
+}
+
+/* Verification Code Input */
+.recovery-form__code-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+.recovery-form__code-field {
+  font-size: 1.5rem;
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+  letter-spacing: 0.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.recovery-form__code-hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  text-align: center;
+}
+
+.recovery-form__resend-link {
+  padding: 0;
+  background: none;
+  border: none;
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.recovery-form__resend-link:hover:not(:disabled) {
+  color: hsl(var(--primary) / 0.8);
+}
+
+.recovery-form__resend-link:disabled {
+  color: hsl(var(--muted-foreground));
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+/* Warning Banner */
+.recovery-form__warning {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  margin-top: 1.5rem;
+  background-color: hsl(var(--destructive) / 0.1);
+  border: 1px solid hsl(var(--destructive) / 0.3);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.recovery-form__warning svg {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.125rem;
+  color: hsl(var(--destructive));
+}
+
+.recovery-form__warning p {
+  margin: 0;
+  color: hsl(var(--foreground));
+}
+
+.recovery-form__warning strong {
+  color: hsl(var(--destructive));
+}
+
+/* Success Step */
+.recovery-form__success-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto 1rem;
+  background-color: hsl(var(--success) / 0.1);
+  border: 2px solid hsl(var(--success));
+  border-radius: 50%;
+  color: hsl(var(--success));
+  font-size: 2rem;
+}
+
+.recovery-form__success-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.recovery-form__success-message p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.recovery-form__spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: hsl(var(--primary));
+}
+
+/* Animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Success color variable (add if not in global CSS) */
+:root {
+  --success: 142 76% 36%;
+}

@@ -108,6 +108,38 @@ export const EmailStatusBanner = forwardRef<HTMLDivElement, EmailStatusBannerPro
     );
   }
 
+  // Case 1.2: Orphaned Verified User (Phase 4)
+  // User verified email but database persistence failed, has no company data
+  if (status === "registered_verified" && result.isOrphaned === true) {
+    return (
+      <div
+        className="registration-form__email-status registration-form__email-status--warning"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        ref={ref}
+        tabIndex={-1}
+      >
+        <RiAlertLine aria-hidden="true" className="registration-form__email-status-icon" />
+        <div className="registration-form__email-status-content">
+          <p className="registration-form__email-status-title">Registration incomplete - email verified.</p>
+          <p className="registration-form__email-status-description">
+            Your email is verified but registration was incomplete. You can complete it now with your company information, or start fresh with a new account.
+          </p>
+        </div>
+        <div className="registration-form__email-status-actions">
+          <Button type="button" variant="default" size="sm" onClick={onResumeVerification}>
+            Complete registration
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onRecover}>
+            Start fresh
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Fully registered user (email verified AND has company data)
   if (status === "registered_verified") {
     return (
       <div
@@ -137,6 +169,50 @@ export const EmailStatusBanner = forwardRef<HTMLDivElement, EmailStatusBannerPro
     );
   }
 
+  // Case 1.1: Orphaned Unverified User (Phase 4)
+  // User created auth account but never verified email, and has no company data
+  if (status === "registered_unverified" && result.isOrphaned === true) {
+    return (
+      <div
+        className="registration-form__email-status registration-form__email-status--warning"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        ref={ref}
+        tabIndex={-1}
+      >
+        <RiAlertLine aria-hidden="true" className="registration-form__email-status-icon" />
+        <div className="registration-form__email-status-content">
+          <p className="registration-form__email-status-title">Incomplete registration detected.</p>
+          <p className="registration-form__email-status-description">
+            This email was used to start registration but was never verified. You can complete email verification now, or start fresh by cleaning up the old account.
+          </p>
+        </div>
+        <div className="registration-form__email-status-actions">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={resendDisabled}
+            aria-disabled={resendDisabled ? true : undefined}
+            onClick={onResend}
+          >
+            Resend verification email
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onResumeVerification}>
+            Resume verification
+          </Button>
+        </div>
+        {resendHint ? (
+          <p className="registration-form__email-status-hint" aria-live="polite">
+            {resendHint}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  // Regular unverified user (not orphaned, likely in active registration flow)
   return (
     <div
       className="registration-form__email-status registration-form__email-status--info"
@@ -150,7 +226,7 @@ export const EmailStatusBanner = forwardRef<HTMLDivElement, EmailStatusBannerPro
       <div className="registration-form__email-status-content">
         <p className="registration-form__email-status-title">Finish verifying your email.</p>
         <p className="registration-form__email-status-description">
-          We’ve seen this email before but the account hasn’t been verified yet. You can resend the
+          We've seen this email before but the account hasn't been verified yet. You can resend the
           confirmation message or continue verification.
         </p>
       </div>

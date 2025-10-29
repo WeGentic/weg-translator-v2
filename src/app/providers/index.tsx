@@ -9,9 +9,9 @@ export function AppProviders({ children }: PropsWithChildren): ReactElement {
   return (
     <LogProvider>
       <AppErrorBoundary>
-        <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </ToastProvider>
       </AppErrorBoundary>
     </LogProvider>
   );

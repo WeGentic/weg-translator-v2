@@ -20,6 +20,7 @@ export function createMockAuth(overrides: MockAuthOverrides = {}): AuthContextVa
     user: null,
     isAuthenticated: false,
     isVerified: false,
+    orphanCheckFailed: false,
     login: vi.fn(),
     logout: vi.fn(),
     isLoading: false,
