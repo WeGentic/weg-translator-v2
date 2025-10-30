@@ -36,6 +36,8 @@ export interface NormalizedRegistrationPayload {
   admin: {
     email: string;
     password: string;
+    first_name?: string;
+    last_name?: string;
   };
   company: {
     name: string;
@@ -56,9 +58,9 @@ export interface NormalizedRegistrationPayload {
 }
 
 interface SubmissionSuccessResult {
-  companyId: string;
-  adminUuid: string;
-  membershipId: string;
+  accountUuid: string;
+  userUuid: string;
+  subscriptionUuid: string;
   payload: NormalizedRegistrationPayload;
 }
 
@@ -131,7 +133,7 @@ function submissionReducer(state: SubmissionState, action: SubmissionAction): Su
         ...state,
         phase: "succeeded",
         result: action.result,
-        adminUuid: action.result.adminUuid,
+        adminUuid: action.result.userUuid,
         error: null,
       };
     case "fail":
@@ -232,13 +234,44 @@ function mapVerificationError(error: unknown): SubmissionError {
 
 function mapFunctionInvokeError(error: unknown): SubmissionError {
   if (error instanceof FunctionsHttpError || error instanceof FunctionsRelayError || error instanceof FunctionsFetchError) {
+    const status = "status" in error ? (error as { status?: number }).status : undefined;
+
+    // Map specific HTTP status codes to user-friendly errors
+    if (status === 409) {
+      // HTTP 409 Conflict - Email already exists
+      return {
+        code: "EMAIL_EXISTS",
+        message: "This email is already registered. Please login or use a different email.",
+        source: "network",
+        details: { status },
+      };
+    }
+
+    if (status === 401) {
+      // HTTP 401 Unauthorized - Email not verified
+      return {
+        code: "EMAIL_NOT_VERIFIED",
+        message: "Please verify your email before creating an account.",
+        source: "network",
+        details: { status },
+      };
+    }
+
+    if (status === 500) {
+      // HTTP 500 Internal Server Error - Allow retry
+      return {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Registration request failed. Please try again.",
+        source: "network",
+        details: { status },
+      };
+    }
+
     return {
       code: error.name || "edge_function_error",
       message: error.message || "Edge Function request failed.",
       source: "network",
-      details: {
-        status: "status" in error ? (error as { status?: number }).status : undefined,
-      },
+      details: { status },
     };
   }
 
@@ -260,9 +293,9 @@ function mapFunctionInvokeError(error: unknown): SubmissionError {
 
 interface PersistenceSuccess {
   kind: "success";
-  companyId: string;
-  adminUuid: string;
-  membershipId: string;
+  accountUuid: string;
+  userUuid: string;
+  subscriptionUuid: string;
 }
 
 interface PersistenceFailure {
@@ -271,14 +304,6 @@ interface PersistenceFailure {
 }
 
 type PersistenceResult = PersistenceSuccess | PersistenceFailure;
-
-function normalizeAddressField(value?: string | null): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
 
 export interface UseRegistrationSubmissionResult {
   phase: SubmissionPhase;
@@ -355,83 +380,118 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
     async (
       payload: NormalizedRegistrationPayload,
       attemptId: string | null,
-      adminUuid: string,
+      _adminUuid: string,
     ): Promise<PersistenceResult> => {
       try {
+        // Validate company_email matches admin_email
+        if (payload.company.email.trim().toLowerCase() !== payload.admin.email.trim().toLowerCase()) {
+          return {
+            kind: "error",
+            error: createSubmissionError({
+              code: "email_mismatch",
+              message: "Company email must match your admin email",
+              source: "unknown",
+            }),
+          };
+        }
+
+        // Generate correlation ID for request tracing
+        const correlationId = attemptId ?? crypto.randomUUID();
+
+        // Construct new Edge Function payload matching create_account_with_admin signature
         const body = {
-          attemptId,
-          company: {
-            name: payload.company.name,
-            email: payload.company.email,
-            phone: payload.company.phone,
-            taxId: payload.company.taxId,
-            taxCountryCode: payload.company.taxCountryCode ?? null,
-            address: {
-              freeform: payload.company.address.freeform,
-              line1: normalizeAddressField(payload.company.address.line1),
-              line2: normalizeAddressField(payload.company.address.line2),
-              city: normalizeAddressField(payload.company.address.city),
-              state: normalizeAddressField(payload.company.address.state),
-              postalCode: normalizeAddressField(payload.company.address.postalCode),
-              countryCode: normalizeAddressField(payload.company.address.countryCode),
-            },
-          },
+          company_name: payload.company.name,
+          company_email: payload.company.email,
+          first_name: payload.admin.first_name ?? null,
+          last_name: payload.admin.last_name ?? null,
+          correlationId,
         };
 
         const { data, error } = await supabase.functions.invoke("register-organization", {
           body,
-          headers: attemptId
-            ? {
-                "x-correlation-id": attemptId,
-              }
-            : undefined,
+          headers: {
+            "x-correlation-id": correlationId,
+          },
         });
 
         if (error) {
           return { kind: "error", error: mapFunctionInvokeError(error) };
         }
 
+        // Parse new Edge Function response structure
         const parsed = data as
           | {
-              data?: { companyId: string; adminUuid?: string; membershipId?: string };
-              error?: { code?: string; message: string; details?: unknown };
+              success?: boolean;
+              account_uuid?: string;
+              user_uuid?: string;
+              subscription_uuid?: string;
+              error?: string;
+              message?: string;
+              correlationId?: string;
             }
           | null
           | undefined;
 
+        // Handle error responses from Edge Function
         if (parsed?.error) {
           return {
             kind: "error",
             error: createSubmissionError({
-              code: parsed.error.code ?? "edge_function_error",
-              message: parsed.error.message,
+              code: parsed.error,
+              message: parsed.message ?? "Registration failed",
               source: "network",
-              details: parsed.error.details,
+              details: { correlationId: parsed.correlationId },
             }),
           };
         }
 
-        const resultCompanyId = parsed?.data?.companyId;
-        const resultMembershipId = parsed?.data?.membershipId;
-
-        if (!resultCompanyId) {
+        // Validate success response structure
+        if (!parsed?.success) {
           return {
             kind: "error",
             error: createSubmissionError({
               code: "edge_function_invalid_response",
-              message: "Edge Function response was missing the company identifier.",
+              message: "Edge Function response was missing success status.",
               source: "network",
               details: parsed,
             }),
           };
         }
 
-        if (!resultMembershipId) {
+        const accountUuid = parsed.account_uuid;
+        const userUuid = parsed.user_uuid;
+        const subscriptionUuid = parsed.subscription_uuid;
+
+        if (!accountUuid) {
           return {
             kind: "error",
             error: createSubmissionError({
               code: "edge_function_invalid_response",
-              message: "Edge Function response was missing the membership identifier.",
+              message: "Edge Function response was missing the account identifier.",
+              source: "network",
+              details: parsed,
+            }),
+          };
+        }
+
+        if (!userUuid) {
+          return {
+            kind: "error",
+            error: createSubmissionError({
+              code: "edge_function_invalid_response",
+              message: "Edge Function response was missing the user identifier.",
+              source: "network",
+              details: parsed,
+            }),
+          };
+        }
+
+        if (!subscriptionUuid) {
+          return {
+            kind: "error",
+            error: createSubmissionError({
+              code: "edge_function_invalid_response",
+              message: "Edge Function response was missing the subscription identifier.",
               source: "network",
               details: parsed,
             }),
@@ -440,9 +500,9 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
 
         return {
           kind: "success",
-          companyId: resultCompanyId,
-          adminUuid: parsed?.data?.adminUuid ?? adminUuid,
-          membershipId: resultMembershipId,
+          accountUuid,
+          userUuid,
+          subscriptionUuid,
         };
       } catch (cause) {
         return { kind: "error", error: mapFunctionInvokeError(cause) };
@@ -578,36 +638,36 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
           }
 
           const persistenceResult = {
-            companyId: persistence.companyId,
-            adminUuid: persistence.adminUuid,
-            membershipId: persistence.membershipId,
+            accountUuid: persistence.accountUuid,
+            userUuid: persistence.userUuid,
+            subscriptionUuid: persistence.subscriptionUuid,
           };
 
-          // Post-registration orphan check: verify user has profile and membership
+          // Post-registration orphan check: verify user has valid account membership
           try {
             const orphanCheck = await checkIfOrphaned(supabaseUser.id);
 
             void logger.info("Post-registration orphan check completed", {
               attempt_id: currentState.attemptId ?? "<none>",
-              company_id: persistenceResult.companyId,
-              admin_uuid: persistenceResult.adminUuid,
-              membership_id: persistenceResult.membershipId,
-              is_orphaned: orphanCheck.isOrphaned,
-              metrics: orphanCheck.metrics,
+              account_uuid: persistenceResult.accountUuid,
+              user_uuid: persistenceResult.userUuid,
+              subscription_uuid: persistenceResult.subscriptionUuid,
+              orphaned: orphanCheck.orphaned,
+              has_valid_account: orphanCheck.hasValidAccount,
             });
 
-            if (orphanCheck.isOrphaned) {
+            if (orphanCheck.orphaned) {
               void logger.warn("Post-registration orphan detected (unexpected)", {
                 attempt_id: currentState.attemptId ?? "<none>",
-                admin_uuid: persistenceResult.adminUuid,
-                classification: orphanCheck.classification,
+                user_uuid: persistenceResult.userUuid,
+                orphan_type: orphanCheck.orphanType,
               });
             }
           } catch (orphanError) {
             // Log orphan check failure but don't block registration success
             void logger.warn("Post-registration orphan check failed (non-blocking)", {
               attempt_id: currentState.attemptId ?? "<none>",
-              admin_uuid: persistenceResult.adminUuid,
+              user_uuid: persistenceResult.userUuid,
               error: orphanError instanceof Error ? orphanError.message : String(orphanError),
             });
           }
@@ -626,9 +686,9 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
 
           void logger.info("Registration persisted", {
             attempt_id: currentState.attemptId ?? "<none>",
-            company_id: persistenceResult.companyId,
-            admin_uuid: persistenceResult.adminUuid,
-            membership_id: persistenceResult.membershipId,
+            account_uuid: persistenceResult.accountUuid,
+            user_uuid: persistenceResult.userUuid,
+            subscription_uuid: persistenceResult.subscriptionUuid,
           });
         } catch (cause) {
           const submissionError = mapVerificationError(cause);
@@ -782,7 +842,7 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
           });
           void logger.error("Registration persistence failed during resume", null, {
             attempt_id: attemptId,
-            admin_uuid: resolvedAdminUuid,
+            user_uuid: resolvedAdminUuid,
             error_code: persistenceResult.error.code,
           });
           return;
@@ -793,24 +853,24 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
 
           void logger.info("Post-registration orphan check completed", {
             attempt_id: attemptId,
-            company_id: persistenceResult.companyId,
-            admin_uuid: persistenceResult.adminUuid,
-            membership_id: persistenceResult.membershipId,
-            is_orphaned: orphanCheck.isOrphaned,
-            metrics: orphanCheck.metrics,
+            account_uuid: persistenceResult.accountUuid,
+            user_uuid: persistenceResult.userUuid,
+            subscription_uuid: persistenceResult.subscriptionUuid,
+            orphaned: orphanCheck.orphaned,
+            has_valid_account: orphanCheck.hasValidAccount,
           });
 
-          if (orphanCheck.isOrphaned) {
+          if (orphanCheck.orphaned) {
             void logger.warn("Post-registration orphan detected (unexpected)", {
               attempt_id: attemptId,
-              admin_uuid: persistenceResult.adminUuid,
-              classification: orphanCheck.classification,
+              user_uuid: persistenceResult.userUuid,
+              orphan_type: orphanCheck.orphanType,
             });
           }
         } catch (orphanError) {
           void logger.warn("Post-registration orphan check failed (non-blocking)", {
             attempt_id: attemptId,
-            admin_uuid: persistenceResult.adminUuid,
+            user_uuid: persistenceResult.userUuid,
             error: orphanError instanceof Error ? orphanError.message : String(orphanError),
           });
         }
@@ -830,9 +890,9 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
 
         void logger.info("Registration resume persisted", {
           attempt_id: attemptId,
-          admin_uuid: persistenceResult.adminUuid,
-          company_id: persistenceResult.companyId,
-          membership_id: persistenceResult.membershipId,
+          user_uuid: persistenceResult.userUuid,
+          account_uuid: persistenceResult.accountUuid,
+          subscription_uuid: persistenceResult.subscriptionUuid,
         });
       };
 

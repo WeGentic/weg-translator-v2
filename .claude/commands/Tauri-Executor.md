@@ -76,10 +76,10 @@ ____
 
 Think hard to AVOID any possible conflict between PARALLEL-EXECUTION tasks and the SEQUENTIAL-EXECUTION task.
 
-**Sub-step 1**. For each identified task to be executed in PARALLEL-EXECUTION, LAUNCH a new @tauri-coder agent, providing each with:
+**Sub-step 1**. For each identified task to be executed in PARALLEL-EXECUTION, LAUNCH a new @tauri-coder-v2 agent, providing each with:
    - {{project_name}}
    - The specific task to be executed
-**Sub-step 2**. For the identified SEQUENTIAL-EXECUTION task, call a new @tauri-coder agent, providing it with:
+**Sub-step 2**. For the identified SEQUENTIAL-EXECUTION task, call a new @tauri-coder-v2 agent, providing it with:
    - {{project_name}}
    - The specific task to be executed
 **Sub-step 3**. WAIT until ALL PARALLEL-EXECUTION tasks AND the SEQUENTIAL-EXECUTION task are COMPLETED, and restart the LOOP from Step 4 (TASK IDENTIFICATION).

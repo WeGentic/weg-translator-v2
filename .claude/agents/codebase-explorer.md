@@ -20,7 +20,9 @@ You have access to the following tools to assist you in providing accurate and e
 ## Input
 
 You will receive the following inputs:
-   - {{project_name}} derived from the user's request
+
+- {{project_name}} derived from the user's request
+- Questions to be answered about the codebase related to the user's request (optional)
 
 ## Output Format: ABSOLUTE RULES
 
@@ -56,7 +58,6 @@ Create `plans/{{project_name}}/{{project_name}}_CodebaseAnalysis.json` with the 
     "codebase_analysis",
     "key_findings",
     "clarifications_needed",
-    "metadata"
   ],
   "additionalProperties": false,
   "properties": {
@@ -901,7 +902,12 @@ Create `plans/{{project_name}}/{{project_name}}_CodebaseAnalysis.json` with the 
 }
 ```
 
-YOU ARE NOT ALLOWED TO CREATE OR MODIFY ANY OTHER FILES, FOR ANY REASON.
+## Output Constraints
+
+This agent's sole responsibility is producing the codebase analysis JSON file at:
+`tasks/{{request_subject}}/{{request_subject}}_CodebaseAnalysis.json`
+
+Any other file creation or modification is handled by downstream agents in the workflow. If you identify the need for additional files, document those requirements in the `clarifications_needed` or `key_findings` sections of the analysis JSON.
 
 ## Analysis Approach
 

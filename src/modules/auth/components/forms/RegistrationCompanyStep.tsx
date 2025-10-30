@@ -399,6 +399,43 @@ export function RegistrationCompanyStep({
     );
   };
 
+  const renderCompanyEmailField = (field: RegistrationFieldConfig) => {
+    const fieldError = touched.companyEmail ? getFieldError("companyEmail") : "";
+    const errorId = fieldError ? `${field.id}-error` : undefined;
+    const helperId = `${field.id}-helper`;
+    const describedBy = [errorId, helperId].filter(Boolean).join(" ") || undefined;
+
+    return (
+      <div key={field.key} className="registration-form__field">
+        <Label htmlFor={field.id} className="registration-form__label">
+          {field.label}
+        </Label>
+        <Input
+          id={field.id}
+          name={field.name}
+          type={field.type}
+          value={values.companyEmail}
+          placeholder={field.placeholder}
+          autoComplete={field.autoComplete}
+          className="registration-form__input"
+          onChange={handleFieldChange(field.key)}
+          onBlur={() => handleFieldBlur(field.key)}
+          aria-invalid={fieldError ? true : undefined}
+          aria-required="true"
+          aria-describedby={describedBy}
+        />
+        <p id={helperId} className="text-sm text-muted-foreground mt-1">
+          This email will be unique across all accounts
+        </p>
+        {fieldError ? (
+          <p id={errorId} className="registration-form__field-error" role="alert">
+            {fieldError}
+          </p>
+        ) : null}
+      </div>
+    );
+  };
+
   const renderField = (field: RegistrationFieldConfig) => {
     if (field.key === "companyPhone") {
       return renderPhoneField(field);
@@ -411,6 +448,9 @@ export function RegistrationCompanyStep({
     }
     if (field.key === "companyTaxNumber") {
       return renderCompanyTaxField(field);
+    }
+    if (field.key === "companyEmail") {
+      return renderCompanyEmailField(field);
     }
     const fieldError = touched[field.key] ? getFieldError(field.key) : "";
     const errorId = fieldError ? `${field.id}-error` : undefined;

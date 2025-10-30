@@ -11,19 +11,25 @@ You are an expert in analyzing user input to extract key information for Tauri 2
 
 ## General Context
 
-- This is a Tauri 2.8.x Desktop Application, targeting Windows, macOS, and Linux.
-- Frontend is based on React 19.2 framework.
-- Backend is based on Rust 1.90.x.
-- The application uses SQLite for local data storage.
-- The application follows these architecture rules:
-    - Keep state close to where it’s used
-    - Use custom hooks as your “view model” (when it helps)
-    - Mutations & forms: Actions + useActionState
-    - Global state only when truly global (zustand, TanStack Query)
-    - Performance: lean on React Compiler instead of manual memoization
-- The application uses Supabase for backend services (authentication, cloud database, cloud storage).
-- The application integrates with various third-party APIs for extended functionality.
-</general_context>
+- Platform: Tauri 2.8.x Desktop Application targeting Windows, macOS, and Linux
+- Frontend: React 19.2 with React Compiler enabled (automatic optimizations)
+- Backend: Rust 1.90.x
+- Data Layer:
+    - Local: SQLite
+    - Cloud: Supabase (authentication, database, storage)
+- Frontend Architecture:
+    - Routing: TanStack Router
+    - Data Fetching: TanStack Query
+    - State Management: Zustand (global only), React Context (scoped)
+    - Forms & Mutations: React 19 Actions + useActionState
+    - Performance: React Compiler handles memoization automatically
+- Architecture Principles
+    1. Collocate state - Keep state close to where it's used
+    2. Custom hooks as ViewModels - Encapsulate logic when beneficial
+    3. React 19 Actions - Use Actions with useActionState for mutations
+    4. Minimal global state - Only use Zustand/Context when truly global
+    5. Lean on React Compiler - Avoid manual useMemo/useCallback/React.memo
+    6. Type safety first - Strict TypeScript, no any usage
 
 ## Input
 
@@ -61,7 +67,7 @@ You will receive raw user input {user_input} describing the a User request.
     "risks_and_mitigations",
     "required_features",
     "open_questions",
-    "requires_codebase_analysis"
+    "codebase_analysis_scope"
   ],
   "additionalProperties": false,
   "properties": {
@@ -409,14 +415,6 @@ You will receive raw user input {user_input} describing the a User request.
           },
           "description": "Specific areas requiring analysis"
         },
-        "questions_requiring_codebase": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^Q-\\d{3}$"
-          },
-          "description": "Question IDs that require codebase analysis"
-        }
       }
     }
   }
@@ -427,8 +425,10 @@ You will receive raw user input {user_input} describing the a User request.
 
 ## User input analysis
 
-<goal>Thoroughly understand user input to inform planning and execution</goal>
-<actions>
+**Objectives**: Thoroughly understand user input to inform planning and execution
+
+**Actions**:
+
 1. Using @agent-Plan and/or sequential-thinking MCP, identify:
     A. Key objectives
     B. Technical Constraints
@@ -437,6 +437,5 @@ You will receive raw user input {user_input} describing the a User request.
     E. Required Features
     F. Open Questions for Codebase Analysis
 2. Store a detailed {{user_input}} analysis as JSON file named: `plans/{{project_name}}/{{project_name}}_UserInput.json`.
-</actions>
 
 ---

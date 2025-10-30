@@ -5,19 +5,27 @@
     "total_tasks": 10,
     "total_subtasks": 42,
     "estimated_days": "15-25",
-    "technology_stack": ["React 19.2", "TypeScript", "Supabase", "Tauri 2.8.5", "PostgreSQL"]
+    "technology_stack": [
+      "React 19.2",
+      "TypeScript",
+      "Supabase",
+      "Tauri 2.8.5",
+      "PostgreSQL"
+    ]
   },
   "tasks": [
     {
       "id": "1",
-      "status": "Not completed",
-"name": "Update TypeScript type definitions for new schema tables",
-      "requirements": ["FR-009"],
+      "status": "Completed",
+      "name": "Update TypeScript type definitions for new schema tables",
+      "requirements": [
+        "FR-009"
+      ],
       "subtasks": [
         {
           "id": "1.1",
-          "status": "Not completed",
-"name": "Define Account interface matching accounts table schema",
+          "status": "Completed",
+          "name": "Define Account interface matching accounts table schema",
           "is_test": false,
           "actions": [
             "Create Account interface in src/shared/types/database.ts with account_uuid, company_name, company_email, created_at, modified_at, deleted_at fields",
@@ -28,8 +36,8 @@
         },
         {
           "id": "1.2",
-          "status": "Not completed",
-"name": "Define User interface for users table with role literal type",
+          "status": "Completed",
+          "name": "Define User interface for users table with role literal type",
           "is_test": false,
           "actions": [
             "Create User interface with user_uuid, account_uuid, user_email, first_name, last_name, avatar_url, role, created_at, modified_at, deleted_at",
@@ -40,8 +48,8 @@
         },
         {
           "id": "1.3",
-          "status": "Not completed",
-"name": "Define Subscription interface matching subscriptions table",
+          "status": "Completed",
+          "name": "Define Subscription interface matching subscriptions table",
           "is_test": false,
           "actions": [
             "Create Subscription interface with subscription_uuid, account_uuid, status, plan_id, trial_ends_at, current_period_start, current_period_end timestamps",
@@ -51,8 +59,8 @@
         },
         {
           "id": "1.4",
-          "status": "Not completed",
-"name": "Mark legacy types deprecated with migration guidance",
+          "status": "Completed",
+          "name": "Mark legacy types deprecated with migration guidance",
           "is_test": false,
           "actions": [
             "Add @deprecated JSDoc tags to Company, Profile, CompanyMember interfaces",
@@ -62,10 +70,12 @@
         },
         {
           "id": "1.5",
-          "status": "Not completed",
-"name": "Validate TypeScript compilation with new types",
+          "status": "Completed",
+          "name": "Validate TypeScript compilation with new types",
           "is_test": true,
-          "requirements": ["FR-009"],
+          "requirements": [
+            "FR-009"
+          ],
           "actions": [
             "Run tsc --noEmit to verify zero compilation errors across codebase",
             "Fix any type mismatches in existing code referencing old schema types",
@@ -77,13 +87,16 @@
     {
       "id": "2",
       "status": "Not completed",
-"name": "Create query helper classes for new schema with RLS and soft-delete filtering",
-      "requirements": ["FR-005", "FR-008"],
+      "name": "Create query helper classes for new schema with RLS and soft-delete filtering",
+      "requirements": [
+        "FR-005",
+        "FR-008"
+      ],
       "subtasks": [
         {
           "id": "2.1",
           "status": "Not completed",
-"name": "Implement AccountQueries class for accounts table operations",
+          "name": "Implement AccountQueries class for accounts table operations",
           "is_test": false,
           "actions": [
             "Create src/core/supabase/queries/accounts.ts with static class following CompanyQueries pattern",
@@ -97,7 +110,7 @@
         {
           "id": "2.2",
           "status": "Not completed",
-"name": "Implement UserQueries class for users table with role-based permissions",
+          "name": "Implement UserQueries class for users table with role-based permissions",
           "is_test": false,
           "actions": [
             "Create src/core/supabase/queries/users.ts with static methods for user CRUD",
@@ -110,7 +123,7 @@
         {
           "id": "2.3",
           "status": "Not completed",
-"name": "Implement SubscriptionQueries class for subscription status checking",
+          "name": "Implement SubscriptionQueries class for subscription status checking",
           "is_test": false,
           "actions": [
             "Create src/core/supabase/queries/subscriptions.ts with subscription helper methods",
@@ -122,7 +135,7 @@
         {
           "id": "2.4",
           "status": "Not completed",
-"name": "Implement comprehensive error handling with correlation IDs",
+          "name": "Implement comprehensive error handling with correlation IDs",
           "is_test": false,
           "actions": [
             "Map Supabase PostgreSQL error codes to UserFriendlyError subclasses: 23505 → EmailAlreadyExistsError, 42501 → PermissionDeniedError",
@@ -134,9 +147,13 @@
         {
           "id": "2.5",
           "status": "Not completed",
-"name": "Write unit tests for query helper classes",
+          "name": "Write unit tests for query helper classes",
           "is_test": true,
-          "requirements": ["FR-005", "FR-008", "NFR-005"],
+          "requirements": [
+            "FR-005",
+            "FR-008",
+            "NFR-005"
+          ],
           "actions": [
             "Test AccountQueries methods with mocked Supabase client: success cases, RLS filtering, soft delete filtering",
             "Test UserQueries methods with role-based permission scenarios: owner can delete, member cannot",
@@ -149,14 +166,18 @@
     },
     {
       "id": "3",
-      "status": "Not completed",
-"name": "Rewrite orphan detection to query single users table with fail-closed retry logic",
-      "requirements": ["FR-002", "NFR-001", "NFR-002"],
+      "status": "Completed",
+      "name": "Rewrite orphan detection to query single users table with fail-closed retry logic",
+      "requirements": [
+        "FR-002",
+        "NFR-001",
+        "NFR-002"
+      ],
       "subtasks": [
         {
           "id": "3.1",
-          "status": "Not completed",
-"name": "Replace parallel queries with single users table query",
+          "status": "Completed",
+          "name": "Replace parallel queries with single users table query",
           "is_test": false,
           "actions": [
             "Rewrite checkIfOrphaned() in src/modules/auth/utils/orphanDetection.ts to execute single query: SELECT user_uuid, account_uuid, role, deleted_at FROM users WHERE user_uuid = $1",
@@ -167,8 +188,8 @@
         },
         {
           "id": "3.2",
-          "status": "Not completed",
-"name": "Implement orphan classification logic with account validation",
+          "status": "Completed",
+          "name": "Implement orphan classification logic with account validation",
           "is_test": false,
           "actions": [
             "Classify as orphaned if users query returns no rows: orphanType = 'no-users-record'",
@@ -180,8 +201,8 @@
         },
         {
           "id": "3.3",
-          "status": "Not completed",
-"name": "Implement retry logic with exponential backoff and Gaussian jitter",
+          "status": "Completed",
+          "name": "Implement retry logic with exponential backoff and Gaussian jitter",
           "is_test": false,
           "actions": [
             "Implement 3-attempt retry logic: 0ms delay first attempt, 100ms jitter second, 300ms jitter third",
@@ -192,8 +213,8 @@
         },
         {
           "id": "3.4",
-          "status": "Not completed",
-"name": "Update OrphanCheckResult interface for AuthProvider integration",
+          "status": "Completed",
+          "name": "Update OrphanCheckResult interface for AuthProvider integration",
           "is_test": false,
           "actions": [
             "Export OrphanCheckResult interface including accountUuid and role for profile enrichment",
@@ -203,10 +224,13 @@
         },
         {
           "id": "3.5",
-          "status": "Not completed",
-"name": "Performance test orphan detection latency requirements",
+          "status": "Completed",
+          "name": "Performance test orphan detection latency requirements",
           "is_test": true,
-          "requirements": ["FR-002", "NFR-001"],
+          "requirements": [
+            "FR-002",
+            "NFR-001"
+          ],
           "actions": [
             "Execute 100 concurrent orphan detection requests against test Supabase database",
             "Measure p95 and p99 latency using performance.now() timing",
@@ -216,10 +240,14 @@
         },
         {
           "id": "3.6",
-          "status": "Not completed",
-"name": "Write comprehensive unit tests for all orphan scenarios",
+          "status": "Completed",
+          "name": "Write comprehensive unit tests for all orphan scenarios",
           "is_test": true,
-          "requirements": ["FR-002", "NFR-002", "NFR-005"],
+          "requirements": [
+            "FR-002",
+            "NFR-002",
+            "NFR-005"
+          ],
           "actions": [
             "Test orphan classification: no users record, null account_uuid, deleted user, deleted account",
             "Test retry scenarios: first attempt timeout then success, all retries timeout then OrphanDetectionError",
@@ -231,14 +259,18 @@
     },
     {
       "id": "4",
-      "status": "Not completed",
-"name": "Migrate AuthProvider to query users table and extract JWT claims with fallback",
-      "requirements": ["FR-002", "FR-003", "NFR-004"],
+      "status": "Completed",
+      "name": "Migrate AuthProvider to query users table and extract JWT claims with fallback",
+      "requirements": [
+        "FR-002",
+        "FR-003",
+        "NFR-004"
+      ],
       "subtasks": [
         {
           "id": "4.1",
-          "status": "Not completed",
-"name": "Replace ProfileQueries with UserQueries in profile enrichment",
+          "status": "Completed",
+          "name": "Replace ProfileQueries with UserQueries in profile enrichment",
           "is_test": false,
           "actions": [
             "Update mapUserWithProfile() in src/app/providers/auth/AuthProvider.tsx to call UserQueries.getUser() instead of ProfileQueries.getProfile()",
@@ -248,8 +280,8 @@
         },
         {
           "id": "4.2",
-          "status": "Not completed",
-"name": "Implement JWT claims extraction with fallback query logic",
+          "status": "Completed",
+          "name": "Implement JWT claims extraction with fallback query logic",
           "is_test": false,
           "actions": [
             "Parse session.user.app_metadata.account_uuid and session.user.app_metadata.user_role from JWT payload",
@@ -260,8 +292,8 @@
         },
         {
           "id": "4.3",
-          "status": "Not completed",
-"name": "Integrate new checkIfOrphaned function with fail-closed handling",
+          "status": "Completed",
+          "name": "Integrate new checkIfOrphaned function with fail-closed handling",
           "is_test": false,
           "actions": [
             "Replace old orphan detection with new checkIfOrphaned() from src/modules/auth/utils/orphanDetection.ts",
@@ -271,8 +303,8 @@
         },
         {
           "id": "4.4",
-          "status": "Not completed",
-"name": "Update syncLocalUserProfile for desktop SQLite backward compatibility",
+          "status": "Completed",
+          "name": "Update syncLocalUserProfile for desktop SQLite backward compatibility",
           "is_test": false,
           "actions": [
             "Map users table fields to local SQLite profile schema: user_uuid → id, first_name → firstName, etc.",
@@ -282,10 +314,14 @@
         },
         {
           "id": "4.5",
-          "status": "Not completed",
-"name": "Write integration tests for complete login flow",
+          "status": "Completed",
+          "name": "Write integration tests for complete login flow",
           "is_test": true,
-          "requirements": ["FR-002", "FR-003", "NFR-005"],
+          "requirements": [
+            "FR-002",
+            "FR-003",
+            "NFR-005"
+          ],
           "actions": [
             "Test successful login: verify JWT claims extracted, orphan detection passes, profile enriched, session established",
             "Test fallback query: mock missing JWT claims, verify fallback UserQueries.getUser() executes and populates context",
@@ -297,14 +333,17 @@
     },
     {
       "id": "5",
-      "status": "Not completed",
-"name": "Refactor register-organization Edge Function to invoke create_account_with_admin",
-      "requirements": ["FR-001", "FR-010"],
+      "status": "Completed",
+      "name": "Refactor register-organization Edge Function to invoke create_account_with_admin",
+      "requirements": [
+        "FR-001",
+        "FR-010"
+      ],
       "subtasks": [
         {
           "id": "5.1",
-          "status": "Not completed",
-"name": "Replace manual INSERT operations with database function invocation",
+          "status": "Completed",
+          "name": "Replace manual INSERT operations with database function invocation",
           "is_test": false,
           "actions": [
             "Refactor handleRegistration() in supabase/functions/register-organization/index.ts to invoke: supabase.rpc('create_account_with_admin', {p_company_name, p_company_email, p_first_name, p_last_name})",
@@ -314,8 +353,8 @@
         },
         {
           "id": "5.2",
-          "status": "Not completed",
-"name": "Update payload validation for function signature compatibility",
+          "status": "Completed",
+          "name": "Update payload validation for function signature compatibility",
           "is_test": false,
           "actions": [
             "Validate payload schema: company_name required non-empty string, company_email valid email format",
@@ -325,8 +364,8 @@
         },
         {
           "id": "5.3",
-          "status": "Not completed",
-"name": "Implement error mapping for constraint violations and function errors",
+          "status": "Completed",
+          "name": "Implement error mapping for constraint violations and function errors",
           "is_test": false,
           "actions": [
             "Catch PostgreSQL error code 23505 (unique_violation) from create_account_with_admin(), return HTTP 409 Conflict with {error: 'EMAIL_EXISTS', message: 'Email already registered'}",
@@ -337,8 +376,8 @@
         },
         {
           "id": "5.4",
-          "status": "Not completed",
-"name": "Update success response structure with all created UUIDs",
+          "status": "Completed",
+          "name": "Update success response structure with all created UUIDs",
           "is_test": false,
           "actions": [
             "Construct success response: {success: true, account_uuid, user_uuid, subscription_uuid} extracted from function result",
@@ -349,9 +388,12 @@
         {
           "id": "5.5",
           "status": "Not completed",
-"name": "Test Edge Function locally with all error scenarios",
+          "name": "Test Edge Function locally with all error scenarios",
           "is_test": true,
-          "requirements": ["FR-001", "FR-010"],
+          "requirements": [
+            "FR-001",
+            "FR-010"
+          ],
           "actions": [
             "Test success case: valid payload returns HTTP 201 with account_uuid, user_uuid, subscription_uuid",
             "Test duplicate email: submit registration with existing email, verify HTTP 409 Conflict with EMAIL_EXISTS error code",
@@ -363,14 +405,18 @@
     },
     {
       "id": "6",
-      "status": "Not completed",
-"name": "Update registration flow components for new Edge Function payload and responses",
-      "requirements": ["FR-001", "FR-004", "FR-010"],
+      "status": "Partial",
+      "name": "Update registration flow components for new Edge Function payload and responses",
+      "requirements": [
+        "FR-001",
+        "FR-004",
+        "FR-010"
+      ],
       "subtasks": [
         {
           "id": "6.1",
-          "status": "Not completed",
-"name": "Update useRegistrationSubmission to construct new payload structure",
+          "status": "Completed",
+          "name": "Update useRegistrationSubmission to construct new payload structure",
           "is_test": false,
           "actions": [
             "Modify submitRegistration() in src/modules/auth/hooks/controllers/useRegistrationSubmission.ts to construct payload: {company_name, company_email, first_name, last_name, correlationId}",
@@ -380,8 +426,8 @@
         },
         {
           "id": "6.2",
-          "status": "Not completed",
-"name": "Update Edge Function invocation with new payload and response parsing",
+          "status": "Completed",
+          "name": "Update Edge Function invocation with new payload and response parsing",
           "is_test": false,
           "actions": [
             "Invoke Edge Function: POST /functions/v1/register-organization with new payload structure including Authorization header with JWT token",
@@ -391,8 +437,8 @@
         },
         {
           "id": "6.3",
-          "status": "Not completed",
-"name": "Implement comprehensive error handling for all Edge Function responses",
+          "status": "Completed",
+          "name": "Implement comprehensive error handling for all Edge Function responses",
           "is_test": false,
           "actions": [
             "Handle HTTP 409 Conflict as EmailAlreadyExistsError: display inline error message suggesting login or different email",
@@ -403,8 +449,8 @@
         },
         {
           "id": "6.4",
-          "status": "Not completed",
-"name": "Update RegistrationCompanyStep for company_email prominence",
+          "status": "Completed",
+          "name": "Update RegistrationCompanyStep for company_email prominence",
           "is_test": false,
           "actions": [
             "Make company_email field prominent in form with clear label: 'Company Email (must match your email)'",
@@ -415,7 +461,7 @@
         {
           "id": "6.5",
           "status": "Not completed",
-"name": "Add real-time email uniqueness validation with debouncing",
+          "name": "Add real-time email uniqueness validation with debouncing",
           "is_test": false,
           "actions": [
             "Implement 500ms debounced email validation checking users table: SELECT EXISTS(SELECT 1 FROM users WHERE user_email = $1 AND deleted_at IS NULL)",
@@ -426,9 +472,14 @@
         {
           "id": "6.6",
           "status": "Not completed",
-"name": "Write integration tests for complete registration flow",
+          "name": "Write integration tests for complete registration flow",
           "is_test": true,
-          "requirements": ["FR-001", "FR-004", "FR-010", "NFR-005"],
+          "requirements": [
+            "FR-001",
+            "FR-004",
+            "FR-010",
+            "NFR-005"
+          ],
           "actions": [
             "Test successful registration: fill form, verify payload construction, mock successful Edge Function response, verify success state with UUIDs",
             "Test email uniqueness validation: enter existing email, verify inline error displayed after 500ms debounce",
@@ -440,14 +491,16 @@
     },
     {
       "id": "7",
-      "status": "Not completed",
-"name": "Implement subscription status checking with caching for trial expiry UI",
-      "requirements": ["FR-006"],
+      "status": "Completed",
+      "name": "Implement subscription status checking with caching for trial expiry UI",
+      "requirements": [
+        "FR-006"
+      ],
       "subtasks": [
         {
           "id": "7.1",
-          "status": "Not completed",
-"name": "Create useSubscriptionStatus hook with react-query caching",
+          "status": "Completed",
+          "name": "Create useSubscriptionStatus hook with react-query caching",
           "is_test": false,
           "actions": [
             "Create useSubscriptionStatus() hook in src/modules/auth/hooks using react-query with 5-minute staleTime and cacheTime configuration",
@@ -457,8 +510,8 @@
         },
         {
           "id": "7.2",
-          "status": "Not completed",
-"name": "Add subscription status to AuthProvider context",
+          "status": "Completed",
+          "name": "Add subscription status to AuthProvider context",
           "is_test": false,
           "actions": [
             "Extend AuthContextType interface with hasActiveSubscription boolean, trialEndsAt timestamp, daysRemaining number fields",
@@ -468,8 +521,8 @@
         },
         {
           "id": "7.3",
-          "status": "Not completed",
-"name": "Create SubscriptionStatusBanner component for trial warnings",
+          "status": "Completed",
+          "name": "Create SubscriptionStatusBanner component for trial warnings",
           "is_test": false,
           "actions": [
             "Create component displaying banner when status='trialing' and trial_ends_at within 3 days",
@@ -480,8 +533,8 @@
         },
         {
           "id": "7.4",
-          "status": "Not completed",
-"name": "Create TrialExpiredModal component for post-expiry access control",
+          "status": "Completed",
+          "name": "Create TrialExpiredModal component for post-expiry access control",
           "is_test": false,
           "actions": [
             "Create modal component displaying when status='trialing' and trial_ends_at < now()",
@@ -492,8 +545,8 @@
         },
         {
           "id": "7.5",
-          "status": "Not completed",
-"name": "Implement cache invalidation on subscription update events",
+          "status": "Completed",
+          "name": "Implement cache invalidation on subscription update events",
           "is_test": false,
           "actions": [
             "Invalidate react-query cache when user upgrades subscription: queryClient.invalidateQueries(['subscription', accountUuid])",
@@ -503,10 +556,12 @@
         },
         {
           "id": "7.6",
-          "status": "Not completed",
-"name": "Write tests for subscription status caching and UI rendering",
+          "status": "Completed",
+          "name": "Write tests for subscription status caching and UI rendering",
           "is_test": true,
-          "requirements": ["FR-006"],
+          "requirements": [
+            "FR-006"
+          ],
           "actions": [
             "Test cache behavior: first call queries database, subsequent calls return cached value within 5-minute TTL",
             "Test trial expiry calculations: various trial_ends_at dates correctly calculate daysRemaining",
@@ -518,14 +573,16 @@
     },
     {
       "id": "8",
-      "status": "Not completed",
-"name": "Implement role-based permissions UI controls using JWT claims",
-      "requirements": ["FR-007"],
+      "status": "Completed",
+      "name": "Implement role-based permissions UI controls using JWT claims",
+      "requirements": [
+        "FR-007"
+      ],
       "subtasks": [
         {
           "id": "8.1",
-          "status": "Not completed",
-"name": "Create usePermissions hook extracting role from AuthProvider context",
+          "status": "Completed",
+          "name": "Create usePermissions hook extracting role from AuthProvider context",
           "is_test": false,
           "actions": [
             "Create usePermissions() hook in src/modules/auth/hooks returning permission flags object",
@@ -535,8 +592,8 @@
         },
         {
           "id": "8.2",
-          "status": "Not completed",
-"name": "Implement permission calculation logic for each role tier",
+          "status": "Completed",
+          "name": "Implement permission calculation logic for each role tier",
           "is_test": false,
           "actions": [
             "Owner role: return all permissions true for full account control including dangerous operations",
@@ -547,8 +604,8 @@
         },
         {
           "id": "8.3",
-          "status": "Not completed",
-"name": "Update account management UI to conditionally render by permissions",
+          "status": "Completed",
+          "name": "Update account management UI to conditionally render by permissions",
           "is_test": false,
           "actions": [
             "Update account settings components to hide delete button when canDeleteAccount=false",
@@ -559,8 +616,8 @@
         },
         {
           "id": "8.4",
-          "status": "Not completed",
-"name": "Verify RLS policies match frontend permission logic for defense-in-depth",
+          "status": "Completed",
+          "name": "Verify RLS policies match frontend permission logic for defense-in-depth",
           "is_test": false,
           "actions": [
             "Document RLS policy permissions: owner can UPDATE/DELETE accounts, admin can UPDATE but not DELETE, member/viewer read-only",
@@ -570,10 +627,13 @@
         },
         {
           "id": "8.5",
-          "status": "Not completed",
-"name": "Write tests validating permission enforcement at UI and RLS layers",
+          "status": "Completed",
+          "name": "Write tests validating permission enforcement at UI and RLS layers",
           "is_test": true,
-          "requirements": ["FR-007", "NFR-002"],
+          "requirements": [
+            "FR-007",
+            "NFR-002"
+          ],
           "actions": [
             "Test permission calculations: verify each role returns correct permission flags from usePermissions hook",
             "Test UI rendering: owner sees all controls, admin sees most, member sees minimal, viewer sees read-only",
@@ -585,14 +645,17 @@
     },
     {
       "id": "9",
-      "status": "Not completed",
-"name": "Migrate entire test suite to work with new schema and add RLS penetration tests",
-      "requirements": ["NFR-005", "NFR-002"],
+      "status": "Completed",
+      "name": "Migrate entire test suite to work with new schema and add RLS penetration tests",
+      "requirements": [
+        "NFR-005",
+        "NFR-002"
+      ],
       "subtasks": [
         {
           "id": "9.1",
-          "status": "Not completed",
-"name": "Update test mocks and factories for new schema types",
+          "status": "Completed",
+          "name": "Update test mocks and factories for new schema types",
           "is_test": false,
           "actions": [
             "Update test mocks in src/test/modules/auth to use Account, User, Subscription types instead of Company, Profile",
@@ -603,8 +666,8 @@
         },
         {
           "id": "9.2",
-          "status": "Not completed",
-"name": "Update AuthProvider tests to mock UserQueries and verify JWT claims extraction",
+          "status": "Completed",
+          "name": "Update AuthProvider tests to mock UserQueries and verify JWT claims extraction",
           "is_test": true,
           "actions": [
             "Replace ProfileQueries mocks with UserQueries mocks in AuthProvider test suite",
@@ -615,8 +678,8 @@
         },
         {
           "id": "9.3",
-          "status": "Not completed",
-"name": "Update orphan detection tests for single users table query",
+          "status": "Completed",
+          "name": "Update orphan detection tests for single users table query",
           "is_test": true,
           "actions": [
             "Rewrite orphan detection tests to expect single users table query instead of parallel profiles/company_members queries",
@@ -627,8 +690,8 @@
         },
         {
           "id": "9.4",
-          "status": "Not completed",
-"name": "Update registration tests to mock create_account_with_admin response",
+          "status": "Completed",
+          "name": "Update registration tests to mock create_account_with_admin response",
           "is_test": true,
           "actions": [
             "Mock Edge Function response: {success: true, account_uuid, user_uuid, subscription_uuid}",
@@ -639,10 +702,12 @@
         },
         {
           "id": "9.5",
-          "status": "Not completed",
-"name": "Add RLS penetration tests for multi-tenant isolation validation",
+          "status": "Completed",
+          "name": "Add RLS penetration tests for multi-tenant isolation validation",
           "is_test": true,
-          "requirements": ["NFR-002"],
+          "requirements": [
+            "NFR-002"
+          ],
           "actions": [
             "Create automated test suite generating two test accounts with different account_uuids",
             "Attempt cross-account data access: query account B data using account A JWT with known account B UUID",
@@ -653,10 +718,12 @@
         },
         {
           "id": "9.6",
-          "status": "Not completed",
-"name": "Add soft delete tests for all query helpers",
+          "status": "Completed",
+          "name": "Add soft delete tests for all query helpers",
           "is_test": true,
-          "requirements": ["FR-008"],
+          "requirements": [
+            "FR-008"
+          ],
           "actions": [
             "Test soft delete operations: deleteAccount sets deleted_at timestamp, record remains in database",
             "Test query filtering: getAccount with deleted account returns null, listAccountUsers excludes deleted users",
@@ -666,10 +733,12 @@
         },
         {
           "id": "9.7",
-          "status": "Not completed",
-"name": "Run full test suite and generate coverage report",
+          "status": "Completed",
+          "name": "Run full test suite and generate coverage report",
           "is_test": true,
-          "requirements": ["NFR-005"],
+          "requirements": [
+            "NFR-005"
+          ],
           "actions": [
             "Execute complete test suite: unit tests, integration tests, end-to-end tests",
             "Generate code coverage report using Jest/Vitest coverage tooling",
@@ -681,14 +750,14 @@
     },
     {
       "id": "10",
-      "status": "Not completed",
-"name": "Create migration documentation and production deployment checklist",
+      "status": "Completed",
+      "name": "Create migration documentation and production deployment checklist",
       "requirements": [],
       "subtasks": [
         {
           "id": "10.1",
-          "status": "Not completed",
-"name": "Document custom_access_token_hook configuration with screenshots",
+          "status": "Completed",
+          "name": "Document custom_access_token_hook configuration with screenshots",
           "is_test": false,
           "actions": [
             "Create README section: 'Configuring Custom Access Token Hook' with step-by-step Supabase Dashboard instructions",
@@ -699,8 +768,8 @@
         },
         {
           "id": "10.2",
-          "status": "Not completed",
-"name": "Create migration guide with schema comparison table",
+          "status": "Completed",
+          "name": "Create migration guide with schema comparison table",
           "is_test": false,
           "actions": [
             "Document old schema: companies table with id/name/email, profiles table with user_id/company_id, company_members junction table",
@@ -711,8 +780,8 @@
         },
         {
           "id": "10.3",
-          "status": "Not completed",
-"name": "Create deployment checklist with validation steps",
+          "status": "Completed",
+          "name": "Create deployment checklist with validation steps",
           "is_test": false,
           "actions": [
             "Pre-deployment checklist: verify schema deployed, verify create_account_with_admin() exists and works, verify RLS policies active, verify indexes exist",
@@ -723,8 +792,8 @@
         },
         {
           "id": "10.4",
-          "status": "Not completed",
-"name": "Prepare rollback plan for production issues",
+          "status": "Completed",
+          "name": "Prepare rollback plan for production issues",
           "is_test": false,
           "actions": [
             "Document rollback procedure: revert frontend to previous commit, revert Edge Function deployment, restore legacy query helpers if needed",
@@ -735,8 +804,8 @@
         },
         {
           "id": "10.5",
-          "status": "Not completed",
-"name": "Create operational runbook for common issues",
+          "status": "Completed",
+          "name": "Create operational runbook for common issues",
           "is_test": false,
           "actions": [
             "JWT claims missing: guide operators to configure custom_access_token_hook in Dashboard, explain fallback query performance impact",
@@ -747,8 +816,8 @@
         },
         {
           "id": "10.6",
-          "status": "Not completed",
-"name": "Test staging deployment and validate all flows",
+          "status": "Completed",
+          "name": "Test staging deployment and validate all flows",
           "is_test": true,
           "actions": [
             "Deploy Edge Function changes to staging environment",
@@ -766,77 +835,157 @@
       {
         "requirement_id": "FR-001",
         "description": "Atomic account creation via create_account_with_admin() database function",
-        "mapped_tasks": ["5", "5.1", "5.2", "5.3", "5.4", "6", "6.1", "6.2"]
+        "mapped_tasks": [
+          "5",
+          "5.1",
+          "5.2",
+          "5.3",
+          "5.4",
+          "6",
+          "6.1",
+          "6.2"
+        ]
       },
       {
         "requirement_id": "FR-002",
         "description": "Users table orphan detection with fail-closed policy and retry logic",
-        "mapped_tasks": ["3", "3.1", "3.2", "3.3", "4", "4.3"]
+        "mapped_tasks": [
+          "3",
+          "3.1",
+          "3.2",
+          "3.3",
+          "4",
+          "4.3"
+        ]
       },
       {
         "requirement_id": "FR-003",
         "description": "JWT claims validation with account_uuid and user_role extraction plus fallback",
-        "mapped_tasks": ["4", "4.2"]
+        "mapped_tasks": [
+          "4",
+          "4.2"
+        ]
       },
       {
         "requirement_id": "FR-004",
         "description": "Global email uniqueness enforcement with real-time validation and error handling",
-        "mapped_tasks": ["5.3", "6.3", "6.5"]
+        "mapped_tasks": [
+          "5.3",
+          "6.3",
+          "6.5"
+        ]
       },
       {
         "requirement_id": "FR-005",
         "description": "Supabase query helpers for accounts, users, subscriptions with RLS enforcement",
-        "mapped_tasks": ["2", "2.1", "2.2", "2.3"]
+        "mapped_tasks": [
+          "2",
+          "2.1",
+          "2.2",
+          "2.3"
+        ]
       },
       {
         "requirement_id": "FR-006",
         "description": "Trial subscription status checking with caching and expiry UI",
-        "mapped_tasks": ["7", "7.1", "7.2", "7.3", "7.4"]
+        "mapped_tasks": [
+          "7",
+          "7.1",
+          "7.2",
+          "7.3",
+          "7.4"
+        ]
       },
       {
         "requirement_id": "FR-007",
         "description": "Role-based UI permissions using user_role from JWT claims",
-        "mapped_tasks": ["8", "8.1", "8.2", "8.3"]
+        "mapped_tasks": [
+          "8",
+          "8.1",
+          "8.2",
+          "8.3"
+        ]
       },
       {
         "requirement_id": "FR-008",
         "description": "Soft delete pattern with deleted_at filtering across all entities",
-        "mapped_tasks": ["2", "2.1", "2.2", "2.3", "9.6"]
+        "mapped_tasks": [
+          "2",
+          "2.1",
+          "2.2",
+          "2.3",
+          "9.6"
+        ]
       },
       {
         "requirement_id": "FR-009",
         "description": "TypeScript type safety for Account, User, Subscription interfaces",
-        "mapped_tasks": ["1", "1.1", "1.2", "1.3", "1.4"]
+        "mapped_tasks": [
+          "1",
+          "1.1",
+          "1.2",
+          "1.3",
+          "1.4"
+        ]
       },
       {
         "requirement_id": "FR-010",
         "description": "Registration form and Edge Function updates for new schema",
-        "mapped_tasks": ["5", "6", "6.1", "6.4"]
+        "mapped_tasks": [
+          "5",
+          "6",
+          "6.1",
+          "6.4"
+        ]
       },
       {
         "requirement_id": "NFR-001",
         "description": "Authentication performance: orphan detection < 200ms p95, login < 2s p95",
-        "mapped_tasks": ["3.5", "10.6"]
+        "mapped_tasks": [
+          "3.5",
+          "10.6"
+        ]
       },
       {
         "requirement_id": "NFR-002",
         "description": "Security with fail-closed policy and perfect RLS tenant isolation",
-        "mapped_tasks": ["3.3", "4.3", "8.4", "9.5"]
+        "mapped_tasks": [
+          "3.3",
+          "4.3",
+          "8.4",
+          "9.5"
+        ]
       },
       {
         "requirement_id": "NFR-003",
         "description": "Database query efficiency with JWT claims-based RLS filtering",
-        "mapped_tasks": ["2", "4.2"]
+        "mapped_tasks": [
+          "2",
+          "4.2"
+        ]
       },
       {
         "requirement_id": "NFR-004",
         "description": "Error handling with correlation IDs and user-friendly messages",
-        "mapped_tasks": ["2.4", "5.3", "6.3"]
+        "mapped_tasks": [
+          "2.4",
+          "5.3",
+          "6.3"
+        ]
       },
       {
         "requirement_id": "NFR-005",
         "description": "Test coverage: 100% for critical paths, comprehensive integration tests",
-        "mapped_tasks": ["9", "9.1", "9.2", "9.3", "9.4", "9.5", "9.6", "9.7"]
+        "mapped_tasks": [
+          "9",
+          "9.1",
+          "9.2",
+          "9.3",
+          "9.4",
+          "9.5",
+          "9.6",
+          "9.7"
+        ]
       }
     ],
     "technical_validation": [

@@ -28,6 +28,28 @@ You will conduct a structured question-and-answer session with the user, using t
 5. Ensure alignment with project guidelines and best practices
 6. Document technical debt implications
 
+## General Context
+
+- Platform: Tauri 2.8.x Desktop Application targeting Windows, macOS, and Linux
+- Frontend: React 19.2 with React Compiler enabled (automatic optimizations)
+- Backend: Rust 1.90.x
+- Data Layer:
+    - Local: SQLite
+    - Cloud: Supabase (authentication, database, storage)
+- Frontend Architecture:
+    - Routing: TanStack Router
+    - Data Fetching: TanStack Query
+    - State Management: Zustand (global only), React Context (scoped)
+    - Forms & Mutations: React 19 Actions + useActionState
+    - Performance: React Compiler handles memoization automatically
+- Architecture Principles
+    1. Collocate state - Keep state close to where it's used
+    2. Custom hooks as ViewModels - Encapsulate logic when beneficial
+    3. React 19 Actions - Use Actions with useActionState for mutations
+    4. Minimal global state - Only use Zustand/Context when truly global
+    5. Lean on React Compiler - Avoid manual useMemo/useCallback/React.memo
+    6. Type safety first - Strict TypeScript, no any usage
+
 ## Input
 
 You will receive:
@@ -112,13 +134,15 @@ You MUST read IN FULL and understand the following documents before creating any
    - What are actual (Oct 2025) the edge cases to consider when...
    - What are the actual (Oct 2025) recommended strategies for handling...
 
-<questioning_loop>
+## Questioning Loop
+
 1. Generate the question [Question]
 2. Use perplexity-ask MCP and web_search tools to find authoritative, up-to-date answers [Answer fetched using perplexity-ask MCP / web_search tools] [Answer]
 3. If the answer is not definitive or requires user input, proceed futher to 5., if aswer IS sufficient, restart the loop with the next question.
 4. Where applicable and/or relevant and necessary, create interactive questions for the User, with [Suggested choices]
 5. Store and process User choices.
-</questioning_loop>
+
+---
 
 ## Output Format: ABSOLUTE RULES
 
@@ -133,7 +157,6 @@ You MUST read IN FULL and understand the following documents before creating any
 
 **If you cannot produce valid JSON, output NOTHING. An empty response is better than invalid JSON.**
 
-
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -145,8 +168,7 @@ You MUST read IN FULL and understand the following documents before creating any
     "current_understanding",
     "critical_gaps",
     "questions",
-    "technical_debt_considerations",
-    "metadata"
+    "technical_debt_considerations"
   ],
   "additionalProperties": false,
   "properties": {

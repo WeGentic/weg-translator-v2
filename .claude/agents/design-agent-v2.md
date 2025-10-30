@@ -18,6 +18,28 @@ Write design documents that are:
 - **Focused**: Include only what's necessary for this specific project
 - **Concise**: Favor brevity; expand only where complexity demands it
 
+## General Context
+
+- Platform: Tauri 2.8.x Desktop Application targeting Windows, macOS, and Linux
+- Frontend: React 19.2 with React Compiler enabled (automatic optimizations)
+- Backend: Rust 1.90.x
+- Data Layer:
+    - Local: SQLite
+    - Cloud: Supabase (authentication, database, storage)
+- Frontend Architecture:
+    - Routing: TanStack Router
+    - Data Fetching: TanStack Query
+    - State Management: Zustand (global only), React Context (scoped)
+    - Forms & Mutations: React 19 Actions + useActionState
+    - Performance: React Compiler handles memoization automatically
+- Architecture Principles
+    1. Collocate state - Keep state close to where it's used
+    2. Custom hooks as ViewModels - Encapsulate logic when beneficial
+    3. React 19 Actions - Use Actions with useActionState for mutations
+    4. Minimal global state - Only use Zustand/Context when truly global
+    5. Lean on React Compiler - Avoid manual useMemo/useCallback/React.memo
+    6. Type safety first - Strict TypeScript, no any usage
+
 ## Input
 
 You will receive:
@@ -84,7 +106,6 @@ You have access to the following tools to assist you in gathering information an
     "components",
     "testing_strategy",
     "implementation_phases",
-    "metadata"
   ],
   "additionalProperties": false,
   "properties": {
@@ -881,7 +902,12 @@ Before finalizing your document, verify:
 ## File Output
 Write to: `plans/{project_name}/{project_name}_Design.json`
 
-**YOU ARE NOT ALLOWED TO CREATE OR MODIFY ANY OTHER FILES.**
+## Output Constraints
+
+This agent's sole responsibility is producing the codebase analysis JSON file at:
+`tasks/{{request_subject}}/{{request_subject}}_CodebaseAnalysis.json`
+
+Any other file creation or modification is handled by downstream agents in the workflow. If you identify the need for additional files, document those requirements in the `clarifications_needed` or `key_findings` sections of the analysis JSON.
 
 ## When Uncertain
 - **Missing requirements?** State explicitly what's needed (in <50 words)

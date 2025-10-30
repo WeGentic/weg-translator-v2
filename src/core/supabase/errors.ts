@@ -99,7 +99,29 @@ export function mapSupabaseError(
       if (constraintMatch) {
         const constraint = constraintMatch[1];
 
-        // Company VAT ID unique violation
+        // B2B Schema: User email unique violation (global uniqueness)
+        if (constraint.includes('users_user_email_key') || constraint.includes('user_email')) {
+          return {
+            type: 'validation',
+            message: 'An account with this email address already exists',
+            field: 'user_email',
+            correlationId,
+            originalError: error,
+          };
+        }
+
+        // B2B Schema: Account email unique violation
+        if (constraint.includes('accounts_company_email_key') || constraint.includes('company_email')) {
+          return {
+            type: 'validation',
+            message: 'An account with this company email already exists',
+            field: 'company_email',
+            correlationId,
+            originalError: error,
+          };
+        }
+
+        // Legacy: Company VAT ID unique violation
         if (constraint.includes('vat_id') || constraint.includes('companies_vat_id')) {
           return {
             type: 'validation',
@@ -110,7 +132,7 @@ export function mapSupabaseError(
           };
         }
 
-        // Company membership unique violation
+        // Legacy: Company membership unique violation
         if (constraint.includes('company_members_unique_membership')) {
           return {
             type: 'validation',
@@ -121,7 +143,7 @@ export function mapSupabaseError(
           };
         }
 
-        // Profile ID unique violation (shouldn't happen due to trigger)
+        // Legacy: Profile ID unique violation (shouldn't happen due to trigger)
         if (constraint.includes('profiles_pkey')) {
           return {
             type: 'validation',
@@ -151,7 +173,29 @@ export function mapSupabaseError(
       if (fkMatch) {
         const fkName = fkMatch[1];
 
-        // Company FK violation
+        // B2B Schema: Account FK violation
+        if (fkName.includes('account_uuid') || fkName.includes('users_account_uuid_fkey')) {
+          return {
+            type: 'foreign_key',
+            message: 'The specified account does not exist',
+            field: 'account_uuid',
+            correlationId,
+            originalError: error,
+          };
+        }
+
+        // B2B Schema: User FK violation (cascade from auth.users)
+        if (fkName.includes('user_uuid') || fkName.includes('users_user_uuid_fkey')) {
+          return {
+            type: 'foreign_key',
+            message: 'The specified user does not exist',
+            field: 'user_uuid',
+            correlationId,
+            originalError: error,
+          };
+        }
+
+        // Legacy: Company FK violation
         if (fkName.includes('company_id')) {
           return {
             type: 'foreign_key',
@@ -162,7 +206,7 @@ export function mapSupabaseError(
           };
         }
 
-        // User/Profile FK violation
+        // Legacy: User/Profile FK violation
         if (fkName.includes('user_id') || fkName.includes('profiles')) {
           return {
             type: 'foreign_key',
@@ -190,7 +234,29 @@ export function mapSupabaseError(
       if (checkMatch) {
         const constraint = checkMatch[1];
 
-        // Company email check violation
+        // B2B Schema: User role check violation
+        if (constraint.includes('users_role_check')) {
+          return {
+            type: 'validation',
+            message: "Role must be one of: 'owner', 'admin', 'member', 'viewer'",
+            field: 'role',
+            correlationId,
+            originalError: error,
+          };
+        }
+
+        // B2B Schema: Subscription status check violation
+        if (constraint.includes('subscriptions_status_check')) {
+          return {
+            type: 'validation',
+            message: "Status must be one of: 'trialing', 'active', 'past_due', 'canceled', 'unpaid'",
+            field: 'status',
+            correlationId,
+            originalError: error,
+          };
+        }
+
+        // Legacy: Company email check violation
         if (constraint.includes('companies_email_check')) {
           return {
             type: 'validation',
@@ -201,7 +267,7 @@ export function mapSupabaseError(
           };
         }
 
-        // Member role check violation
+        // Legacy: Member role check violation
         if (constraint.includes('company_members_role_check')) {
           return {
             type: 'validation',

@@ -4,14 +4,17 @@ import { AppErrorBoundary } from "./errors";
 import { LogProvider } from "./logging";
 import { ToastProvider } from "@/shared/ui/toast";
 import { AuthProvider } from "./auth";
+import { QueryProvider } from "./QueryProvider";
 
 export function AppProviders({ children }: PropsWithChildren): ReactElement {
   return (
     <LogProvider>
       <AppErrorBoundary>
-        <ToastProvider>
-          <AuthProvider>{children}</AuthProvider>
-        </ToastProvider>
+        <QueryProvider>
+          <ToastProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </ToastProvider>
+        </QueryProvider>
       </AppErrorBoundary>
     </LogProvider>
   );

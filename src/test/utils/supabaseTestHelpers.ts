@@ -125,17 +125,16 @@ export async function createOrphanedUser(options: CreateOrphanedUserOptions): Pr
     await client.auth.signOut();
   }
 
-  // Step 3: Verify user is orphaned (no company data)
-  const { data: companies } = await client.from('companies').select('id').eq('owner_admin_uuid', user.id).limit(1);
+  // Step 3: Verify user is orphaned (no users table record or no account membership)
+  const { data: userRecord } = await client
+    .from('users')
+    .select('user_uuid, account_uuid')
+    .eq('user_uuid', user.id)
+    .limit(1)
+    .maybeSingle();
 
-  const { data: admins } = await client.from('company_admins').select('admin_uuid').eq('admin_uuid', user.id).limit(1);
-
-  if (companies && companies.length > 0) {
-    throw new Error('User is not orphaned - has company data');
-  }
-
-  if (admins && admins.length > 0) {
-    throw new Error('User is not orphaned - has admin data');
+  if (userRecord && userRecord.account_uuid) {
+    throw new Error('User is not orphaned - has valid account_uuid in users table');
   }
 
   console.log(`✓ Created orphaned user: ${options.email} (verified: ${options.emailVerified})`);
@@ -178,11 +177,11 @@ export async function cleanupTestUser(email: string, userId?: string): Promise<v
       userIdToDelete = user.id;
     }
 
-    // Step 2: Delete from companies (if exists)
-    await client.from('companies').delete().eq('owner_admin_uuid', userIdToDelete);
+    // Step 2: Delete from users table (if exists) - CASCADE will handle related records
+    await client.from('users').delete().eq('user_uuid', userIdToDelete);
 
-    // Step 3: Delete from company_admins (if exists)
-    await client.from('company_admins').delete().eq('admin_uuid', userIdToDelete);
+    // Step 3: Delete from accounts (if user was owner) - only if no other users
+    // Note: RLS should prevent deletion if not permitted
 
     // Step 4: Delete verification codes
     const emailHash = await hashEmail(email);
@@ -237,66 +236,101 @@ export async function verifyTestUserEmail(userId: string): Promise<void> {
 }
 
 /**
- * Create test company and admin entry for user
+ * Create test account and user entry
  *
- * Converts orphaned user into complete user with company data
+ * Converts orphaned auth.users record into complete user with account membership
+ * Uses create_account_with_admin() database function for atomic creation
  *
- * @param userId - User ID
- * @param companyName - Company name
+ * @param userId - Auth user ID
+ * @param companyName - Company/account name
+ * @param companyEmail - Company email (must be unique globally)
  */
-export async function createTestCompanyForUser(userId: string, companyName: string): Promise<string> {
+export async function createTestAccountForUser(
+  userId: string,
+  companyName: string,
+  companyEmail: string
+): Promise<{ accountUuid: string; userUuid: string }> {
   const client = createTestSupabaseClient();
 
-  // Create company
-  const { data: company, error: companyError } = await client
-    .from('companies')
+  // Option 1: Use create_account_with_admin() function (requires proper setup)
+  // const { data, error } = await client.rpc('create_account_with_admin', {
+  //   p_company_name: companyName,
+  //   p_company_email: companyEmail,
+  //   p_first_name: 'Test',
+  //   p_last_name: 'User'
+  // });
+
+  // Option 2: Manual creation for tests (bypassing function for flexibility)
+  // Create account
+  const { data: account, error: accountError } = await client
+    .from('accounts')
     .insert({
-      name: companyName,
-      owner_admin_uuid: userId,
-      // Add other required fields based on your schema
+      company_name: companyName,
+      company_email: companyEmail,
     })
     .select()
     .single();
 
-  if (companyError || !company) {
-    throw new Error(`Failed to create test company: ${companyError?.message || 'Unknown error'}`);
+  if (accountError || !account) {
+    throw new Error(`Failed to create test account: ${accountError?.message || 'Unknown error'}`);
   }
 
-  // Create admin entry
-  const { error: adminError } = await client.from('company_admins').insert({
-    company_id: company.id,
-    admin_uuid: userId,
-    // Add other required fields based on your schema
+  // Create users table entry linking to account
+  const { error: userError } = await client.from('users').insert({
+    user_uuid: userId,
+    account_uuid: account.account_uuid,
+    user_email: companyEmail,
+    role: 'owner', // First user is owner
   });
 
-  if (adminError) {
-    // Rollback: delete company
-    await client.from('companies').delete().eq('id', company.id);
-    throw new Error(`Failed to create admin entry: ${adminError.message}`);
+  if (userError) {
+    // Rollback: delete account
+    await client.from('accounts').delete().eq('account_uuid', account.account_uuid);
+    throw new Error(`Failed to create user entry: ${userError.message}`);
   }
 
-  console.log(`✓ Created company "${companyName}" for user: ${userId}`);
+  console.log(`✓ Created account "${companyName}" for user: ${userId}`);
 
-  return company.id;
+  return {
+    accountUuid: account.account_uuid,
+    userUuid: userId,
+  };
 }
 
 /**
  * Check if user is orphaned
  *
  * @param userId - User ID to check
- * @returns True if orphaned (no company data), false otherwise
+ * @returns True if orphaned (no users table record or no valid account), false otherwise
  */
 export async function isUserOrphaned(userId: string): Promise<boolean> {
   const client = createTestSupabaseClient();
 
-  const { data: companies } = await client.from('companies').select('id').eq('owner_admin_uuid', userId).limit(1);
+  const { data: userRecord } = await client
+    .from('users')
+    .select('user_uuid, account_uuid, deleted_at')
+    .eq('user_uuid', userId)
+    .limit(1)
+    .maybeSingle();
 
-  const { data: admins } = await client.from('company_admins').select('admin_uuid').eq('admin_uuid', userId).limit(1);
+  // User is orphaned if:
+  // 1. No record in users table
+  // 2. account_uuid is null
+  // 3. deleted_at is not null (soft deleted)
+  if (!userRecord || !userRecord.account_uuid || userRecord.deleted_at) {
+    return true;
+  }
 
-  const hasCompanyData = Boolean(companies && companies.length > 0);
-  const hasAdminData = Boolean(admins && admins.length > 0);
+  // Verify account exists and is not soft-deleted
+  const { data: account } = await client
+    .from('accounts')
+    .select('account_uuid, deleted_at')
+    .eq('account_uuid', userRecord.account_uuid)
+    .limit(1)
+    .maybeSingle();
 
-  return !hasCompanyData && !hasAdminData;
+  // User is orphaned if account doesn't exist or is soft-deleted
+  return !account || account.deleted_at !== null;
 }
 
 /**
