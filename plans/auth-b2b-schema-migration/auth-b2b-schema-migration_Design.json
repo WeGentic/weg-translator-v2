@@ -1,0 +1,1109 @@
+{
+  "project_name": "auth-b2b-schema-migration",
+  "overview": {
+    "problem_statement": "The current authentication system uses a legacy companies/profiles/company_members schema that lacks proper multi-tenant isolation, role-based access control, and subscription management. This architecture creates security risks through inadequate RLS enforcement, performance bottlenecks from subquery-heavy orphan detection, and maintenance complexity from scattered membership checks across multiple tables. The deployed B2B schema (accounts/users/subscriptions) exists in production but all application code still references the old schema, creating a critical gap between database structure and application logic that prevents leveraging new security features like JWT-based RLS filtering and atomic account creation.",
+    "solution_approach": "Systematically migrate all authentication code to query the new schema tables while preserving existing security guarantees and performance targets. Replace manual table insertions with the create_account_with_admin() stored function for atomic account creation. Rewrite orphan detection to query the single users table instead of joining profiles/company_members. Update AuthProvider to extract account_uuid and user_role from JWT claims with fallback to direct query when custom_access_token_hook is unconfigured. Create new query helper classes (AccountQueries, UserQueries, SubscriptionQueries) following existing patterns while replacing old helpers. Implement soft-delete filtering consistently across all queries. Update TypeScript types to reflect new schema while marking legacy types deprecated. This approach maintains backward compatibility with local SQLite profile syncing for desktop features while migrating cloud data access to the new schema.",
+    "key_design_decisions": [
+      {
+        "decision": "Use JWT claims (account_uuid, user_role) as primary source with fallback query when custom_access_token_hook not configured",
+        "rationale": "JWT claims enable zero-query RLS filtering for optimal performance, but the hook requires manual Supabase Dashboard configuration. Fallback query ensures application remains functional if hook misconfigured, trading performance for reliability. RLS policies use auth.jwt()->>'account_uuid' when available, degrading gracefully to subquery when missing. This design prevents authentication failures from configuration issues while still achieving performance gains when properly configured.",
+        "alternatives_considered": [
+          "Require custom_access_token_hook configuration and fail hard if missing - rejected because blocks all authentication if user forgets to configure hook",
+          "Always query users table for account_uuid instead of using JWT claims - rejected because defeats purpose of RLS optimization and creates unnecessary database load",
+          "Cache account_uuid in React Context from first query and reuse - rejected because cache invalidation complexity and potential stale data issues"
+        ],
+        "tradeoffs": "Fallback query adds 50-100ms latency when hook not configured and increases database load. However, this is acceptable tradeoff for operational resilience. Warning logs alert operators to configuration issue without blocking users."
+      },
+      {
+        "decision": "Rewrite orphan detection to single users table query instead of parallel profiles/company_members queries",
+        "rationale": "New schema eliminates profiles and company_members tables, consolidating all user data into users table with account_uuid foreign key. Single query SELECT user_uuid, account_uuid, deleted_at FROM users WHERE user_uuid = auth.uid() replaces previous parallel queries, simplifying logic and reducing network round trips. This maintains <200ms p95 latency requirement through proper indexing on users(user_uuid) and users(account_uuid). Orphan classification now checks: (1) user record exists, (2) account_uuid is not null, (3) deleted_at is null, (4) referenced account exists and is not deleted.",
+        "alternatives_considered": [
+          "Keep parallel query pattern for consistency with old code - rejected because unnecessary complexity and worse performance than single query",
+          "Use RLS policy to automatically filter orphaned users - rejected because orphan detection must fail-closed, requiring explicit error handling before session establishment"
+        ],
+        "tradeoffs": "Simplified orphan detection logic reduces debugging complexity but requires rewriting all existing tests. Single query is faster but loses ability to distinguish between missing profile vs missing membership (now single missing users record)."
+      },
+      {
+        "decision": "Replace manual table insertions in register-organization Edge Function with create_account_with_admin() stored function call",
+        "rationale": "Atomic transaction guarantees prevent partial account creation scenarios where account exists but user or subscription fails. Database function encapsulates business logic (role='owner' assignment, 14-day trial calculation, email uniqueness enforcement) at data layer, ensuring consistency even if multiple registration paths added. Function returns all created UUIDs (account_uuid, user_uuid, subscription_uuid) enabling frontend to complete profile enrichment. Rollback on any error ensures clean retry without orphaned records.",
+        "alternatives_considered": [
+          "Keep manual INSERT operations with application-level transaction management - rejected because distributed transaction complexity and race condition risks",
+          "Use database triggers to cascade account creation - rejected because trigger debugging difficulty and hidden business logic"
+        ],
+        "tradeoffs": "Edge Function becomes dependent on specific function signature and cannot customize account creation logic without schema changes. However, this enforces consistency and prevents bugs from manual SQL errors."
+      },
+      {
+        "decision": "Create separate AccountQueries, UserQueries, SubscriptionQueries classes instead of combining into single unified class",
+        "rationale": "Separation follows single responsibility principle with each class managing one entity type. Enables clear interface contracts matching database tables and simplifies testing by mocking specific query classes. Mirrors existing CompanyQueries/ProfileQueries pattern developers are familiar with, reducing learning curve. Each class encapsulates entity-specific logic (soft delete filtering, RLS enforcement, role-based permissions) without cross-entity coupling.",
+        "alternatives_considered": [
+          "Create unified DatabaseQueries class with all methods - rejected because violates SRP and creates large unmaintainable class",
+          "Use repository pattern with interfaces - rejected as over-engineering for current codebase size"
+        ],
+        "tradeoffs": "Three separate classes create more import statements and potential duplication of shared query logic. Mitigated by extracting common patterns into base query utilities."
+      },
+      {
+        "decision": "Implement subscription status caching with 5-minute TTL in React state instead of real-time queries",
+        "rationale": "Trial status changes infrequently (once per account lifecycle when trial expires) and 5-minute staleness is acceptable for trial expiry UI. Caching reduces database load by 80%+ for repeated subscription checks across components. Cache invalidation on subscription update events ensures accuracy when user upgrades. TTL prevents stale status from persisting indefinitely while avoiding unnecessary refetches on every component render.",
+        "alternatives_considered": [
+          "Real-time subscription checking on every page load - rejected due to unnecessary database load for rarely-changing data",
+          "Cache subscription status in JWT claims - rejected because JWT reissue frequency may not align with trial expiry timing",
+          "Use Supabase real-time subscriptions for subscription changes - rejected as over-engineering for infrequent updates"
+        ],
+        "tradeoffs": "5-minute staleness means trial expiry banner may lag by up to 5 minutes after actual expiry. Acceptable because grace period handles edge cases and worst case is slightly delayed upgrade prompt."
+      }
+    ],
+    "summary": "This migration replaces the legacy multi-table authentication schema with a streamlined accounts/users/subscriptions model, eliminating orphan detection complexity, enabling JWT-optimized RLS policies, and providing atomic account creation. The design preserves critical non-functional requirements (fail-closed security, <200ms orphan detection, 100% test coverage) while simplifying the codebase through single-table user queries and consolidated account management. Key innovations include JWT claims fallback for operational resilience, single-query orphan detection for performance, and atomic stored function for data consistency. Implementation requires updating 8 critical files (AuthProvider, orphanDetection, RegistrationForm flows, Edge Function, query helpers) and creating 3 new query classes, estimated at 60-80 developer hours across 10 implementation phases. Success is measured by zero authentication regressions, perfect tenant isolation in RLS testing, and maintained performance targets, with comprehensive testing ensuring production readiness before deployment."
+  },
+  "architecture": {
+    "high_level_flow": {
+      "description": "Authentication flows through three primary paths: (1) Registration creates account atomically via Edge Function invoking create_account_with_admin(), returns to login with account_uuid; (2) Login validates credentials, checks users table for orphans, extracts JWT claims, enriches profile, establishes session; (3) Session bootstrap on app start validates JWT, refreshes claims if stale, syncs local SQLite profile. All paths enforce fail-closed policy, filter soft deletes, and leverage account_uuid from JWT for RLS optimization.",
+      "mermaid_diagram": "graph TD\n    A[User Action] --> B{Action Type}\n    B -->|Register| C[RegistrationForm]\n    B -->|Login| D[LoginForm]\n    B -->|App Start| E[Session Bootstrap]\n    C --> F[Edge Function: register-organization]\n    F --> G[create_account_with_admin DB Function]\n    G --> H[Return account_uuid + subscription_uuid]\n    H --> I[Redirect to Login]\n    D --> J[AuthProvider.login]\n    J --> K[Supabase Auth]\n    K --> L[checkIfOrphaned users query]\n    L -->|Valid| M[Extract JWT Claims]\n    L -->|Orphaned| N[Fail-Closed Block]\n    M --> O[Enrich Profile from users table]\n    O --> P[Establish Session]\n    E --> Q[Validate JWT Claims]\n    Q --> R[Refresh if Stale]\n    R --> S[Sync Local SQLite Profile]",
+      "nodes": [
+        {
+          "id": "A",
+          "label": "User Action",
+          "description": "User initiates authentication flow through registration form, login form, or automatic session restoration on application startup. Each action type triggers different validation and data flow paths.",
+          "responsibilities": [
+            "Collect user credentials or detect existing session",
+            "Route to appropriate authentication handler",
+            "Display loading states and error feedback"
+          ]
+        },
+        {
+          "id": "C",
+          "label": "RegistrationForm",
+          "description": "Multi-step form collecting company information and admin credentials. Validates email uniqueness in real-time, enforces company_email matches admin_email, polls for email verification completion.",
+          "responsibilities": [
+            "Validate company_email and admin_email match for new schema",
+            "Check email uniqueness against users table with 500ms debounce",
+            "Poll email verification status until confirmed or timeout",
+            "Submit normalized payload to Edge Function after verification"
+          ]
+        },
+        {
+          "id": "F",
+          "label": "Edge Function: register-organization",
+          "description": "Serverless function handling account creation by invoking create_account_with_admin() stored function. Validates payload, handles constraint violations, returns account identifiers.",
+          "responsibilities": [
+            "Invoke create_account_with_admin() with company_name, company_email, first_name, last_name",
+            "Catch unique constraint violations (23505) for duplicate email",
+            "Map database errors to user-friendly HTTP responses",
+            "Return account_uuid, user_uuid, subscription_uuid on success"
+          ]
+        },
+        {
+          "id": "G",
+          "label": "create_account_with_admin DB Function",
+          "description": "PostgreSQL stored function creating account, admin user with owner role, and trial subscription atomically. Enforces email uniqueness, calculates 14-day trial, handles transaction rollback on errors.",
+          "responsibilities": [
+            "INSERT account record with company_name and company_email",
+            "INSERT users record with role='owner' and link to account_uuid",
+            "INSERT subscription with status='trialing' and trial_ends_at = now() + 14 days",
+            "Return all created UUIDs or rollback entire transaction on error"
+          ]
+        },
+        {
+          "id": "J",
+          "label": "AuthProvider.login",
+          "description": "Core authentication orchestrator managing Supabase Auth login, orphan detection, profile enrichment, and session establishment. Implements fail-closed policy with comprehensive error handling.",
+          "responsibilities": [
+            "Invoke supabase.auth.signInWithPassword() for credential validation",
+            "Execute checkIfOrphaned() to validate users table membership",
+            "Extract account_uuid and user_role from JWT claims with fallback",
+            "Enrich user context with full_name and avatar_url from users table",
+            "Establish session or block with fail-closed errors"
+          ]
+        },
+        {
+          "id": "L",
+          "label": "checkIfOrphaned users query",
+          "description": "Single query to users table checking for record existence, valid account_uuid, and non-deleted status. Implements retry logic with exponential backoff for transient failures.",
+          "responsibilities": [
+            "Query SELECT user_uuid, account_uuid, deleted_at FROM users WHERE user_uuid = auth.uid()",
+            "Classify as orphaned if: no record, account_uuid null, deleted_at not null",
+            "Retry up to 3 times with Gaussian jitter on timeout/network errors",
+            "Return orphan classification or throw OrphanDetectionError for fail-closed"
+          ]
+        },
+        {
+          "id": "M",
+          "label": "Extract JWT Claims",
+          "description": "Parse JWT payload to extract account_uuid and user_role from app_metadata. Falls back to users table query if custom_access_token_hook not configured.",
+          "responsibilities": [
+            "Parse session.user.app_metadata.account_uuid and user_role from JWT",
+            "Execute fallback query to users table if claims missing",
+            "Log warning when custom_access_token_hook not configured",
+            "Validate role is in allowed set (owner, admin, member, viewer)"
+          ]
+        },
+        {
+          "id": "E",
+          "label": "Session Bootstrap",
+          "description": "Automatic session restoration on application startup. Validates existing JWT, refreshes claims if stale, syncs cloud profile to local SQLite for desktop features.",
+          "responsibilities": [
+            "Check for existing Supabase session on app mount",
+            "Validate JWT expiry and refresh if needed",
+            "Execute orphan detection on restored session",
+            "Sync cloud users table profile to local SQLite via Tauri IPC"
+          ]
+        }
+      ]
+    },
+    "integration_points": [
+      {
+        "id": "INT-001",
+        "name": "Supabase Auth Service",
+        "system": "Supabase Authentication API",
+        "description": "Manages user credentials, session tokens, and email verification. Provides signInWithPassword(), signUp(), signOut(), and session management. Integration point for all authentication operations requiring credential validation and JWT issuance.",
+        "integration_type": "api",
+        "data_flow": "bidirectional",
+        "dependencies": [
+          "@supabase/supabase-js client library",
+          "Supabase project URL and anon key configuration"
+        ],
+        "error_handling": "Catch AuthApiError for invalid credentials, map to user-friendly messages. Handle network timeouts with retry logic. Email verification failures redirect to manual verification flow."
+      },
+      {
+        "id": "INT-002",
+        "name": "Supabase Database (users table)",
+        "system": "PostgreSQL via Supabase Client",
+        "description": "Primary data source for user account membership, role information, and profile data. RLS policies filter queries by account_uuid from JWT claims. All queries include deleted_at IS NULL filter for soft delete enforcement.",
+        "integration_type": "database",
+        "data_flow": "bidirectional",
+        "dependencies": [
+          "Indexes on users(user_uuid), users(account_uuid), users(user_email)",
+          "RLS policies configured for account isolation"
+        ],
+        "error_handling": "Map PostgreSQL error codes (23505 unique violation, 42501 permission denied) to user-friendly errors. Retry transient connection failures up to 3 times. Fail-closed on persistent database errors."
+      },
+      {
+        "id": "INT-003",
+        "name": "create_account_with_admin Function",
+        "system": "PostgreSQL Stored Function",
+        "description": "Atomic account creation transaction creating account, admin user, and trial subscription in single operation. Returns account_uuid, user_uuid, subscription_uuid on success or rolls back on any error.",
+        "integration_type": "database",
+        "data_flow": "outbound",
+        "dependencies": [
+          "Function deployed in Supabase with signature create_account_with_admin(p_company_name text, p_company_email text, p_first_name text, p_last_name text)",
+          "Authenticated session with valid auth.uid()"
+        ],
+        "error_handling": "Catch function exceptions and map to specific errors: 23505 for email uniqueness, 23503 for foreign key violations. Edge Function translates to HTTP 400/409/500 based on error type."
+      },
+      {
+        "id": "INT-004",
+        "name": "register-organization Edge Function",
+        "system": "Supabase Edge Functions",
+        "description": "Serverless function invoked during registration to create account. Validates payload, invokes create_account_with_admin(), handles errors, returns account identifiers to frontend.",
+        "integration_type": "api",
+        "data_flow": "bidirectional",
+        "dependencies": [
+          "Valid JWT token passed in Authorization header",
+          "Payload with company_name, company_email, first_name, last_name, correlationId"
+        ],
+        "error_handling": "Return 409 Conflict for email uniqueness violations, 400 Bad Request for validation failures, 500 Internal Server Error for database timeouts. Include correlation ID in all error responses."
+      },
+      {
+        "id": "INT-005",
+        "name": "JWT Custom Access Token Hook",
+        "system": "Supabase Custom Hooks",
+        "description": "Optional hook configured in Supabase Dashboard adding account_uuid and user_role to JWT app_metadata. Enables zero-query RLS filtering when configured. Application functions with fallback query if not configured.",
+        "integration_type": "event-bus",
+        "data_flow": "inbound",
+        "dependencies": [
+          "Hook configured at Authentication > Hooks > Custom Access Token",
+          "Hook function queries users table and adds claims to JWT"
+        ],
+        "error_handling": "Fallback to direct users table query if claims missing from JWT. Log warning to alert operators of missing configuration. Degrade gracefully without blocking authentication."
+      },
+      {
+        "id": "INT-006",
+        "name": "Local SQLite Profile Storage",
+        "system": "Tauri SQLite Backend",
+        "description": "Desktop-only local profile cache synchronized from cloud users table. Enables offline access to user data and maintains backward compatibility with existing desktop features.",
+        "integration_type": "database",
+        "data_flow": "outbound",
+        "dependencies": [
+          "Tauri IPC commands: createUserProfile, updateUserProfile, getUserProfile",
+          "Local SQLite database in app config directory"
+        ],
+        "error_handling": "Log sync failures without blocking authentication. Local profile stale data acceptable for desktop features. Re-sync on next successful cloud query."
+      },
+      {
+        "id": "INT-007",
+        "name": "Subscription Status Cache",
+        "system": "React Query Client",
+        "description": "In-memory cache for subscription status with 5-minute TTL. Reduces database load for trial expiry checking while maintaining acceptable staleness for UI updates.",
+        "integration_type": "api",
+        "data_flow": "inbound",
+        "dependencies": [
+          "react-query library with configured QueryClient",
+          "SubscriptionQueries.getAccountSubscription() method"
+        ],
+        "error_handling": "Invalidate cache on subscription update events. Retry failed queries with exponential backoff. Display stale data with warning indicator if refresh fails."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "COMP-001",
+      "name": "AuthProvider",
+      "purpose": "Core authentication context managing session lifecycle, orphan detection, JWT claims extraction, and profile enrichment for application-wide auth state.",
+      "interface": {
+        "language": "typescript",
+        "code": "interface AuthContextType {\n  user: User | null;\n  session: Session | null;\n  isAuthenticated: boolean;\n  isLoading: boolean;\n  login: (email: string, password: string) => Promise<void>;\n  logout: () => Promise<void>;\n  accountUuid: string | null;\n  userRole: 'owner' | 'admin' | 'member' | 'viewer' | null;\n}\n\nexport function AuthProvider({ children }: { children: ReactNode }): JSX.Element;\nexport function useAuth(): AuthContextType;",
+        "key_exports": [
+          {
+            "name": "AuthProvider",
+            "type": "component",
+            "description": "React Context Provider wrapping application root, manages auth state and provides useAuth hook to descendant components."
+          },
+          {
+            "name": "useAuth",
+            "type": "hook",
+            "description": "Hook exposing authentication context including user, session, accountUuid, userRole, and login/logout functions."
+          },
+          {
+            "name": "AuthContextType",
+            "type": "interface",
+            "description": "TypeScript interface defining shape of authentication context available to consuming components."
+          }
+        ]
+      },
+      "implementation_strategy": [
+        "Replace ProfileQueries.getProfile() with UserQueries.getUser() to fetch from users table instead of profiles table",
+        "Update mapUserWithProfile() to extract account_uuid and role from users table result, include in user context",
+        "Rewrite orphan detection to call checkIfOrphaned() which queries users table for user_uuid, account_uuid, deleted_at",
+        "Implement JWT claims extraction: parse session.user.app_metadata.account_uuid and user_role, fallback to users query if missing",
+        "Add warning log when custom_access_token_hook not configured (claims missing), include setup documentation link",
+        "Update syncLocalUserProfile() to map users table fields to local SQLite profile structure for desktop backward compatibility",
+        "Maintain fail-closed policy: throw OrphanedUserError to block login if orphan detection fails or user has no valid account"
+      ],
+      "dependencies": [
+        "COMP-002",
+        "COMP-003"
+      ],
+      "file_location": "src/app/providers/auth/AuthProvider.tsx",
+      "related_requirements": [
+        "FR-002",
+        "FR-003",
+        "NFR-001",
+        "NFR-002"
+      ]
+    },
+    {
+      "id": "COMP-002",
+      "name": "OrphanDetection",
+      "purpose": "Detects incomplete registrations by querying users table for account membership, implements retry logic with exponential backoff, enforces fail-closed security policy.",
+      "interface": {
+        "language": "typescript",
+        "code": "interface OrphanCheckResult {\n  orphaned: boolean;\n  hasValidAccount: boolean;\n  accountUuid: string | null;\n  role: 'owner' | 'admin' | 'member' | 'viewer' | null;\n  orphanType?: 'no-users-record' | 'null-account-uuid' | 'deleted-user' | 'deleted-account';\n}\n\nexport async function checkIfOrphaned(\n  userId: string,\n  options?: { maxRetries?: number; timeoutMs?: number }\n): Promise<OrphanCheckResult>;",
+        "key_exports": [
+          {
+            "name": "checkIfOrphaned",
+            "type": "function",
+            "description": "Main orphan detection function querying users table with retry logic, returns classification or throws OrphanDetectionError on persistent failures.",
+            "signature": "async function checkIfOrphaned(userId: string, options?: OrphanDetectionOptions): Promise<OrphanCheckResult>"
+          },
+          {
+            "name": "OrphanCheckResult",
+            "type": "interface",
+            "description": "Result object containing orphan status, account membership details, and optional orphan type for error handling."
+          }
+        ]
+      },
+      "implementation_strategy": [
+        "Replace parallel queries (profiles + company_members) with single query: SELECT user_uuid, account_uuid, role, deleted_at FROM users WHERE user_uuid = $1",
+        "Add timeout of 200ms to query using Supabase abortSignal, throw timeout error for retry logic",
+        "Classify as orphaned if: query returns no rows, account_uuid is null, deleted_at is not null",
+        "Add secondary query to validate account existence: SELECT deleted_at FROM accounts WHERE account_uuid = $1, classify as orphaned if account deleted",
+        "Implement retry logic: 3 attempts with exponential backoff (0ms, 100ms jitter, 300ms jitter) using Gaussian distribution for jitter calculation",
+        "Throw OrphanDetectionError after all retries exhausted, include correlation ID and all retry metadata for debugging",
+        "Return hasValidAccount=true only if user record exists with non-null account_uuid, both user and account have deleted_at=null"
+      ],
+      "dependencies": [],
+      "file_location": "src/modules/auth/utils/orphanDetection.ts",
+      "related_requirements": [
+        "FR-002",
+        "NFR-001",
+        "NFR-002"
+      ]
+    },
+    {
+      "id": "COMP-003",
+      "name": "UserQueries",
+      "purpose": "Query helper class for users table CRUD operations with RLS enforcement, soft delete filtering, and role-based permission checks.",
+      "interface": {
+        "language": "typescript",
+        "code": "export class UserQueries {\n  static async getUser(userUuid: string): Promise<User | null>;\n  static async listAccountUsers(accountUuid: string): Promise<User[]>;\n  static async updateUser(\n    userUuid: string,\n    payload: Partial<Pick<User, 'first_name' | 'last_name' | 'avatar_url'>>\n  ): Promise<User>;\n  static async deleteUser(userUuid: string): Promise<void>;\n  static async restoreUser(userUuid: string): Promise<User>;\n}",
+        "key_exports": [
+          {
+            "name": "getUser",
+            "type": "function",
+            "description": "Fetch single user by user_uuid with RLS filtering by account_uuid from JWT, returns null if not found or no permission.",
+            "signature": "static async getUser(userUuid: string): Promise<User | null>"
+          },
+          {
+            "name": "listAccountUsers",
+            "type": "function",
+            "description": "Fetch all non-deleted users for specified account, RLS ensures only same-account users visible.",
+            "signature": "static async listAccountUsers(accountUuid: string): Promise<User[]>"
+          },
+          {
+            "name": "updateUser",
+            "type": "function",
+            "description": "Update user profile fields with automatic modified_at timestamp, RLS enforces permission based on role.",
+            "signature": "static async updateUser(userUuid: string, payload: Partial<User>): Promise<User>"
+          },
+          {
+            "name": "deleteUser",
+            "type": "function",
+            "description": "Soft delete user by setting deleted_at timestamp, only owner/admin roles permitted via RLS.",
+            "signature": "static async deleteUser(userUuid: string): Promise<void>"
+          }
+        ]
+      },
+      "implementation_strategy": [
+        "Follow CompanyQueries pattern: static class with async methods, each generates correlation ID for error tracing",
+        "All SELECT queries include WHERE deleted_at IS NULL to filter soft-deleted records by default",
+        "Leverage RLS policies filtering by account_uuid from JWT claims, no manual account_uuid filtering in application queries",
+        "getUser() query: SELECT * FROM users WHERE user_uuid = $1 AND deleted_at IS NULL, RLS filters to same account automatically",
+        "updateUser() sets modified_at = now() automatically via database trigger, validates payload fields before UPDATE",
+        "deleteUser() executes UPDATE users SET deleted_at = now() WHERE user_uuid = $1, never hard DELETE",
+        "Map Supabase errors to UserFriendlyError subclasses: PermissionDeniedError for RLS blocks, NotFoundError for missing records, NetworkError for timeouts"
+      ],
+      "dependencies": [],
+      "file_location": "src/core/supabase/queries/users.ts",
+      "related_requirements": [
+        "FR-005",
+        "FR-008"
+      ]
+    },
+    {
+      "id": "COMP-004",
+      "name": "RegistrationSubmission",
+      "purpose": "State machine managing registration submission lifecycle including email verification polling, Edge Function invocation, and error handling.",
+      "interface": {
+        "language": "typescript",
+        "code": "type SubmissionPhase = 'idle' | 'signingUp' | 'awaitingVerification' | 'verifying' | 'persisting' | 'succeeded' | 'failed';\n\ninterface SubmissionSuccessResult {\n  accountUuid: string;\n  userUuid: string;\n  subscriptionUuid: string;\n}\n\nexport function useRegistrationSubmission(): {\n  phase: SubmissionPhase;\n  error: SubmissionError | null;\n  result: SubmissionSuccessResult | null;\n  submitRegistration: (payload: RegistrationPayload) => Promise<void>;\n};",
+        "key_exports": [
+          {
+            "name": "useRegistrationSubmission",
+            "type": "hook",
+            "description": "Hook managing registration submission state machine with phases tracking progress from signup through verification to account creation.",
+            "signature": "function useRegistrationSubmission(): UseRegistrationSubmissionResult"
+          },
+          {
+            "name": "SubmissionPhase",
+            "type": "type",
+            "description": "Union type representing registration submission phases for state machine transitions.",
+            "signature": "type SubmissionPhase = 'idle' | 'signingUp' | 'awaitingVerification' | 'verifying' | 'persisting' | 'succeeded' | 'failed'"
+          },
+          {
+            "name": "SubmissionSuccessResult",
+            "type": "interface",
+            "description": "Success result containing account_uuid, user_uuid, and subscription_uuid from create_account_with_admin function."
+          }
+        ]
+      },
+      "implementation_strategy": [
+        "Update submitRegistration() to construct payload for create_account_with_admin: {company_name, company_email, first_name, last_name, correlationId}",
+        "Validate company_email matches admin_email before submission, throw validation error if mismatch",
+        "Invoke register-organization Edge Function with POST /functions/v1/register-organization, include Authorization header with JWT token",
+        "Parse success response extracting account_uuid, user_uuid, subscription_uuid from function result",
+        "Handle HTTP 409 Conflict as EmailAlreadyExistsError, display user-friendly message suggesting login or different email",
+        "Handle HTTP 500 as transient error, allow retry with existing form data without losing user input",
+        "Transition phase to 'succeeded' and store result for redirect to login with success message"
+      ],
+      "dependencies": [],
+      "file_location": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+      "related_requirements": [
+        "FR-001",
+        "FR-004",
+        "FR-010"
+      ]
+    },
+    {
+      "id": "COMP-005",
+      "name": "EdgeFunctionHandler",
+      "purpose": "Serverless function invoking create_account_with_admin() for atomic account creation, validates payload, maps errors to HTTP responses.",
+      "interface": {
+        "language": "typescript",
+        "code": "interface RegistrationPayload {\n  company_name: string;\n  company_email: string;\n  first_name?: string;\n  last_name?: string;\n  correlationId: string;\n}\n\ninterface AccountCreationResult {\n  account_uuid: string;\n  user_uuid: string;\n  subscription_uuid: string;\n}\n\nasync function handleRegistration(\n  payload: RegistrationPayload,\n  token: string\n): Promise<Response>;",
+        "key_exports": [
+          {
+            "name": "handleRegistration",
+            "type": "function",
+            "description": "Main handler invoking create_account_with_admin database function and mapping results/errors to HTTP responses.",
+            "signature": "async function handleRegistration(payload: RegistrationPayload, token: string): Promise<Response>"
+          },
+          {
+            "name": "RegistrationPayload",
+            "type": "interface",
+            "description": "Input payload structure matching create_account_with_admin parameters plus correlation ID for tracing."
+          },
+          {
+            "name": "AccountCreationResult",
+            "type": "interface",
+            "description": "Success result containing all created entity UUIDs returned from database function."
+          }
+        ]
+      },
+      "implementation_strategy": [
+        "Validate payload schema: company_name required non-empty string, company_email valid email format, first_name/last_name optional strings",
+        "Initialize Supabase client with Authorization token from request header for authenticated context",
+        "Invoke database function: const { data, error } = await supabase.rpc('create_account_with_admin', {p_company_name, p_company_email, p_first_name, p_last_name})",
+        "Check for PostgreSQL error code 23505 (unique_violation), return HTTP 409 with {error: 'EMAIL_EXISTS', message: 'Email already registered'}",
+        "Check for authentication errors (auth.uid() null), return HTTP 401 with message to verify email confirmation",
+        "Map successful response: extract account_uuid, user_uuid, subscription_uuid from data, return HTTP 201 with {success: true, ...data}",
+        "Handle timeout/connection errors with HTTP 500 and retry suggestion, include correlation ID in all error responses for debugging"
+      ],
+      "dependencies": [
+        "COMP-003"
+      ],
+      "file_location": "supabase/functions/register-organization/index.ts",
+      "related_requirements": [
+        "FR-001",
+        "FR-010"
+      ]
+    }
+  ],
+  "data_models": {
+    "required": true,
+    "models": [
+      {
+        "id": "MODEL-001",
+        "name": "Account",
+        "type": "interface",
+        "definition": "export interface Account {\n  account_uuid: string;\n  company_name: string;\n  company_email: string;\n  created_at: string;\n  modified_at: string;\n  deleted_at: string | null;\n}",
+        "fields": [
+          {
+            "name": "account_uuid",
+            "type": "uuid (string)",
+            "description": "Primary key and tenant identifier for RLS filtering, referenced by users and subscriptions tables.",
+            "required": true,
+            "constraints": [
+              "Primary key",
+              "UUID v4 format",
+              "Referenced by users(account_uuid) and subscriptions(account_uuid)"
+            ]
+          },
+          {
+            "name": "company_name",
+            "type": "text",
+            "description": "Organization name displayed in UI and account management interfaces.",
+            "required": true,
+            "constraints": [
+              "NOT NULL",
+              "Minimum 2 characters"
+            ]
+          },
+          {
+            "name": "company_email",
+            "type": "text",
+            "description": "Primary contact email for account, must match first admin user email during creation.",
+            "required": true,
+            "constraints": [
+              "NOT NULL",
+              "Valid email format",
+              "Must match admin email for create_account_with_admin"
+            ]
+          },
+          {
+            "name": "deleted_at",
+            "type": "timestamp with time zone",
+            "description": "Soft delete timestamp, null for active accounts, filters applied via deleted_at IS NULL in all queries.",
+            "required": false,
+            "default_value": "null"
+          }
+        ],
+        "relationships": [
+          {
+            "type": "one-to-many",
+            "target": "MODEL-002",
+            "description": "Account has many users linked via users.account_uuid foreign key"
+          },
+          {
+            "type": "one-to-many",
+            "target": "MODEL-003",
+            "description": "Account has many subscriptions (typically one active) linked via subscriptions.account_uuid"
+          }
+        ]
+      },
+      {
+        "id": "MODEL-002",
+        "name": "User",
+        "type": "interface",
+        "definition": "export interface User {\n  user_uuid: string;\n  account_uuid: string;\n  user_email: string;\n  first_name: string | null;\n  last_name: string | null;\n  avatar_url: string | null;\n  role: 'owner' | 'admin' | 'member' | 'viewer';\n  created_at: string;\n  modified_at: string;\n  deleted_at: string | null;\n}",
+        "fields": [
+          {
+            "name": "user_uuid",
+            "type": "uuid (string)",
+            "description": "Primary key matching auth.users.id, one-to-one relationship with Supabase Auth user.",
+            "required": true,
+            "constraints": [
+              "Primary key",
+              "Foreign key to auth.users(id) ON DELETE CASCADE",
+              "UUID v4 format"
+            ]
+          },
+          {
+            "name": "account_uuid",
+            "type": "uuid (string)",
+            "description": "Foreign key to accounts table, establishes tenant membership for RLS filtering.",
+            "required": true,
+            "constraints": [
+              "NOT NULL",
+              "Foreign key to accounts(account_uuid)",
+              "Indexed for RLS performance"
+            ]
+          },
+          {
+            "name": "user_email",
+            "type": "text",
+            "description": "User email synchronized from auth.users.email via trigger, globally unique across all accounts.",
+            "required": true,
+            "constraints": [
+              "UNIQUE constraint enforcing global email uniqueness",
+              "NOT NULL",
+              "Auto-synced from auth.users.email via sync_user_email trigger"
+            ]
+          },
+          {
+            "name": "role",
+            "type": "'owner' | 'admin' | 'member' | 'viewer'",
+            "description": "Permission level within account, enforced by RLS policies and exposed in JWT claims.",
+            "required": true,
+            "default_value": "'member'",
+            "constraints": [
+              "CHECK constraint limiting to allowed values",
+              "First user (created by create_account_with_admin) defaults to 'owner'"
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "type": "one-to-one",
+            "target": "auth.users",
+            "description": "User record sits on top of Supabase Auth user with matching user_uuid, cascade deletes from auth.users"
+          },
+          {
+            "type": "one-to-one",
+            "target": "MODEL-001",
+            "description": "User belongs to one account via account_uuid foreign key"
+          }
+        ]
+      },
+      {
+        "id": "MODEL-003",
+        "name": "Subscription",
+        "type": "interface",
+        "definition": "export interface Subscription {\n  subscription_uuid: string;\n  account_uuid: string;\n  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid';\n  plan_id: string;\n  trial_ends_at: string | null;\n  current_period_start: string | null;\n  current_period_end: string | null;\n  created_at: string;\n  modified_at: string;\n  deleted_at: string | null;\n}",
+        "fields": [
+          {
+            "name": "subscription_uuid",
+            "type": "uuid (string)",
+            "description": "Primary key for subscription record.",
+            "required": true,
+            "constraints": [
+              "Primary key",
+              "UUID v4 format"
+            ]
+          },
+          {
+            "name": "account_uuid",
+            "type": "uuid (string)",
+            "description": "Foreign key to accounts table, one account typically has one active subscription.",
+            "required": true,
+            "constraints": [
+              "NOT NULL",
+              "Foreign key to accounts(account_uuid)"
+            ]
+          },
+          {
+            "name": "status",
+            "type": "'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid'",
+            "description": "Current subscription status, 'trialing' for new accounts with trial_ends_at set.",
+            "required": true,
+            "default_value": "'trialing'",
+            "constraints": [
+              "CHECK constraint for allowed values"
+            ]
+          },
+          {
+            "name": "trial_ends_at",
+            "type": "timestamp with time zone",
+            "description": "Trial expiration timestamp, set to now() + 14 days by create_account_with_admin for new accounts.",
+            "required": false,
+            "default_value": "null",
+            "constraints": [
+              "Must be future timestamp when status='trialing'"
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "type": "one-to-one",
+            "target": "MODEL-001",
+            "description": "Subscription belongs to one account via account_uuid foreign key"
+          }
+        ]
+      }
+    ],
+    "mermaid_erd": "erDiagram\n    ACCOUNTS ||--o{ USERS : has\n    ACCOUNTS ||--o{ SUBSCRIPTIONS : has\n    AUTH_USERS ||--|| USERS : authenticates\n\n    ACCOUNTS {\n        uuid account_uuid PK\n        text company_name\n        text company_email\n        timestamp created_at\n        timestamp modified_at\n        timestamp deleted_at\n    }\n\n    USERS {\n        uuid user_uuid PK,FK\n        uuid account_uuid FK\n        text user_email UK\n        text first_name\n        text last_name\n        text avatar_url\n        enum role\n        timestamp created_at\n        timestamp modified_at\n        timestamp deleted_at\n    }\n\n    SUBSCRIPTIONS {\n        uuid subscription_uuid PK\n        uuid account_uuid FK\n        enum status\n        text plan_id\n        timestamp trial_ends_at\n        timestamp current_period_start\n        timestamp current_period_end\n        timestamp created_at\n        timestamp modified_at\n        timestamp deleted_at\n    }\n\n    AUTH_USERS {\n        uuid id PK\n        text email UK\n        timestamp email_confirmed_at\n    }"
+  },
+  "error_handling": {
+    "required": true,
+    "strategy": "Implement multi-layered error handling with fail-closed defaults: database constraint violations mapped to user-friendly errors, network failures retried with exponential backoff, orphan detection failures block authentication. All errors include correlation IDs for end-to-end tracing from frontend through Edge Functions to database. Error boundaries prevent cascading failures. Critical security paths (orphan detection, RLS enforcement) fail-closed to deny access on errors rather than allowing potentially invalid state.",
+    "error_types": [
+      {
+        "error_type": "EmailAlreadyExistsError",
+        "description": "PostgreSQL unique constraint violation (23505) on users.user_email when attempting to create account with existing email.",
+        "handling_strategy": "Edge Function catches unique_violation error from create_account_with_admin(), maps to HTTP 409 Conflict with {error: 'EMAIL_EXISTS', message: 'Email already registered'}. Frontend displays inline error suggesting login or different email, pre-populates login form if user chooses to login.",
+        "user_impact": "error-message",
+        "recovery_action": "User can login with existing email or restart registration with different email. Frontend clears form email field for re-entry.",
+        "logged": true,
+        "retryable": false
+      },
+      {
+        "error_type": "OrphanedUserError",
+        "description": "User exists in auth.users but has no corresponding users table record, null account_uuid, or deleted_at is not null. Indicates incomplete registration or account deletion.",
+        "handling_strategy": "checkIfOrphaned() throws OrphanedUserError with orphanType classification. AuthProvider catches error, blocks login, triggers cleanup flow. User redirected to /auth/recovery with verification code to restart registration. Fail-closed policy prevents authentication with incomplete account data.",
+        "user_impact": "blocking",
+        "recovery_action": "Cleanup flow sends verification code, user verifies email, orphaned auth.users record deleted, user redirected to restart registration from beginning.",
+        "logged": true,
+        "retryable": false
+      },
+      {
+        "error_type": "OrphanDetectionError",
+        "description": "Orphan detection query fails after all retry attempts exhausted due to database timeout, network failure, or permissions error. Indicates system issue preventing user validation.",
+        "handling_strategy": "Throw OrphanDetectionError with correlation ID and all retry metadata after 3 failed attempts. AuthProvider catches error, displays user-friendly message 'Unable to verify account status. Please try again later.' Login completely blocked per fail-closed policy. Error logged with high priority for operator investigation.",
+        "user_impact": "blocking",
+        "recovery_action": "User must retry login after system issues resolved. No automatic retry to prevent infinite loops. Operators alerted via error monitoring to investigate database connectivity or performance degradation.",
+        "logged": true,
+        "retryable": true
+      },
+      {
+        "error_type": "AccountCreationFailedError",
+        "description": "create_account_with_admin() function fails due to database error, transaction rollback, or Edge Function timeout during registration.",
+        "handling_strategy": "Edge Function catches all database errors from function invocation, maps to HTTP 500 for transient errors or HTTP 400 for validation errors. Frontend allows retry with existing form data without losing user input. Transaction rollback ensures no partial account creation. Correlation ID traces error through all layers.",
+        "user_impact": "error-message",
+        "recovery_action": "User clicks retry button to resubmit registration. If persistent failures, user contacts support with correlation ID. No partial cleanup needed due to atomic transaction.",
+        "logged": true,
+        "retryable": true
+      },
+      {
+        "error_type": "JWTClaimsMissingError",
+        "description": "JWT payload lacks account_uuid or user_role in app_metadata because custom_access_token_hook not configured in Supabase Dashboard.",
+        "handling_strategy": "AuthProvider detects missing claims, logs warning with setup documentation link, executes fallback query to users table for account_uuid and role. Authentication continues with degraded performance. Warning banner displayed in UI prompting admin to configure hook for optimal performance.",
+        "user_impact": "warning",
+        "recovery_action": "Admin configures custom_access_token_hook in Supabase Dashboard following documentation. Next login includes claims automatically. No user action required, application functional with fallback.",
+        "logged": true,
+        "retryable": false
+      }
+    ]
+  },
+  "testing_strategy": {
+    "overview": "Comprehensive three-tier testing strategy covering unit tests for isolated component logic, integration tests against deployed Supabase schema, and end-to-end tests for complete authentication flows. Focus on critical paths (orphan detection, account creation, RLS enforcement) with 100% branch coverage requirement. Security testing validates tenant isolation through multi-account penetration scenarios. Performance testing ensures <200ms orphan detection maintained. All tests run in CI pipeline with required pass before merge.",
+    "unit_testing": {
+      "approach": "Test individual components and utilities in isolation using mocked Supabase client and controlled test data. Focus on state machine transitions (useRegistrationSubmission phases), error mapping (Supabase errors to user-friendly errors), retry logic (exponential backoff calculations), JWT claims parsing edge cases.",
+      "tools": [
+        "Vitest",
+        "@testing-library/react",
+        "@testing-library/react-hooks",
+        "Mock Service Worker (MSW)"
+      ],
+      "coverage_target": "100%",
+      "critical_components": [
+        "COMP-002",
+        "COMP-001",
+        "COMP-004"
+      ]
+    },
+    "integration_testing": {
+      "approach": "Test against actual deployed Supabase schema with test accounts to validate RLS policies, soft delete filtering, and database function behavior. Use separate test database or test account namespace to avoid production data contamination. Verify end-to-end data flows from Edge Function through database function to frontend state updates.",
+      "tools": [
+        "Vitest",
+        "Supabase test client",
+        "Playwright for Edge Function invocation"
+      ],
+      "test_scenarios": [
+        "Registration creates account with trial subscription via create_account_with_admin(), verify all UUIDs returned and database records created",
+        "Email uniqueness constraint blocks duplicate registration, Edge Function returns 409 Conflict with EMAIL_EXISTS error code",
+        "Orphan detection correctly identifies users with no users table record, null account_uuid, or deleted_at not null",
+        "RLS policies enforce perfect tenant isolation: user in account A cannot query account B data even with known UUIDs",
+        "Soft delete sets deleted_at timestamp, deleted records invisible in all queries filtering by deleted_at IS NULL",
+        "JWT claims include account_uuid and user_role after login when custom_access_token_hook configured",
+        "Fallback query to users table succeeds when JWT claims missing, degraded performance but functional authentication",
+        "Trial subscription status cached for 5 minutes, cache invalidated on subscription update",
+        "Role-based permissions: member role cannot delete account (RLS blocks), owner role can delete account (RLS permits)",
+        "Login retry logic handles transient database timeouts with exponential backoff, succeeds after 1-2 retries"
+      ]
+    },
+    "e2e_testing": {
+      "approach": "Complete user flows from registration through login to authenticated session establishment using Playwright browser automation. Test against staging environment with deployed schema and Edge Functions. Validate UI feedback, error messages, loading states match UX requirements.",
+      "tools": [
+        "Playwright",
+        "Tauri test harness for desktop app"
+      ],
+      "critical_flows": [
+        "New user registration: fill company details, admin details, verify email, Edge Function creates account, redirect to login, successful first login",
+        "Duplicate email registration: attempt registration with existing email, see real-time validation error, see Edge Function 409 error, switch to login flow",
+        "Orphaned user recovery: incomplete registration detected on login, redirect to recovery flow, verify email, cleanup completes, restart registration successfully",
+        "Login with valid credentials: enter email/password, orphan detection passes, JWT claims extracted, profile enriched, session established, redirect to workspace",
+        "Session bootstrap: close and reopen app, existing session restored, JWT validated, profile synced to local SQLite, authenticated state preserved",
+        "Trial expiry warning: login with trial expiring in 2 days, see warning banner with days remaining and upgrade button",
+        "Soft deleted account: owner soft-deletes account, logout, attempt login, orphan detection blocks with deleted-account error",
+        "Role-based UI: login as member, verify admin panels hidden, attempt unauthorized action via API, RLS blocks with permission error"
+      ]
+    }
+  },
+  "implementation_phases": [
+    {
+      "phase_number": 1,
+      "name": "TypeScript Types and Interfaces Update",
+      "objective": "Create type-safe foundation by defining Account, User, Subscription interfaces matching new schema and marking legacy types deprecated.",
+      "tasks": [
+        "Add Account interface to src/shared/types/database.ts with fields: account_uuid, company_name, company_email, created_at, modified_at, deleted_at",
+        "Add User interface (for users table) with fields: user_uuid, account_uuid, user_email, first_name, last_name, avatar_url, role (literal type), created_at, modified_at, deleted_at",
+        "Add Subscription interface with fields: subscription_uuid, account_uuid, status (literal type), plan_id, trial_ends_at, current_period_start, current_period_end, created_at, modified_at, deleted_at",
+        "Mark Company, Profile, CompanyMember interfaces with @deprecated JSDoc tags and migration notes pointing to new types",
+        "Run tsc --noEmit to verify zero compilation errors, fix any type mismatches in existing code",
+        "Update imports in test files to use new types for mock data generation"
+      ],
+      "deliverables": [
+        "Updated src/shared/types/database.ts with new schema types",
+        "Zero TypeScript compilation errors across codebase",
+        "Deprecated legacy types with clear migration path documented"
+      ],
+      "dependencies": [],
+      "estimated_duration": "1-2 days",
+      "components_affected": [],
+      "requirements_addressed": [
+        "FR-009"
+      ]
+    },
+    {
+      "phase_number": 2,
+      "name": "Query Helper Classes Creation",
+      "objective": "Implement AccountQueries, UserQueries, SubscriptionQueries following existing pattern with RLS enforcement and soft delete filtering.",
+      "tasks": [
+        "Create src/core/supabase/queries/accounts.ts with AccountQueries class methods: getAccount, listUserAccounts, updateAccount, deleteAccount (soft delete)",
+        "Create src/core/supabase/queries/users.ts with UserQueries class methods: getUser, listAccountUsers, updateUser, deleteUser (soft delete), restoreUser",
+        "Create src/core/supabase/queries/subscriptions.ts with SubscriptionQueries class methods: getAccountSubscription, checkTrialExpiry",
+        "Implement consistent error handling: generate correlation IDs, map Supabase errors to UserFriendlyError subclasses, log all errors with correlation ID",
+        "Add WHERE deleted_at IS NULL filter to all SELECT queries by default, includeDeleted parameter for admin queries",
+        "Write unit tests for each query method: test success cases, RLS filtering, soft delete filtering, error mapping",
+        "Export new query classes from src/core/supabase/queries/index.ts"
+      ],
+      "deliverables": [
+        "Three new query helper classes with comprehensive error handling",
+        "Unit tests achieving 100% coverage for query logic",
+        "Exported query classes available for import across codebase"
+      ],
+      "dependencies": [
+        1
+      ],
+      "estimated_duration": "3-4 days",
+      "components_affected": [
+        "COMP-003"
+      ],
+      "requirements_addressed": [
+        "FR-005",
+        "FR-008"
+      ]
+    },
+    {
+      "phase_number": 3,
+      "name": "Orphan Detection Rewrite",
+      "objective": "Replace profiles/company_members queries with single users table query maintaining <200ms latency and fail-closed retry logic.",
+      "tasks": [
+        "Rewrite checkIfOrphaned() in src/modules/auth/utils/orphanDetection.ts to query: SELECT user_uuid, account_uuid, role, deleted_at FROM users WHERE user_uuid = $1",
+        "Implement 200ms query timeout using Supabase abortSignal for fail-fast behavior",
+        "Add secondary query to validate account existence and deleted_at status: SELECT deleted_at FROM accounts WHERE account_uuid = $1",
+        "Update orphan classification logic: orphaned if no users record, account_uuid null, user deleted_at not null, or account deleted_at not null",
+        "Maintain 3-retry logic with exponential backoff (0ms, 100ms jitter, 300ms jitter), throw OrphanDetectionError after all retries exhausted",
+        "Update OrphanCheckResult interface to include accountUuid and role for AuthProvider enrichment",
+        "Write comprehensive unit tests: test all orphan types, retry scenarios, timeout handling, fail-closed policy enforcement",
+        "Performance test: verify p95 latency <200ms with 100 concurrent requests against test database"
+      ],
+      "deliverables": [
+        "Simplified orphan detection with single primary query",
+        "Maintained <200ms p95 latency requirement",
+        "100% unit test coverage with all edge cases tested",
+        "Performance test results demonstrating latency targets met"
+      ],
+      "dependencies": [
+        2
+      ],
+      "estimated_duration": "2-3 days",
+      "components_affected": [
+        "COMP-002"
+      ],
+      "requirements_addressed": [
+        "FR-002",
+        "NFR-001",
+        "NFR-002"
+      ]
+    },
+    {
+      "phase_number": 4,
+      "name": "AuthProvider Migration",
+      "objective": "Update authentication context to query users table, extract JWT claims, and enrich profile with account_uuid and role.",
+      "tasks": [
+        "Replace ProfileQueries.getProfile() calls with UserQueries.getUser() in mapUserWithProfile() enrichment logic",
+        "Update user context interface to include accountUuid: string | null and userRole: 'owner' | 'admin' | 'member' | 'viewer' | null",
+        "Implement JWT claims extraction: parse session.user.app_metadata.account_uuid and session.user.app_metadata.user_role from JWT payload",
+        "Add fallback query to UserQueries.getUser() when JWT claims missing, log warning with custom_access_token_hook setup documentation link",
+        "Integrate new checkIfOrphaned() function replacing old orphan detection, maintain fail-closed error handling",
+        "Update syncLocalUserProfile() to map users table fields to local SQLite schema for desktop backward compatibility",
+        "Add role validation: if user_role not in allowed set, default to 'member' and log warning for investigation",
+        "Write integration tests: test login flow end-to-end, verify JWT claims extraction, test fallback query, verify orphan detection integration"
+      ],
+      "deliverables": [
+        "AuthProvider querying new users table schema",
+        "JWT claims extraction with graceful fallback",
+        "User context enriched with account_uuid and role",
+        "Integration tests validating complete login flow"
+      ],
+      "dependencies": [
+        2,
+        3
+      ],
+      "estimated_duration": "3-4 days",
+      "components_affected": [
+        "COMP-001"
+      ],
+      "requirements_addressed": [
+        "FR-002",
+        "FR-003",
+        "NFR-004"
+      ]
+    },
+    {
+      "phase_number": 5,
+      "name": "Edge Function Refactoring",
+      "objective": "Replace manual table insertions with create_account_with_admin() invocation in register-organization Edge Function.",
+      "tasks": [
+        "Refactor handleRegistration() in supabase/functions/register-organization/index.ts to invoke: supabase.rpc('create_account_with_admin', {p_company_name, p_company_email, p_first_name, p_last_name})",
+        "Remove manual INSERT operations for companies, profiles, company_members tables",
+        "Update payload validation to require company_name, company_email, optional first_name/last_name matching function signature",
+        "Implement error mapping: catch PostgreSQL error code 23505 (unique_violation), return HTTP 409 with {error: 'EMAIL_EXISTS', message}",
+        "Map authentication errors (auth.uid() null) to HTTP 401 with verification prompt message",
+        "Update success response to return {success: true, account_uuid, user_uuid, subscription_uuid} extracted from function result",
+        "Add comprehensive error logging with correlation ID passed through all error responses",
+        "Test Edge Function locally: test success case, duplicate email error, missing auth error, database timeout error"
+      ],
+      "deliverables": [
+        "Edge Function invoking create_account_with_admin() atomically",
+        "Error mapping for all constraint violations and edge cases",
+        "Local testing validation for all scenarios"
+      ],
+      "dependencies": [],
+      "estimated_duration": "2-3 days",
+      "components_affected": [
+        "COMP-005"
+      ],
+      "requirements_addressed": [
+        "FR-001",
+        "FR-004",
+        "FR-010"
+      ]
+    },
+    {
+      "phase_number": 6,
+      "name": "Registration Flow Updates",
+      "objective": "Update RegistrationForm, useRegistrationForm, useRegistrationSubmission to work with new Edge Function and account creation response.",
+      "tasks": [
+        "Update useRegistrationSubmission() to construct payload with company_name, company_email, first_name, last_name, correlationId",
+        "Add validation: ensure company_email matches admin_email before submission, throw error if mismatch",
+        "Update Edge Function invocation to POST /functions/v1/register-organization with new payload structure",
+        "Parse success response extracting account_uuid, user_uuid, subscription_uuid from {success: true, ...} result",
+        "Handle HTTP 409 Conflict as EmailAlreadyExistsError: display inline error, suggest login or different email",
+        "Update success phase to include SubmissionSuccessResult with all UUIDs for potential future use",
+        "Update RegistrationCompanyStep to make company_email field prominent with global uniqueness messaging",
+        "Add real-time email validation with 500ms debounce querying users table for existing user_email, display error if exists",
+        "Write integration tests: test full registration flow, test email uniqueness validation, test error handling"
+      ],
+      "deliverables": [
+        "Registration form submitting to new Edge Function structure",
+        "Real-time email uniqueness validation",
+        "Comprehensive error handling for all Edge Function responses",
+        "Integration tests covering happy path and error scenarios"
+      ],
+      "dependencies": [
+        5
+      ],
+      "estimated_duration": "3-4 days",
+      "components_affected": [
+        "COMP-004"
+      ],
+      "requirements_addressed": [
+        "FR-001",
+        "FR-004",
+        "FR-010"
+      ]
+    },
+    {
+      "phase_number": 7,
+      "name": "Subscription Status Integration",
+      "objective": "Implement subscription status checking with caching for trial expiry UI and access enforcement.",
+      "tasks": [
+        "Create useSubscriptionStatus() hook using react-query with 5-minute staleTime and cacheTime configuration",
+        "Implement fetchSubscriptionStatus() calling SubscriptionQueries.getAccountSubscription(accountUuid) from JWT claims or context",
+        "Add subscription status to AuthProvider context: hasActiveSubscription, trialEndsAt, daysRemaining computed values",
+        "Create SubscriptionStatusBanner component displaying trial days remaining when status='trialing' and trial_ends_at within 3 days",
+        "Create TrialExpiredModal component blocking premium features when trial_ends_at in past, prompt upgrade with link to subscription management",
+        "Implement cache invalidation on subscription update events (e.g., user upgrades to paid plan)",
+        "Add fail-closed check: if subscription query fails, assume no active subscription and block premium features",
+        "Write tests: test cache hit/miss behavior, test trial expiry calculations, test UI rendering based on subscription status"
+      ],
+      "deliverables": [
+        "Subscription status caching with 5-minute TTL",
+        "UI components for trial warnings and expiry",
+        "Fail-closed subscription enforcement",
+        "Tests validating caching behavior and UI rendering"
+      ],
+      "dependencies": [
+        2,
+        4
+      ],
+      "estimated_duration": "2-3 days",
+      "components_affected": [],
+      "requirements_addressed": [
+        "FR-006"
+      ]
+    },
+    {
+      "phase_number": 8,
+      "name": "Role-Based Permissions Implementation",
+      "objective": "Create usePermissions() hook and UI components respecting user_role from JWT claims for role-appropriate feature access.",
+      "tasks": [
+        "Create usePermissions() hook extracting user_role from AuthProvider context, returning permission flags: {canManageAccount, canInviteUsers, canDeleteAccount, canEditSettings}",
+        "Implement permission logic: owner gets all permissions, admin gets most except deleteAccount, member gets standard access, viewer gets read-only",
+        "Update account management UI components to conditionally render based on permission flags (hide delete button for non-owners, hide invite for members/viewers)",
+        "Add role badge to user profile display showing current role from JWT claims",
+        "Ensure RLS policies at database level match frontend permission logic for defense-in-depth (UI hides, RLS blocks)",
+        "Test role changes: modify user role in database, verify JWT claims update on next request (within JWT expiry window ~1 hour)",
+        "Write tests: test permission calculations for each role, test UI rendering with different roles, test RLS enforcement blocks unauthorized actions"
+      ],
+      "deliverables": [
+        "usePermissions hook with role-based flags",
+        "UI components respecting permission boundaries",
+        "Tests validating permission enforcement at UI and RLS layers"
+      ],
+      "dependencies": [
+        4
+      ],
+      "estimated_duration": "2-3 days",
+      "components_affected": [],
+      "requirements_addressed": [
+        "FR-007"
+      ]
+    },
+    {
+      "phase_number": 9,
+      "name": "Test Suite Migration",
+      "objective": "Update all existing tests to work with new schema, add integration tests for RLS policies and multi-tenant isolation.",
+      "tasks": [
+        "Update test mocks in src/test/modules/auth to use new Account, User, Subscription types instead of Company, Profile",
+        "Rewrite test data factories to generate accounts instead of companies, users instead of profiles",
+        "Update AuthProvider tests to mock UserQueries instead of ProfileQueries, verify JWT claims extraction logic",
+        "Update orphan detection tests to expect users table queries, test all orphan classification types",
+        "Update registration tests to mock create_account_with_admin() response, test email uniqueness errors",
+        "Add RLS penetration tests: create two test accounts, attempt cross-account data access with known UUIDs, verify zero results returned",
+        "Add soft delete tests: create account/user, soft delete, verify invisible in queries, test restore functionality",
+        "Run full test suite, verify 100% pass rate, fix any failures from schema migration",
+        "Generate coverage report, ensure critical authentication modules maintain 100% branch coverage"
+      ],
+      "deliverables": [
+        "All existing tests passing with new schema mocks",
+        "New RLS penetration tests validating tenant isolation",
+        "100% test pass rate and coverage targets met"
+      ],
+      "dependencies": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "estimated_duration": "4-5 days",
+      "components_affected": [],
+      "requirements_addressed": [
+        "NFR-005"
+      ]
+    },
+    {
+      "phase_number": 10,
+      "name": "Documentation and Deployment",
+      "objective": "Document migration changes, create deployment checklist, and prepare production rollout plan.",
+      "tasks": [
+        "Document custom_access_token_hook configuration steps in README with screenshots of Supabase Dashboard navigation",
+        "Create migration guide comparing old schema (companies/profiles) to new schema (accounts/users) with column mapping table",
+        "Document breaking changes: email uniqueness now global, orphan detection simpler but different error types",
+        "Create deployment checklist: verify schema deployed, verify create_account_with_admin() exists, configure custom_access_token_hook, run test suite against staging",
+        "Prepare rollback plan: keep legacy query helpers available for quick revert if production issues",
+        "Test staging deployment: deploy Edge Function changes, test full registration and login flows against staging database",
+        "Monitor performance: measure orphan detection latency p95, verify <200ms target maintained in production load",
+        "Create runbook for common issues: JWT claims missing (configure hook), email uniqueness errors (guide users to login), orphan detection failures (database connectivity check)"
+      ],
+      "deliverables": [
+        "Comprehensive migration documentation with before/after schema comparison",
+        "Deployment checklist and rollback plan",
+        "Staging deployment validation completed",
+        "Production runbook for operational support"
+      ],
+      "dependencies": [
+        9
+      ],
+      "estimated_duration": "2-3 days",
+      "components_affected": [],
+      "requirements_addressed": []
+    }
+  ],
+  "performance_considerations": {
+    "required": true,
+    "overview": "Performance is critical for authentication flows where latency directly impacts user experience. The migration maintains existing <200ms orphan detection requirement while optimizing through JWT claims-based RLS filtering. Subscription status caching reduces database load by 80%+ for repeated checks. Single-query orphan detection eliminates parallel network round trips. Proper indexing on users(user_uuid), users(account_uuid), users(user_email) ensures fast lookups. Monitoring focuses on p95 latency thresholds and cache hit rates.",
+    "optimizations": [
+      {
+        "optimization": "Replace parallel profiles/company_members queries with single users table query for orphan detection",
+        "rationale": "Old orphan detection executed two parallel queries to check profiles(id) and company_members(user_id), requiring two network round trips and complex result merging. New schema consolidates all user data in users table with account_uuid foreign key, enabling single query: SELECT user_uuid, account_uuid, deleted_at FROM users WHERE user_uuid = $1. This reduces network latency by eliminating parallel query overhead and simplifies result processing. With proper index on users(user_uuid), query executes in <50ms typically, leaving margin for retry logic within <200ms p95 requirement.",
+        "expected_impact": "Reduce orphan detection latency from ~150ms p95 to ~80ms p95 through single query and simpler result processing. Eliminate race conditions from parallel query timing differences. Simplify retry logic with single query timeout instead of coordinating multiple query timeouts.",
+        "implementation_phase": 3,
+        "affected_components": [
+          "COMP-002"
+        ]
+      },
+      {
+        "optimization": "Leverage JWT claims (account_uuid, user_role) for RLS filtering instead of subquery joins",
+        "rationale": "Traditional RLS policies use subqueries like WHERE account_uuid IN (SELECT account_uuid FROM company_members WHERE user_id = auth.uid()) which executes subquery on every row evaluation. JWT claims enable direct filtering: WHERE account_uuid = (auth.jwt()->>'account_uuid')::uuid which evaluates constant expression once per query. PostgreSQL query planner optimizes constant expressions significantly better than correlated subqueries. This optimization requires custom_access_token_hook configuration but provides fallback query when missing, maintaining functionality while gaining performance when properly configured.",
+        "expected_impact": "Reduce query execution time by 60-80% for RLS-filtered queries when JWT claims configured. Typical account data query improves from ~150ms to ~40ms. Improves database throughput under high concurrent load by reducing subquery execution overhead. When hook not configured, falls back to single users table query adding ~50ms compared to claims-based approach.",
+        "implementation_phase": 4,
+        "affected_components": [
+          "COMP-001",
+          "COMP-003"
+        ]
+      },
+      {
+        "optimization": "Implement subscription status caching with 5-minute TTL using react-query",
+        "rationale": "Subscription status changes infrequently (once per account when trial expires or user upgrades) but is checked frequently across multiple components (navigation bar, feature access guards, settings panels). Without caching, each component render triggers database query. React-query with 5-minute staleTime caches subscription status in memory, returning cached value on subsequent requests. Cache invalidated on subscription update events ensuring accuracy. 5-minute staleness acceptable because trial expiry is date-based (not time-sensitive) and worst case is delayed upgrade prompt by few minutes.",
+        "expected_impact": "Reduce subscription-related database queries by 80-95% through caching. Typical user session with 20 component renders checks subscription once instead of 20 times. Improves perceived application performance by eliminating loading states on cached data. Reduces database load allowing more concurrent users on same infrastructure. Cache hit rate expected >80% in normal operations.",
+        "implementation_phase": 7,
+        "affected_components": []
+      }
+    ]
+  },
+  "metadata": {
+    "created_at": "2025-01-30T00:00:00Z",
+    "created_by": "design-agent-v2",
+    "version": "1.0.0",
+    "last_updated": "2025-01-30T00:00:00Z",
+    "status": "draft",
+    "estimated_implementation_effort": "60-80 developer hours across 10 phases",
+    "estimated_project_duration": "3-5 weeks",
+    "total_components": 5,
+    "total_integration_points": 7,
+    "total_implementation_phases": 10
+  }
+}

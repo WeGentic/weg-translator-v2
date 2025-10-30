@@ -1,4 +1,5 @@
 import type { RegistrationStepKey } from "@/modules/auth/utils/constants/registration";
+import { RiCheckLine } from "react-icons/ri";
 
 export interface RegistrationProgressStepState {
   key: RegistrationStepKey;
@@ -21,13 +22,7 @@ export function RegistrationProgress({ steps, onStepSelect }: RegistrationProgre
     <nav className="registration-form__stepper" aria-label="Registration progress">
       <ol className="registration-form__stepper-list" role="list">
         {steps.map((step, index) => {
-          const state = step.isSelected
-            ? step.isCompleted
-              ? "selected-completed"
-              : "selected-incomplete"
-            : step.isCompleted
-              ? "not-selected-completed"
-              : "not-selected-incomplete";
+          const state = step.isSelected ? "selected" : "not-selected";
           return (
             <li key={step.key} className="registration-form__stepper-item">
               <button
@@ -43,7 +38,10 @@ export function RegistrationProgress({ steps, onStepSelect }: RegistrationProgre
                 <span className="registration-form__stepper-text">
                   <span className="registration-form__stepper-label">{step.label}</span>
                   {step.isCompleted ? (
-                    <span className="registration-form__stepper-status">(complete)</span>
+                    <span className="registration-form__stepper-status">
+                      <RiCheckLine className="registration-form__stepper-status-icon" aria-hidden="true" />
+                      <span>(complete)</span>
+                    </span>
                   ) : null}
                 </span>
               </button>

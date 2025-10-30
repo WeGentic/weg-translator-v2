@@ -1,0 +1,1191 @@
+{
+  "project_name": "auth-b2b-schema-migration",
+  "introduction": {
+    "purpose": "This project migrates the existing authentication and registration system from the legacy companies/profiles/company_members schema to a new B2B multi-tenant SaaS schema (accounts/users/subscriptions) already deployed in Supabase. The migration enables proper multi-tenant isolation, role-based access control, trial subscription management, and atomic account creation while maintaining the desktop application's security and performance standards. The primary goal is to adapt all frontend React 19.2 components and backend Rust 1.89 Tauri integration code to work seamlessly with the new schema without requiring any schema modifications.",
+    "scope": "The migration scope encompasses the complete authentication lifecycle including user registration, login, session management, orphan detection, profile enrichment, and subscription status checking. All affected components include RegistrationForm, LoginForm, AuthProvider, orphan detection utilities, Supabase query helpers, Edge Functions, TypeScript type definitions, and corresponding test suites. The project excludes Rust desktop-specific features beyond local profile syncing and does not include data migration tools (addressed separately if needed). The scope strictly limits changes to code adaptation, maintaining backward compatibility with local SQLite storage for desktop profiles while adding cloud users table integration.",
+    "success_criteria": [
+      "All registration flows successfully create accounts using create_account_with_admin() function with atomic transaction guarantees and proper error handling for constraint violations",
+      "Login flow validates user membership in users table, respects soft deletes (deleted_at), and populates JWT claims with account_uuid and user_role for RLS enforcement",
+      "Orphan detection completes in <200ms p95 latency, correctly identifies users without users table records, and maintains fail-closed security policy during detection failures",
+      "RLS policies perfectly isolate data between accounts with zero cross-account data leakage verified through multi-account penetration testing",
+      "All TypeScript types compile without errors and accurately reflect the new schema structure with proper Account, User, and Subscription interfaces",
+      "Email uniqueness constraint properly enforced globally with clear error messages when duplicate emails detected during registration",
+      "Trial subscriptions automatically created with accurate 14-day expiry calculation and status checking integrated into authentication middleware",
+      "Role-based permissions consistently enforced between RLS policies and frontend UI with real-time updates via JWT claims",
+      "All existing test suites pass or updated to work with new schema, maintaining 100% coverage for critical authentication paths",
+      "Edge Function (register-organization) successfully invokes create_account_with_admin() and handles all error scenarios including timeouts and partial failures"
+    ],
+    "out_of_scope": [
+      "Schema modifications or database migrations (schemas already deployed and immutable for this project)",
+      "Data migration from old companies/profiles schema to new accounts/users schema (addressed in separate project if production data exists)",
+      "Configuration of custom_access_token_hook in Supabase Dashboard (user responsibility, documentation provided only)",
+      "Payment provider integration for subscription management beyond trial creation",
+      "User invitation flows for adding members to existing accounts (separate feature development)",
+      "Multi-account switching UI for users belonging to multiple accounts (depends on schema clarification)",
+      "Email service provider configuration for verification emails (existing Supabase email service used)",
+      "Rust backend desktop application features beyond local SQLite profile syncing",
+      "Mobile application support (desktop-only Tauri application)",
+      "Performance optimization beyond maintaining current <200ms orphan detection requirement",
+      "Comprehensive admin dashboard for account/user/subscription management",
+      "Backup and restore functionality for account data",
+      "Audit logging for authentication events beyond existing correlation ID tracking",
+      "GDPR compliance tooling for data export/deletion",
+      "Rate limiting enhancements for authentication endpoints",
+      "Single sign-on (SSO) integration with third-party providers",
+      "Two-factor authentication (2FA) implementation",
+      "Password reset flow modifications (existing flow maintained)",
+      "Localization/internationalization updates for new error messages",
+      "Analytics tracking for registration conversion funnel"
+    ]
+  },
+  "glossary": [
+    {
+      "term": "Account",
+      "definition": "The top-level tenant entity in the B2B multi-tenant schema, replacing the legacy 'Company' concept. Each account represents a distinct organization with complete data isolation enforced by RLS policies.",
+      "aliases": ["Organization", "Tenant", "Company (legacy)"],
+      "example": "When a user registers, create_account_with_admin() creates a new Account record with a unique account_uuid that serves as the tenant identifier for all related data."
+    },
+    {
+      "term": "User (users table)",
+      "definition": "The user record in the public.users table that sits on top of auth.users with a foreign key constraint. Contains account_uuid for tenant membership, role for permissions, and user_email that must be globally unique.",
+      "aliases": ["Profile (legacy)", "Member"],
+      "example": "After successful auth.users creation, the create_account_with_admin() function creates a corresponding users table record with account_uuid linking to the parent account."
+    },
+    {
+      "term": "Orphaned User",
+      "definition": "A user who exists in auth.users (Supabase authentication) but lacks a corresponding record in the public.users table or has no valid account_uuid. This indicates an incomplete registration that must be detected and blocked via fail-closed policy.",
+      "aliases": ["Incomplete Registration", "Partial User"],
+      "example": "If registration creates auth.users but Edge Function fails before create_account_with_admin() completes, the user becomes orphaned and cannot login until cleanup recovery flow completes."
+    },
+    {
+      "term": "RLS (Row Level Security)",
+      "definition": "PostgreSQL row-level security policies that enforce tenant isolation by filtering queries based on account_uuid extracted from JWT claims. Prevents cross-account data access at the database layer.",
+      "aliases": ["Row Level Security Policy", "Security Policy"],
+      "example": "When a user queries the accounts table, the RLS policy automatically adds WHERE account_uuid = (SELECT account_uuid FROM users WHERE user_uuid = auth.uid()) to ensure they only see their own account."
+    },
+    {
+      "term": "JWT Claims",
+      "definition": "Custom claims added to the JSON Web Token by the custom_access_token_hook that include account_uuid and user_role. These claims enable efficient RLS policy enforcement without additional database queries.",
+      "aliases": ["Token Claims", "Custom Claims"],
+      "example": "After login, the JWT payload includes {sub: user_uuid, account_uuid: uuid, user_role: owner} which RLS policies use to filter data and frontend uses to show/hide UI elements."
+    },
+    {
+      "term": "create_account_with_admin()",
+      "definition": "PostgreSQL stored function that atomically creates an account, admin user, and trial subscription in a single transaction. Ensures data consistency and prevents partial account creation scenarios.",
+      "aliases": ["Account Creation Function", "Atomic Registration"],
+      "example": "The register-organization Edge Function invokes SELECT * FROM create_account_with_admin('Acme Corp', 'admin@acme.com', 'John', 'Doe') which returns account_uuid, user_uuid, and subscription_uuid."
+    },
+    {
+      "term": "Trial Subscription",
+      "definition": "A time-limited subscription automatically created with every new account, valid for 14 days from creation. The subscriptions table contains trial_ends_at timestamp and status field for enforcement.",
+      "aliases": ["Free Trial", "Trial Period"],
+      "example": "When create_account_with_admin() executes, it inserts a subscription record with status='trialing', trial_ends_at=now() + interval '14 days', and plan_id='trial'."
+    },
+    {
+      "term": "Soft Delete",
+      "definition": "A data deletion pattern where records are marked as deleted via deleted_at timestamp column instead of being physically removed from the database. Enables data recovery and maintains referential integrity.",
+      "aliases": ["Logical Delete", "Mark as Deleted"],
+      "example": "When deleting a user, the system executes UPDATE users SET deleted_at = now() WHERE user_uuid = $1 instead of DELETE FROM users. All queries filter by deleted_at IS NULL."
+    },
+    {
+      "term": "Fail-Closed Policy",
+      "definition": "A security principle where authentication failures default to denying access rather than allowing it. Applied to orphan detection where detection errors block login instead of allowing potentially incomplete registrations.",
+      "aliases": ["Secure Default", "Deny by Default"],
+      "example": "If orphan detection query times out after all retries, the system throws OrphanDetectionError blocking login rather than allowing a potentially orphaned user to authenticate."
+    },
+    {
+      "term": "Edge Function",
+      "definition": "Supabase serverless function deployed at the edge for low-latency execution. The register-organization Edge Function handles account creation by invoking create_account_with_admin() with validated user input.",
+      "aliases": ["Serverless Function", "Supabase Function"],
+      "example": "The frontend invokes fetch('/functions/v1/register-organization', {method: 'POST', body: JSON.stringify({company_name, company_email})}) which triggers the Edge Function to create the account."
+    },
+    {
+      "term": "Correlation ID",
+      "definition": "A UUID generated for each operation to trace requests across distributed system boundaries (frontend → Edge Function → database). Enables debugging by linking related log entries.",
+      "aliases": ["Trace ID", "Request ID"],
+      "example": "When registration starts, a correlation ID like '7b4f3c2a-9d8e-4f5b-a1c6-2e7d3b8f9a4c' is generated and passed through all operations, appearing in frontend logs, Edge Function logs, and database error messages."
+    },
+    {
+      "term": "Account UUID",
+      "definition": "The universally unique identifier for an account, serving as the primary key (account_uuid) and the tenant identifier for all RLS policies. Extracted from JWT claims for efficient data filtering.",
+      "aliases": ["Tenant ID", "account_uuid"],
+      "example": "All data access queries include WHERE account_uuid = auth.jwt() ->> 'account_uuid' to ensure tenant isolation."
+    },
+    {
+      "term": "User Role",
+      "definition": "The permission level assigned to a user within their account, stored in users.role column with values: owner (full control), admin (management), member (standard), viewer (read-only).",
+      "aliases": ["Permission Level", "Access Level"],
+      "example": "The first user created by create_account_with_admin() receives role='owner', while invited users can be assigned 'admin', 'member', or 'viewer' based on business requirements."
+    }
+  ],
+  "requirements": {
+    "functional": [
+      {
+        "id": "FR-001",
+        "title": "Atomic Account Creation via Database Function",
+        "user_story": {
+          "role": "new user registering for the platform",
+          "capability": "have my account, user profile, and trial subscription created atomically in a single transaction",
+          "benefit": "I am guaranteed complete registration without partial data creation scenarios that could leave me in an inconsistent state requiring manual recovery"
+        },
+        "acceptance_criteria": [
+          {
+            "criterion": "WHEN the register-organization Edge Function receives valid registration payload with company_name and company_email, THE System SHALL invoke create_account_with_admin() stored function passing company_name, company_email, and optional first_name/last_name parameters",
+            "trigger": "register-organization Edge Function receives POST request with validated payload after email verification confirmed",
+            "action": "Execute SELECT * FROM create_account_with_admin(p_company_name, p_company_email, p_first_name, p_last_name) with parameters from request body",
+            "expected_result": "Function returns JSON object containing account_uuid, user_uuid, and subscription_uuid indicating successful atomic creation"
+          },
+          {
+            "criterion": "WHEN create_account_with_admin() function executes successfully, THE System SHALL return account_uuid, user_uuid, and subscription_uuid to Edge Function which forwards to frontend",
+            "trigger": "Database function completes all INSERT operations within transaction successfully",
+            "action": "Extract account_uuid, user_uuid, subscription_uuid from function result and construct success response with HTTP 201 status",
+            "expected_result": "Frontend receives {success: true, account_uuid, user_uuid, subscription_uuid} response and updates registration success state"
+          },
+          {
+            "criterion": "WHEN create_account_with_admin() encounters any error during execution (constraint violation, null value, FK violation), THE System SHALL rollback entire transaction and return error details",
+            "trigger": "Database function encounters error during account, user, or subscription INSERT operations",
+            "action": "PostgreSQL automatically rolls back transaction, function returns error with SQLSTATE code and message",
+            "expected_result": "Edge Function catches error, maps to user-friendly message based on error code, returns HTTP 400/409/500 with descriptive error"
+          },
+          {
+            "criterion": "WHEN registration payload contains company_email that already exists in users.user_email, THE System SHALL return 409 Conflict error with clear message indicating email already registered",
+            "trigger": "create_account_with_admin() attempts INSERT into users table with email matching existing user_email value",
+            "action": "PostgreSQL raises unique constraint violation (SQLSTATE 23505), Edge Function catches and maps to EmailAlreadyExistsError",
+            "expected_result": "Frontend displays error message 'This email is already registered. Please use a different email or login to your existing account.'"
+          },
+          {
+            "criterion": "WHEN create_account_with_admin() function creates user record, THE System SHALL automatically assign role='owner' to first user in account",
+            "trigger": "create_account_with_admin() executes INSERT into users table with p_first_name and p_last_name",
+            "action": "Function explicitly sets role='owner' in INSERT statement ensuring first user has full account control",
+            "expected_result": "Newly created user record has role='owner' and JWT claims include user_role='owner' after login"
+          },
+          {
+            "criterion": "WHEN create_account_with_admin() creates subscription record, THE System SHALL set status='trialing', trial_ends_at to 14 days from now, and plan_id='trial'",
+            "trigger": "Function completes account and user creation and proceeds to subscription INSERT",
+            "action": "Execute INSERT into subscriptions (account_uuid, status, trial_ends_at, plan_id) VALUES (new_account_uuid, 'trialing', now() + interval '14 days', 'trial')",
+            "expected_result": "Subscription record created with accurate 14-day trial period and status='trialing' for immediate trial status checking"
+          },
+          {
+            "criterion": "WHEN Edge Function invocation times out or fails before receiving response from create_account_with_admin(), THE System SHALL allow user to retry registration without duplicate account creation",
+            "trigger": "Edge Function execution exceeds timeout limit or network fails before response returned",
+            "action": "Database transaction automatically rolls back on connection loss, user retries registration with same email",
+            "expected_result": "Retry succeeds if original transaction rolled back, or returns EmailAlreadyExistsError if transaction committed before timeout"
+          }
+        ],
+        "priority": "must-have",
+        "dependencies": [],
+        "related_features": ["FEAT-003", "FEAT-004"],
+        "notes": "The create_account_with_admin() function is already deployed in Supabase and cannot be modified. Edge Function must adapt to existing function signature and error handling behavior. Email verification must be confirmed before invoking this function to prevent orphaned auth.users records."
+      },
+      {
+        "id": "FR-002",
+        "title": "Users Table Orphan Detection with Fail-Closed Policy",
+        "user_story": {
+          "role": "user attempting to login after incomplete registration",
+          "capability": "be prevented from accessing the application until my registration is completed or cleaned up",
+          "benefit": "the system maintains data integrity by blocking access to users without proper account membership while providing a recovery path to complete registration"
+        },
+        "acceptance_criteria": [
+          {
+            "criterion": "WHEN user successfully authenticates with Supabase Auth, THE System SHALL query users table to verify user_uuid record exists with non-null account_uuid and deleted_at IS NULL",
+            "trigger": "AuthProvider.login() receives successful session from supabase.auth.signInWithPassword()",
+            "action": "Execute SELECT user_uuid, account_uuid, role, deleted_at FROM users WHERE user_uuid = auth.uid() within 200ms timeout",
+            "expected_result": "Query returns single row with valid account_uuid and null deleted_at, or returns no rows indicating orphaned user"
+          },
+          {
+            "criterion": "WHEN users table query returns no rows or returns row with null account_uuid, THE System SHALL classify user as orphaned and throw OrphanedUserError blocking login",
+            "trigger": "checkIfOrphaned() receives null result from users query or result.account_uuid === null",
+            "action": "Construct OrphanedUserError with orphanType='no-account-membership' and correlation ID, throw to AuthProvider",
+            "expected_result": "Login blocked, user redirected to recovery flow at /auth/recovery with option to restart registration"
+          },
+          {
+            "criterion": "WHEN users table query returns row with deleted_at NOT NULL, THE System SHALL classify user as deleted and throw OrphanedUserError preventing login",
+            "trigger": "checkIfOrphaned() receives result where result.deleted_at !== null",
+            "action": "Construct OrphanedUserError with orphanType='soft-deleted' and deleted_at timestamp",
+            "expected_result": "Login blocked with message 'Your account has been deactivated. Please contact support for assistance.'"
+          },
+          {
+            "criterion": "WHEN orphan detection query times out after 200ms or fails with network error, THE System SHALL retry up to 3 times with exponential backoff (0ms, 100ms, 300ms jitter)",
+            "trigger": "Supabase query throws timeout or network error during first attempt",
+            "action": "Catch error, wait calculated backoff duration with Gaussian jitter, retry query up to 3 total attempts",
+            "expected_result": "Query succeeds on retry if transient issue, or all retries exhausted triggering fail-closed block"
+          },
+          {
+            "criterion": "WHEN all orphan detection retry attempts fail, THE System SHALL throw OrphanDetectionError blocking login with fail-closed policy",
+            "trigger": "Third retry attempt fails with timeout or network error",
+            "action": "Construct OrphanDetectionError with all retry metadata and correlation ID, throw to AuthProvider",
+            "expected_result": "Login completely blocked with message 'Unable to verify account status. Please try again later.' and error logged with correlation ID"
+          },
+          {
+            "criterion": "WHEN orphan detection succeeds and user has valid users record, THE System SHALL proceed with login flow including profile enrichment and session establishment",
+            "trigger": "checkIfOrphaned() returns {orphaned: false, hasValidAccount: true, accountUuid, role}",
+            "action": "Continue AuthProvider.login() execution, enrich user context with account_uuid and role, establish session",
+            "expected_result": "User logged in successfully with context containing {user_uuid, email, account_uuid, role, full_name, avatar_url}"
+          },
+          {
+            "criterion": "WHEN orphaned user is detected, THE System SHALL verify account exists in accounts table and account.deleted_at IS NULL",
+            "trigger": "checkIfOrphaned() finds users record with account_uuid but needs to validate account existence",
+            "action": "Execute SELECT account_uuid, deleted_at FROM accounts WHERE account_uuid = $1 to validate account still active",
+            "expected_result": "If account deleted or missing, classify as orphaned with orphanType='deleted-account' and block login"
+          }
+        ],
+        "priority": "must-have",
+        "dependencies": ["FR-001"],
+        "related_features": ["FEAT-002", "FEAT-018"],
+        "notes": "Orphan detection latency must remain <200ms p95 to maintain responsive login experience. The fail-closed policy is critical security requirement and cannot be relaxed. Retry logic with Gaussian jitter prevents thundering herd under database load."
+      },
+      {
+        "id": "FR-003",
+        "title": "JWT Claims Validation and Account Context Enrichment",
+        "user_story": {
+          "role": "authenticated user accessing the application",
+          "capability": "have my account UUID and role automatically included in my session token",
+          "benefit": "the application can efficiently enforce RLS policies and display role-appropriate UI without additional database queries on every request"
+        },
+        "acceptance_criteria": [
+          {
+            "criterion": "WHEN user successfully logs in and custom_access_token_hook is configured, THE System SHALL extract account_uuid and user_role from JWT claims and include in user context",
+            "trigger": "AuthProvider receives session from Supabase Auth after login",
+            "action": "Parse JWT payload, extract custom claims at session.user.app_metadata.account_uuid and session.user.app_metadata.user_role",
+            "expected_result": "User context populated with {account_uuid, role} from JWT claims without database query"
+          },
+          {
+            "criterion": "WHEN JWT claims are missing account_uuid due to unconfigured custom_access_token_hook, THE System SHALL fall back to querying users table and log warning",
+            "trigger": "AuthProvider detects session.user.app_metadata.account_uuid is undefined or null",
+            "action": "Execute fallback query SELECT account_uuid, role FROM users WHERE user_uuid = auth.uid(), log warning with correlation ID",
+            "expected_result": "User context still populated correctly but performance degraded, warning logged: 'Custom access token hook not configured. See documentation.'"
+          },
+          {
+            "criterion": "WHEN fallback query to users table fails or returns no results, THE System SHALL block login with OrphanedUserError ensuring fail-closed policy",
+            "trigger": "Fallback query for missing JWT claims returns null or throws error",
+            "action": "Construct OrphanedUserError with message indicating account_uuid unavailable, block login",
+            "expected_result": "Login blocked, user sees error message 'Unable to verify account membership. Please contact support.'"
+          },
+          {
+            "criterion": "WHEN user context is established with account_uuid from any source, THE System SHALL validate account exists and is not soft-deleted before completing login",
+            "trigger": "AuthProvider has account_uuid from JWT claims or fallback query",
+            "action": "Execute SELECT deleted_at FROM accounts WHERE account_uuid = $1, verify deleted_at IS NULL",
+            "expected_result": "If account deleted, throw OrphanedUserError with orphanType='deleted-account' blocking login"
+          },
+          {
+            "criterion": "WHEN user role from JWT claims is invalid or not in allowed set (owner, admin, member, viewer), THE System SHALL default to 'member' role and log warning",
+            "trigger": "AuthProvider extracts user_role from JWT but value is not in ['owner', 'admin', 'member', 'viewer']",
+            "action": "Set role = 'member', log warning with correlation ID and original role value for investigation",
+            "expected_result": "User can login with safe default 'member' role, warning logged for admin investigation"
+          }
+        ],
+        "priority": "must-have",
+        "dependencies": ["FR-002"],
+        "related_features": ["FEAT-009"],
+        "notes": "The custom_access_token_hook must be manually configured by user in Supabase Dashboard (Authentication → Hooks → Custom Access Token). Hook configuration cannot be automated via code. Fallback query ensures application remains functional even if hook misconfigured, though with performance penalty."
+      },
+      {
+        "id": "FR-004",
+        "title": "Global Email Uniqueness Enforcement and Validation",
+        "user_story": {
+          "role": "new user attempting to register with an email already in use",
+          "capability": "receive immediate, clear feedback that my email is already registered",
+          "benefit": "I can either login to my existing account or use a different email without completing the entire registration process"
+        },
+        "acceptance_criteria": [
+          {
+            "criterion": "WHEN user enters email in registration form admin step, THE System SHALL check users.user_email for existing registration with 500ms debounce",
+            "trigger": "User types in email field and pauses for 500ms (debounced input)",
+            "action": "Execute SELECT EXISTS(SELECT 1 FROM users WHERE user_email = $1 AND deleted_at IS NULL) query",
+            "expected_result": "If email exists, display inline error message 'This email is already registered. Would you like to login instead?'"
+          },
+          {
+            "criterion": "WHEN registration submission reaches Edge Function with email that already exists, THE System SHALL return 409 Conflict error before invoking create_account_with_admin()",
+            "trigger": "Edge Function receives registration payload and pre-validates email uniqueness",
+            "action": "Query users table for email, if exists return {error: 'EMAIL_EXISTS', message: 'Email already registered'} with HTTP 409",
+            "expected_result": "Frontend displays user-friendly error and suggests login option without wasting database function invocation"
+          },
+          {
+            "criterion": "WHEN create_account_with_admin() encounters unique constraint violation on users.user_email, THE System SHALL catch PostgreSQL error 23505 and return descriptive error",
+            "trigger": "Function attempts INSERT into users table with duplicate email triggering unique constraint",
+            "action": "PostgreSQL raises UNIQUE VIOLATION, Edge Function catches, maps to EmailAlreadyExistsError class",
+            "expected_result": "Frontend receives error with code 'EMAIL_EXISTS' and displays 'This email is already registered. Please login or use a different email.'"
+          },
+          {
+            "criterion": "WHEN email validation query fails due to network or database error, THE System SHALL allow form submission to proceed (fail-open for validation, fail-closed for creation)",
+            "trigger": "Real-time email validation query times out or returns error",
+            "action": "Log error with correlation ID, clear validation error state, allow user to continue to submission",
+            "expected_result": "User can proceed with submission, duplicate email will be caught by Edge Function or database constraint as final safety net"
+          },
+          {
+            "criterion": "WHEN user submits registration form with company_email different from admin email, THE System SHALL reject with validation error before submission",
+            "trigger": "Form validation detects formData.company.email !== formData.admin.email",
+            "action": "Set form error: 'Company email must match admin email for initial registration'",
+            "expected_result": "Submission blocked, user must correct email mismatch before proceeding"
+          }
+        ],
+        "priority": "must-have",
+        "dependencies": ["FR-001"],
+        "related_features": ["FEAT-012", "FEAT-017"],
+        "notes": "Email uniqueness is enforced at three levels: frontend validation (UX), Edge Function validation (API), and database constraint (data integrity). This defense-in-depth approach ensures no duplicate emails slip through. The constraint is global across all accounts, preventing the same email from being used in multiple organizations."
+      },
+      {
+        "id": "FR-005",
+        "title": "Supabase Query Helpers for New Schema",
+        "user_story": {
+          "role": "developer working on features requiring account, user, or subscription data",
+          "capability": "use consistent, RLS-enforced query helper classes for all database operations",
+          "benefit": "I can write data access code quickly with confidence that tenant isolation, soft deletes, and error handling are automatically handled correctly"
+        },
+        "acceptance_criteria": [
+          {
+            "criterion": "WHEN AccountQueries.getAccount(accountUuid) is called, THE System SHALL fetch account from accounts table filtering by account_uuid from JWT claims and deleted_at IS NULL",
+            "trigger": "Component or hook invokes AccountQueries.getAccount('uuid-123')",
+            "action": "Execute SELECT * FROM accounts WHERE account_uuid = $1 AND account_uuid = auth.jwt()->>'account_uuid' AND deleted_at IS NULL",
+            "expected_result": "Returns Account object if user has access, null if no access or account not found, throws error on database failure"
+          },
+          {
+            "criterion": "WHEN UserQueries.listAccountUsers(accountUuid) is called, THE System SHALL return all non-deleted users in specified account respecting RLS policies",
+            "trigger": "Admin panel component needs to display team members for current account",
+            "action": "Execute SELECT * FROM users WHERE account_uuid = $1 AND deleted_at IS NULL ORDER BY created_at DESC",
+            "expected_result": "Returns array of User objects for account, empty array if no users, RLS ensures only same-account users visible"
+          },
+          {
+            "criterion": "WHEN SubscriptionQueries.getAccountSubscription(accountUuid) is called, THE System SHALL fetch active subscription filtering by deleted_at IS NULL",
+            "trigger": "Subscription status component needs to display trial expiry or plan details",
+            "action": "Execute SELECT * FROM subscriptions WHERE account_uuid = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1",
+            "expected_result": "Returns most recent non-deleted Subscription object, null if no active subscription"
+          },
+          {
+            "criterion": "WHEN UserQueries.updateUser(userUuid, payload) is called, THE System SHALL enforce role-based permissions via RLS and update modified_at automatically",
+            "trigger": "User profile settings form submits updated first_name and last_name",
+            "action": "Execute UPDATE users SET first_name = $1, last_name = $2, modified_at = now() WHERE user_uuid = $3 AND account_uuid = auth.jwt()->>'account_uuid'",
+            "expected_result": "User record updated if permissions allow, RLS blocks update if user lacks permission, modified_at timestamp automatically updated"
+          },
+          {
+            "criterion": "WHEN AccountQueries.deleteAccount(accountUuid) is called, THE System SHALL set deleted_at timestamp instead of hard deleting record",
+            "trigger": "Account owner clicks 'Delete Account' in settings",
+            "action": "Execute UPDATE accounts SET deleted_at = now() WHERE account_uuid = $1 AND auth.jwt()->>'user_role' = 'owner'",
+            "expected_result": "Account soft-deleted (deleted_at set), RLS policies immediately hide account from all queries, only 'owner' role can perform deletion"
+          },
+          {
+            "criterion": "WHEN any query helper method encounters database error, THE System SHALL map Supabase error to user-friendly error with correlation ID",
+            "trigger": "Query fails with PostgreSQL error (connection timeout, constraint violation, permission denied)",
+            "action": "Catch PostgreSQL error, generate correlation ID, map to UserFriendlyError subclass based on error code",
+            "expected_result": "Method throws mapped error (e.g., PermissionDeniedError, NetworkError), frontend displays appropriate message to user"
+          },
+          {
+            "criterion": "WHEN query helper is called without authenticated session, THE System SHALL throw AuthenticationRequiredError before executing query",
+            "trigger": "Query helper invoked but supabase.auth.getSession() returns null",
+            "action": "Check for session existence in query helper, throw AuthenticationRequiredError if null",
+            "expected_result": "Error thrown with message 'You must be logged in to perform this action', prevents unauthorized query execution"
+          }
+        ],
+        "priority": "must-have",
+        "dependencies": ["FR-003"],
+        "related_features": ["FEAT-005", "FEAT-006", "FEAT-007", "FEAT-016"],
+        "notes": "Query helpers replace existing CompanyQueries, ProfileQueries, and CompanyMemberQueries with new AccountQueries, UserQueries, and SubscriptionQueries. Old query helpers should be deprecated with clear migration path documented. All query helpers must consistently filter by deleted_at IS NULL and leverage JWT claims for account_uuid when available."
+      },
+      {
+        "id": "FR-006",
+        "title": "Trial Subscription Status Checking and Enforcement",
+        "user_story": {
+          "role": "user with an active or expired trial subscription",
+          "capability": "see my trial status, days remaining, and upgrade prompts in the application",
+          "benefit": "I understand when my trial expires and have a clear path to upgrade before losing access to premium features"
+        },
+        "acceptance_criteria": [
+          {
+            "criterion": "WHEN authenticated user accesses application, THE System SHALL fetch subscription status from subscriptions table and cache for 5 minutes",
+            "trigger": "AuthProvider establishes session and user context includes account_uuid",
+            "action": "Execute SubscriptionQueries.getAccountSubscription(account_uuid), cache result with 5-minute TTL",
+            "expected_result": "Subscription status available in auth context without repeated queries, cache invalidated after 5 minutes or on subscription update"
+          },
+          {
+            "criterion": "WHEN subscription status is 'trialing' and trial_ends_at is within 3 days, THE System SHALL display warning banner with days remaining",
+            "trigger": "Subscription check detects status='trialing' and trial_ends_at - now() < 3 days",
+            "action": "Calculate days remaining, display warning banner: 'Your trial expires in X days. Upgrade now to continue accessing premium features.'",
+            "expected_result": "Banner visible on all pages, includes 'Upgrade' button linking to subscription management page"
+          },
+          {
+            "criterion": "WHEN subscription status is 'trialing' and trial_ends_at is in the past, THE System SHALL display expired trial modal with upgrade prompt",
+            "trigger": "Subscription check detects status='trialing' and trial_ends_at < now()",
+            "action": "Display modal blocking access to premium features: 'Your trial has expired. Please upgrade to continue using the application.'",
+            "expected_result": "User can only access limited features or read-only mode until subscription upgraded"
+          },
+          {
+            "criterion": "WHEN subscription status is 'active' with valid plan_id, THE System SHALL hide trial-related UI and grant full feature access",
+            "trigger": "Subscription check detects status='active' and plan_id != 'trial'",
+            "action": "Set user context flag hasActiveSubscription=true, hide trial banners, enable all premium features",
+            "expected_result": "User has full access to application without trial restrictions or upgrade prompts"
+          },
+          {
+            "criterion": "WHEN subscription query fails or returns null, THE System SHALL assume no active subscription and block access with fail-closed policy",
+            "trigger": "SubscriptionQueries.getAccountSubscription() returns null or throws error",
+            "action": "Set hasActiveSubscription=false, display error: 'Unable to verify subscription status. Please contact support.'",
+            "expected_result": "User blocked from accessing premium features until subscription status confirmed"
+          },
+          {
+            "criterion": "WHEN subscription status changes (trial expires or user upgrades), THE System SHALL invalidate cached subscription and refetch on next request",
+            "trigger": "Subscription update webhook received or trial_ends_at timestamp passes",
+            "action": "Clear subscription cache, trigger refetch of subscription status from database",
+            "expected_result": "User sees updated subscription status within 1 minute without requiring logout/login"
+          }
+        ],
+        "priority": "should-have",
+        "dependencies": ["FR-005"],
+        "related_features": ["FEAT-013"],
+        "notes": "Subscription enforcement is critical for business model but not blocking for initial migration. Can be implemented in phase 2 if time constrained. Caching reduces database load but must balance with real-time accuracy requirements. Consider implementing as middleware that checks subscription before rendering protected routes."
+      },
+      {
+        "id": "FR-007",
+        "title": "Role-Based UI Permissions and Authorization",
+        "user_story": {
+          "role": "user with a specific role (owner, admin, member, viewer) in my account",
+          "capability": "see only the UI controls and features appropriate for my permission level",
+          "benefit": "I am not confused by features I cannot use, and the application prevents me from attempting unauthorized actions"
+        },
+        "acceptance_criteria": [
+          {
+            "criterion": "WHEN user context includes user_role from JWT claims, THE System SHALL expose usePermissions() hook for UI authorization checks",
+            "trigger": "Component needs to conditionally render UI based on user permissions",
+            "action": "Call usePermissions() which returns {canManageAccount, canInviteUsers, canDeleteAccount, canEditSettings} based on role",
+            "expected_result": "Component receives boolean flags for each permission, hides/disables UI elements for unauthorized actions"
+          },
+          {
+            "criterion": "WHEN user has 'owner' role, THE System SHALL enable all account management actions including delete account and role changes",
+            "trigger": "usePermissions() detects user_role === 'owner'",
+            "action": "Return {canManageAccount: true, canInviteUsers: true, canDeleteAccount: true, canEditSettings: true}",
+            "expected_result": "Owner sees all management UI controls including dangerous actions like account deletion"
+          },
+          {
+            "criterion": "WHEN user has 'admin' role, THE System SHALL enable most management actions except account deletion and owner role assignment",
+            "trigger": "usePermissions() detects user_role === 'admin'",
+            "action": "Return {canManageAccount: true, canInviteUsers: true, canDeleteAccount: false, canEditSettings: true}",
+            "expected_result": "Admin can invite users and manage settings but cannot delete account or change owner"
+          },
+          {
+            "criterion": "WHEN user has 'member' role, THE System SHALL enable standard features but hide management UI",
+            "trigger": "usePermissions() detects user_role === 'member'",
+            "action": "Return {canManageAccount: false, canInviteUsers: false, canDeleteAccount: false, canEditSettings: false}",
+            "expected_result": "Member sees only standard application features, no admin panels or user management"
+          },
+          {
+            "criterion": "WHEN user has 'viewer' role, THE System SHALL enable read-only access with all modification actions disabled",
+            "trigger": "usePermissions() detects user_role === 'viewer'",
+            "action": "Return all permission flags as false, disable all forms and action buttons",
+            "expected_result": "Viewer can browse data but all edit/delete/create actions are hidden or disabled"
+          },
+          {
+            "criterion": "WHEN user attempts unauthorized action by manipulating UI, THE System SHALL block action at RLS policy level and return permission error",
+            "trigger": "User bypasses frontend permissions and sends unauthorized API request",
+            "action": "RLS policy checks user_role in JWT claims, rejects query with permission denied error",
+            "expected_result": "Action blocked at database level, user sees error message 'You do not have permission to perform this action'"
+          },
+          {
+            "criterion": "WHEN user role changes in database, THE System SHALL refresh JWT claims on next request to reflect new permissions",
+            "trigger": "Admin changes user's role from 'member' to 'admin' in users table",
+            "action": "On next authenticated request, custom_access_token_hook includes updated user_role in JWT claims",
+            "expected_result": "User's permissions update within 1 minute (JWT expiry) without requiring logout/login"
+          }
+        ],
+        "priority": "should-have",
+        "dependencies": ["FR-003"],
+        "related_features": ["FEAT-014"],
+        "notes": "UI permissions must always be backed by RLS policies to prevent bypass via API manipulation. Frontend permission checks improve UX by hiding unavailable features but are not security controls. JWT claims provide real-time role information but database RLS policies are the authoritative source of truth for enforcement."
+      },
+      {
+        "id": "FR-008",
+        "title": "Soft Delete Pattern Implementation Across All Entities",
+        "user_story": {
+          "role": "account owner accidentally deleting critical data",
+          "capability": "have my deleted accounts, users, and subscriptions recoverable by marking them deleted rather than permanently removing them",
+          "benefit": "I can recover from mistakes without losing data permanently, and the system maintains referential integrity during logical deletions"
+        },
+        "acceptance_criteria": [
+          {
+            "criterion": "WHEN delete operation is invoked on accounts, users, or subscriptions table, THE System SHALL execute UPDATE setting deleted_at = now() instead of DELETE",
+            "trigger": "Query helper deleteAccount(), deleteUser(), or cancelSubscription() method called",
+            "action": "Execute UPDATE {table} SET deleted_at = now() WHERE {id_column} = $1 instead of DELETE FROM {table}",
+            "expected_result": "Record remains in database with deleted_at timestamp, no foreign key constraint violations"
+          },
+          {
+            "criterion": "WHEN any SELECT query is executed, THE System SHALL automatically filter WHERE deleted_at IS NULL to exclude soft-deleted records",
+            "trigger": "Any query helper method called to fetch accounts, users, or subscriptions",
+            "action": "Append AND deleted_at IS NULL to WHERE clause of every SELECT query",
+            "expected_result": "Soft-deleted records invisible to normal queries, application behaves as if records were hard deleted"
+          },
+          {
+            "criterion": "WHEN admin needs to view deleted records for audit purposes, THE System SHALL provide includeDeleted parameter in query helper methods",
+            "trigger": "Admin panel invokes listAccountUsers({includeDeleted: true})",
+            "action": "Conditionally omit deleted_at IS NULL filter when includeDeleted === true",
+            "expected_result": "Query returns both active and soft-deleted records, deleted records clearly marked with deletion timestamp"
+          },
+          {
+            "criterion": "WHEN account is soft-deleted, THE System SHALL cascade soft-delete to all related users and subscriptions via trigger or application logic",
+            "trigger": "AccountQueries.deleteAccount() sets accounts.deleted_at = now()",
+            "action": "Either database trigger or application code executes UPDATE users, subscriptions SET deleted_at = now() WHERE account_uuid = $1",
+            "expected_result": "Account and all related users/subscriptions marked deleted in single operation, maintaining data consistency"
+          },
+          {
+            "criterion": "WHEN soft-deleted record is restored, THE System SHALL set deleted_at = NULL making record visible again",
+            "trigger": "Admin panel invokes restoreAccount(accountUuid) or restoreUser(userUuid)",
+            "action": "Execute UPDATE {table} SET deleted_at = NULL WHERE {id_column} = $1",
+            "expected_result": "Record becomes visible in normal queries, user can login if user record restored, account accessible if account restored"
+          },
+          {
+            "criterion": "WHEN RLS policies are evaluated, THE System SHALL respect deleted_at status and deny access to soft-deleted records unless explicitly querying",
+            "trigger": "User queries accounts table, RLS policy evaluates access",
+            "action": "RLS policy includes AND deleted_at IS NULL in policy definition ensuring automatic filtering",
+            "expected_result": "User cannot access soft-deleted accounts even if they know the account_uuid, database-level enforcement"
+          }
+        ],
+        "priority": "must-have",
+        "dependencies": ["FR-005"],
+        "related_features": ["FEAT-016"],
+        "notes": "Soft delete pattern must be consistently applied across all three main tables (accounts, users, subscriptions). Database triggers can automate cascade soft deletes but must be carefully tested to avoid infinite loops. Consider implementing automatic hard-delete after retention period (e.g., 90 days) via scheduled job."
+      },
+      {
+        "id": "FR-009",
+        "title": "TypeScript Type Safety for New Schema",
+        "user_story": {
+          "role": "frontend developer implementing features with the new schema",
+          "capability": "have TypeScript types that accurately reflect the accounts/users/subscriptions schema structure",
+          "benefit": "I catch type errors at compile time, have accurate IDE autocomplete, and avoid runtime errors from incorrect property access"
+        },
+        "acceptance_criteria": [
+          {
+            "criterion": "WHEN developer imports database types, THE System SHALL provide Account interface matching accounts table schema exactly",
+            "trigger": "Developer writes: import { Account } from '@/shared/types/database'",
+            "action": "TypeScript type checker validates Account interface has properties: account_uuid, company_name, company_email, created_at, modified_at, deleted_at",
+            "expected_result": "Developer gets autocomplete for all Account properties, type errors if accessing non-existent properties"
+          },
+          {
+            "criterion": "WHEN developer imports User type, THE System SHALL provide interface matching users table with account_uuid and role fields",
+            "trigger": "Developer writes: import { User } from '@/shared/types/database'",
+            "action": "TypeScript validates User interface has: user_uuid, account_uuid, user_email, first_name, last_name, role, created_at, modified_at, deleted_at",
+            "expected_result": "User type distinct from legacy Profile type, includes account_uuid and role fields required by new schema"
+          },
+          {
+            "criterion": "WHEN developer imports Subscription type, THE System SHALL provide interface matching subscriptions table schema",
+            "trigger": "Developer writes: import { Subscription } from '@/shared/types/database'",
+            "action": "TypeScript validates Subscription interface has: subscription_uuid, account_uuid, status, plan_id, trial_ends_at, created_at, modified_at, deleted_at",
+            "expected_result": "Subscription type enables type-safe subscription status checking and trial expiry calculations"
+          },
+          {
+            "criterion": "WHEN developer uses query helper methods, THE System SHALL provide accurate return type annotations matching new schema",
+            "trigger": "Developer writes: const account = await AccountQueries.getAccount(uuid)",
+            "action": "TypeScript infers account variable type as Account | null based on method signature",
+            "expected_result": "Developer must handle null case explicitly, type checker prevents accessing properties without null check"
+          },
+          {
+            "criterion": "WHEN developer attempts to use deprecated legacy types (Company, Profile, CompanyMember), THE System SHALL show deprecation warning",
+            "trigger": "Developer imports: import { Company } from '@/shared/types/database'",
+            "action": "TypeScript displays deprecation warning: '@deprecated Use Account type instead. Company type will be removed in v2.0'",
+            "expected_result": "Developer alerted to use new types, legacy types still functional during migration period"
+          },
+          {
+            "criterion": "WHEN all TypeScript code is compiled, THE System SHALL produce zero type errors related to database types",
+            "trigger": "Developer runs: npm run type-check or tsc --noEmit",
+            "action": "TypeScript compiler validates all database type usage across entire codebase",
+            "expected_result": "Compilation succeeds with zero errors, any mismatched types caught before runtime"
+          },
+          {
+            "criterion": "WHEN developer uses role field from User type, THE System SHALL enforce literal type for role values",
+            "trigger": "Developer writes: if (user.role === 'admin')",
+            "action": "TypeScript type checker validates role is one of 'owner' | 'admin' | 'member' | 'viewer'",
+            "expected_result": "Type error if developer uses invalid role value, autocomplete suggests valid role options"
+          }
+        ],
+        "priority": "must-have",
+        "dependencies": [],
+        "related_features": ["FEAT-008"],
+        "notes": "TypeScript types should be generated from database schema using Supabase CLI: supabase gen types typescript --local > src/shared/types/database.ts. This ensures types always match actual schema. Legacy types should remain with @deprecated JSDoc tags to guide migration."
+      },
+      {
+        "id": "FR-010",
+        "title": "Registration Form and Edge Function Update for New Schema",
+        "user_story": {
+          "role": "new user completing the registration form",
+          "capability": "provide my company information and admin details in a form that submits to the new account creation function",
+          "benefit": "I can successfully register without encountering errors, and the system creates my account atomically with proper trial subscription"
+        },
+        "acceptance_criteria": [
+          {
+            "criterion": "WHEN user completes company step in registration form, THE System SHALL validate company_email matches admin_email before allowing progression",
+            "trigger": "User clicks 'Next' on company information step",
+            "action": "Validate formData.company.email === formData.admin.email, show error if mismatch",
+            "expected_result": "User cannot proceed unless company and admin emails match, error message: 'Company email must match your admin email'"
+          },
+          {
+            "criterion": "WHEN useRegistrationSubmission invokes register-organization Edge Function, THE System SHALL send payload matching create_account_with_admin() parameters",
+            "trigger": "User completes final registration step and email verification confirmed",
+            "action": "Send POST to /functions/v1/register-organization with body: {company_name, company_email, first_name, last_name, correlationId}",
+            "expected_result": "Edge Function receives correctly formatted payload for database function invocation"
+          },
+          {
+            "criterion": "WHEN register-organization Edge Function receives payload, THE System SHALL invoke create_account_with_admin() with extracted parameters",
+            "trigger": "Edge Function handleRegistration() called with validated payload",
+            "action": "Execute: const result = await supabase.rpc('create_account_with_admin', {p_company_name, p_company_email, p_first_name, p_last_name})",
+            "expected_result": "Database function invoked correctly, result contains account_uuid, user_uuid, subscription_uuid"
+          },
+          {
+            "criterion": "WHEN create_account_with_admin() returns success, THE System SHALL return account details to frontend with HTTP 201 status",
+            "trigger": "Database function completes successfully and returns result object",
+            "action": "Edge Function constructs response: {success: true, account_uuid, user_uuid, subscription_uuid} with HTTP 201",
+            "expected_result": "Frontend useRegistrationSubmission receives success response and updates state to 'succeeded'"
+          },
+          {
+            "criterion": "WHEN Edge Function encounters email uniqueness error, THE System SHALL return 409 Conflict with descriptive message",
+            "trigger": "create_account_with_admin() throws unique constraint violation (SQLSTATE 23505)",
+            "action": "Catch error, check error code, return HTTP 409 with body: {error: 'EMAIL_EXISTS', message: 'Email already registered'}",
+            "expected_result": "Frontend displays error message suggesting login, user can choose to login or change email"
+          },
+          {
+            "criterion": "WHEN Edge Function times out or fails, THE System SHALL return 500 error allowing frontend to retry",
+            "trigger": "Edge Function execution exceeds timeout or database connection fails",
+            "action": "Return HTTP 500 with body: {error: 'FUNCTION_TIMEOUT', message: 'Registration failed. Please try again.'}",
+            "expected_result": "Frontend shows retry button, user can resubmit without losing form data"
+          },
+          {
+            "criterion": "WHEN registration succeeds, THE System SHALL redirect user to login page with success message",
+            "trigger": "useRegistrationSubmission state transitions to 'succeeded' after receiving HTTP 201",
+            "action": "Display toast: 'Account created successfully! Please login with your credentials', redirect to /login",
+            "expected_result": "User sees success feedback and prompted to login with their new account credentials"
+          }
+        ],
+        "priority": "must-have",
+        "dependencies": ["FR-001", "FR-004"],
+        "related_features": ["FEAT-003", "FEAT-004", "FEAT-011"],
+        "notes": "RegistrationForm components (RegistrationCompanyStep, RegistrationAdminStep) must be updated to collect correct fields. The company_email field becomes critical as it must match admin email for new schema. Edge Function must be refactored to remove manual table insert logic and rely entirely on create_account_with_admin() function."
+      }
+    ],
+    "non_functional": [
+      {
+        "id": "NFR-001",
+        "title": "Authentication Performance Standards",
+        "category": "performance",
+        "requirement": "All authentication operations including login, orphan detection, profile enrichment, and subscription checking must complete within defined latency targets to maintain responsive user experience. Performance degradation beyond these thresholds indicates architectural issues requiring immediate investigation.",
+        "acceptance_criteria": [
+          {
+            "criterion": "Orphan detection query execution must complete in <200ms at 95th percentile (p95) under normal load conditions",
+            "metric": "Query execution time from checkIfOrphaned() invocation to result return",
+            "target": "p95 latency < 200ms, p99 latency < 500ms",
+            "measurement_method": "Frontend performance monitoring with correlation IDs, log aggregation analyzing orphan detection latency distribution over 1-hour windows"
+          },
+          {
+            "criterion": "Complete login flow from form submission to session establishment must complete in <2 seconds at p95",
+            "metric": "End-to-end time from login button click to authenticated route render",
+            "target": "p95 < 2000ms, p99 < 4000ms",
+            "measurement_method": "Frontend performance API measuring full login flow duration, real user monitoring (RUM) data aggregation"
+          },
+          {
+            "criterion": "JWT claims validation and extraction must complete in <50ms at p95",
+            "metric": "Time to parse JWT payload and extract account_uuid and user_role",
+            "target": "p95 < 50ms, p99 < 100ms",
+            "measurement_method": "Performance.mark() timing around JWT parsing logic, aggregated in application monitoring dashboard"
+          },
+          {
+            "criterion": "Subscription status check must complete in <300ms at p95 when cache miss occurs",
+            "metric": "Query execution time for SubscriptionQueries.getAccountSubscription()",
+            "target": "p95 < 300ms (cache miss), p50 < 10ms (cache hit)",
+            "measurement_method": "Query performance logging with cache hit/miss tagging, PostgreSQL query stats from pg_stat_statements"
+          },
+          {
+            "criterion": "Account context enrichment must not block UI rendering beyond 500ms",
+            "metric": "Time from session available to user context fully populated with account_uuid, role, full_name",
+            "target": "p95 < 500ms, user sees loading state if exceeds 200ms",
+            "measurement_method": "React DevTools profiler measuring AuthProvider render cycles, custom performance marks"
+          }
+        ],
+        "priority": "must-have",
+        "rationale": "Performance requirements directly impact user experience and system scalability. The <200ms orphan detection requirement is critical for fail-closed security policy to be user-acceptable. Slower performance could lead to user frustration and increased support burden.",
+        "verification_method": "testing"
+      },
+      {
+        "id": "NFR-002",
+        "title": "Security and Fail-Closed Policy Enforcement",
+        "category": "security",
+        "requirement": "All security-critical operations must implement fail-closed policies where system failures result in denying access rather than allowing it. RLS policies must provide perfect tenant isolation, and all authentication paths must verify user membership before granting access.",
+        "acceptance_criteria": [
+          {
+            "criterion": "Orphan detection failures must block login rather than allowing potentially incomplete registrations",
+            "metric": "Percentage of failed orphan detections that successfully block authentication",
+            "target": "100% of detection failures result in authentication denial",
+            "measurement_method": "Integration tests simulating database timeouts and network failures, verify OrphanDetectionError thrown and login blocked"
+          },
+          {
+            "criterion": "RLS policies must prevent all cross-account data access attempts",
+            "metric": "Number of successful cross-account data access attempts in penetration testing",
+            "target": "Zero successful cross-account access attempts across 1000+ test scenarios",
+            "measurement_method": "Create two test accounts, attempt to access other account's data using known UUIDs, query logs, and direct SQL queries"
+          },
+          {
+            "criterion": "JWT claims missing account_uuid must trigger fallback query or block access with fail-closed policy",
+            "metric": "Percentage of sessions with missing JWT claims that are handled safely",
+            "target": "100% of missing claims result in either fallback query success or access denial",
+            "measurement_method": "Integration tests with custom_access_token_hook disabled, verify fallback query executes or login blocked"
+          },
+          {
+            "criterion": "Soft-deleted accounts and users must be immediately inaccessible across all application paths",
+            "metric": "Number of deleted_at IS NOT NULL records accessible to users",
+            "target": "Zero soft-deleted records visible in any query or API response",
+            "measurement_method": "Soft delete test account, attempt access via UI, API, and direct queries, verify all return no results"
+          },
+          {
+            "criterion": "Role-based permissions must be enforced at RLS policy level, not just frontend UI",
+            "metric": "Number of successful permission bypasses via API manipulation",
+            "target": "Zero successful permission bypasses in security testing",
+            "measurement_method": "Attempt to execute owner-only actions as member user by manipulating API requests, verify RLS blocks unauthorized operations"
+          }
+        ],
+        "priority": "must-have",
+        "rationale": "Security is non-negotiable for B2B SaaS application handling multiple tenant data. Fail-closed policies prevent security vulnerabilities from allowing unauthorized access. RLS enforcement is the authoritative security layer that cannot be bypassed by frontend manipulation.",
+        "verification_method": "testing"
+      },
+      {
+        "id": "NFR-003",
+        "title": "Database Query Efficiency and RLS Performance",
+        "category": "performance",
+        "requirement": "All Supabase queries must leverage JWT claims for account_uuid filtering to minimize subquery overhead in RLS policies. Query plans must be analyzed to ensure efficient index usage and avoid N+1 query patterns.",
+        "acceptance_criteria": [
+          {
+            "criterion": "RLS policies must extract account_uuid from JWT claims rather than executing subqueries",
+            "metric": "Percentage of RLS policies using auth.jwt()->>'account_uuid' vs subquery patterns",
+            "target": "100% of frequently-used RLS policies use JWT claim extraction",
+            "measurement_method": "Review RLS policy definitions in database, EXPLAIN ANALYZE queries to verify no subquery execution in filter clauses"
+          },
+          {
+            "criterion": "Database must have indexes on users(account_uuid), users(user_uuid), users(user_email) for efficient filtering",
+            "metric": "Query execution plans showing index usage for primary filters",
+            "target": "100% of queries using indexed columns show Index Scan in EXPLAIN ANALYZE",
+            "measurement_method": "Run EXPLAIN ANALYZE on all query helper methods, verify index usage, no sequential scans on large tables"
+          },
+          {
+            "criterion": "Query helper methods must avoid N+1 patterns by using JOIN or batch loading",
+            "metric": "Number of database round trips for common operations like listing account users",
+            "target": "Single query for list operations, maximum 2 queries for complex enrichment scenarios",
+            "measurement_method": "Database query logging during integration tests, count queries per operation, verify batching for multiple IDs"
+          },
+          {
+            "criterion": "Subscription status cache must reduce database load by at least 80% for repeated checks",
+            "metric": "Cache hit rate for subscription status queries",
+            "target": ">80% cache hit rate during normal operations with 5-minute TTL",
+            "measurement_method": "Cache monitoring with hit/miss counters, calculate hit rate over 1-hour windows"
+          }
+        ],
+        "priority": "should-have",
+        "rationale": "Efficient database queries are essential for application scalability. RLS policies with subqueries can cause performance degradation as data grows. Leveraging JWT claims for filtering provides both security and performance benefits.",
+        "verification_method": "analysis"
+      },
+      {
+        "id": "NFR-004",
+        "title": "Error Handling and Observability",
+        "category": "reliability",
+        "requirement": "All error scenarios must be handled with user-friendly messages, correlation IDs for debugging, and structured logging for operational visibility. Error boundaries must prevent cascading failures.",
+        "acceptance_criteria": [
+          {
+            "criterion": "All database errors must be mapped to user-friendly error classes with correlation IDs",
+            "metric": "Percentage of errors that include correlation ID and human-readable message",
+            "target": "100% of errors include correlation ID, 95% have user-friendly messages",
+            "measurement_method": "Error logging analysis, verify correlation ID presence in all error logs, test error message clarity"
+          },
+          {
+            "criterion": "Frontend must handle all error states without crashing or showing technical error details to users",
+            "metric": "Number of unhandled errors causing white screen or app crash",
+            "target": "Zero unhandled errors in production, all errors caught by error boundaries",
+            "measurement_method": "Error boundary monitoring, production error tracking with Sentry or equivalent, test all error scenarios"
+          },
+          {
+            "criterion": "Edge Functions must log all operations with correlation IDs traceable across frontend and database",
+            "metric": "Percentage of Edge Function invocations with end-to-end correlation ID tracing",
+            "target": "100% of Edge Function calls traceable via correlation ID from frontend to database logs",
+            "measurement_method": "Log aggregation analysis, verify correlation ID appears in frontend logs, Edge Function logs, and database error logs"
+          },
+          {
+            "criterion": "Retry logic must log all retry attempts with backoff timing for debugging performance issues",
+            "metric": "Percentage of retry attempts that are logged with timing information",
+            "target": "100% of retry attempts logged with attempt number, backoff duration, and outcome",
+            "measurement_method": "Parse retry logs, verify all retry scenarios include structured logging with timing data"
+          }
+        ],
+        "priority": "must-have",
+        "rationale": "Operational visibility is critical for debugging production issues in distributed authentication system. Correlation IDs enable tracing requests across multiple system boundaries. User-friendly errors reduce support burden and improve user trust.",
+        "verification_method": "testing"
+      },
+      {
+        "id": "NFR-005",
+        "title": "Test Coverage and Regression Prevention",
+        "category": "maintainability",
+        "requirement": "All authentication flows must have comprehensive test coverage including unit tests, integration tests, and end-to-end tests. Tests must cover both happy paths and error scenarios to prevent regressions during future changes.",
+        "acceptance_criteria": [
+          {
+            "criterion": "Critical authentication paths must maintain 100% branch coverage",
+            "metric": "Code coverage percentage for authentication modules",
+            "target": "100% coverage for AuthProvider, orphanDetection, checkIfOrphaned, registration submission",
+            "measurement_method": "Jest/Vitest coverage reports, enforce coverage thresholds in CI pipeline"
+          },
+          {
+            "criterion": "Integration tests must verify end-to-end flows against actual Supabase schema",
+            "metric": "Number of integration tests covering full authentication lifecycle",
+            "target": "Minimum 20 integration tests covering registration, login, orphan detection, subscription checking",
+            "measurement_method": "Test suite analysis, verify tests execute against real Supabase instance (not mocks)"
+          },
+          {
+            "criterion": "Edge Function tests must cover all error scenarios including constraint violations and timeouts",
+            "metric": "Number of error scenarios tested for register-organization Edge Function",
+            "target": "Minimum 10 error test cases covering email uniqueness, timeouts, invalid input, missing auth",
+            "measurement_method": "Edge Function test suite analysis, verify error paths tested with actual Supabase client"
+          },
+          {
+            "criterion": "All tests must pass before merge to main branch",
+            "metric": "CI pipeline test pass rate",
+            "target": "100% test pass rate required for merge, no skipped or flaky tests allowed",
+            "measurement_method": "GitHub Actions workflow results, enforce required status checks before merge"
+          }
+        ],
+        "priority": "must-have",
+        "rationale": "Authentication is mission-critical functionality where regressions can lock users out of the application. Comprehensive test coverage prevents regressions and enables confident refactoring. Integration tests against real schema catch type mismatches and RLS policy issues.",
+        "verification_method": "testing"
+      }
+    ]
+  },
+  "traceability_matrix": [
+    {
+      "requirement_id": "FR-001",
+      "requirement_type": "functional",
+      "maps_to": {
+        "features": ["FEAT-003", "FEAT-004"],
+        "objectives": ["OBJ-002", "OBJ-005"],
+        "success_criteria": ["SC-001"],
+        "risks": ["RISK-009"]
+      },
+      "verification_tasks": [
+        "Test register-organization Edge Function with valid payload returns account_uuid and subscription_uuid",
+        "Verify create_account_with_admin() creates account, user, and subscription in single transaction",
+        "Test email uniqueness constraint triggers 409 Conflict error",
+        "Verify transaction rollback on any error during account creation"
+      ]
+    },
+    {
+      "requirement_id": "FR-002",
+      "requirement_type": "functional",
+      "maps_to": {
+        "features": ["FEAT-002", "FEAT-018"],
+        "objectives": ["OBJ-004"],
+        "success_criteria": ["SC-002", "SC-005"],
+        "risks": ["RISK-004"]
+      },
+      "verification_tasks": [
+        "Test orphan detection with user missing users table record returns orphaned=true",
+        "Verify orphan detection with null account_uuid returns orphaned=true",
+        "Test retry logic with 3 attempts and exponential backoff under database failure",
+        "Verify fail-closed policy blocks login when all retries exhausted"
+      ]
+    },
+    {
+      "requirement_id": "FR-003",
+      "requirement_type": "functional",
+      "maps_to": {
+        "features": ["FEAT-009"],
+        "objectives": ["OBJ-003"],
+        "success_criteria": ["SC-003"],
+        "risks": ["RISK-002"]
+      },
+      "verification_tasks": [
+        "Verify JWT payload includes account_uuid and user_role after login with custom_access_token_hook configured",
+        "Test fallback query to users table when JWT claims missing account_uuid",
+        "Verify warning logged when custom_access_token_hook not configured",
+        "Test fail-closed block when fallback query fails"
+      ]
+    },
+    {
+      "requirement_id": "FR-004",
+      "requirement_type": "functional",
+      "maps_to": {
+        "features": ["FEAT-012", "FEAT-017"],
+        "objectives": ["OBJ-006"],
+        "success_criteria": ["SC-007"],
+        "risks": ["RISK-005"]
+      },
+      "verification_tasks": [
+        "Test real-time email validation detects existing email with 500ms debounce",
+        "Verify Edge Function pre-validation returns 409 for duplicate email",
+        "Test database unique constraint catches duplicate email at insertion",
+        "Verify clear error message suggests login when email already registered"
+      ]
+    },
+    {
+      "requirement_id": "FR-005",
+      "requirement_type": "functional",
+      "maps_to": {
+        "features": ["FEAT-005", "FEAT-006", "FEAT-007", "FEAT-016"],
+        "objectives": ["OBJ-001", "OBJ-007", "OBJ-010"],
+        "success_criteria": ["SC-004"],
+        "risks": ["RISK-008"]
+      },
+      "verification_tasks": [
+        "Test AccountQueries.getAccount() respects RLS and filters by JWT account_uuid",
+        "Verify UserQueries.listAccountUsers() returns only same-account users",
+        "Test soft delete sets deleted_at instead of hard deleting records",
+        "Verify query helpers filter deleted_at IS NULL automatically"
+      ]
+    },
+    {
+      "requirement_id": "FR-006",
+      "requirement_type": "functional",
+      "maps_to": {
+        "features": ["FEAT-013"],
+        "objectives": ["OBJ-009"],
+        "success_criteria": ["SC-008"],
+        "risks": ["RISK-006"]
+      },
+      "verification_tasks": [
+        "Test subscription status check returns trial_ends_at and days remaining",
+        "Verify cache reduces subscription queries with 5-minute TTL",
+        "Test warning banner displays when trial expires in <3 days",
+        "Verify expired trial modal blocks premium feature access"
+      ]
+    },
+    {
+      "requirement_id": "FR-007",
+      "requirement_type": "functional",
+      "maps_to": {
+        "features": ["FEAT-014"],
+        "objectives": ["OBJ-003"],
+        "success_criteria": ["SC-009"],
+        "risks": ["RISK-007"]
+      },
+      "verification_tasks": [
+        "Test usePermissions() returns correct flags for each role (owner/admin/member/viewer)",
+        "Verify owner can access all management UI including delete account",
+        "Test member role hides admin panels and management controls",
+        "Verify RLS policies block unauthorized actions even if UI bypassed"
+      ]
+    },
+    {
+      "requirement_id": "FR-008",
+      "requirement_type": "functional",
+      "maps_to": {
+        "features": ["FEAT-016"],
+        "objectives": ["OBJ-010"],
+        "success_criteria": ["SC-010"],
+        "risks": ["RISK-008"]
+      },
+      "verification_tasks": [
+        "Test delete operations set deleted_at timestamp instead of hard deleting",
+        "Verify all SELECT queries filter deleted_at IS NULL automatically",
+        "Test includeDeleted parameter allows admin to view soft-deleted records",
+        "Verify restore operation sets deleted_at = NULL making record visible"
+      ]
+    },
+    {
+      "requirement_id": "FR-009",
+      "requirement_type": "functional",
+      "maps_to": {
+        "features": ["FEAT-008"],
+        "objectives": ["OBJ-008"],
+        "success_criteria": ["SC-006"],
+        "risks": []
+      },
+      "verification_tasks": [
+        "Verify Account, User, Subscription interfaces match database schema exactly",
+        "Test TypeScript compilation with tsc --noEmit produces zero errors",
+        "Verify deprecated legacy types (Company, Profile) show deprecation warnings",
+        "Test role field uses literal type enforcing 'owner' | 'admin' | 'member' | 'viewer'"
+      ]
+    },
+    {
+      "requirement_id": "FR-010",
+      "requirement_type": "functional",
+      "maps_to": {
+        "features": ["FEAT-003", "FEAT-004", "FEAT-011"],
+        "objectives": ["OBJ-005"],
+        "success_criteria": ["SC-001"],
+        "risks": []
+      },
+      "verification_tasks": [
+        "Test registration form validates company_email matches admin_email",
+        "Verify useRegistrationSubmission sends correct payload to Edge Function",
+        "Test Edge Function returns account_uuid, user_uuid, subscription_uuid on success",
+        "Verify successful registration redirects to login with success message"
+      ]
+    },
+    {
+      "requirement_id": "NFR-001",
+      "requirement_type": "non-functional",
+      "maps_to": {
+        "features": ["FEAT-002", "FEAT-018"],
+        "objectives": ["OBJ-004"],
+        "success_criteria": ["SC-005"],
+        "risks": ["RISK-003"]
+      },
+      "verification_tasks": [
+        "Measure orphan detection latency p95 under normal load, verify <200ms",
+        "Measure complete login flow end-to-end, verify p95 <2000ms",
+        "Test JWT claims extraction performance, verify p95 <50ms",
+        "Measure subscription status check cache hit rate, verify >80%"
+      ]
+    },
+    {
+      "requirement_id": "NFR-002",
+      "requirement_type": "non-functional",
+      "maps_to": {
+        "features": ["FEAT-002", "FEAT-005", "FEAT-006", "FEAT-009"],
+        "objectives": ["OBJ-007"],
+        "success_criteria": ["SC-002", "SC-004"],
+        "risks": ["RISK-001", "RISK-004", "RISK-007"]
+      },
+      "verification_tasks": [
+        "Penetration test RLS policies with two test accounts, verify zero cross-account access",
+        "Test orphan detection failures block login with fail-closed policy",
+        "Verify soft-deleted accounts immediately inaccessible across all paths",
+        "Test role-based permission bypass attempts via API manipulation all blocked"
+      ]
+    },
+    {
+      "requirement_id": "NFR-003",
+      "requirement_type": "non-functional",
+      "maps_to": {
+        "features": ["FEAT-005", "FEAT-006", "FEAT-007"],
+        "objectives": ["OBJ-007"],
+        "success_criteria": [],
+        "risks": ["RISK-003"]
+      },
+      "verification_tasks": [
+        "Run EXPLAIN ANALYZE on all query helpers, verify index usage on account_uuid, user_uuid, user_email",
+        "Review RLS policies verify auth.jwt()->>'account_uuid' used instead of subqueries",
+        "Test list operations for N+1 patterns, verify single query or batch loading",
+        "Measure subscription cache hit rate over 1-hour window, verify >80%"
+      ]
+    },
+    {
+      "requirement_id": "NFR-004",
+      "requirement_type": "non-functional",
+      "maps_to": {
+        "features": ["FEAT-003", "FEAT-017"],
+        "objectives": [],
+        "success_criteria": [],
+        "risks": []
+      },
+      "verification_tasks": [
+        "Verify all errors include correlation ID in logs and error responses",
+        "Test error boundary catches all unhandled errors without app crash",
+        "Trace correlation ID from frontend through Edge Function to database logs",
+        "Verify retry logic logs all attempts with timing information"
+      ]
+    },
+    {
+      "requirement_id": "NFR-005",
+      "requirement_type": "non-functional",
+      "maps_to": {
+        "features": ["FEAT-020"],
+        "objectives": [],
+        "success_criteria": ["SC-012"],
+        "risks": []
+      },
+      "verification_tasks": [
+        "Generate code coverage report, verify 100% for critical authentication modules",
+        "Count integration tests covering full authentication lifecycle, verify minimum 20",
+        "Review Edge Function test suite, verify minimum 10 error scenario tests",
+        "Verify CI pipeline enforces 100% test pass rate before merge"
+      ]
+    }
+  ],
+  "assumptions_and_constraints": {
+    "assumptions": [
+      {
+        "id": "ASMP-001",
+        "assumption": "The new accounts/users/subscriptions schema is already fully deployed to production Supabase instance and RLS policies are correctly configured and tested",
+        "impact": "If schema is incomplete or RLS policies misconfigured, migration code will fail at runtime with data access errors or security vulnerabilities",
+        "mitigation": "Before starting code migration, verify schema deployment by running test queries against production database. Validate RLS policies with test accounts to ensure tenant isolation works correctly."
+      },
+      {
+        "id": "ASMP-002",
+        "assumption": "The create_account_with_admin() stored function is deployed and thoroughly tested in production Supabase, with known and stable error handling behavior",
+        "impact": "If function has bugs or unexpected error behavior, registration flow will fail unpredictably requiring function fixes before code migration can complete",
+        "mitigation": "Test create_account_with_admin() directly via SQL console with various input scenarios (valid, duplicate email, invalid data) to document exact error responses and behavior."
+      },
+      {
+        "id": "ASMP-003",
+        "assumption": "No existing production user data requires migration from old companies/profiles schema to new accounts/users schema, or data migration is handled separately",
+        "impact": "If production data exists in old schema and is not migrated, current users will become orphaned and unable to login after code migration deploys",
+        "mitigation": "Confirm with stakeholders whether production data exists. If yes, pause code migration until data migration plan completed. If no data, proceed with clean cutover."
+      },
+      {
+        "id": "ASMP-004",
+        "assumption": "The custom_access_token_hook will be manually configured by user in Supabase Dashboard, or application can function with fallback query if hook is not configured",
+        "impact": "If hook not configured and fallback query not implemented, all authentication will fail with missing account_uuid errors",
+        "mitigation": "Implement robust fallback query logic for missing JWT claims. Provide clear documentation and setup instructions for configuring custom_access_token_hook. Add runtime detection and warning messages when hook not configured."
+      },
+      {
+        "id": "ASMP-005",
+        "assumption": "Users table enforces one user per email globally (not per account), meaning same email cannot be used in multiple accounts",
+        "impact": "If business model requires users to belong to multiple accounts, schema change would be required to support many-to-many relationship",
+        "mitigation": "Clarify with stakeholders whether multi-account membership is required (Question Q-004). If required, schema may need junction table like company_members to support many-to-many."
+      },
+      {
+        "id": "ASMP-006",
+        "assumption": "Trial subscriptions expire after exactly 14 days and enforcement happens at application layer (not payment provider webhook)",
+        "impact": "If trial expiration not properly enforced, users could continue accessing premium features indefinitely after trial ends",
+        "mitigation": "Implement subscription status checking in authentication middleware. Add scheduled job to update expired trial status. Consider adding grace period for user experience."
+      }
+    ],
+    "constraints": [
+      {
+        "id": "CNST-001",
+        "constraint": "The deployed Supabase schema cannot be modified during this migration project. All changes must work with existing deployed table structures and RLS policies.",
+        "type": "technical",
+        "affected_requirements": ["FR-001", "FR-002", "FR-005", "FR-008"]
+      },
+      {
+        "id": "CNST-002",
+        "constraint": "React 19.2 and Rust 1.89 versions must be maintained. No framework upgrades allowed during migration to minimize scope and risk.",
+        "type": "technical",
+        "affected_requirements": ["FR-009", "FR-010"]
+      },
+      {
+        "id": "CNST-003",
+        "constraint": "Orphan detection latency must remain under 200ms p95 to maintain responsive login experience. This is hard requirement from existing system.",
+        "type": "technical",
+        "affected_requirements": ["FR-002", "NFR-001"]
+      },
+      {
+        "id": "CNST-004",
+        "constraint": "Desktop application must maintain local SQLite profile storage for backward compatibility with offline features. Cannot migrate to cloud-only storage model.",
+        "type": "business",
+        "affected_requirements": ["FR-002", "FR-003"]
+      },
+      {
+        "id": "CNST-005",
+        "constraint": "Migration must be completed and deployed within 3-5 week timeline to meet business roadmap commitments.",
+        "type": "time",
+        "affected_requirements": ["FR-001", "FR-002", "FR-003", "FR-004", "FR-005", "FR-009", "FR-010"]
+      },
+      {
+        "id": "CNST-006",
+        "constraint": "All existing authentication tests must continue to pass or be updated to work with new schema. Cannot reduce test coverage during migration.",
+        "type": "regulatory",
+        "affected_requirements": ["NFR-005"]
+      },
+      {
+        "id": "CNST-007",
+        "constraint": "Email uniqueness must be enforced globally across all accounts with no exceptions. This is fundamental to new B2B SaaS architecture.",
+        "type": "business",
+        "affected_requirements": ["FR-004"]
+      }
+    ]
+  },
+  "metadata": {
+    "created_at": "2025-10-30T00:00:00Z",
+    "created_by": "specs-agent-v2",
+    "version": "1.0.0",
+    "last_updated": "2025-10-30T00:00:00Z",
+    "status": "draft",
+    "total_functional_requirements": 10,
+    "total_non_functional_requirements": 5,
+    "total_acceptance_criteria": 71,
+    "estimated_implementation_effort": "3-5 weeks",
+    "priority_breakdown": {
+      "must_have": 12,
+      "should_have": 3,
+      "could_have": 0,
+      "wont_have": 0
+    }
+  }
+}

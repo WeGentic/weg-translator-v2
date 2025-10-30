@@ -1,0 +1,762 @@
+{
+  "project_name": "auth-b2b-schema-migration",
+  "current_understanding": {
+    "summary": "The project involves migrating authentication and registration code from a legacy multi-table schema (companies/profiles/company_members) to a new B2B multi-tenant schema (accounts/users/subscriptions) that is already deployed to production Supabase. The migration must adapt all frontend React 19.2 components, backend Tauri integration, Edge Functions, and TypeScript types without modifying the deployed schema. Key objectives include replacing manual table insertions with the atomic create_account_with_admin() stored function, rewriting orphan detection to query the single users table instead of parallel queries, extracting account_uuid and user_role from JWT claims with fallback to direct queries, implementing soft-delete patterns consistently, and maintaining critical non-functional requirements including fail-closed security policy and <200ms p95 orphan detection latency. The implementation spans 10 phases over 3-5 weeks with an estimated 60-80 developer hours.",
+    "key_points": [
+      {
+        "point": "The accounts/users/subscriptions schema is already deployed to production Supabase and cannot be modified during this migration project",
+        "source": "requirements",
+        "confidence": "high",
+        "related_requirements": []
+      },
+      {
+        "point": "The create_account_with_admin() stored function handles atomic account creation with admin user and 14-day trial subscription in a single transaction",
+        "source": "user-input",
+        "confidence": "high",
+        "related_requirements": ["FR-001"]
+      },
+      {
+        "point": "JWT custom claims (account_uuid, user_role) are added via custom_access_token_hook configured manually in Supabase Dashboard, with fallback query if not configured",
+        "source": "design",
+        "confidence": "high",
+        "related_requirements": ["FR-003"]
+      },
+      {
+        "point": "Orphan detection must be rewritten from parallel profiles/company_members queries to single users table query maintaining <200ms p95 latency with fail-closed retry logic",
+        "source": "requirements",
+        "confidence": "high",
+        "related_requirements": ["FR-002", "NFR-001"]
+      },
+      {
+        "point": "Email uniqueness is enforced globally across all accounts via UNIQUE constraint on users.user_email column, preventing same email from registering in multiple accounts",
+        "source": "user-input",
+        "confidence": "high",
+        "related_requirements": ["FR-004"]
+      },
+      {
+        "point": "RLS policies filter data by account_uuid from JWT claims when custom_access_token_hook configured, degrading to subquery when claims missing",
+        "source": "design",
+        "confidence": "medium",
+        "related_requirements": ["FR-003", "FR-005"]
+      },
+      {
+        "point": "The users table has account_uuid as single NOT NULL foreign key, suggesting one-to-one relationship between users and accounts rather than many-to-many",
+        "source": "design",
+        "confidence": "high",
+        "related_requirements": []
+      },
+      {
+        "point": "Soft delete pattern uses deleted_at timestamp column on accounts, users, and subscriptions tables with all queries filtering deleted_at IS NULL by default",
+        "source": "requirements",
+        "confidence": "high",
+        "related_requirements": ["FR-008"]
+      },
+      {
+        "point": "Subscription status caching uses react-query with 5-minute TTL to reduce database load for trial expiry checks while maintaining acceptable staleness",
+        "source": "design",
+        "confidence": "medium",
+        "related_requirements": ["FR-006"]
+      },
+      {
+        "point": "Local SQLite profile synchronization continues for desktop app backward compatibility, syncing from cloud users table to local storage via Tauri IPC",
+        "source": "codebase-analysis",
+        "confidence": "medium",
+        "related_requirements": []
+      },
+      {
+        "point": "Registration Edge Function must be refactored from manual INSERT operations to invoking create_account_with_admin() with error mapping for constraint violations",
+        "source": "design",
+        "confidence": "high",
+        "related_requirements": ["FR-001", "FR-010"]
+      },
+      {
+        "point": "TypeScript types must be updated to include Account, User, Subscription interfaces matching new schema while marking Company, Profile, CompanyMember as deprecated",
+        "source": "requirements",
+        "confidence": "high",
+        "related_requirements": ["FR-009"]
+      },
+      {
+        "point": "Role-based permissions (owner, admin, member, viewer) are enforced at both RLS policy level and frontend UI level using user_role from JWT claims",
+        "source": "requirements",
+        "confidence": "medium",
+        "related_requirements": ["FR-007"]
+      },
+      {
+        "point": "The migration excludes schema modifications, data migration tooling, payment provider integration beyond trial creation, user invitation flows, and multi-account switching UI",
+        "source": "requirements",
+        "confidence": "high",
+        "related_requirements": []
+      },
+      {
+        "point": "Email sync trigger updates users.user_email when auth.users.email changes, maintaining consistency between authentication and application user tables",
+        "source": "user-input",
+        "confidence": "low",
+        "related_requirements": []
+      }
+    ],
+    "assumptions": [
+      {
+        "assumption": "The create_account_with_admin() function is deployed, tested, and has stable error handling behavior including proper rollback on failures",
+        "needs_validation": true,
+        "risk_if_wrong": "critical"
+      },
+      {
+        "assumption": "RLS policies for accounts, users, and subscriptions tables are correctly configured and tested for perfect tenant isolation",
+        "needs_validation": true,
+        "risk_if_wrong": "critical"
+      },
+      {
+        "assumption": "No production user data exists in the old companies/profiles/company_members schema requiring migration before code deployment",
+        "needs_validation": true,
+        "risk_if_wrong": "critical"
+      },
+      {
+        "assumption": "The custom_access_token_hook PostgreSQL function exists in the database even if not yet configured via Supabase Dashboard",
+        "needs_validation": true,
+        "risk_if_wrong": "high"
+      },
+      {
+        "assumption": "Email sync trigger (sync_user_email) is deployed and automatically maintains consistency between auth.users.email and users.user_email",
+        "needs_validation": true,
+        "risk_if_wrong": "high"
+      },
+      {
+        "assumption": "The one-to-one relationship between users and accounts (users.account_uuid single FK) is intentional business decision, not schema deployment error",
+        "needs_validation": true,
+        "risk_if_wrong": "high"
+      },
+      {
+        "assumption": "Soft delete cascade logic (deleting account soft-deletes all users and subscriptions) is handled by database triggers rather than application code",
+        "needs_validation": true,
+        "risk_if_wrong": "medium"
+      },
+      {
+        "assumption": "Trial subscription expiration enforcement allows users to login to upgrade, blocking only premium features rather than authentication itself",
+        "needs_validation": true,
+        "risk_if_wrong": "medium"
+      },
+      {
+        "assumption": "The company_email field in registration form will always match admin_email for new accounts as enforced by create_account_with_admin() function",
+        "needs_validation": true,
+        "risk_if_wrong": "medium"
+      },
+      {
+        "assumption": "Orphan recovery flow can send verification codes to users who exist in auth.users but lack users table records, enabling cleanup and re-registration",
+        "needs_validation": true,
+        "risk_if_wrong": "medium"
+      }
+    ]
+  },
+  "critical_gaps": [
+    {
+      "gap_id": "GAP-001",
+      "gap": "Unknown whether production user data exists in old companies/profiles/company_members schema requiring migration before code deployment. If data exists and code deploys without migration, current users become orphaned and unable to login.",
+      "impact": "blocking",
+      "category": "requirements",
+      "affects": ["FR-001", "FR-002", "FR-005"],
+      "addressed_by_question": "Q-001"
+    },
+    {
+      "gap_id": "GAP-002",
+      "gap": "Multi-account membership model unclear: deployed schema shows users.account_uuid as single FK (one-to-one), but B2B SaaS best practices recommend many-to-many via junction table. This fundamentally changes user invitation and account switching features.",
+      "impact": "blocking",
+      "category": "architecture",
+      "affects": ["FR-005", "FR-006", "FR-007"],
+      "addressed_by_question": "Q-002"
+    },
+    {
+      "gap_id": "GAP-003",
+      "gap": "Missing validation that deployed schema components (create_account_with_admin function, RLS policies, triggers, indexes) exist and function correctly. Coding without validation risks runtime failures in production.",
+      "impact": "blocking",
+      "category": "technical-constraints",
+      "affects": ["FR-001", "FR-002", "FR-005", "FR-008"],
+      "addressed_by_question": "Q-003"
+    },
+    {
+      "gap_id": "GAP-004",
+      "gap": "Unclear whether custom_access_token_hook is already configured in Supabase Dashboard or if user must configure it post-deployment. This affects deployment sequence and fallback query necessity.",
+      "impact": "high",
+      "category": "integration",
+      "affects": ["FR-003", "NFR-001"],
+      "addressed_by_question": "Q-004"
+    },
+    {
+      "gap_id": "GAP-005",
+      "gap": "Orphan recovery mechanics during schema transition unclear: if user exists in auth.users without users table record, how does verification code system work when users.user_email doesn't exist for lookup?",
+      "impact": "high",
+      "category": "user-flow",
+      "affects": ["FR-002"],
+      "addressed_by_question": "Q-005"
+    },
+    {
+      "gap_id": "GAP-006",
+      "gap": "Email sync trigger ownership and error handling undefined: who maintains sync_user_email trigger? What happens if sync fails? Can users change email in auth.users directly or only through application?",
+      "impact": "high",
+      "category": "technical-constraints",
+      "affects": [],
+      "addressed_by_question": "Q-006"
+    },
+    {
+      "gap_id": "GAP-007",
+      "gap": "Soft delete cascade mechanism unclear: FR-008 mentions cascading soft deletes from accounts to users/subscriptions, but doesn't specify if via database trigger or application code. Database triggers preferred but need confirmation.",
+      "impact": "high",
+      "category": "implementation",
+      "affects": ["FR-008"],
+      "addressed_by_question": "Q-007"
+    },
+    {
+      "gap_id": "GAP-008",
+      "gap": "Orphan detection query optimization opportunity: design shows two sequential queries (users table, then accounts table validation). Single JOIN query may achieve better performance while maintaining <200ms requirement.",
+      "impact": "medium",
+      "category": "performance",
+      "affects": ["FR-002", "NFR-001"],
+      "addressed_by_question": "Q-008"
+    },
+    {
+      "gap_id": "GAP-009",
+      "gap": "Subscription cache invalidation triggers undefined: design specifies 5-minute TTL but doesn't detail what events trigger immediate invalidation (user upgrade, trial expiry, subscription cancellation).",
+      "impact": "medium",
+      "category": "implementation",
+      "affects": ["FR-006"],
+      "addressed_by_question": "Q-009"
+    },
+    {
+      "gap_id": "GAP-010",
+      "gap": "Invalid role handling strategy unclear: design suggests defaulting to 'member' role if JWT contains invalid value, but fail-closed security principle suggests blocking login instead.",
+      "impact": "medium",
+      "category": "security",
+      "affects": ["FR-003", "FR-007", "NFR-002"],
+      "addressed_by_question": "Q-010"
+    },
+    {
+      "gap_id": "GAP-011",
+      "gap": "Trial expiration enforcement level ambiguous: should block at route level (prevent navigation) or data level (allow login but block queries)? Affects user upgrade UX.",
+      "impact": "medium",
+      "category": "user-flow",
+      "affects": ["FR-006"],
+      "addressed_by_question": "Q-011"
+    },
+    {
+      "gap_id": "GAP-012",
+      "gap": "Local SQLite sync data boundaries unclear: which profile fields sync to local storage vs remain cloud-only? What happens when cloud users record soft-deleted but local profile exists?",
+      "impact": "medium",
+      "category": "technical-constraints",
+      "affects": [],
+      "addressed_by_question": "Q-012"
+    },
+    {
+      "gap_id": "GAP-013",
+      "gap": "Deployment sequence and backward compatibility strategy missing: should Edge Function deploy before frontend (breaking old frontend), frontend before Edge Function (calling non-existent endpoint), or blue-green deployment?",
+      "impact": "medium",
+      "category": "implementation",
+      "affects": ["FR-001", "FR-010"],
+      "addressed_by_question": "Q-013"
+    },
+    {
+      "gap_id": "GAP-014",
+      "gap": "RLS penetration testing implementation undefined: NFR-002 requires zero cross-account access across 1000+ scenarios, but no test plan exists for creating test accounts and validating isolation.",
+      "impact": "medium",
+      "category": "technical-constraints",
+      "affects": ["NFR-002"],
+      "addressed_by_question": "Q-014"
+    },
+    {
+      "gap_id": "GAP-015",
+      "gap": "Registration field validation enforcement level unclear: company_email must match admin_email, but is this enforced only in frontend or also in Edge Function and database function? Frontend-only allows bypass via API manipulation.",
+      "impact": "medium",
+      "category": "security",
+      "affects": ["FR-010"],
+      "addressed_by_question": "Q-015"
+    },
+    {
+      "gap_id": "GAP-016",
+      "gap": "create_account_with_admin() parameter optionality undefined: are first_name and last_name required or optional parameters? Design shows them as optional in form but unclear if function accepts NULL.",
+      "impact": "medium",
+      "category": "integration",
+      "affects": ["FR-001"],
+      "addressed_by_question": "Q-016"
+    },
+    {
+      "gap_id": "GAP-017",
+      "gap": "Account switching performance impact unclear if multi-account membership supported: how does switching between accounts affect JWT claims refresh? Does it require re-login or session variable update?",
+      "impact": "low",
+      "category": "performance",
+      "affects": [],
+      "addressed_by_question": "Q-017"
+    },
+    {
+      "gap_id": "GAP-018",
+      "gap": "Edge Function timeout and retry strategy for create_account_with_admin() invocation undefined: if function times out, does transaction rollback? Can user safely retry registration with same email?",
+      "impact": "low",
+      "category": "implementation",
+      "affects": ["FR-001"],
+      "addressed_by_question": "Q-018"
+    }
+  ],
+  "questions": {
+    "blocking": [
+      {
+        "question_id": "Q-001",
+        "question": "Does production Supabase contain any user data in the OLD schema (companies, profiles, company_members tables)? If yes, how many users/companies exist and what is the data migration strategy timeline?",
+        "category": "data-model",
+        "priority": "blocking",
+        "context": "UserInput Q-001 and Q-006 identify this as blocking. If production data exists in old schema and code deploys without migration, current users become orphaned (exist in auth.users but no users table record). This triggers fail-closed orphan detection blocking all existing users from login. Must confirm either: (1) No production data exists, safe to proceed with clean cutover, OR (2) Production data exists, requiring data migration BEFORE code deployment.",
+        "perplexity_research": "Not applicable - requires user to query production database",
+        "perplexity_answer": "User must execute: SELECT COUNT(*) FROM companies; SELECT COUNT(*) FROM profiles; SELECT COUNT(*) FROM company_members; in production Supabase to determine data existence.",
+        "suggested_choices": [
+          "No production data exists - this is green-field deployment, safe to proceed with code migration",
+          "Production data exists - provide exact counts and pause code migration until data migration plan completed",
+          "Unsure - need to verify with database administrator or run validation queries"
+        ],
+        "user_choice": null,
+        "rationale": "BLOCKING because answer fundamentally changes project scope. If data exists, need separate migration project. If no data, can proceed with code-only migration. Wrong assumption causes production outage.",
+        "affects": ["FR-001", "FR-002", "FR-005", "FEAT-001", "FEAT-002", "FEAT-015", "FEAT-020"]
+      },
+      {
+        "question_id": "Q-002",
+        "question": "Is the one-to-one relationship between users and accounts (users.account_uuid as single NOT NULL FK) intentional, or should users support membership in multiple accounts via junction table?",
+        "category": "architecture",
+        "priority": "blocking",
+        "context": "Design MODEL-002 shows users.account_uuid as single foreign key suggesting one user belongs to one account. However, Perplexity research on B2B SaaS best practices (January 2025) indicates many-to-many relationship via junction table (user_organization) is standard pattern to support consultants, vendors, and admins collaborating across multiple tenants. Old schema had company_members junction table suggesting many-to-many was previous pattern. This fundamentally affects: (1) User invitation flows - can't invite existing email if one-to-one, (2) Account switching UI requirements, (3) Whether to add junction table within 'no schema modification' constraint.",
+        "perplexity_research": "Researched via perplexity-ask MCP tool: 'What are the best practices (January 2025) for multi-tenant B2B SaaS database schema design in PostgreSQL with Supabase?' Result: 'For B2B SaaS apps, users commonly belong to multiple organizations (many-to-many) rather than a single organization (one-to-many), reflecting real-world scenarios where a user (e.g., consultant, vendor, or admin) can collaborate across tenants. This is typically implemented using a mapping or junction table, such as user_organization or user_tenant, to efficiently model this relationship.'",
+        "perplexity_answer": "Industry best practice (January 2025) for B2B SaaS is many-to-many via junction table. However, one-to-one can be intentional business decision for simpler user management at cost of collaboration flexibility.",
+        "suggested_choices": [
+          "One-to-one is intentional - users can only belong to single account, no multi-account support needed",
+          "Many-to-many required - add user_accounts junction table mapping users to multiple accounts (requires schema modification discussion)",
+          "Start with one-to-one, plan many-to-many for future phase - document as technical debt"
+        ],
+        "user_choice": null,
+        "rationale": "BLOCKING because answer changes entire membership model. If many-to-many needed but schema is one-to-one and 'cannot modify schema', project may be impossible without schema changes. If one-to-one intentional, need to document implications for user invitations and collaboration.",
+        "affects": ["FR-005", "FR-006", "FR-007", "FEAT-005", "FEAT-006", "OBJ-004"]
+      },
+      {
+        "question_id": "Q-003",
+        "question": "Can you confirm the following components are deployed and functional in production Supabase by running validation queries: (1) create_account_with_admin() function exists and returns expected structure, (2) RLS policies on accounts/users/subscriptions tables are active, (3) sync_user_email trigger exists, (4) Proper indexes exist on users(user_uuid), users(account_uuid), users(user_email)?",
+        "category": "technical-constraints",
+        "priority": "blocking",
+        "context": "TC-001 states 'schemas are already deployed' but doesn't confirm all supporting infrastructure exists. Without validation, code migration risks runtime failures. Need user to run: (1) SELECT * FROM create_account_with_admin('Test Co', 'test@example.com', 'John', 'Doe'); to verify function exists and works, (2) SELECT tablename, policyname FROM pg_policies WHERE schemaname = 'public' AND tablename IN ('accounts', 'users', 'subscriptions'); to verify RLS policies, (3) SELECT trigger_name FROM information_schema.triggers WHERE event_object_table = 'users'; to verify email sync trigger, (4) SELECT indexname FROM pg_indexes WHERE tablename IN ('accounts', 'users', 'subscriptions'); to verify indexes.",
+        "perplexity_research": "Not applicable - requires user to validate deployed infrastructure",
+        "perplexity_answer": "Standard practice is to validate all infrastructure components before code migration to prevent runtime failures and emergency rollbacks.",
+        "suggested_choices": [
+          "All components validated and working - provide query results confirming existence",
+          "Some components missing - specify which need deployment before code migration",
+          "Cannot validate - provide database access for validation assistance"
+        ],
+        "user_choice": null,
+        "rationale": "BLOCKING because coding against non-existent infrastructure causes immediate production failures. Better to pause and validate than code blindly and discover missing components during deployment. Validation takes 15 minutes, fixing production outage takes hours.",
+        "affects": ["FR-001", "FR-002", "FR-003", "FR-005", "FR-008", "NFR-001", "NFR-002"]
+      }
+    ],
+    "high": [
+      {
+        "question_id": "Q-004",
+        "question": "Is the custom_access_token_hook PostgreSQL function already configured in Supabase Dashboard (Authentication > Hooks > Custom Access Token), or does user need to configure it after code deployment?",
+        "category": "integration",
+        "priority": "high",
+        "context": "FR-003 and Design COMP-001 describe JWT claims extraction with fallback query. Perplexity research confirms configuration via Dashboard at 'Auth > Advanced > custom access token hook' with URI 'pg-functions://postgres/public/custom_access_token_hook'. If not configured, application uses fallback query degrading performance from ~40ms to ~90ms per request. Need to know: (1) Current configuration status, (2) If not configured, who configures it and when (before or after code deployment), (3) Acceptable timeline for degraded performance if deployed without hook.",
+        "perplexity_research": "Researched via perplexity-ask MCP tool: 'What are the current best practices (January 2025) for implementing custom access token hooks in Supabase?' Result: 'In the Supabase Dashboard, go to project settings > Auth > Advanced, locate the custom access token hook, and set the URI as: pg-functions://postgres/public/custom_access_token_hook. Performance: JWT claims are stateless, cacheable, very fast vs RLS subqueries which incur performance penalty with extra database reads.'",
+        "perplexity_answer": "Hook provides significant performance benefit (60-80% faster queries) but application can function with fallback query if not configured. Configuration is manual Dashboard operation, cannot be automated.",
+        "suggested_choices": [
+          "Hook already configured - JWT claims will be available immediately after deployment",
+          "Hook not configured - will configure before code deployment to avoid fallback query performance penalty",
+          "Hook not configured - acceptable to deploy with fallback query, will configure hook within [X days] post-deployment"
+        ],
+        "user_choice": null,
+        "rationale": "HIGH priority because affects deployment planning and performance expectations. Not BLOCKING because fallback query allows functionality, just degraded performance. Important for setting realistic performance targets and user communication.",
+        "affects": ["FR-003", "NFR-001", "NFR-003", "FEAT-009"]
+      },
+      {
+        "question_id": "Q-005",
+        "question": "How does orphan recovery flow work when user exists in auth.users but has no users table record? Specifically: can verification code system lookup user by email when users.user_email doesn't exist?",
+        "category": "user-flow",
+        "priority": "high",
+        "context": "Design describes orphan cleanup flow sending verification code to allow re-registration. But if user orphaned (no users table record), the verification code system typically queries users table by email to send code. This creates chicken-egg problem: can't send code without users record, can't create users record without verification. Need to clarify: (1) Does cleanup delete auth.users record entirely forcing fresh signUp? (2) Does verification code system query auth.users table directly? (3) Is there special orphan recovery Edge Function?",
+        "perplexity_research": "Not applicable - specific to application's orphan recovery implementation",
+        "perplexity_answer": "Standard pattern is to delete orphaned auth.users record and force user through fresh registration flow, simplifying recovery logic.",
+        "suggested_choices": [
+          "Cleanup deletes auth.users record - user must complete fresh registration from beginning",
+          "Verification system queries auth.users directly - can send code to orphaned users for recovery",
+          "Special orphan recovery Edge Function exists - handles verification without users table dependency",
+          "Orphan recovery not implemented yet - add to project scope or mark as technical debt"
+        ],
+        "user_choice": null,
+        "rationale": "HIGH priority because affects FR-002 implementation complexity and user experience during schema transition. If recovery flow doesn't work, orphaned users locked out permanently requiring manual intervention.",
+        "affects": ["FR-002", "FEAT-002", "FEAT-018"]
+      },
+      {
+        "question_id": "Q-006",
+        "question": "Who owns and maintains the sync_user_email trigger that updates users.user_email when auth.users.email changes? What happens if sync fails - does email change rollback or proceed with inconsistency?",
+        "category": "technical-constraints",
+        "priority": "high",
+        "context": "OBJ-009 mentions email sync trigger but doesn't specify ownership, error handling, or failure modes. Triggers can fail silently causing data inconsistency. Need to know: (1) Is trigger already deployed and tested? (2) What happens if sync fails (rollback transaction, log error and continue, retry logic)? (3) Can users change email only through application UI or also directly in Supabase Auth dashboard? (4) Who monitors sync failures?",
+        "perplexity_research": "Not applicable - specific to deployed trigger implementation",
+        "perplexity_answer": "Best practice is to implement trigger with EXCEPTION block for error handling, and prevent direct auth.users.email modification outside application.",
+        "suggested_choices": [
+          "Trigger deployed with transaction rollback on sync failure - email changes atomic across both tables",
+          "Trigger deployed with error logging only - proceeds despite sync failure, relies on eventual consistency",
+          "Trigger not yet deployed - add to pre-deployment checklist",
+          "No trigger - application responsible for keeping tables in sync"
+        ],
+        "user_choice": null,
+        "rationale": "HIGH priority because email inconsistency between auth.users and users tables breaks login (orphan detection queries users.user_email). Need clear error handling strategy.",
+        "affects": ["OBJ-009", "FR-002"]
+      },
+      {
+        "question_id": "Q-007",
+        "question": "How are soft deletes cascaded from accounts to related users and subscriptions? Is this handled by database trigger (CASCADE UPDATE), application logic in query helpers, or manual deletion in each table?",
+        "category": "implementation",
+        "priority": "high",
+        "context": "FR-008 states 'when account is soft-deleted, system shall cascade soft-delete to all related users and subscriptions.' Design doesn't specify mechanism. Database trigger preferred for atomicity but requires deployment. Application logic simpler but risks partial deletes if transaction fails. Need to know: (1) Current implementation in deployed schema, (2) If not implemented, which approach to use, (3) Performance implications for large accounts with many users.",
+        "perplexity_research": "Not applicable - requires design decision based on deployed schema capabilities",
+        "perplexity_answer": "Database trigger provides atomicity and consistency but debugging complexity. Application logic offers flexibility but requires careful transaction management.",
+        "suggested_choices": [
+          "Database trigger exists - automatic cascade on accounts.deleted_at update",
+          "Application logic preferred - AccountQueries.deleteAccount() handles cascade in transaction",
+          "Manual deletion required - separate calls to delete account, users, and subscriptions",
+          "Not implemented - add to project scope and decide on approach"
+        ],
+        "user_choice": null,
+        "rationale": "HIGH priority because affects implementation of FEAT-016 and data consistency guarantees. Wrong approach causes orphaned user records or subscription billing issues.",
+        "affects": ["FR-008", "FEAT-005", "FEAT-016"]
+      }
+    ],
+    "medium": [
+      {
+        "question_id": "Q-008",
+        "question": "Can orphan detection performance be optimized by using single JOIN query instead of two sequential queries? Design shows: (1) Query users table, (2) Query accounts table. Could use: SELECT u.user_uuid, u.account_uuid, u.deleted_at, a.deleted_at as account_deleted FROM users u LEFT JOIN accounts a ON u.account_uuid = a.account_uuid WHERE u.user_uuid = $1",
+        "category": "performance",
+        "priority": "medium",
+        "context": "Design COMP-002 describes two sequential queries for orphan detection. Single JOIN query eliminates second network round trip potentially improving performance. However, adds query complexity and may not significantly impact latency if both queries fast. Need to consider: (1) Network latency vs query execution time tradeoff, (2) Index usage with JOIN vs separate queries, (3) Maintainability of complex JOIN vs simple queries.",
+        "perplexity_research": "Not applicable - requires performance testing to validate",
+        "perplexity_answer": "Best practice is to minimize network round trips for latency-sensitive operations. Single JOIN query likely faster than two sequential queries if properly indexed.",
+        "suggested_choices": [
+          "Use single JOIN query - optimize for performance with proper indexing",
+          "Keep two sequential queries - prioritize simplicity and debuggability over minor performance gain",
+          "Implement both and A/B test - measure actual latency difference before deciding"
+        ],
+        "user_choice": null,
+        "rationale": "MEDIUM priority because <200ms requirement may be achievable either way. Performance optimization nice-to-have but not blocking if current approach works.",
+        "affects": ["FR-002", "NFR-001", "FEAT-002"]
+      },
+      {
+        "question_id": "Q-009",
+        "question": "What events should trigger immediate subscription cache invalidation beyond the 5-minute TTL? Should include: user upgrades subscription, trial expires, subscription cancelled, admin manually changes subscription?",
+        "category": "implementation",
+        "priority": "medium",
+        "context": "Design describes 5-minute subscription cache but doesn't specify invalidation events. Stale cache after user upgrades shows incorrect trial status confusing users. Need to define: (1) Which subscription mutations trigger cache.invalidateQueries(), (2) Whether to use Supabase real-time subscriptions for instant updates, (3) Acceptable staleness window for different scenarios.",
+        "perplexity_research": "Not applicable - requires product decision on acceptable staleness",
+        "perplexity_answer": "Best practice is to invalidate cache immediately on user-initiated actions (upgrade, cancel) but allow natural expiry for system-initiated changes (trial expiry).",
+        "suggested_choices": [
+          "Invalidate on all subscription mutations - maximizes accuracy at cost of more database queries",
+          "Invalidate only on user-initiated actions - balances accuracy with performance",
+          "5-minute TTL sufficient for all cases - simpler implementation, acceptable staleness",
+          "Use Supabase real-time subscriptions - instant updates but adds complexity"
+        ],
+        "user_choice": null,
+        "rationale": "MEDIUM priority because affects UX quality but not core functionality. Stale cache annoying but not breaking. Can refine post-deployment based on user feedback.",
+        "affects": ["FR-006", "FEAT-013"]
+      },
+      {
+        "question_id": "Q-010",
+        "question": "If JWT contains invalid user_role (not in ['owner', 'admin', 'member', 'viewer']), should system default to 'member' role allowing degraded access, or block login entirely per fail-closed security policy?",
+        "category": "security",
+        "priority": "medium",
+        "context": "Design FR-003 states: 'When user role from JWT claims is invalid or not in allowed set, system shall default to member role and log warning.' This contradicts fail-closed security principle used for orphan detection. Need to decide: (1) Default to member for operational resilience, OR (2) Block login to prevent unauthorized access with corrupted JWT. Consider: invalid role suggests JWT corruption or database inconsistency, potentially security issue.",
+        "perplexity_research": "Not applicable - requires security policy decision",
+        "perplexity_answer": "Security best practice is fail-closed: when authorization data invalid, deny access rather than assume safe default. Prevents privilege escalation from corrupted tokens.",
+        "suggested_choices": [
+          "Fail-closed: block login if invalid role - maximizes security, may lock out users with corrupted JWTs",
+          "Default to member: allow degraded access - prioritizes availability, logs for investigation",
+          "Hybrid: block if role is null/missing, default to member if unrecognized value - balances security and usability"
+        ],
+        "user_choice": null,
+        "rationale": "MEDIUM priority because invalid roles should be rare in normal operation. However, security implications suggest fail-closed may be more appropriate despite design saying default.",
+        "affects": ["FR-003", "FR-007", "NFR-002", "FEAT-009"]
+      },
+      {
+        "question_id": "Q-011",
+        "question": "When trial subscription expires, should system block at authentication level (prevent login) or route level (allow login but restrict navigation to premium features)?",
+        "category": "user-flow",
+        "priority": "medium",
+        "context": "FR-006 states 'when trial expires, display modal blocking access to premium features.' Doesn't specify if user can login. Blocking login prevents upgrade path. Allowing login but restricting routes enables self-service upgrade. Need to define: (1) Can expired trial users login? (2) Which routes accessible (billing/upgrade, or nothing)? (3) Read-only mode vs complete feature block?",
+        "perplexity_research": "Not applicable - requires product/UX decision",
+        "perplexity_answer": "Best practice for SaaS is to allow login after trial expiry but block feature access, displaying clear upgrade path. Prevents user frustration and enables self-service conversion.",
+        "suggested_choices": [
+          "Allow login, block premium features - enable self-service upgrade with clear messaging",
+          "Block login entirely - force contact with sales/support for upgrade",
+          "Allow login in read-only mode - user can view data but not modify",
+          "Grace period: allow full access for 3 days post-expiry, then block features"
+        ],
+        "user_choice": null,
+        "rationale": "MEDIUM priority because affects conversion funnel and user experience but not core authentication security. Product decision more than technical decision.",
+        "affects": ["FR-006", "FEAT-013"]
+      },
+      {
+        "question_id": "Q-012",
+        "question": "Which user profile fields should sync to local SQLite (for offline desktop features) vs remain cloud-only? What happens when cloud users record is soft-deleted but local SQLite profile exists?",
+        "category": "technical-constraints",
+        "priority": "medium",
+        "context": "Design mentions 'maintain local SQLite profiles for desktop backward compatibility' but doesn't specify sync boundaries. Need to define: (1) Which fields sync (all users table fields, or subset)? (2) Sync frequency (on login, on profile change, periodic)? (3) Handling deleted users (delete local record, mark as deleted, keep for recovery)? (4) Conflict resolution if local and cloud diverge.",
+        "perplexity_research": "Not applicable - requires desktop app architecture decision",
+        "perplexity_answer": "Best practice is to sync minimal fields needed for offline operation, treat cloud as source of truth, delete local records when cloud soft-deleted.",
+        "suggested_choices": [
+          "Sync minimal fields (user_uuid, full_name, avatar_url) - only display data for offline use",
+          "Sync all users table fields - full offline capability",
+          "Deprecate local SQLite sync - move to cloud-only model",
+          "Delete local record when cloud soft-deleted - maintain consistency"
+        ],
+        "user_choice": null,
+        "rationale": "MEDIUM priority because affects desktop app backward compatibility (CNST-004) but not core cloud authentication. Can refine based on actual desktop feature requirements.",
+        "affects": ["CNST-004", "FEAT-001"]
+      },
+      {
+        "question_id": "Q-013",
+        "question": "What is the safe deployment sequence for Edge Function and frontend changes? Should Edge Function deploy first (breaking old frontend calls), frontend first (calling non-existent new endpoint), or blue-green deployment with version negotiation?",
+        "category": "implementation",
+        "priority": "medium",
+        "context": "FEAT-003 refactors register-organization Edge Function to invoke create_account_with_admin(). Frontend must send new payload structure. Deploying Edge Function first breaks existing registrations. Deploying frontend first calls modified Edge Function endpoint causing failures. Need strategy: (1) Backward-compatible Edge Function accepting both old and new payload? (2) Maintenance window for synchronized deployment? (3) Blue-green deployment with traffic switching?",
+        "perplexity_research": "Not applicable - requires deployment strategy decision",
+        "perplexity_answer": "Best practice is backward-compatible Edge Function during transition, supporting both old and new payload formats until all clients migrated.",
+        "suggested_choices": [
+          "Backward-compatible Edge Function - detect payload format and route to appropriate logic",
+          "Synchronized deployment with maintenance window - deploy Edge Function and frontend together",
+          "Blue-green deployment - maintain two versions, gradually shift traffic",
+          "Edge Function first - acceptable short-term breakage if registration traffic low"
+        ],
+        "user_choice": null,
+        "rationale": "MEDIUM priority because affects deployment complexity and risk of production issues. Important for production stability but solvable through proper planning.",
+        "affects": ["FEAT-003", "FEAT-004"]
+      },
+      {
+        "question_id": "Q-014",
+        "question": "How should RLS penetration testing be implemented to validate zero cross-account access? Should include automated test suite creating multiple test accounts and attempting unauthorized queries?",
+        "category": "technical-constraints",
+        "priority": "medium",
+        "context": "NFR-002 requires 'zero successful cross-account access attempts across 1000+ test scenarios.' Need testing strategy: (1) Automated test suite with Supabase client? (2) Manual SQL injection attempts? (3) Test account provisioning (how many accounts, how much data)? (4) Query patterns to test (SELECT, UPDATE, DELETE, JOIN across accounts)? (5) CI integration for regression prevention?",
+        "perplexity_research": "Not applicable - requires test strategy design",
+        "perplexity_answer": "Best practice is automated integration tests creating multiple test accounts, attempting cross-account queries with known UUIDs, verifying zero rows returned.",
+        "suggested_choices": [
+          "Automated integration test suite - create test accounts, verify isolation in CI pipeline",
+          "Manual penetration testing - security team attempts bypass with various techniques",
+          "Combination: automated regression tests + manual security audit",
+          "Defer to post-deployment security audit - add to acceptance criteria"
+        ],
+        "user_choice": null,
+        "rationale": "MEDIUM priority because critical for security validation but can be implemented in Phase 9 (testing phase). Not blocking initial development.",
+        "affects": ["NFR-002", "FEAT-020"]
+      },
+      {
+        "question_id": "Q-015",
+        "question": "Where should company_email matching admin_email validation be enforced? Frontend only (can be bypassed), Edge Function (catches API manipulation), or database function (ultimate safety)?",
+        "category": "security",
+        "priority": "medium",
+        "context": "Design states company_email must match admin_email for create_account_with_admin(). Frontend validation is UX convenience but can be bypassed via direct API calls. Need defense-in-depth: (1) Frontend validation for immediate feedback, (2) Edge Function validation before database call, (3) Database function validation for safety. Question is whether all three layers needed or if subset sufficient.",
+        "perplexity_research": "Not applicable - requires security policy decision",
+        "perplexity_answer": "Best practice is defense-in-depth: frontend for UX, backend for security enforcement. Database function should validate all constraints as final safeguard.",
+        "suggested_choices": [
+          "All three layers - maximum security with redundant validation",
+          "Frontend + Edge Function - practical balance of UX and security",
+          "Edge Function only - simpler implementation, catches API bypass",
+          "Database function only - minimal validation, relies on function constraints"
+        ],
+        "user_choice": null,
+        "rationale": "MEDIUM priority because multiple layers improve security but add complexity. Minimum requirement is Edge Function validation to prevent API bypass.",
+        "affects": ["FR-010", "FEAT-003", "FEAT-011"]
+      },
+      {
+        "question_id": "Q-016",
+        "question": "Are first_name and last_name parameters required or optional in create_account_with_admin() function? If optional, does function accept NULL and how are NULL values displayed in UI?",
+        "category": "integration",
+        "priority": "medium",
+        "context": "Design shows RegistrationAdminStep with optional first_name/last_name fields. Edge Function invocation includes these parameters. Need to confirm: (1) Function signature accepts NULL for these params, (2) How NULL values handled in users table (stored as NULL or empty string), (3) UI display of users without names (show email only, placeholder like 'User', or require names).",
+        "perplexity_research": "Not applicable - requires function specification validation",
+        "perplexity_answer": "Common pattern is to accept NULL for optional name fields, store as NULL in database, display email as fallback in UI.",
+        "suggested_choices": [
+          "Function accepts NULL - stores NULL in users table, UI displays email as fallback",
+          "Function requires non-NULL - frontend must collect names or provide defaults",
+          "Function has default values - uses email prefix as first_name if NULL",
+          "Not specified - verify function signature and add to validation checklist (Q-003)"
+        ],
+        "user_choice": null,
+        "rationale": "MEDIUM priority because affects form validation and user experience but doesn't block core registration flow. Can default to requiring names if uncertain.",
+        "affects": ["FR-001", "FEAT-003", "FEAT-011"]
+      }
+    ],
+    "low": [
+      {
+        "question_id": "Q-017",
+        "question": "If multi-account membership is supported (depends on Q-002), how does account switching affect JWT claims refresh? Does it require re-login, session variable update, or automatic JWT reissue?",
+        "category": "performance",
+        "priority": "low",
+        "context": "Only relevant if Q-002 answers 'many-to-many relationship required'. Perplexity research indicates: 'Account switching should update a session-scoped setting (e.g., current_setting(app.organization_id)), NOT require a new login or JWT if possible.' Need to understand Supabase JWT refresh capabilities and session variable patterns for efficient account switching.",
+        "perplexity_research": "Researched via perplexity-ask MCP tool: 'Performance for Account Switching: Account switching should update a session-scoped setting (e.g., current_setting(app.organization_id)), NOT require a new login or JWT if possible. Indexing: Ensure tenant_id/organization_id columns are indexed.'",
+        "perplexity_answer": "Best practice is session variable update without re-login. However, if JWT claims include account_uuid, switching may require JWT refresh or fallback to session variable for current account.",
+        "suggested_choices": [
+          "Not applicable - one-to-one relationship, no account switching",
+          "Require re-login - simplest implementation, poor UX",
+          "Session variable approach - update current_setting without JWT refresh",
+          "Automatic JWT refresh - reissue token with new account_uuid claim"
+        ],
+        "user_choice": null,
+        "rationale": "LOW priority because contingent on Q-002 answer. If one-to-one, not applicable. If many-to-many, becomes higher priority but implementation can be deferred to future phase.",
+        "affects": []
+      },
+      {
+        "question_id": "Q-018",
+        "question": "If Edge Function times out during create_account_with_admin() invocation, does database transaction automatically rollback? Can user safely retry registration with same email without duplicate account creation?",
+        "category": "implementation",
+        "priority": "low",
+        "context": "Design mentions Edge Function timeout handling but doesn't specify transaction behavior. PostgreSQL transactions rollback on connection loss, but Edge Function may timeout before database timeout. Need to confirm: (1) Transaction rollback on Edge Function timeout, (2) Idempotency of retry (can user resubmit with same email), (3) Error message guidance (retry vs change email).",
+        "perplexity_research": "Not applicable - requires transaction behavior validation",
+        "perplexity_answer": "PostgreSQL automatically rolls back transaction on connection loss. Edge Function timeout typically closes connection, triggering rollback. Safe to retry.",
+        "suggested_choices": [
+          "Transaction auto-rollback on timeout - safe to retry with same email",
+          "Partial commit possible - implement idempotency key to prevent duplicates",
+          "Manual rollback required - Edge Function must explicitly rollback on error",
+          "Not handled - add timeout error handling to Edge Function implementation"
+        ],
+        "user_choice": null,
+        "rationale": "LOW priority because Edge Function timeouts should be rare with proper timeout configuration. However, important for user experience if it does occur.",
+        "affects": ["FR-001", "FEAT-003"]
+      }
+    ]
+  },
+  "technical_debt_considerations": {
+    "summary": "The migration from legacy multi-table schema to new B2B schema introduces several areas of technical debt that should be tracked and addressed in future iterations. Primary debt items include: (1) Potential one-to-one user-account relationship limiting multi-tenant collaboration if not addressed, (2) Fallback query performance penalty if custom_access_token_hook not configured, (3) Orphan detection during schema transition requiring special handling, (4) Local SQLite sync maintenance for desktop backward compatibility, (5) Deprecated legacy types (Company, Profile, CompanyMember) requiring eventual removal. Most critical is the multi-account membership model (GAP-002) which may require schema changes if business needs evolve. Recommended approach is to document these as technical debt items with clear migration paths and prioritize based on user impact and implementation effort.",
+    "potential_debt_items": [
+      {
+        "id": "TD-001",
+        "debt_item": "One-to-one user-account relationship prevents multi-account collaboration (consultants working across multiple organizations). If business evolves to require many-to-many, requires schema migration adding user_accounts junction table.",
+        "category": "architecture",
+        "severity": "high",
+        "impact": "Limits product flexibility for users needing access to multiple organizations. Requires workaround of creating multiple user accounts with different emails for same person. May become competitive disadvantage vs B2B SaaS competitors offering multi-account access.",
+        "mitigation": "Document as known limitation in user documentation. Monitor user feedback for requests to join multiple accounts. If pattern emerges, prioritize schema migration to add junction table. Estimated 2-3 week effort for schema change, data migration, and code updates.",
+        "when_to_address": "post-mvp",
+        "estimated_effort": "2-3 weeks",
+        "related_components": ["COMP-003", "COMP-005"]
+      },
+      {
+        "id": "TD-002",
+        "debt_item": "Fallback query for JWT claims when custom_access_token_hook not configured adds 50-100ms latency per authenticated request, degrading user experience and increasing database load.",
+        "category": "performance",
+        "severity": "medium",
+        "impact": "Acceptable for short transition period but long-term performance issue if hook remains unconfigured. Each authenticated request triggers additional users table query. At scale (1000+ concurrent users), adds significant database load.",
+        "mitigation": "Configure custom_access_token_hook in Supabase Dashboard immediately after code deployment. Add monitoring alert if fallback query usage exceeds threshold (>10% of requests). Document hook configuration in deployment runbook.",
+        "when_to_address": "immediately",
+        "estimated_effort": "1-2 hours",
+        "related_components": ["COMP-001"]
+      },
+      {
+        "id": "TD-003",
+        "debt_item": "Orphan detection logic during schema transition period requires checking both old (profiles/company_members) and new (users/accounts) schema to catch users mid-migration. Adds complexity and performance overhead.",
+        "category": "code-quality",
+        "severity": "low",
+        "impact": "Only relevant during transition period if production data exists in old schema. Once all users migrated, old schema checks become dead code. Maintains backward compatibility at cost of code complexity.",
+        "mitigation": "If Q-001 confirms no production data, skip old schema checks entirely. If production data exists, implement transition logic with clear deprecation timeline. After all users migrated, remove old schema checks in cleanup phase.",
+        "when_to_address": "before-phase-2",
+        "estimated_effort": "4-6 hours",
+        "related_components": ["COMP-002"]
+      },
+      {
+        "id": "TD-004",
+        "debt_item": "Local SQLite profile synchronization maintains duplicate data between cloud users table and local storage, requiring consistency management and adding complexity to profile update flows.",
+        "category": "architecture",
+        "severity": "medium",
+        "impact": "Backward compatibility requirement for desktop app offline features (CNST-004). Increases maintenance burden with two profile storage systems. Sync failures cause data inconsistencies requiring manual resolution.",
+        "mitigation": "Document sync boundaries clearly (which fields sync vs cloud-only). Implement robust error handling for sync failures. Consider deprecating local profiles in future release when offline requirements clarified.",
+        "when_to_address": "post-mvp",
+        "estimated_effort": "1-2 days",
+        "related_components": ["COMP-001"]
+      },
+      {
+        "id": "TD-005",
+        "debt_item": "Deprecated legacy types (Company, Profile, CompanyMember) marked with @deprecated tags but not removed, requiring dual type maintenance and risk of accidental usage in new code.",
+        "category": "maintainability",
+        "severity": "low",
+        "impact": "Increases cognitive load for developers who must understand which types to use. Risk of copy-paste errors using deprecated types. Bloats database.ts file with unused types.",
+        "mitigation": "After all code migrated to new types and tests passing, remove deprecated types in cleanup phase. Use TypeScript compilation to verify no references remain before removal.",
+        "when_to_address": "before-phase-3",
+        "estimated_effort": "2-3 hours",
+        "related_components": []
+      },
+      {
+        "id": "TD-006",
+        "debt_item": "Subscription status caching with 5-minute TTL may show stale trial expiry information for up to 5 minutes after actual expiry, potentially allowing brief access to premium features post-expiry.",
+        "category": "security",
+        "severity": "low",
+        "impact": "5-minute window where expired trial users could access premium features. Low severity because trial enforcement is business logic not security boundary. Worst case is minor revenue loss from extended trial.",
+        "mitigation": "Implement cache invalidation on critical events (subscription upgrade, manual cancellation). For automated trial expiry, accept 5-minute staleness as acceptable tradeoff for performance. Add grace period messaging to users.",
+        "when_to_address": "backlog",
+        "estimated_effort": "3-4 hours",
+        "related_components": []
+      },
+      {
+        "id": "TD-007",
+        "debt_item": "Role validation defaulting to 'member' for invalid JWT role values (per Design FR-003) contradicts fail-closed security principle, potentially allowing degraded access with corrupted authorization data.",
+        "category": "security",
+        "severity": "medium",
+        "impact": "If JWT corruption occurs (database inconsistency, token tampering), system allows access with default 'member' role instead of blocking. Could enable unauthorized access if attacker manipulates role claim.",
+        "mitigation": "Based on Q-010 answer, implement fail-closed approach: block login if role invalid rather than defaulting. Add monitoring for invalid role detection to catch JWT corruption early.",
+        "when_to_address": "before-phase-2",
+        "estimated_effort": "2-3 hours",
+        "related_components": ["COMP-001"]
+      },
+      {
+        "id": "TD-008",
+        "debt_item": "Email sync trigger (sync_user_email) ownership and error handling undefined. Silent failures could cause email inconsistency between auth.users and users tables breaking login.",
+        "category": "reliability",
+        "severity": "medium",
+        "impact": "If trigger fails silently, users table contains stale email. Orphan detection queries users.user_email which doesn't match auth.users.email. User attempts login with new email but orphan detection fails. Requires manual database intervention.",
+        "mitigation": "Based on Q-006 answer, implement comprehensive trigger error handling with transaction rollback on failure. Add monitoring for sync failures. Prevent direct auth.users.email modification outside application.",
+        "when_to_address": "immediately",
+        "estimated_effort": "4-6 hours",
+        "related_components": []
+      }
+    ],
+    "debt_mitigation_strategy": "Prioritize technical debt items based on severity and user impact. Address critical and high severity items (TD-001, TD-002, TD-007, TD-008) before or during initial phases to prevent accumulation. Medium severity items (TD-004, TD-006) can be deferred to post-MVP but should have clear resolution timeline. Low severity items (TD-003, TD-005) address during cleanup phases when no other blocking work. Maintain technical debt backlog with effort estimates and review quarterly for reprioritization. For TD-001 (multi-account limitation), monitor user feedback closely to determine if schema change required. For TD-002 (JWT hook), configure immediately to avoid long-term performance debt. Document all debt items in project README for team awareness."
+  },
+  "session_summary": {
+    "all_blocking_resolved": false,
+    "ready_to_proceed": false,
+    "outstanding_questions": ["Q-001", "Q-002", "Q-003"],
+    "follow_up_needed": true,
+    "key_decisions_made": [
+      "Identified critical gap: production data existence in old schema must be validated before code migration (Q-001)",
+      "Identified architectural mismatch: deployed one-to-one user-account relationship conflicts with B2B SaaS best practices for many-to-many (Q-002)",
+      "Identified validation gap: deployed schema components (functions, triggers, RLS, indexes) must be validated before coding (Q-003)",
+      "Validated JWT claims approach aligns with January 2025 best practices via Perplexity research",
+      "Validated custom_access_token_hook configuration process and performance benefits via Perplexity research",
+      "Identified multi-account membership as potential technical debt requiring future schema migration",
+      "Prioritized 18 questions across 4 categories (3 blocking, 4 high, 11 medium/low) for user clarification",
+      "Documented 8 technical debt items with mitigation strategies and timelines for future management"
+    ]
+  },
+  "metadata": {
+    "created_at": "2025-01-30T00:00:00Z",
+    "created_by": "specs-agent-v2",
+    "version": "1.0.0",
+    "analysis_approach": "Systematic review of UserInput, Requirements, Design, and CodebaseAnalysis documents combined with industry best practices research via Perplexity MCP tool for January 2025 standards. Sequential thinking MCP tool used to break down complex requirements and identify gaps through 12 reasoning steps. Research validated JWT claims handling, custom access token hooks, and multi-tenant schema patterns against current Supabase and React 19.2 best practices.",
+    "research_sources": [
+      "Perplexity research: JWT claims handling in React 19.2 applications (January 2025)",
+      "Perplexity research: Supabase custom access token hooks configuration and performance (January 2025)",
+      "Perplexity research: Multi-tenant B2B SaaS database schema design patterns with PostgreSQL (January 2025)"
+    ],
+    "total_questions": 18,
+    "questions_by_priority": {
+      "blocking": 3,
+      "high": 4,
+      "medium": 9,
+      "low": 2
+    },
+    "total_gaps_identified": 18,
+    "total_assumptions_requiring_validation": 10,
+    "total_technical_debt_items": 8,
+    "next_steps": [
+      "User answers 3 blocking questions (Q-001, Q-002, Q-003) to validate schema deployment status and data existence",
+      "User answers 4 high priority questions (Q-004 through Q-007) to clarify implementation details",
+      "Review and validate remaining medium/low priority questions based on blocking question answers",
+      "Update Requirements and Design documents based on user answers",
+      "Proceed to task list creation only after all blocking questions resolved"
+    ]
+  }
+}

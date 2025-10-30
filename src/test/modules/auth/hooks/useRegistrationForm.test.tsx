@@ -318,8 +318,8 @@ describe("useRegistrationForm", () => {
       correlationId: "corr-123",
       attemptId: "attempt-123",
       checkedAt: Date.now(),
-      hasCompanyData: null,
-      isOrphaned: null,
+      hasCompanyData: true,
+      isOrphaned: false,
     };
 
     act(() => {
@@ -336,6 +336,40 @@ describe("useRegistrationForm", () => {
       "Administrator email is already registered.",
     );
     expect(result.current.formBlockingLabels).toContain(
+      "Administrator email is already registered.",
+    );
+  });
+
+  it("does not block verified accounts without company data", () => {
+    const { result, rerender } = renderHook(() => useRegistrationForm());
+
+    act(() => {
+      result.current.goToStep(1);
+      result.current.handleFieldChange("adminEmail")({
+        target: { value: "admin@acme.test" },
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+      result.current.handleFieldBlur("adminEmail");
+    });
+
+    const probeState = result.current.emailStatusProbe;
+    probeState.status = "registered_verified";
+    probeState.result = {
+      status: "registered_verified",
+      verifiedAt: new Date().toISOString(),
+      lastSignInAt: null,
+      correlationId: "corr-verified",
+      attemptId: "attempt-verified",
+      checkedAt: Date.now(),
+      hasCompanyData: false,
+      isOrphaned: true,
+    };
+
+    rerender();
+
+    expect(result.current.currentStepBlockingLabels).not.toContain(
+      "Administrator email is already registered.",
+    );
+    expect(result.current.formBlockingLabels).not.toContain(
       "Administrator email is already registered.",
     );
   });

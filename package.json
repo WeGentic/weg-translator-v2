@@ -19,7 +19,9 @@
     "test:coverage": "vitest run --coverage",
     "format": "prettier \"**/*.{cjs,js,jsx,mjs,ts,tsx,json,md,css}\" --write",
     "format:check": "prettier \"**/*.{cjs,js,jsx,mjs,ts,tsx,json,md,css}\" --check",
-    "generate:types": "supabase gen types typescript --project-id wnohgxkujwnuoqtibsss > src/shared/types/supabase.ts"
+    "generate:types": "supabase gen types typescript --project-id wnohgxkujwnuoqtibsss > src/shared/types/supabase.ts",
+    "validate:schema": "node scripts/validate-schema.mjs",
+    "test:jwt-hook": "node scripts/test-jwt-hook.mjs"
   },
   "dependencies": {
     "@openai/codex": "^0.50.0",

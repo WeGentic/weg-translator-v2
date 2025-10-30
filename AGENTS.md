@@ -10,6 +10,10 @@ Your highest priority is accuracy and reliability. When you are unsure, you must
 
 **ANY CODE YOU WRITE MUST PERFECTLY INTEGRATE WITH THE EXISTING CODEBASE AND FOLLOW THE PROJECT GUIDELINES. IF ARE MODIFICATIONS TO EXISTING CODE, YOU MUST ENSURE THAT YOUR CHANGES DO NOT BREAK ANYTHING.**
 
+**EDGE function MUST BE DEPLOYED AND TESTED AND VALIDATED.**
+
+**MIGRATIONS MUST BE EXECUTED, TESTED AND VALIDATED.**
+
 ## Coding Standards
 
 - Project is based on the Tauri + React + TypeScript, with npm workspaces.

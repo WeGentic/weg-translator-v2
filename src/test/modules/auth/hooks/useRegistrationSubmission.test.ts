@@ -1,4 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
+import { AuthError } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useRegistrationSubmission } from "@/modules/auth/hooks/controllers/useRegistrationSubmission";
@@ -17,6 +18,10 @@ const supabaseMocks = vi.hoisted(() => ({
   loggerDebugMock: vi.fn(),
 }));
 
+const orphanDetectionMocks = vi.hoisted(() => ({
+  checkIfOrphanedMock: vi.fn(),
+}));
+
 vi.mock("@/core/config", () => ({
   supabase: {
     auth: {
@@ -29,6 +34,10 @@ vi.mock("@/core/config", () => ({
       invoke: supabaseMocks.functionsInvokeMock,
     },
   },
+}));
+
+vi.mock("@/modules/auth/utils/orphanDetection", () => ({
+  checkIfOrphaned: orphanDetectionMocks.checkIfOrphanedMock,
 }));
 
 vi.mock("@/shared/ui/toast", () => ({
@@ -56,6 +65,7 @@ const {
   loggerErrorMock,
   loggerDebugMock,
 } = supabaseMocks;
+const { checkIfOrphanedMock } = orphanDetectionMocks;
 
 const payload: NormalizedRegistrationPayload = {
   admin: {
@@ -105,9 +115,35 @@ describe("useRegistrationSubmission", () => {
     loggerWarnMock.mockReset();
     loggerErrorMock.mockReset();
     loggerDebugMock.mockReset();
+    checkIfOrphanedMock.mockReset();
 
     getSessionMock.mockResolvedValue({ data: { session: null }, error: null });
     signInWithPasswordMock.mockResolvedValue({ data: { user: verifiedSupabaseUser, session: {} }, error: null });
+    functionsInvokeMock.mockResolvedValue({
+      data: {
+        data: {
+          companyId: "company-uuid-default",
+          adminUuid: "admin-uuid-default",
+          membershipId: "membership-uuid-default",
+        },
+      },
+      error: null,
+    });
+    checkIfOrphanedMock.mockResolvedValue({
+      isOrphaned: false,
+      classification: null,
+      metrics: {
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        totalDurationMs: 5,
+        queryDurationMs: 2,
+        attemptCount: 1,
+        timedOut: false,
+        hadError: false,
+      },
+      hasCompanyData: true,
+      hasAdminData: true,
+    });
   });
 
   afterEach(() => {
@@ -161,6 +197,70 @@ describe("useRegistrationSubmission", () => {
     });
   });
 
+  it("resumes registration when Supabase reports an existing verified account", async () => {
+    const conflictError = new AuthError("User already registered", 400);
+    (conflictError as { code?: string }).code = "user_already_exists";
+    signUpMock.mockResolvedValueOnce({ data: { user: null }, error: conflictError });
+
+    signInWithPasswordMock.mockResolvedValueOnce({
+      data: { user: verifiedSupabaseUser, session: {} },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useRegistrationSubmission());
+
+    await act(async () => {
+      await result.current.submit(payload);
+    });
+
+    expect(signInWithPasswordMock).toHaveBeenCalledWith({
+      email: payload.admin.email,
+      password: payload.admin.password,
+    });
+    expect(functionsInvokeMock).toHaveBeenCalledWith("register-organization", expect.any(Object));
+    expect(checkIfOrphanedMock).toHaveBeenCalledWith(verifiedSupabaseUser.id);
+    expect(result.current.phase).toBe("succeeded");
+    expect(result.current.result).toMatchObject({
+      companyId: "company-uuid-default",
+      adminUuid: "admin-uuid-default",
+      membershipId: "membership-uuid-default",
+      payload,
+    });
+    expect(toastMock).toHaveBeenLastCalledWith({
+      title: "Registration complete",
+      description: `Your organization "${payload.company.name}" has been created successfully.`,
+    });
+  });
+
+  it("waits for email confirmation when existing account is unverified", async () => {
+    const conflictError = new AuthError("User already registered", 400);
+    (conflictError as { code?: string }).code = "user_already_exists";
+    signUpMock.mockResolvedValueOnce({ data: { user: null }, error: conflictError });
+
+    const emailNotConfirmed = new AuthError("Email not confirmed", 400);
+    signInWithPasswordMock.mockResolvedValueOnce({
+      data: { user: null, session: null },
+      error: emailNotConfirmed,
+    });
+
+    const { result } = renderHook(() => useRegistrationSubmission());
+
+    await act(async () => {
+      await result.current.submit(payload);
+    });
+
+    expect(signInWithPasswordMock).toHaveBeenCalledWith({
+      email: payload.admin.email,
+      password: payload.admin.password,
+    });
+    expect(result.current.phase).toBe("awaitingVerification");
+    expect(result.current.adminUuid).toBeNull();
+    expect(toastMock).toHaveBeenLastCalledWith({
+      title: "Verify your email",
+      description: expect.stringContaining("existing account"),
+    });
+  });
+
   it("completes verification and persistence on manual check", async () => {
     signUpMock.mockResolvedValueOnce({ data: { user: { id: "admin-uuid-1" } }, error: null });
     getSessionMock
@@ -177,6 +277,7 @@ describe("useRegistrationSubmission", () => {
         data: {
           companyId: "company-uuid-1",
           adminUuid: "admin-uuid-1",
+          membershipId: "membership-uuid-1",
         },
       },
       error: null,
@@ -212,14 +313,15 @@ describe("useRegistrationSubmission", () => {
       headers: expect.any(Object),
     });
     expect(result.current.phase).toBe("succeeded");
-    expect(result.current.result).toEqual({
+    expect(result.current.result).toMatchObject({
       companyId: "company-uuid-1",
       adminUuid: "admin-uuid-1",
+      membershipId: "membership-uuid-1",
       payload,
     });
     expect(toastMock).toHaveBeenLastCalledWith({
       title: "Registration complete",
-      description: "Your organization has been verified and created successfully.",
+      description: `Your organization "${payload.company.name}" has been verified and created successfully. You have been assigned as the owner.`,
     });
   });
 });

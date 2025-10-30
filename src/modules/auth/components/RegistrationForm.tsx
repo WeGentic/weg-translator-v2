@@ -68,6 +68,7 @@ export function RegistrationForm() {
     handleNextStep,
     handlePreviousStep,
     handleStepSelect,
+    goToStep,
     getFieldError,
     hasFieldBlockingError,
     passwordEvaluation,
@@ -203,8 +204,16 @@ export function RegistrationForm() {
       void emailStatusProbe.forceCheck();
       return;
     }
-    void handleManualVerificationCheck();
-  }, [emailStatusProbe, handleManualVerificationCheck]);
+
+    const firstStepIndex = 0;
+    void logger.info("registration.email_probe.cta_resume_registration", {
+      status: emailStatusProbe.status,
+      has_company_data: emailStatusProbe.result?.hasCompanyData ?? "<unknown>",
+      attempt_id: emailStatusProbe.result?.attemptId ?? "<none>",
+    });
+    handleStepSelect(firstStepIndex);
+    setMessage("Resume your registration by confirming organization details, then submit to finish.");
+  }, [emailStatusProbe, handleStepSelect, setMessage]);
 
   const handleProbeManualCheck = useCallback(() => {
     void emailStatusProbe.forceCheck();

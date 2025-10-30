@@ -175,6 +175,20 @@ function isEmailNotConfirmedError(error: AuthError): boolean {
   return message.includes("email not confirmed");
 }
 
+function isUserAlreadyExistsError(error: AuthError): boolean {
+  const code = (error as { code?: string }).code;
+  if (typeof code === "string" && code.toLowerCase() === "user_already_exists") {
+    return true;
+  }
+
+  const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
+  return (
+    message.includes("user already registered") ||
+    message.includes("email already exists") ||
+    message.includes("already registered")
+  );
+}
+
 function createSubmissionError(params: SubmissionError): SubmissionError {
   return params;
 }
@@ -670,6 +684,158 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
       const attemptId = crypto.randomUUID();
       dispatch({ type: "start", attemptId, payload });
 
+      const resumeExistingAccount = async () => {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: payload.admin.email,
+          password: payload.admin.password,
+        });
+
+        if (signInError) {
+          if (signInError instanceof AuthError && isEmailNotConfirmedError(signInError)) {
+            pollAttemptsRef.current = 0;
+            dispatch({
+              type: "await-verification",
+              adminUuid: null,
+            });
+            scheduleVerificationPoll();
+
+            toast({
+              title: "Verify your email",
+              description:
+                "We found an existing account for this email. Confirm the verification link to finish registration.",
+            });
+
+            void logger.info("Registration resume awaiting verification", {
+              attempt_id: attemptId,
+              correlation_id: attemptId,
+            });
+            return;
+          }
+
+          const mappedError =
+            signInError instanceof AuthError
+              ? createSubmissionError({
+                  code: signInError.name || "invalid_credentials",
+                  message:
+                    signInError.message && signInError.message.trim().length > 0
+                      ? signInError.message
+                      : "Incorrect password. Reset your password to continue.",
+                  source: "supabase",
+                  details: { status: (signInError as { status?: number }).status },
+                })
+              : mapUnknownError(signInError);
+
+          dispatch({ type: "fail", error: mappedError });
+
+          toast({
+            variant: "destructive",
+            title: "Registration failed",
+            description: mappedError.message,
+          });
+
+          void logger.warn("Registration resume sign-in failed", {
+            attempt_id: attemptId,
+            error: mappedError.message,
+            code: mappedError.code,
+          });
+          return;
+        }
+
+        const resumedUser = signInData?.user ?? null;
+        const resolvedAdminUuid = resumedUser?.id ?? stateRef.current.adminUuid;
+
+        if (!resolvedAdminUuid) {
+          const error = createSubmissionError({
+            code: "resume_missing_admin",
+            message:
+              "We signed you in, but could not determine the administrator account. Contact support.",
+            source: "unknown",
+          });
+          dispatch({ type: "fail", error });
+          toast({
+            variant: "destructive",
+            title: "Registration failed",
+            description: error.message,
+          });
+          void logger.error("Registration resume missing admin UUID", null, {
+            attempt_id: attemptId,
+          });
+          return;
+        }
+
+        pollAttemptsRef.current = 0;
+        dispatch({ type: "persisting" });
+
+        toast({
+          title: "Completing registration",
+          description: `We're finalizing "${payload.company.name}".`,
+        });
+
+        const persistenceResult = await persistRegistration(payload, attemptId, resolvedAdminUuid);
+
+        if (persistenceResult.kind === "error") {
+          dispatch({ type: "fail", error: persistenceResult.error });
+          toast({
+            variant: "destructive",
+            title: "Registration failed",
+            description: persistenceResult.error.message,
+          });
+          void logger.error("Registration persistence failed during resume", null, {
+            attempt_id: attemptId,
+            admin_uuid: resolvedAdminUuid,
+            error_code: persistenceResult.error.code,
+          });
+          return;
+        }
+
+        try {
+          const orphanCheck = await checkIfOrphaned(resolvedAdminUuid);
+
+          void logger.info("Post-registration orphan check completed", {
+            attempt_id: attemptId,
+            company_id: persistenceResult.companyId,
+            admin_uuid: persistenceResult.adminUuid,
+            membership_id: persistenceResult.membershipId,
+            is_orphaned: orphanCheck.isOrphaned,
+            metrics: orphanCheck.metrics,
+          });
+
+          if (orphanCheck.isOrphaned) {
+            void logger.warn("Post-registration orphan detected (unexpected)", {
+              attempt_id: attemptId,
+              admin_uuid: persistenceResult.adminUuid,
+              classification: orphanCheck.classification,
+            });
+          }
+        } catch (orphanError) {
+          void logger.warn("Post-registration orphan check failed (non-blocking)", {
+            attempt_id: attemptId,
+            admin_uuid: persistenceResult.adminUuid,
+            error: orphanError instanceof Error ? orphanError.message : String(orphanError),
+          });
+        }
+
+        dispatch({
+          type: "success",
+          result: {
+            ...persistenceResult,
+            payload,
+          },
+        });
+
+        toast({
+          title: "Registration complete",
+          description: `Your organization "${payload.company.name}" has been created successfully.`,
+        });
+
+        void logger.info("Registration resume persisted", {
+          attempt_id: attemptId,
+          admin_uuid: persistenceResult.adminUuid,
+          company_id: persistenceResult.companyId,
+          membership_id: persistenceResult.membershipId,
+        });
+      };
+
       const request = (async () => {
         try {
           const { data, error } = await supabase.auth.signUp({
@@ -685,6 +851,10 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
           });
 
           if (error) {
+            if (error instanceof AuthError && isUserAlreadyExistsError(error)) {
+              await resumeExistingAccount();
+              return;
+            }
             throw error;
           }
 

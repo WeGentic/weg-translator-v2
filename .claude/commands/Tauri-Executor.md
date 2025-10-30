@@ -11,7 +11,7 @@ You have access to the following tools to assist you in gathering information an
 - WebSearch: For researching best practices, design patterns, and technology-specific guidelines.
 - Perplexity-ask MCP tool: For validating technical approaches and ensuring alignment with current industry standards, for fetching latest best practices.
 - sequential-thinking MCP tool: For breaking down complex design challenges into manageable components.
-- @plan-agent: To plan for structuring and formatting your design document according to project standards.
+- @agent-Plan: To plan for structuring and formatting your design document according to project standards.
 
 ## Workflow
 
@@ -42,7 +42,7 @@ You have access to the following tools to assist you in gathering information an
     </actions>
 ____
 
-### Step 2: Execution and Reporting.
+### Step 2: Execution and Reporting
 
 <goal>Execute the selected mode calling coding agents. Define task that can run in parallel.</goal>
 
