@@ -10,6 +10,7 @@ import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/core/config";
 import { logger } from "@/core/logging";
 import { useToast } from "@/shared/ui/toast";
+import { checkIfOrphaned } from "@/modules/auth/utils/orphanDetection";
 
 const POLL_BASE_DELAY_MS = 5_000;
 const POLL_MAX_DELAY_MS = 60_000;
@@ -35,6 +36,8 @@ export interface NormalizedRegistrationPayload {
   admin: {
     email: string;
     password: string;
+    first_name?: string;
+    last_name?: string;
   };
   company: {
     name: string;
@@ -55,8 +58,9 @@ export interface NormalizedRegistrationPayload {
 }
 
 interface SubmissionSuccessResult {
-  companyId: string;
-  adminUuid: string;
+  accountUuid: string;
+  userUuid: string;
+  subscriptionUuid: string;
   payload: NormalizedRegistrationPayload;
 }
 
@@ -129,7 +133,7 @@ function submissionReducer(state: SubmissionState, action: SubmissionAction): Su
         ...state,
         phase: "succeeded",
         result: action.result,
-        adminUuid: action.result.adminUuid,
+        adminUuid: action.result.userUuid,
         error: null,
       };
     case "fail":
@@ -171,6 +175,20 @@ function isEmailNotConfirmedError(error: AuthError): boolean {
   }
 
   return message.includes("email not confirmed");
+}
+
+function isUserAlreadyExistsError(error: AuthError): boolean {
+  const code = (error as { code?: string }).code;
+  if (typeof code === "string" && code.toLowerCase() === "user_already_exists") {
+    return true;
+  }
+
+  const message = typeof error.message === "string" ? error.message.toLowerCase() : "";
+  return (
+    message.includes("user already registered") ||
+    message.includes("email already exists") ||
+    message.includes("already registered")
+  );
 }
 
 function createSubmissionError(params: SubmissionError): SubmissionError {
@@ -216,13 +234,44 @@ function mapVerificationError(error: unknown): SubmissionError {
 
 function mapFunctionInvokeError(error: unknown): SubmissionError {
   if (error instanceof FunctionsHttpError || error instanceof FunctionsRelayError || error instanceof FunctionsFetchError) {
+    const status = "status" in error ? (error as { status?: number }).status : undefined;
+
+    // Map specific HTTP status codes to user-friendly errors
+    if (status === 409) {
+      // HTTP 409 Conflict - Email already exists
+      return {
+        code: "EMAIL_EXISTS",
+        message: "This email is already registered. Please login or use a different email.",
+        source: "network",
+        details: { status },
+      };
+    }
+
+    if (status === 401) {
+      // HTTP 401 Unauthorized - Email not verified
+      return {
+        code: "EMAIL_NOT_VERIFIED",
+        message: "Please verify your email before creating an account.",
+        source: "network",
+        details: { status },
+      };
+    }
+
+    if (status === 500) {
+      // HTTP 500 Internal Server Error - Allow retry
+      return {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Registration request failed. Please try again.",
+        source: "network",
+        details: { status },
+      };
+    }
+
     return {
       code: error.name || "edge_function_error",
       message: error.message || "Edge Function request failed.",
       source: "network",
-      details: {
-        status: "status" in error ? (error as { status?: number }).status : undefined,
-      },
+      details: { status },
     };
   }
 
@@ -244,8 +293,9 @@ function mapFunctionInvokeError(error: unknown): SubmissionError {
 
 interface PersistenceSuccess {
   kind: "success";
-  companyId: string;
-  adminUuid: string;
+  accountUuid: string;
+  userUuid: string;
+  subscriptionUuid: string;
 }
 
 interface PersistenceFailure {
@@ -254,14 +304,6 @@ interface PersistenceFailure {
 }
 
 type PersistenceResult = PersistenceSuccess | PersistenceFailure;
-
-function normalizeAddressField(value?: string | null): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
 
 export interface UseRegistrationSubmissionResult {
   phase: SubmissionPhase;
@@ -338,69 +380,118 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
     async (
       payload: NormalizedRegistrationPayload,
       attemptId: string | null,
-      adminUuid: string,
+      _adminUuid: string,
     ): Promise<PersistenceResult> => {
       try {
+        // Validate company_email matches admin_email
+        if (payload.company.email.trim().toLowerCase() !== payload.admin.email.trim().toLowerCase()) {
+          return {
+            kind: "error",
+            error: createSubmissionError({
+              code: "email_mismatch",
+              message: "Company email must match your admin email",
+              source: "unknown",
+            }),
+          };
+        }
+
+        // Generate correlation ID for request tracing
+        const correlationId = attemptId ?? crypto.randomUUID();
+
+        // Construct new Edge Function payload matching create_account_with_admin signature
         const body = {
-          attemptId,
-          company: {
-            name: payload.company.name,
-            email: payload.company.email,
-            phone: payload.company.phone,
-            taxId: payload.company.taxId,
-            taxCountryCode: payload.company.taxCountryCode ?? null,
-            address: {
-              freeform: payload.company.address.freeform,
-              line1: normalizeAddressField(payload.company.address.line1),
-              line2: normalizeAddressField(payload.company.address.line2),
-              city: normalizeAddressField(payload.company.address.city),
-              state: normalizeAddressField(payload.company.address.state),
-              postalCode: normalizeAddressField(payload.company.address.postalCode),
-              countryCode: normalizeAddressField(payload.company.address.countryCode),
-            },
-          },
+          company_name: payload.company.name,
+          company_email: payload.company.email,
+          first_name: payload.admin.first_name ?? null,
+          last_name: payload.admin.last_name ?? null,
+          correlationId,
         };
 
         const { data, error } = await supabase.functions.invoke("register-organization", {
           body,
-          headers: attemptId
-            ? {
-                "x-correlation-id": attemptId,
-              }
-            : undefined,
+          headers: {
+            "x-correlation-id": correlationId,
+          },
         });
 
         if (error) {
           return { kind: "error", error: mapFunctionInvokeError(error) };
         }
 
+        // Parse new Edge Function response structure
         const parsed = data as
           | {
-              data?: { companyId: string; adminUuid?: string };
-              error?: { code?: string; message: string; details?: unknown };
+              success?: boolean;
+              account_uuid?: string;
+              user_uuid?: string;
+              subscription_uuid?: string;
+              error?: string;
+              message?: string;
+              correlationId?: string;
             }
           | null
           | undefined;
 
+        // Handle error responses from Edge Function
         if (parsed?.error) {
           return {
             kind: "error",
             error: createSubmissionError({
-              code: parsed.error.code ?? "edge_function_error",
-              message: parsed.error.message,
+              code: parsed.error,
+              message: parsed.message ?? "Registration failed",
               source: "network",
-              details: parsed.error.details,
+              details: { correlationId: parsed.correlationId },
             }),
           };
         }
 
-        const resultCompanyId = parsed?.data?.companyId;
-        if (!resultCompanyId) {
+        // Validate success response structure
+        if (!parsed?.success) {
           return {
             kind: "error",
             error: createSubmissionError({
               code: "edge_function_invalid_response",
-              message: "Edge Function response was missing the company identifier.",
+              message: "Edge Function response was missing success status.",
+              source: "network",
+              details: parsed,
+            }),
+          };
+        }
+
+        const accountUuid = parsed.account_uuid;
+        const userUuid = parsed.user_uuid;
+        const subscriptionUuid = parsed.subscription_uuid;
+
+        if (!accountUuid) {
+          return {
+            kind: "error",
+            error: createSubmissionError({
+              code: "edge_function_invalid_response",
+              message: "Edge Function response was missing the account identifier.",
+              source: "network",
+              details: parsed,
+            }),
+          };
+        }
+
+        if (!userUuid) {
+          return {
+            kind: "error",
+            error: createSubmissionError({
+              code: "edge_function_invalid_response",
+              message: "Edge Function response was missing the user identifier.",
+              source: "network",
+              details: parsed,
+            }),
+          };
+        }
+
+        if (!subscriptionUuid) {
+          return {
+            kind: "error",
+            error: createSubmissionError({
+              code: "edge_function_invalid_response",
+              message: "Edge Function response was missing the subscription identifier.",
               source: "network",
               details: parsed,
             }),
@@ -409,8 +500,9 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
 
         return {
           kind: "success",
-          companyId: resultCompanyId,
-          adminUuid: parsed?.data?.adminUuid ?? adminUuid,
+          accountUuid,
+          userUuid,
+          subscriptionUuid,
         };
       } catch (cause) {
         return { kind: "error", error: mapFunctionInvokeError(cause) };
@@ -546,9 +638,39 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
           }
 
           const persistenceResult = {
-            companyId: persistence.companyId,
-            adminUuid: persistence.adminUuid,
+            accountUuid: persistence.accountUuid,
+            userUuid: persistence.userUuid,
+            subscriptionUuid: persistence.subscriptionUuid,
           };
+
+          // Post-registration orphan check: verify user has valid account membership
+          try {
+            const orphanCheck = await checkIfOrphaned(supabaseUser.id);
+
+            void logger.info("Post-registration orphan check completed", {
+              attempt_id: currentState.attemptId ?? "<none>",
+              account_uuid: persistenceResult.accountUuid,
+              user_uuid: persistenceResult.userUuid,
+              subscription_uuid: persistenceResult.subscriptionUuid,
+              orphaned: orphanCheck.orphaned,
+              has_valid_account: orphanCheck.hasValidAccount,
+            });
+
+            if (orphanCheck.orphaned) {
+              void logger.warn("Post-registration orphan detected (unexpected)", {
+                attempt_id: currentState.attemptId ?? "<none>",
+                user_uuid: persistenceResult.userUuid,
+                orphan_type: orphanCheck.orphanType,
+              });
+            }
+          } catch (orphanError) {
+            // Log orphan check failure but don't block registration success
+            void logger.warn("Post-registration orphan check failed (non-blocking)", {
+              attempt_id: currentState.attemptId ?? "<none>",
+              user_uuid: persistenceResult.userUuid,
+              error: orphanError instanceof Error ? orphanError.message : String(orphanError),
+            });
+          }
 
           dispatch({
             type: "success",
@@ -559,13 +681,14 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
           });
           toast({
             title: "Registration complete",
-            description: "Your organization has been verified and created successfully.",
+            description: `Your organization "${payload.company.name}" has been verified and created successfully. You have been assigned as the owner.`,
           });
 
           void logger.info("Registration persisted", {
             attempt_id: currentState.attemptId ?? "<none>",
-            company_id: persistenceResult.companyId,
-            admin_uuid: persistenceResult.adminUuid,
+            account_uuid: persistenceResult.accountUuid,
+            user_uuid: persistenceResult.userUuid,
+            subscription_uuid: persistenceResult.subscriptionUuid,
           });
         } catch (cause) {
           const submissionError = mapVerificationError(cause);
@@ -621,6 +744,158 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
       const attemptId = crypto.randomUUID();
       dispatch({ type: "start", attemptId, payload });
 
+      const resumeExistingAccount = async () => {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: payload.admin.email,
+          password: payload.admin.password,
+        });
+
+        if (signInError) {
+          if (signInError instanceof AuthError && isEmailNotConfirmedError(signInError)) {
+            pollAttemptsRef.current = 0;
+            dispatch({
+              type: "await-verification",
+              adminUuid: null,
+            });
+            scheduleVerificationPoll();
+
+            toast({
+              title: "Verify your email",
+              description:
+                "We found an existing account for this email. Confirm the verification link to finish registration.",
+            });
+
+            void logger.info("Registration resume awaiting verification", {
+              attempt_id: attemptId,
+              correlation_id: attemptId,
+            });
+            return;
+          }
+
+          const mappedError =
+            signInError instanceof AuthError
+              ? createSubmissionError({
+                  code: signInError.name || "invalid_credentials",
+                  message:
+                    signInError.message && signInError.message.trim().length > 0
+                      ? signInError.message
+                      : "Incorrect password. Reset your password to continue.",
+                  source: "supabase",
+                  details: { status: (signInError as { status?: number }).status },
+                })
+              : mapUnknownError(signInError);
+
+          dispatch({ type: "fail", error: mappedError });
+
+          toast({
+            variant: "destructive",
+            title: "Registration failed",
+            description: mappedError.message,
+          });
+
+          void logger.warn("Registration resume sign-in failed", {
+            attempt_id: attemptId,
+            error: mappedError.message,
+            code: mappedError.code,
+          });
+          return;
+        }
+
+        const resumedUser = signInData?.user ?? null;
+        const resolvedAdminUuid = resumedUser?.id ?? stateRef.current.adminUuid;
+
+        if (!resolvedAdminUuid) {
+          const error = createSubmissionError({
+            code: "resume_missing_admin",
+            message:
+              "We signed you in, but could not determine the administrator account. Contact support.",
+            source: "unknown",
+          });
+          dispatch({ type: "fail", error });
+          toast({
+            variant: "destructive",
+            title: "Registration failed",
+            description: error.message,
+          });
+          void logger.error("Registration resume missing admin UUID", null, {
+            attempt_id: attemptId,
+          });
+          return;
+        }
+
+        pollAttemptsRef.current = 0;
+        dispatch({ type: "persisting" });
+
+        toast({
+          title: "Completing registration",
+          description: `We're finalizing "${payload.company.name}".`,
+        });
+
+        const persistenceResult = await persistRegistration(payload, attemptId, resolvedAdminUuid);
+
+        if (persistenceResult.kind === "error") {
+          dispatch({ type: "fail", error: persistenceResult.error });
+          toast({
+            variant: "destructive",
+            title: "Registration failed",
+            description: persistenceResult.error.message,
+          });
+          void logger.error("Registration persistence failed during resume", null, {
+            attempt_id: attemptId,
+            user_uuid: resolvedAdminUuid,
+            error_code: persistenceResult.error.code,
+          });
+          return;
+        }
+
+        try {
+          const orphanCheck = await checkIfOrphaned(resolvedAdminUuid);
+
+          void logger.info("Post-registration orphan check completed", {
+            attempt_id: attemptId,
+            account_uuid: persistenceResult.accountUuid,
+            user_uuid: persistenceResult.userUuid,
+            subscription_uuid: persistenceResult.subscriptionUuid,
+            orphaned: orphanCheck.orphaned,
+            has_valid_account: orphanCheck.hasValidAccount,
+          });
+
+          if (orphanCheck.orphaned) {
+            void logger.warn("Post-registration orphan detected (unexpected)", {
+              attempt_id: attemptId,
+              user_uuid: persistenceResult.userUuid,
+              orphan_type: orphanCheck.orphanType,
+            });
+          }
+        } catch (orphanError) {
+          void logger.warn("Post-registration orphan check failed (non-blocking)", {
+            attempt_id: attemptId,
+            user_uuid: persistenceResult.userUuid,
+            error: orphanError instanceof Error ? orphanError.message : String(orphanError),
+          });
+        }
+
+        dispatch({
+          type: "success",
+          result: {
+            ...persistenceResult,
+            payload,
+          },
+        });
+
+        toast({
+          title: "Registration complete",
+          description: `Your organization "${payload.company.name}" has been created successfully.`,
+        });
+
+        void logger.info("Registration resume persisted", {
+          attempt_id: attemptId,
+          user_uuid: persistenceResult.userUuid,
+          account_uuid: persistenceResult.accountUuid,
+          subscription_uuid: persistenceResult.subscriptionUuid,
+        });
+      };
+
       const request = (async () => {
         try {
           const { data, error } = await supabase.auth.signUp({
@@ -636,6 +911,10 @@ export function useRegistrationSubmission(): UseRegistrationSubmissionResult {
           });
 
           if (error) {
+            if (error instanceof AuthError && isUserAlreadyExistsError(error)) {
+              await resumeExistingAccount();
+              return;
+            }
             throw error;
           }
 

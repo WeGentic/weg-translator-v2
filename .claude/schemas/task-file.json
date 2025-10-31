@@ -1,0 +1,351 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "T-Tasker Implementation TaskList",
+  "description": "Comprehensive task breakdown with requirement traceability and execution planning",
+  "type": "object",
+  "required": ["metadata", "tasks", "execution_plan", "checklist"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Project-level information and context",
+      "required": ["project_name", "overview", "technology_stack"],
+      "additionalProperties": false,
+      "properties": {
+        "project_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Short identifier for the project",
+          "examples": ["Auth-System-Redesign", "Payment-Gateway-Integration"]
+        },
+        "overview": {
+          "type": "string",
+          "minLength": 50,
+          "maxLength": 500,
+          "description": "Comprehensive summary of what this implementation achieves"
+        },
+        "technology_stack": {
+          "type": "array",
+          "description": "Primary technologies, frameworks, and tools used",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "examples": [["TypeScript", "Next.js", "PostgreSQL", "Supabase"]]
+        },
+        "estimated_duration": {
+          "type": "string",
+          "description": "Optional: Total estimated time (e.g., '2-3 weeks', '40-60 hours')",
+          "pattern": "^\\d+-\\d+\\s+(hours?|days?|weeks?)$"
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "description": "Top-level implementation tasks",
+      "minItems": 5,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "status", "requirements", "execution_type", "subtasks"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^\\d+$",
+            "description": "Unique numeric identifier (e.g., '1', '2', '3')"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 75,
+            "description": "Descriptive task name indicating what will be accomplished"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"],
+            "description": "Current task completion status"
+          },
+          "requirements": {
+            "type": "array",
+            "description": "Functional and non-functional requirements this task addresses",
+            "items": {
+              "type": "string",
+              "pattern": "^(FR|NFR)-\\d{3}$"
+            },
+            "uniqueItems": true,
+            "examples": [["FR-001", "FR-002", "NFR-005"]]
+          },
+          "execution_type": {
+            "type": "string",
+            "enum": ["sequential", "parallel"],
+            "description": "Whether this task must run sequentially or can run in parallel with others"
+          },
+          "execution_metadata": {
+            "type": "object",
+            "description": "Dependency and resource information for execution planning",
+            "additionalProperties": false,
+            "properties": {
+              "depends_on": {
+                "type": "array",
+                "description": "Task IDs that must complete before this task can start",
+                "items": {
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+(\\.\\d+)?)?$"
+                },
+                "uniqueItems": true
+              },
+              "blocks": {
+                "type": "array",
+                "description": "Task IDs that cannot start until this task completes",
+                "items": {
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+(\\.\\d+)?)?$"
+                },
+                "uniqueItems": true
+              },
+              "resource_locks": {
+                "type": "array",
+                "description": "Files, components, or resources this task will modify",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true,
+                "examples": [["src/auth/AuthProvider.tsx", "database:users_table", "api/routes/auth.ts"]]
+              },
+              "parallelizable_with": {
+                "type": "array",
+                "description": "Task IDs that can safely run concurrently with this task",
+                "items": {
+                  "type": "string",
+                  "pattern": "^\\d+$"
+                },
+                "uniqueItems": true
+              }
+            }
+          },
+          "subtasks": {
+            "type": "array",
+            "description": "Breakdown of this task into atomic implementation steps",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "name", "is_test", "actions", "status"],
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^\\d+\\.\\d+(\\.\\d+)?$",
+                  "description": "Hierarchical identifier (e.g., '1.1', '1.2', '1.2.1')"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 10,
+                  "maxLength": 75,
+                  "description": "Brief description of this subtask's objective"
+                },
+                "is_test": {
+                  "type": "boolean",
+                  "description": "True if this subtask involves testing (unit, integration, e2e)"
+                },
+                "requirements": {
+                  "type": "array",
+                  "description": "Optional: Specific requirements this subtask addresses",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^(FR|NFR)-\\d{3}$"
+                  },
+                  "uniqueItems": true
+                },
+                "actions": {
+                  "type": "array",
+                  "description": "Atomic actions (checkboxes) to complete this subtask",
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "items": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 150,
+                    "pattern": "^(Create|Implement|Update|Test|Verify|Add|Remove|Refactor|Extract|Define|Configure|Integrate|Validate|Document)\\s",
+                    "description": "Action starting with verb, specifying exact file/component affected"
+                  }
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"],
+                  "description": "Current subtask completion status"
+                },
+                "estimated_hours": {
+                  "type": "number",
+                  "minimum": 0.5,
+                  "maximum": 40,
+                  "description": "Optional: Estimated time to complete this subtask"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "execution_plan": {
+      "type": "object",
+      "description": "Dependency-aware execution strategy with batching",
+      "required": ["batches"],
+      "additionalProperties": false,
+      "properties": {
+        "batches": {
+          "type": "array",
+          "description": "Ordered groups of tasks that can be executed together",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["batch_id", "execution_mode", "task_ids"],
+            "additionalProperties": false,
+            "properties": {
+              "batch_id": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Sequential batch number (1, 2, 3...)"
+              },
+              "execution_mode": {
+                "type": "string",
+                "enum": ["sequential", "parallel"],
+                "description": "How tasks in this batch should be executed"
+              },
+              "task_ids": {
+                "type": "array",
+                "description": "Task IDs included in this batch",
+                "items": {
+                  "type": "string",
+                  "pattern": "^\\d+$"
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 200,
+                "description": "Optional: Brief explanation of this batch's purpose"
+              }
+            }
+          }
+        },
+        "critical_path": {
+          "type": "array",
+          "description": "Task IDs on the critical path determining minimum project duration",
+          "items": {
+            "type": "string",
+            "pattern": "^\\d+$"
+          },
+          "uniqueItems": true
+        },
+        "total_estimated_hours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Optional: Sum of all task estimates"
+        }
+      }
+    },
+    "checklist": {
+      "type": "object",
+      "description": "Validation, traceability, and risk management information",
+      "required": ["requirement_coverage", "technical_validation", "dependencies", "risk_mitigation"],
+      "additionalProperties": false,
+      "properties": {
+        "requirement_coverage": {
+          "type": "array",
+          "description": "Bidirectional mapping of requirements to implementing tasks",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["requirement_id", "description", "mapped_tasks"],
+            "additionalProperties": false,
+            "properties": {
+              "requirement_id": {
+                "type": "string",
+                "pattern": "^(FR|NFR)-\\d{3}$",
+                "description": "Unique requirement identifier"
+              },
+              "description": {
+                "type": "string",
+                "minLength": 10,
+                "maxLength": 200,
+                "description": "Brief summary of what this requirement specifies"
+              },
+              "mapped_tasks": {
+                "type": "array",
+                "description": "Task and subtask IDs that implement this requirement",
+                "items": {
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+(\\.\\d+)?)?$"
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "coverage_status": {
+                "type": "string",
+                "enum": ["complete", "partial", "planned"],
+                "description": "Optional: Assessment of how well this requirement is covered"
+              }
+            }
+          }
+        },
+        "technical_validation": {
+          "type": "array",
+          "description": "Statements confirming technical approaches were researched/validated",
+          "minItems": 1,
+          "maxItems": 10,
+          "items": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 300,
+            "examples": [
+              "JWT extraction logic validated against Supabase auth v2 documentation (2025)",
+              "Database migration strategy confirmed with PostgreSQL 16 best practices",
+              "Type definitions aligned with TypeScript 5.3 advanced inference patterns"
+            ]
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "description": "External libraries, services, or tools required",
+          "items": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 200,
+            "examples": [
+              "@supabase/supabase-js v2.38+ for authentication",
+              "PostgreSQL 14+ with uuid-ossp extension",
+              "Node.js 20+ LTS for runtime environment"
+            ]
+          }
+        },
+        "risk_mitigation": {
+          "type": "array",
+          "description": "Identified risks with corresponding mitigation strategies",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 300,
+            "examples": [
+              "Risk: Authentication migration downtime. Mitigation: Dual-system support during transition with feature flags",
+              "Risk: Database migration failure. Mitigation: Comprehensive rollback scripts tested in staging environment",
+              "Risk: Breaking changes in dependencies. Mitigation: Pin exact versions and test upgrades in isolated branch"
+            ]
+          }
+        },
+        "assumptions": {
+          "type": "array",
+          "description": "Optional: Key assumptions made during planning",
+          "items": {
+            "type": "string",
+            "maxLength": 200
+          }
+        }
+      }
+    }
+  }
+}

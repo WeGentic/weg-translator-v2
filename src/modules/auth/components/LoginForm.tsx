@@ -34,8 +34,6 @@ const REQUIRED_MESSAGES: Record<FieldKey, string> = {
   password: "Password is required.",
 };
 
-const VALIDATION_MESSAGE = "Please correct the highlighted fields before continuing.";
-
 const EMPTY_ERRORS: FieldErrors = {
   email: "",
   password: "",
@@ -53,7 +51,6 @@ export function LoginForm() {
   const [rememberMe, setRememberMe] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>(EMPTY_ERRORS);
   const [touched, setTouched] = useState<TouchedFields>(UNTOUCHED);
-  const [error, setError] = useState("");
 
   const { login, isLoading } = useAuth();
   const router = useRouter();
@@ -78,17 +75,25 @@ export function LoginForm() {
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      setError("");
       setTouched({ email: true, password: true });
 
       const validation = validateFields(email, password);
       if (validation.email || validation.password) {
-        setError(VALIDATION_MESSAGE);
+        // Inline field validation errors are displayed below each field
         return;
       }
 
       try {
-        await login(email, password);
+        const result = await login(email, password);
+
+        // Only proceed with navigation if login was successful
+        if (!result.success) {
+          // Login failed - toast notification already shown by AuthProvider
+          // Do not navigate, do not clear errors
+          return;
+        }
+
+        // Login successful - clear errors and navigate
         setFieldErrors(EMPTY_ERRORS);
         setTouched(UNTOUCHED);
 
@@ -105,19 +110,30 @@ export function LoginForm() {
 
         router.history.push(redirectTo);
       } catch (err) {
-        // Check if this is a redirect error from orphan detection
+        // CRITICAL: OrphanedUserError redirect handling - DO NOT MODIFY
+        // When AuthProvider detects an orphaned user during login, it throws a special
+        // redirect error with message "REDIRECT_TO_RECOVERY" and a redirectUrl property.
+        // This is the ONLY error type that AuthProvider throws during login.
         if (err instanceof Error && err.message === "REDIRECT_TO_RECOVERY") {
           // Extract redirectUrl from error object (set by AuthProvider)
           const redirectUrl = (err as Error & { redirectUrl?: string }).redirectUrl;
           if (redirectUrl) {
-            // Redirect to recovery route (toast notification already shown by AuthProvider)
-            await router.navigate({ to: redirectUrl as any });
+            // Redirect to recovery route using router
+            // Note: Toast notification is already shown by AuthProvider
+            router.history.push(redirectUrl);
             return;
           }
         }
 
-        // Handle all other login errors normally
-        setError(err instanceof Error ? err.message : "Login failed. Please try again.");
+        // For all other login errors (invalid credentials, network errors, etc.):
+        // - AuthProvider displays toast notification with user-friendly error message
+        // - AuthProvider does NOT throw the error (returns gracefully instead)
+        // - Therefore, this catch block will never be reached for regular login errors
+        // - Inline field validation errors (empty email/password) are still shown below each field
+        // - Error is logged by AuthProvider with correlation ID for debugging
+
+        // If we reach this point with a non-redirect error, it's unexpected
+        void console.error("Unexpected error in LoginForm catch block:", err);
       }
     },
     [email, login, password, router, validateFields],
@@ -136,11 +152,8 @@ export function LoginForm() {
       if (touched.email) {
         setFieldError("email", value.trim() ? "" : REQUIRED_MESSAGES.email);
       }
-      if (VALIDATION_MESSAGE === error && value.trim() && password.trim()) {
-        setError("");
-      }
     },
-    [error, password, setError, setFieldError, touched.email],
+    [setFieldError, touched.email],
   );
 
   const handlePasswordChange = useCallback(
@@ -149,11 +162,8 @@ export function LoginForm() {
       if (touched.password) {
         setFieldError("password", value.trim() ? "" : REQUIRED_MESSAGES.password);
       }
-      if (VALIDATION_MESSAGE === error && email.trim() && value.trim()) {
-        setError("");
-      }
     },
-    [email, error, setError, setFieldError, touched.password],
+    [setFieldError, touched.password],
   );
 
   const handleFieldBlur = useCallback(
@@ -167,13 +177,6 @@ export function LoginForm() {
 
   const emailErrorId = fieldErrors.email ? "login-email-error" : undefined;
   const passwordErrorId = fieldErrors.password ? "login-password-error" : undefined;
-
-  const emailDescribedBy = [emailErrorId, error ? "login-error" : undefined]
-    .filter(Boolean)
-    .join(" ") || undefined;
-  const passwordDescribedBy = [passwordErrorId, error ? "login-error" : undefined]
-    .filter(Boolean)
-    .join(" ") || undefined;
 
   return (
     <Card className="login-form-card w-full">
@@ -202,7 +205,7 @@ export function LoginForm() {
                 className="login-form__input"
                 disabled={isLoading}
                 aria-invalid={fieldErrors.email ? true : undefined}
-                aria-describedby={emailDescribedBy}
+                aria-describedby={emailErrorId}
               />
             </div>
             {touched.email && fieldErrors.email && (
@@ -228,7 +231,7 @@ export function LoginForm() {
                 className="login-form__input"
                 disabled={isLoading}
                 aria-invalid={fieldErrors.password ? true : undefined}
-                aria-describedby={passwordDescribedBy}
+                aria-describedby={passwordErrorId}
               />
               <Button
                 type="button"

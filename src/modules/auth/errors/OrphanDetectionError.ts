@@ -97,6 +97,11 @@ export interface OrphanDetectionMetrics {
    * Whether any attempt had an error (database error, connection failure, etc.)
    */
   hadError: boolean;
+
+  /**
+   * Correlation ID for end-to-end request tracing
+   */
+  correlationId: string;
 }
 
 /**

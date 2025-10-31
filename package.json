@@ -18,7 +18,10 @@
     "test:run": "vitest run --silent --reporter=dot",
     "test:coverage": "vitest run --coverage",
     "format": "prettier \"**/*.{cjs,js,jsx,mjs,ts,tsx,json,md,css}\" --write",
-    "format:check": "prettier \"**/*.{cjs,js,jsx,mjs,ts,tsx,json,md,css}\" --check"
+    "format:check": "prettier \"**/*.{cjs,js,jsx,mjs,ts,tsx,json,md,css}\" --check",
+    "generate:types": "supabase gen types typescript --project-id wnohgxkujwnuoqtibsss > src/shared/types/supabase.ts",
+    "validate:schema": "node scripts/validate-schema.mjs",
+    "test:jwt-hook": "node scripts/test-jwt-hook.mjs"
   },
   "dependencies": {
     "@openai/codex": "^0.50.0",
@@ -36,6 +39,8 @@
     "@supabase/supabase-js": "^2.76.1",
     "@tailwindcss/vite": "^4.1.16",
     "@tanstack/match-sorter-utils": "^8.19.4",
+    "@tanstack/react-query": "^5.90.5",
+    "@tanstack/react-query-devtools": "^5.90.2",
     "@tanstack/react-router": "^1.133.32",
     "@tanstack/react-router-devtools": "^1.133.32",
     "@tanstack/react-table": "^8.21.3",

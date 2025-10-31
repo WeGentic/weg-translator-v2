@@ -55,7 +55,7 @@ export const COMPANY_FIELDS: readonly RegistrationFieldConfig[] = [
   {
     key: "companyEmail",
     id: "company-email",
-    label: "Company email",
+    label: "Company email (must match your email)",
     name: "companyEmail",
     placeholder: "contact@acmetraductions.com",
     type: "email",

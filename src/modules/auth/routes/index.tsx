@@ -7,6 +7,8 @@ import LoginBackground from "@/assets/LOGIN_BACKGROUND_.png";
 import { buttonVariants } from "@/shared/ui/button";
 import { cn } from "@/shared/utils/class-names";
 import { usePageTransition } from "@/shared/transitions/PageTransitionProvider";
+import { SupabaseConnectionIndicator } from "@/shared/components/SupabaseConnectionIndicator";
+import { useSupabaseHealth } from "@/app/hooks/useSupabaseHealth";
 
 import { LoginForm } from "../components/LoginForm";
 
@@ -14,6 +16,7 @@ import "./css/login-page.css";
 
 export function LoginRoute() {
   const { setMessage } = usePageTransition();
+  const { healthResult } = useSupabaseHealth();
 
   const backgroundStyle = useMemo(
     () =>
@@ -76,6 +79,25 @@ export function LoginRoute() {
             >
               Create a new Account
             </Link>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              marginTop: '12px',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: '500',
+              background: healthResult?.status === 'connected' ? '#22c55e' : healthResult?.status === 'disconnected' ? '#ef4444' : '#f59e0b',
+              color: 'white'
+            }}>
+              {healthResult?.status === 'connected'
+                ? `✓ Database Connected • ${healthResult.latency}ms`
+                : healthResult?.status === 'disconnected'
+                ? `✗ Database Error: ${healthResult.error}`
+                : `⟳ Checking database...`
+              }
+            </div>
           </div>
         </section>
       </main>

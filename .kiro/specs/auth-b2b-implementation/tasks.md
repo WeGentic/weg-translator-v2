@@ -1,0 +1,161 @@
+# Implementation Plan (Correct)
+
+Convert the B2B multi-tenant authentication design into a series of implementation tasks that build incrementally toward a complete solution. Each task focuses on writing, modifying, or testing specific code components while ensuring backward compatibility and type safety.
+
+## Task List
+
+- [ ] 1. Create TypeScript types for new schema
+  - Create comprehensive type definitions matching the deployed Supabase schema
+  - Define Account, User, Subscription interfaces with all required fields
+  - Export MemberRole and SubscriptionStatus union types
+  - Add JSDoc comments explaining relationships and usage
+  - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
+
+- [ ] 2. Implement JWT claims extraction utilities
+  - [ ] 2.1 Create JWT claim extraction functions
+    - Write extractAccountUuid function with fallback paths
+    - Write extractUserRole function with graceful degradation
+    - Write validateJwtClaims function with UUID format validation
+    - Implement fail-closed policy for missing account_uuid
+    - _Requirements: 2.1, 2.2, 2.3_
+  - [ ] 2.2 Add comprehensive error handling
+    - Log warnings for claims found in unexpected locations
+    - Log errors for missing critical claims with user context
+    - Return appropriate defaults (null for account_uuid, 'member' for role)
+    - _Requirements: 2.2, 2.3_
+  - [ ]* 2.3 Write unit tests for JWT extraction
+    - Test all extraction paths (app_metadata, user_metadata, top-level)
+    - Test validation logic (null session, missing claims, invalid format)
+    - Test error logging and warning scenarios
+    - Verify fail-closed behavior for account_uuid
+    - _Requirements: 5.5_
+
+- [ ] 3. Extend AuthProvider with account context
+  - [ ] 3.1 Add account state to AuthProvider
+    - Add accountUuid and userRole state variables
+    - Update AuthContextType interface with new nullable fields
+    - Update context value object to include account fields
+    - Import MemberRole type from database types
+    - _Requirements: 2.4_
+  - [ ] 3.2 Integrate JWT extraction in login flow
+    - Add JWT validation after signInWithPassword succeeds
+    - Extract account_uuid and user_role from session
+    - Update auth context with extracted claims
+    - Implement fail-closed policy for missing account_uuid
+    - _Requirements: 2.1, 2.2, 2.4_
+  - [ ] 3.3 Update logout to clear account context
+    - Clear accountUuid and userRole state on logout
+    - Ensure proper cleanup order (session → user → account context)
+    - _Requirements: 2.4, 5.5_
+  - [ ] 3.4 Handle session bootstrap and refresh
+    - Extract claims from existing session on app startup
+    - Update account context when session refreshes
+    - Handle missing claims gracefully (log warning, set to null)
+    - _Requirements: 2.4_
+  - [ ]* 3.5 Write integration tests for AuthProvider
+    - Test login flow with valid JWT claims
+    - Test fail-closed behavior for missing account_uuid
+    - Test logout clears account context
+    - Test session bootstrap extracts claims
+    - _Requirements: 5.5_
+
+- [ ] 4. Update registration flow to use create_account_with_admin
+  - [ ] 4.1 Create payload types for account creation
+    - Define CreateAccountPayload interface matching function signature
+    - Define CreateAccountResponse interface with expected fields
+    - Add comprehensive JSDoc explaining payload structure
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+  - [ ] 4.2 Update persistRegistration function
+    - Replace register-organization call with create_account_with_admin
+    - Map form payload to function payload structure
+    - Add correlation ID to headers for debugging
+    - Handle function response and validate required fields
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+  - [ ] 4.3 Implement error mapping for function errors
+    - Map FunctionsHttpError to user-friendly messages
+    - Handle email_already_exists with login suggestion
+    - Map network errors to retry-friendly messages
+    - Preserve existing SubmissionError structure
+    - _Requirements: 1.3, 1.4_
+  - [ ] 4.4 Update success result to include account context
+    - Return accountId and userRole in SubmissionSuccessResult
+    - Maintain backward compatibility with existing fields
+    - Ensure type safety with CreateAccountResponse
+    - _Requirements: 1.2, 1.5_
+  - [ ]* 4.5 Write integration tests for registration flow
+    - Test create_account_with_admin function call with correct payload
+    - Test error handling for duplicate email and network errors
+    - Test success result includes account context
+    - Test state machine transitions remain unchanged
+    - _Requirements: 5.5_
+
+- [ ] 5. Adapt orphan detection for multi-tenant model
+  - [ ] 5.1 Update orphan detection query logic
+    - Replace legacy table queries with public.users query
+    - Add account_uuid parameter for validation
+    - Implement account UUID mismatch detection (security check)
+    - Maintain existing OrphanCheckResult interface
+    - _Requirements: 3.1, 3.2, 3.3_
+  - [ ] 5.2 Preserve fail-closed retry policy
+    - Keep 3-retry limit with exponential backoff
+    - Maintain timeout handling and error classification
+    - Log performance metrics (p95, p99 latency)
+    - Throw OrphanDetectionError on max retries exceeded
+    - _Requirements: 3.4, 3.5_
+  - [ ] 5.3 Update orphan detection call sites
+    - Pass accountUuid parameter in AuthProvider login flow
+    - Update registration flow call if it exists
+    - Ensure non-blocking behavior in registration context
+    - _Requirements: 3.1, 3.5_
+  - [ ]* 5.4 Write unit tests for orphan detection
+    - Test non-orphaned user returns isOrphaned: false
+    - Test orphaned user (no record) returns isOrphaned: true
+    - Test account UUID mismatch throws security violation
+    - Test retry logic with exponential backoff
+    - Test performance metrics logging
+    - _Requirements: 5.5_
+
+- [ ] 6. Update local profile sync for backward compatibility
+  - [ ] 6.1 Extend syncLocalUserProfile function
+    - Add accountUuid and userRole parameters to function signature
+    - Include account context in profile data passed to IPC
+    - Handle null values gracefully (backward compatibility)
+    - Maintain existing profile fields (userUuid, username, email, roles)
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 6.2 Update profile sync call sites
+    - Pass account context in AuthProvider login flow
+    - Pass account context in registration success flow
+    - Wrap profile sync in try-catch (non-blocking)
+    - Log errors but don't throw (graceful degradation)
+    - _Requirements: 5.1, 5.4, 5.5_
+  - [ ]* 6.3 Update IPC profile types if needed
+    - Extend Rust profile struct with optional account fields
+    - Update SQLite schema if storing account context locally
+    - Test profile sync with account context
+    - Verify existing desktop features continue to work
+    - _Requirements: 5.1, 5.3, 5.4_
+
+- [ ] 7. Comprehensive testing and validation
+  - [ ] 7.1 Run all unit tests and verify coverage
+    - Execute all test suites for modified components
+    - Verify 80%+ test coverage for changed files
+    - Fix any failing tests or coverage gaps
+    - _Requirements: 5.5_
+  - [ ] 7.2 Perform integration testing
+    - Test complete registration flow (form → account creation → success)
+    - Test complete login flow (credentials → claims → context → access)
+    - Test error scenarios (duplicate email, network errors, orphan detection)
+    - Verify RLS policy enforcement prevents cross-account access
+    - _Requirements: 5.5_
+  - [ ] 7.3 Validate performance targets
+    - Measure registration time (target: < 3s excluding email wait)
+    - Measure login time (target: < 2s)
+    - Measure orphan detection latency (target: < 200ms p95)
+    - Measure JWT extraction overhead (target: < 50ms)
+    - _Requirements: Performance targets from design_
+  - [ ] 7.4 Verify backward compatibility
+    - Test existing auth consumers continue to work
+    - Verify local SQLite profile sync doesn't break desktop features
+    - Confirm no breaking changes to public APIs
+    - Test graceful degradation when account context is missing
+    - _Requirements: 5.4, 5.5_

@@ -27,7 +27,7 @@ The v2 schema reflects the baseline migration (`0001_baseline_schema.up.sql`). A
 
 | Table | Purpose | Key Columns | Notes |
 | --- | --- | --- | --- |
-| `projects` | Project metadata | `project_uuid` PK, `project_name`, `project_status`, FK `user_uuid`, optional FK `client_uuid` | `update_date` auto-refreshes through trigger `projects_set_update_date`. |
+| `projects` | Project metadata | `project_uuid` PK, {{project_name}}, `project_status`, FK `user_uuid`, optional FK `client_uuid` | `update_date` auto-refreshes through trigger `projects_set_update_date`. |
 | `project_language_pairs` | Allowed language pairs per project | Composite PK `(project_uuid, source_lang, target_lang)` | Enforced subset for file language pairs. |
 | `project_files` | Link between project and file metadata | Composite PK `(project_uuid, file_uuid)` | `type` stores asset role. FK to `file_info`. |
 | `file_info` | Physical file metadata | `file_uuid` PK, `ext`, `type`, `size_bytes`, `segment_count`, `token_count`, `notes` | Shared across projects when files are reused. |

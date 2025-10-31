@@ -1,0 +1,1814 @@
+{
+  "project_name": "auth-b2b-schema-migration",
+  "overview": {
+    "user_input_summary": "Current codebase uses companies/profiles/company_members schema for multi-tenant organization management. Must migrate to new accounts/users/subscriptions schema already deployed to Supabase. Focus on adapting registration flow, login authentication, orphan detection, and all data model references from old to new schema while maintaining fail-closed security policies and <200ms orphan detection latency.",
+    "analysis_scope": "Comprehensive analysis of authentication, state management, data models, and API integration across frontend React 19.2 components and backend Tauri/Supabase integration. Covers RegistrationForm, LoginForm, AuthProvider, orphan detection, query helpers, Edge Functions, and type definitions. Excludes Rust desktop-specific features but includes local SQLite profile syncing impact.",
+    "primary_focus": [
+      "authentication",
+      "state-management",
+      "data-models",
+      "api-integration",
+      "routing"
+    ]
+  },
+  "file_tree_structure": {
+    "root_directory": "src/modules/auth, src/app/providers/auth, src/core/supabase, src/shared/types, supabase/functions",
+    "relevant_paths": [
+      {
+        "path": "src/modules/auth/components/RegistrationForm.tsx",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Main registration UI component orchestrating company/admin step collection and submission flow. Must be updated to collect company_email (matching admin email) for new schema and understand response contains account_uuid instead of company_id.",
+        "key_exports": ["RegistrationForm"]
+      },
+      {
+        "path": "src/modules/auth/components/LoginForm.tsx",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Login form presentation component. Requires updates to handle account-based multi-tenancy with account selection if user belongs to multiple accounts (depends on Q-004 answer).",
+        "key_exports": ["LoginForm"]
+      },
+      {
+        "path": "src/app/providers/auth/AuthProvider.tsx",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Core authentication context managing login, session, orphan detection, and profile enrichment. Must be updated to: (1) Query users table instead of profiles, (2) Include account_uuid and role in user context, (3) Rewrite orphan detection to check users table instead of profiles/company_members, (4) Maintain <200ms latency and fail-closed security.",
+        "key_exports": ["AuthProvider", "useAuth"]
+      },
+      {
+        "path": "src/modules/auth/utils/orphanDetection.ts",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Orphan detection utility with retry logic (3 attempts, exponential backoff with jitter). Currently queries profiles and company_members tables. Must be completely rewritten to query users table and validate account_uuid presence, account existence, and soft deletes. Must maintain <200ms p95 latency and fail-closed retry strategy.",
+        "key_exports": ["checkIfOrphaned", "type OrphanCheckResult", "type OrphanType"]
+      },
+      {
+        "path": "src/core/supabase/queries/companies.ts",
+        "type": "file",
+        "relevance": "high",
+        "description": "Query helper class for companies table CRUD operations. Will be superseded by new AccountQueries class but shows pattern for RLS-enforced queries. Methods: getCompany, listUserCompanies, createCompany, updateCompany, deleteCompany.",
+        "key_exports": ["CompanyQueries"]
+      },
+      {
+        "path": "src/core/supabase/queries/profiles.ts",
+        "type": "file",
+        "relevance": "high",
+        "description": "Query helper class for profiles table read/update operations. Shows pattern for profile enrichment. Will be superseded by UserQueries but demonstrates ProfileQueries.getProfile() pattern used in AuthProvider for enrichment.",
+        "key_exports": ["ProfileQueries"]
+      },
+      {
+        "path": "src/core/supabase/queries/company_members.ts",
+        "type": "file",
+        "relevance": "high",
+        "description": "Query helper for company_members junction table. May become obsolete if users table replaces the many-to-many relationship (depends on Q-004). Critical to understand current membership checking pattern.",
+        "key_exports": ["CompanyMemberQueries"]
+      },
+      {
+        "path": "src/shared/types/database.ts",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Database type definitions including Company, Profile, CompanyMember interfaces. Must be updated to add Account, User (for users table), Subscription types while marking old types as deprecated. Lines 338-437 contain old schema types that need migration.",
+        "key_exports": [
+          "interface Company",
+          "interface Profile",
+          "interface CompanyMember",
+          "type MemberRole"
+        ]
+      },
+      {
+        "path": "src/modules/auth/hooks/controllers/useRegistrationForm.ts",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Form controller hook managing registration state, validation, and submission. Must be updated to understand new Edge Function response with account_uuid and subscription_uuid, and pass company_email/company_name parameters matching new create_account_with_admin() signature.",
+        "key_exports": ["useRegistrationForm", "type UseRegistrationFormResult"]
+      },
+      {
+        "path": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Hook managing submission state machine including email verification polling, orphan detection, and Edge Function invocation. Must be updated to handle create_account_with_admin() response structure and new error cases (email uniqueness constraint, account creation failures).",
+        "key_exports": ["type SubmissionPhase", "type SubmissionError", "type SubmissionSuccessResult"]
+      },
+      {
+        "path": "supabase/functions/register-organization/index.ts",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Edge Function handling registration. Currently creates companies/profiles/company_members manually. Must be refactored to invoke create_account_with_admin() function instead, passing company_name, company_email, and admin first/last names. Must handle 409 Conflict for email uniqueness and new error response structure.",
+        "key_exports": ["serve", "handleRegistration"]
+      },
+      {
+        "path": "src/modules/auth/utils/cleanupOrphanedUser.ts",
+        "type": "file",
+        "relevance": "high",
+        "description": "Utility for cleaning up orphaned user records during recovery flow. Must be updated to handle users table cleanup instead of profiles/company_members. Currently removes profile and membership, new version removes users record.",
+        "key_exports": ["cleanupOrphanedUser"]
+      },
+      {
+        "path": "src/modules/auth/utils/cleanupInitiation.ts",
+        "type": "file",
+        "relevance": "medium",
+        "description": "Initiates orphan cleanup flow after orphaned user detection. May need updates to reflect new database structure but core cleanup logic handled by cleanupOrphanedUser.",
+        "key_exports": ["initiateCleanupFlow"]
+      },
+      {
+        "path": "src/modules/auth/components/forms/RegistrationCompanyStep.tsx",
+        "type": "file",
+        "relevance": "high",
+        "description": "Company information collection step. Fields include company name, email, phone, tax ID, address. Company email will become critical as it must match admin email for new schema and enforce global uniqueness.",
+        "key_exports": ["RegistrationCompanyStep"]
+      },
+      {
+        "path": "src/modules/auth/components/forms/RegistrationAdminStep.tsx",
+        "type": "file",
+        "relevance": "high",
+        "description": "Admin user information collection step including email, password, first/last name. Admin email must match company email for new schema. Password policy and email verification probe require updates for new database structure.",
+        "key_exports": ["RegistrationAdminStep"]
+      },
+      {
+        "path": "src/test/modules/auth/hooks/useRegistrationForm.test.tsx",
+        "type": "file",
+        "relevance": "high",
+        "description": "Unit tests for registration form controller. Must be updated with new schema mocks and test cases for create_account_with_admin() response structure.",
+        "key_exports": []
+      },
+      {
+        "path": "src/test/modules/auth/hooks/useRegistrationSubmission.test.ts",
+        "type": "file",
+        "relevance": "high",
+        "description": "Tests for submission state machine. Must cover new error cases (email uniqueness, account creation failures) and response structure with subscription_uuid.",
+        "key_exports": []
+      },
+      {
+        "path": "src/test/modules/auth/components/RegistrationForm.integration.test.tsx",
+        "type": "file",
+        "relevance": "high",
+        "description": "Integration tests for full registration flow. Must be updated to mock create_account_with_admin() invocation and verify account creation with trial subscription.",
+        "key_exports": []
+      },
+      {
+        "path": "src/core/supabase/queries/index.ts",
+        "type": "file",
+        "relevance": "medium",
+        "description": "Query exports barrel file. Will need to export new AccountQueries, UserQueries, SubscriptionQueries in addition to or replacing old query classes.",
+        "key_exports": []
+      },
+      {
+        "path": "src/core/supabase/errors.ts",
+        "type": "file",
+        "relevance": "medium",
+        "description": "Error mapping utilities for Supabase errors. May need enhancement to handle new error cases like email uniqueness constraint (23505) and role-based permission violations.",
+        "key_exports": ["mapSupabaseError", "logOperationError"]
+      },
+      {
+        "path": "src/modules/auth/errors",
+        "type": "directory",
+        "relevance": "high",
+        "description": "Auth-specific error classes including OrphanedUserError, OrphanDetectionError. May need new error types for account creation failures, email uniqueness violations.",
+        "key_exports": []
+      }
+    ],
+    "tree_visualization": "src/\n├── app/\n│   └── providers/\n│       └── auth/\n│           └── AuthProvider.tsx [CRITICAL: Needs complete rewrite for new schema]\n├── modules/\n│   └── auth/\n│       ├── components/\n│       │   ├── RegistrationForm.tsx [CRITICAL: UI orchestration]\n│       │   ├── LoginForm.tsx [CRITICAL: Login flow]\n│       │   └── forms/\n│       │       ├── RegistrationCompanyStep.tsx [HIGH: Company data collection]\n│       │       └── RegistrationAdminStep.tsx [HIGH: Admin data + email verification]\n│       ├── hooks/\n│       │   └── controllers/\n│       │       ├── useRegistrationForm.ts [CRITICAL: Form state]\n│       │       └── useRegistrationSubmission.ts [CRITICAL: Submission state machine]\n│       ├── utils/\n│       │   ├── orphanDetection.ts [CRITICAL: Retry logic + query rewrite]\n│       │   ├── cleanupOrphanedUser.ts [HIGH: Cleanup logic]\n│       │   └── cleanupInitiation.ts [MEDIUM: Cleanup orchestration]\n│       └── errors/ [HIGH: Auth error classes]\n├── core/\n│   └── supabase/\n│       ├── queries/\n│       │   ├── companies.ts [HIGH: Pattern reference, becomes obsolete]\n│       │   ├── profiles.ts [HIGH: Pattern reference, becomes obsolete]\n│       │   ├── company_members.ts [HIGH: Pattern reference, becomes obsolete]\n│       │   └── index.ts [MEDIUM: Export barrel]\n│       └── errors.ts [MEDIUM: Error mapping]\n├── shared/\n│   └── types/\n│       └── database.ts [CRITICAL: Type definitions, lines 338-437]\n└── test/\n    └── modules/auth/\n        ├── hooks/\n        │   ├── useRegistrationForm.test.tsx [HIGH: Form tests]\n        │   └── useRegistrationSubmission.test.ts [HIGH: Submission tests]\n        └── components/\n            └── RegistrationForm.integration.test.tsx [HIGH: Integration tests]\n\nsupabase/\n└── functions/\n    ├── register-organization/ [CRITICAL: Must invoke create_account_with_admin()]\n    ├── check-email-status/ [MEDIUM: May need updates for new schema]\n    └── cleanup-orphaned-user/ [HIGH: May need updates for users table cleanup]"
+  },
+  "entry_points": [
+    {
+      "id": "EP-001",
+      "name": "AuthProvider (Bootstrap)",
+      "file_path": "src/app/providers/auth/AuthProvider.tsx",
+      "line_number": 101,
+      "type": "component",
+      "purpose": "Application-wide authentication context provider. Initializes session on mount, manages login lifecycle, triggers orphan detection, and enriches user context with profile data from cloud database.",
+      "dependencies": [
+        "EP-003",
+        "EP-004"
+      ],
+      "signature": "export function AuthProvider({ children }: { children: ReactNode }): JSX.Element",
+      "usage_examples": [
+        "Wraps entire application in __root.tsx layout",
+        "Called during app initialization to restore session from Supabase Auth",
+        "Listens to auth state changes and updates context"
+      ]
+    },
+    {
+      "id": "EP-002",
+      "name": "useAuth Hook",
+      "file_path": "src/app/providers/auth/AuthProvider.tsx",
+      "line_number": 436,
+      "type": "hook",
+      "purpose": "Exposes AuthContext to components. Returns current user, session, authentication status, and login/logout functions.",
+      "dependencies": [],
+      "signature": "export function useAuth(): AuthContextType",
+      "usage_examples": [
+        "LoginForm uses useAuth().login(email, password) to authenticate",
+        "Components check useAuth().isAuthenticated before rendering protected content",
+        "Profile enrichment uses useAuth().user for current context"
+      ]
+    },
+    {
+      "id": "EP-003",
+      "name": "checkIfOrphaned Utility",
+      "file_path": "src/modules/auth/utils/orphanDetection.ts",
+      "line_number": 166,
+      "type": "function",
+      "purpose": "Detects orphaned users (exist in auth.users but no profiles/company_members) during login. Implements fail-closed retry strategy with exponential backoff. Returns orphan classification or throws OrphanDetectionError.",
+      "dependencies": [],
+      "signature": "export async function checkIfOrphaned(userId: string, options?: OrphanDetectionOptions): Promise<OrphanCheckResult>",
+      "usage_examples": [
+        "Called in AuthProvider.login() after successful Supabase auth but before session establishment",
+        "Performs parallel queries to check profiles(id) and company_members(user_id)",
+        "Throws OrphanDetectionError to trigger fail-closed login block"
+      ]
+    },
+    {
+      "id": "EP-004",
+      "name": "ProfileQueries.getProfile",
+      "file_path": "src/core/supabase/queries/profiles.ts",
+      "line_number": 39,
+      "type": "function",
+      "purpose": "Fetches user profile from profiles table for context enrichment. Used by AuthProvider.mapUserWithProfile to add full_name and avatar_url to user context.",
+      "dependencies": [],
+      "signature": "static async getProfile(userId: string): Promise<Profile | null>",
+      "usage_examples": [
+        "AuthProvider calls ProfileQueries.getProfile(supabaseUser.id) after successful auth",
+        "Enriches user context with full_name and avatar_url before setting session"
+      ]
+    },
+    {
+      "id": "EP-005",
+      "name": "RegistrationForm Component",
+      "file_path": "src/modules/auth/components/RegistrationForm.tsx",
+      "line_number": 36,
+      "type": "component",
+      "purpose": "Main registration UI component orchestrating multi-step form (company details, admin profile, verification). Manages form state via useRegistrationForm hook and displays step-appropriate sub-components.",
+      "dependencies": [
+        "EP-006",
+        "EP-007",
+        "EP-008"
+      ],
+      "signature": "export function RegistrationForm(): JSX.Element",
+      "usage_examples": [
+        "Rendered at /register route",
+        "Manages RegistrationCompanyStep and RegistrationAdminStep visibility based on stepIndex",
+        "Invokes handleSubmit on final step after email verification"
+      ]
+    },
+    {
+      "id": "EP-006",
+      "name": "useRegistrationForm Hook",
+      "file_path": "src/modules/auth/hooks/controllers/useRegistrationForm.ts",
+      "line_number": 1,
+      "type": "hook",
+      "purpose": "Manages registration form state including field values, validation, step navigation, and submission. Exposes form field handlers, validation state, and submission phase to RegistrationForm component.",
+      "dependencies": [
+        "EP-009"
+      ],
+      "signature": "export function useRegistrationForm(): UseRegistrationFormResult",
+      "usage_examples": [
+        "RegistrationForm destructures all form state and handlers from this hook",
+        "Manages email probe (check if email already registered) and verification polling",
+        "Delegates submission to useRegistrationSubmission hook"
+      ]
+    },
+    {
+      "id": "EP-007",
+      "name": "RegistrationCompanyStep Component",
+      "file_path": "src/modules/auth/components/forms/RegistrationCompanyStep.tsx",
+      "line_number": 1,
+      "type": "component",
+      "purpose": "Collects company information (name, email, phone, tax ID, address). Email field is critical as it must match admin email in new schema and is globally unique.",
+      "dependencies": [],
+      "signature": "export function RegistrationCompanyStep(props: RegistrationCompanyStepProps): JSX.Element",
+      "usage_examples": [
+        "Rendered when RegistrationForm.currentStepKey === 'company'",
+        "Company email becomes critical parameter for create_account_with_admin()"
+      ]
+    },
+    {
+      "id": "EP-008",
+      "name": "RegistrationAdminStep Component",
+      "file_path": "src/modules/auth/components/forms/RegistrationAdminStep.tsx",
+      "line_number": 1,
+      "type": "component",
+      "purpose": "Collects admin user information (email, password, optional first/last name). Integrates with email status probe to detect existing registrations and trigger verification.",
+      "dependencies": [],
+      "signature": "export function RegistrationAdminStep(props: RegistrationAdminStepProps): JSX.Element",
+      "usage_examples": [
+        "Rendered when RegistrationForm.currentStepKey === 'admin'",
+        "Admin email validation must match company email (new schema requirement)",
+        "Integrates with emailStatusProbe for returning user detection"
+      ]
+    },
+    {
+      "id": "EP-009",
+      "name": "useRegistrationSubmission Hook",
+      "file_path": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+      "line_number": 1,
+      "type": "hook",
+      "purpose": "Manages registration submission state machine including email verification polling, Edge Function invocation, error handling. Returns submission phase, error, and result to caller.",
+      "dependencies": [],
+      "signature": "export function useRegistrationSubmission(): UseRegistrationSubmissionResult",
+      "usage_examples": [
+        "Called from useRegistrationForm to handle form submission",
+        "Invokes register-organization Edge Function with normalized payload",
+        "Polls for email verification completion and handles timeout"
+      ]
+    },
+    {
+      "id": "EP-010",
+      "name": "LoginForm Component",
+      "file_path": "src/modules/auth/components/LoginForm.tsx",
+      "line_number": 49,
+      "type": "component",
+      "purpose": "Simple login form collecting email and password. Calls AuthProvider.login() and handles redirect to appropriate route (account selection if multi-account user, or main workspace).",
+      "dependencies": [
+        "EP-002"
+      ],
+      "signature": "export function LoginForm(): JSX.Element",
+      "usage_examples": [
+        "Rendered at /login route",
+        "On successful login, may redirect to account selection if user belongs to multiple accounts",
+        "Handles orphan detection redirect via special REDIRECT_TO_RECOVERY error"
+      ]
+    },
+    {
+      "id": "EP-011",
+      "name": "CompanyQueries Static Class",
+      "file_path": "src/core/supabase/queries/companies.ts",
+      "line_number": 23,
+      "type": "service",
+      "purpose": "Query helper for companies table CRUD operations. Pattern reference for new AccountQueries. Methods: getCompany, listUserCompanies, createCompany, updateCompany, deleteCompany. All RLS-enforced.",
+      "dependencies": [],
+      "signature": "export class CompanyQueries { static async getCompany(companyId: string): Promise<Company | null> }",
+      "usage_examples": [
+        "Demonstrates RLS-enforced Supabase query patterns",
+        "Shows error mapping and user-friendly error handling",
+        "Becomes obsolete when replaced by AccountQueries"
+      ]
+    },
+    {
+      "id": "EP-012",
+      "name": "register-organization Edge Function",
+      "file_path": "supabase/functions/register-organization/index.ts",
+      "line_number": 167,
+      "type": "api-endpoint",
+      "purpose": "Edge Function invoked during registration to create company/admin records. Must be refactored to invoke create_account_with_admin() instead of manual table inserts. Accepts POST with company and admin data, returns account_uuid and subscription_uuid.",
+      "dependencies": [],
+      "signature": "async function handleRegistration(payload: RegistrationInput, token: string, correlationId: string): Promise<Response>",
+      "usage_examples": [
+        "Invoked from useRegistrationSubmission after email verification",
+        "Receives: company.name, company.email, company.phone, company.taxId, company.address",
+        "Returns: account_uuid, subscription_uuid, user_uuid on success"
+      ]
+    },
+    {
+      "id": "EP-013",
+      "name": "cleanupOrphanedUser Utility",
+      "file_path": "src/modules/auth/utils/cleanupOrphanedUser.ts",
+      "line_number": 1,
+      "type": "function",
+      "purpose": "Cleans up incomplete registration records when orphan detected. Currently removes profiles and company_members. Must be updated to handle users table cleanup.",
+      "dependencies": [],
+      "signature": "export async function cleanupOrphanedUser(userId: string, email: string): Promise<void>",
+      "usage_examples": [
+        "Called from initiateCleanupFlow when user detected as orphaned after login",
+        "Removes partial registration data to allow user to restart registration"
+      ]
+    },
+    {
+      "id": "EP-014",
+      "name": "initiateCleanupFlow Utility",
+      "file_path": "src/modules/auth/utils/cleanupInitiation.ts",
+      "line_number": 1,
+      "type": "function",
+      "purpose": "Orchestrates cleanup flow after orphan detection. Sends verification code, initiates async cleanup, provides recovery route.",
+      "dependencies": [
+        "EP-013"
+      ],
+      "signature": "export async function initiateCleanupFlow(email: string, correlationId: string): Promise<void>",
+      "usage_examples": [
+        "Called from AuthProvider catch handler when OrphanedUserError thrown",
+        "Fire-and-forget cleanup initiation to avoid blocking login redirect"
+      ]
+    },
+    {
+      "id": "EP-015",
+      "name": "syncLocalUserProfile Async Effect",
+      "file_path": "src/app/providers/auth/AuthProvider.tsx",
+      "line_number": 363,
+      "type": "hook",
+      "purpose": "Syncs authenticated user profile to local SQLite for desktop app backward compatibility. Fetches from cloud profiles table (mapped to new users table) and creates/updates local SQLite record.",
+      "dependencies": [],
+      "signature": "async function syncLocalUserProfile(currentUser: User | null): Promise<void>",
+      "usage_examples": [
+        "Called as useEffect dependency on user context changes",
+        "Maintains local SQLite profiles for desktop-specific features while migrating to cloud users table"
+      ]
+    }
+  ],
+  "codebase_structure": {
+    "architectural_patterns": [
+      {
+        "pattern": "Context Provider Pattern",
+        "location": [
+          "src/app/providers/auth/AuthProvider.tsx"
+        ],
+        "description": "AuthProvider implements React Context for application-wide authentication state management. Provides user, session, login, logout functions to all descendant components via useAuth hook. Manages session bootstrap on app startup and subscribes to Supabase auth state changes.",
+        "relevance": "critical",
+        "should_follow": true
+      },
+      {
+        "pattern": "Static Query Helper Classes",
+        "location": [
+          "src/core/supabase/queries/companies.ts",
+          "src/core/supabase/queries/profiles.ts",
+          "src/core/supabase/queries/company_members.ts"
+        ],
+        "description": "Database operations abstracted into static classes with RLS-enforced Supabase queries. Each class provides CRUD methods with consistent error handling, correlation IDs, and user-friendly error mapping. Pattern enables testable, reusable query logic.",
+        "relevance": "high",
+        "should_follow": true
+      },
+      {
+        "pattern": "State Machine with useReducer",
+        "location": [
+          "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts"
+        ],
+        "description": "Registration submission state managed via reducer pattern with explicit state transitions (idle → signingUp → awaitingVerification → verifying → persisting → succeeded/failed). Enables clear state visualization and prevents invalid state transitions.",
+        "relevance": "high",
+        "should_follow": true
+      },
+      {
+        "pattern": "Error Mapping with Correlation IDs",
+        "location": [
+          "src/core/supabase/errors.ts",
+          "src/core/supabase/queries/"
+        ],
+        "description": "Supabase errors mapped to user-friendly errors with correlation IDs for debugging. Each operation generates UUID correlation ID to trace errors through distributed system (frontend → Edge Function → database).",
+        "relevance": "high",
+        "should_follow": true
+      },
+      {
+        "pattern": "Retry with Exponential Backoff and Jitter",
+        "location": [
+          "src/modules/auth/utils/orphanDetection.ts"
+        ],
+        "description": "Orphan detection implements 3 retry attempts with exponential backoff (0ms, 0-200ms, 0-500ms jitter) to handle transient database issues. Fail-closed security policy: if detection fails after all retries, block login. Prevents thundering herd under load.",
+        "relevance": "critical",
+        "should_follow": true
+      },
+      {
+        "pattern": "Verification Code with Polling",
+        "location": [
+          "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+          "supabase/functions/check-email-status/index.ts"
+        ],
+        "description": "Email verification uses Supabase Verification tokens, frontend polls check-email-status Edge Function to detect completion. Avoids long-polling on unstable connections by using manual verification check option.",
+        "relevance": "high",
+        "should_follow": true
+      },
+      {
+        "pattern": "Multi-Step Form with Validation",
+        "location": [
+          "src/modules/auth/components/RegistrationForm.tsx",
+          "src/modules/auth/hooks/controllers/useRegistrationForm.ts"
+        ],
+        "description": "Registration form split into multiple steps (company, admin) with per-step validation. Form controller manages validation state, field touches, and step progression. Enables clear UX with progress indicators.",
+        "relevance": "high",
+        "should_follow": true
+      },
+      {
+        "pattern": "Orphan Detection with Recovery Flow",
+        "location": [
+          "src/app/providers/auth/AuthProvider.tsx",
+          "src/modules/auth/utils/orphanDetection.ts",
+          "src/modules/auth/utils/cleanupInitiation.ts"
+        ],
+        "description": "Detects incomplete registrations and triggers recovery flow. Sends verification code to allow user to restart registration. Implements fail-closed policy: if detection fails, block login entirely.",
+        "relevance": "critical",
+        "should_follow": true
+      },
+      {
+        "pattern": "Tauri IPC for Local Profile Sync",
+        "location": [
+          "src/app/providers/auth/AuthProvider.tsx",
+          "src/core/ipc/db/users"
+        ],
+        "description": "Local SQLite profile synchronization via Tauri IPC commands (getUserProfile, createUserProfile, updateUserProfile). AuthProvider maintains one-way sync from cloud profiles table to local SQLite for desktop app features.",
+        "relevance": "medium",
+        "should_follow": true
+      }
+    ],
+    "key_modules": [
+      {
+        "id": "MOD-001",
+        "name": "AuthProvider",
+        "path": "src/app/providers/auth/AuthProvider.tsx",
+        "purpose": "Application-wide authentication context managing session bootstrap, login lifecycle, orphan detection, and profile enrichment. Core integration point between Supabase Auth and application state.",
+        "type": "component",
+        "dependencies": [
+          "supabase-js",
+          "checkIfOrphaned",
+          "ProfileQueries",
+          "Tauri IPC"
+        ],
+        "exports": [
+          "AuthProvider",
+          "useAuth"
+        ],
+        "can_be_reused": true,
+        "needs_modification": true
+      },
+      {
+        "id": "MOD-002",
+        "name": "RegistrationForm",
+        "path": "src/modules/auth/components/RegistrationForm.tsx",
+        "purpose": "Multi-step registration UI orchestrating company and admin data collection, email verification, and submission. Presentation-only component delegating business logic to hooks.",
+        "type": "component",
+        "dependencies": [
+          "useRegistrationForm",
+          "RegistrationCompanyStep",
+          "RegistrationAdminStep"
+        ],
+        "exports": [
+          "RegistrationForm"
+        ],
+        "can_be_reused": true,
+        "needs_modification": false
+      },
+      {
+        "id": "MOD-003",
+        "name": "LoginForm",
+        "path": "src/modules/auth/components/LoginForm.tsx",
+        "purpose": "Simple login UI collecting email/password and invoking AuthProvider.login(). Handles orphan detection redirect via special error case.",
+        "type": "component",
+        "dependencies": [
+          "useAuth"
+        ],
+        "exports": [
+          "LoginForm"
+        ],
+        "can_be_reused": true,
+        "needs_modification": true
+      },
+      {
+        "id": "MOD-004",
+        "name": "useRegistrationForm",
+        "path": "src/modules/auth/hooks/controllers/useRegistrationForm.ts",
+        "purpose": "Form state controller managing field values, validation, step progression, email probe, and submission delegation. Exposes all form state and handlers to RegistrationForm component.",
+        "type": "hook",
+        "dependencies": [
+          "useRegistrationSubmission",
+          "validation utilities"
+        ],
+        "exports": [
+          "useRegistrationForm"
+        ],
+        "can_be_reused": true,
+        "needs_modification": true
+      },
+      {
+        "id": "MOD-005",
+        "name": "useRegistrationSubmission",
+        "path": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+        "purpose": "Submission state machine managing registration lifecycle: email verification polling, Edge Function invocation, error handling, success state. Implements state reducer pattern.",
+        "type": "hook",
+        "dependencies": [
+          "supabase",
+          "register-organization Edge Function"
+        ],
+        "exports": [
+          "useRegistrationSubmission",
+          "type SubmissionPhase"
+        ],
+        "can_be_reused": true,
+        "needs_modification": true
+      },
+      {
+        "id": "MOD-006",
+        "name": "checkIfOrphaned",
+        "path": "src/modules/auth/utils/orphanDetection.ts",
+        "purpose": "Detects orphaned users via parallel queries with fail-closed retry logic. Classifies orphan type and returns performance metrics. Critical for login security.",
+        "type": "utility",
+        "dependencies": [
+          "supabase"
+        ],
+        "exports": [
+          "checkIfOrphaned",
+          "type OrphanCheckResult"
+        ],
+        "can_be_reused": true,
+        "needs_modification": true
+      },
+      {
+        "id": "MOD-007",
+        "name": "CompanyQueries",
+        "path": "src/core/supabase/queries/companies.ts",
+        "purpose": "RLS-enforced query helper for companies table CRUD operations. Pattern reference for new AccountQueries class. Will be superseded in new schema.",
+        "type": "service",
+        "dependencies": [
+          "supabase"
+        ],
+        "exports": [
+          "CompanyQueries"
+        ],
+        "can_be_reused": false,
+        "needs_modification": false
+      },
+      {
+        "id": "MOD-008",
+        "name": "ProfileQueries",
+        "path": "src/core/supabase/queries/profiles.ts",
+        "purpose": "RLS-enforced query helper for profiles table read/update operations. Used by AuthProvider for profile enrichment. Will be superseded by UserQueries.",
+        "type": "service",
+        "dependencies": [
+          "supabase"
+        ],
+        "exports": [
+          "ProfileQueries"
+        ],
+        "can_be_reused": false,
+        "needs_modification": false
+      },
+      {
+        "id": "MOD-009",
+        "name": "register-organization Edge Function",
+        "path": "supabase/functions/register-organization/index.ts",
+        "purpose": "Serverless function invoked during registration to create company and admin records. Must be refactored to invoke create_account_with_admin() stored function.",
+        "type": "api",
+        "dependencies": [
+          "Supabase Auth",
+          "create_account_with_admin stored function"
+        ],
+        "exports": [
+          "serve",
+          "handleRegistration"
+        ],
+        "can_be_reused": false,
+        "needs_modification": true
+      },
+      {
+        "id": "MOD-010",
+        "name": "cleanupOrphanedUser",
+        "path": "src/modules/auth/utils/cleanupOrphanedUser.ts",
+        "purpose": "Utility for cleaning up incomplete registrations. Removes orphaned user records from database. Must be updated for new schema.",
+        "type": "utility",
+        "dependencies": [
+          "supabase"
+        ],
+        "exports": [
+          "cleanupOrphanedUser"
+        ],
+        "can_be_reused": true,
+        "needs_modification": true
+      },
+      {
+        "id": "MOD-011",
+        "name": "Database Types",
+        "path": "src/shared/types/database.ts",
+        "purpose": "TypeScript type definitions for database entities (Company, Profile, CompanyMember, etc.). Lines 338-437 contain old schema types. Must add Account, User, Subscription types.",
+        "type": "model",
+        "dependencies": [],
+        "exports": [
+          "interface Company",
+          "interface Profile",
+          "interface CompanyMember",
+          "type MemberRole"
+        ],
+        "can_be_reused": false,
+        "needs_modification": true
+      }
+    ],
+    "data_flow": {
+      "description": "Authentication and registration flows involve multiple layers: (1) Frontend presentation components collect user input and manage form state, (2) Controller hooks manage business logic (submission, validation, email verification polling), (3) Edge Functions handle server-side logic (user verification, database writes), (4) Supabase Auth manages credentials and sessions, (5) PostgreSQL database stores user and organization data with RLS policies, (6) Local SQLite maintains profile copy for desktop app features. Registration flow creates atomic transaction via create_account_with_admin() storing account, user, and subscription. Login flow performs orphan detection via parallel queries checking for user record existence and account membership. All interactions include correlation IDs for distributed tracing.",
+      "flow_diagrams": [
+        {
+          "name": "Registration Flow",
+          "flow_type": "user-action",
+          "steps": [
+            {
+              "step": 1,
+              "component": "RegistrationForm",
+              "description": "User enters company details (name, email, phone, tax ID, address)",
+              "data_transformed": "Form values collected in useRegistrationForm state"
+            },
+            {
+              "step": 2,
+              "component": "RegistrationForm",
+              "description": "User enters admin details (email matching company email, password, name)",
+              "data_transformed": "Email probe triggered to check if email already registered"
+            },
+            {
+              "step": 3,
+              "component": "check-email-status Edge Function",
+              "description": "Frontend polls to detect email verification status",
+              "data_transformed": "Returns email verification status and existing registration detection"
+            },
+            {
+              "step": 4,
+              "component": "useRegistrationSubmission",
+              "description": "After email verified, submit normalized payload to register-organization Edge Function",
+              "data_transformed": "Payload includes company (name, email, phone, taxId, address) and admin email/password"
+            },
+            {
+              "step": 5,
+              "component": "register-organization Edge Function",
+              "description": "Verify user authentication, invoke create_account_with_admin() stored function",
+              "data_transformed": "Returns account_uuid, user_uuid, subscription_uuid from stored function"
+            },
+            {
+              "step": 6,
+              "component": "create_account_with_admin (Database Function)",
+              "description": "Atomically creates account, user, subscription records in single transaction",
+              "data_transformed": "New records stored in accounts, users, subscriptions tables"
+            },
+            {
+              "step": 7,
+              "component": "RegistrationForm",
+              "description": "Display success dialog, redirect to login route",
+              "data_transformed": "User now can authenticate with their email and password"
+            }
+          ]
+        },
+        {
+          "name": "Login Flow with Orphan Detection",
+          "flow_type": "user-action",
+          "steps": [
+            {
+              "step": 1,
+              "component": "LoginForm",
+              "description": "User enters email and password",
+              "data_transformed": "Email and password collected in form state"
+            },
+            {
+              "step": 2,
+              "component": "AuthProvider",
+              "description": "Invoke supabase.auth.signInWithPassword(email, password)",
+              "data_transformed": "Supabase Auth validates credentials and returns session with JWT token"
+            },
+            {
+              "step": 3,
+              "component": "AuthProvider",
+              "description": "Verify email_confirmed_at flag is set, sign out if not verified",
+              "data_transformed": "User must have verified email before login allowed"
+            },
+            {
+              "step": 4,
+              "component": "checkIfOrphaned",
+              "description": "Execute parallel queries (retry 3x with exponential backoff) to check users table and account membership",
+              "data_transformed": "Queries return user record existence and account association status"
+            },
+            {
+              "step": 5,
+              "component": "checkIfOrphaned",
+              "description": "Analyze results: if no users record or no account, user is orphaned",
+              "data_transformed": "Return OrphanCheckResult with isOrphaned flag and classification"
+            },
+            {
+              "step": 6,
+              "component": "AuthProvider",
+              "description": "If orphaned: throw OrphanedUserError triggering recovery flow",
+              "data_transformed": "Error includes email and correlation ID for recovery tracking"
+            },
+            {
+              "step": 7,
+              "component": "AuthProvider",
+              "description": "If not orphaned: fetch profile data from users table for context enrichment",
+              "data_transformed": "Enriched user context includes full_name, avatar_url, account_uuid, user_role"
+            },
+            {
+              "step": 8,
+              "component": "AuthProvider",
+              "description": "Set session and user context, subscription updates auto-propagate via listener",
+              "data_transformed": "Application now authenticated with full user context available"
+            },
+            {
+              "step": 9,
+              "component": "syncLocalUserProfile",
+              "description": "Async effect syncs user profile to local SQLite (backward compatibility)",
+              "data_transformed": "Local profile created/updated for desktop app features"
+            }
+          ]
+        },
+        {
+          "name": "Orphan Detection Failure and Recovery",
+          "flow_type": "user-action",
+          "steps": [
+            {
+              "step": 1,
+              "component": "LoginForm",
+              "description": "User attempts login during registration flow interruption",
+              "data_transformed": "Email and password submitted"
+            },
+            {
+              "step": 2,
+              "component": "AuthProvider",
+              "description": "Supabase auth succeeds but user exists in auth.users without users table record",
+              "data_transformed": "User authenticated but incomplete registration"
+            },
+            {
+              "step": 3,
+              "component": "checkIfOrphaned",
+              "description": "Orphan detection queries fail due to database issue (timeout or error)",
+              "data_transformed": "Retry 3 times with exponential backoff, still fails"
+            },
+            {
+              "step": 4,
+              "component": "AuthProvider",
+              "description": "Catch OrphanDetectionError, sign user out (fail-closed security)",
+              "data_transformed": "Session cleared, user must try login again"
+            },
+            {
+              "step": 5,
+              "component": "LoginForm",
+              "description": "Display error: 'Authentication system temporarily unavailable'",
+              "data_transformed": "User advised to retry login in few minutes"
+            }
+          ]
+        }
+      ]
+    },
+    "technology_stack": {
+      "frontend": [
+        {
+          "name": "React",
+          "version": "19.2.0",
+          "purpose": "UI framework for component-based registration and login flows with React Compiler for automatic memoization"
+        },
+        {
+          "name": "TanStack Router",
+          "version": "1.132+",
+          "purpose": "File-based routing providing /login and /register routes with deep linking support"
+        },
+        {
+          "name": "@supabase/supabase-js",
+          "version": "2.45.3+",
+          "purpose": "Supabase client SDK for authentication, database queries, and Edge Function invocation"
+        },
+        {
+          "name": "TypeScript",
+          "version": "5.x",
+          "purpose": "Type safety for all components, hooks, and database types"
+        },
+        {
+          "name": "TailwindCSS",
+          "version": "4.1.1+",
+          "purpose": "Utility-first CSS for form styling and layout"
+        },
+        {
+          "name": "ShadCN UI",
+          "version": "3.3.1+",
+          "purpose": "Accessible component library providing Button, Input, Card, Dialog, Tooltip components"
+        }
+      ],
+      "backend": [
+        {
+          "name": "Deno",
+          "version": "1.x",
+          "purpose": "Runtime for Edge Functions (register-organization, check-email-status, cleanup-orphaned-user)"
+        },
+        {
+          "name": "PostgreSQL",
+          "version": "14.x",
+          "purpose": "Supabase backend database storing accounts, users, subscriptions with RLS policies"
+        },
+        {
+          "name": "Supabase Auth",
+          "version": "2.x",
+          "purpose": "JWT-based authentication with email verification and password reset"
+        },
+        {
+          "name": "Tauri",
+          "version": "2.8.5",
+          "purpose": "Desktop app framework providing IPC for local SQLite profile synchronization"
+        },
+        {
+          "name": "SQLite",
+          "version": "3.x",
+          "purpose": "Local desktop database for profile caching and offline features"
+        }
+      ],
+      "libraries": [
+        {
+          "name": "zod",
+          "version": "3.23.8+",
+          "purpose": "Schema validation for registration payload and Edge Function inputs",
+          "location": "both",
+          "is_critical": true
+        },
+        {
+          "name": "react-hook-form",
+          "version": "7.x+",
+          "purpose": "Form state management for registration and login forms",
+          "location": "frontend",
+          "is_critical": true
+        },
+        {
+          "name": "react-phone-number-input",
+          "version": "latest",
+          "purpose": "International phone number input with validation for registration company phone",
+          "location": "frontend",
+          "is_critical": false
+        },
+        {
+          "name": "postgres.js",
+          "version": "3.4.3+",
+          "purpose": "Direct PostgreSQL connection in Edge Functions for stored function invocation",
+          "location": "backend",
+          "is_critical": true
+        },
+        {
+          "name": "date-fns",
+          "version": "2.x+",
+          "purpose": "Date utilities for trial subscription expiry calculations",
+          "location": "both",
+          "is_critical": false
+        }
+      ]
+    }
+  },
+  "codebase_analysis": {
+    "code_flow_tracing": [
+      {
+        "id": "FLOW-001",
+        "flow_name": "Complete Registration Flow from Form Submission to Account Creation",
+        "trigger": "User clicks 'Request organization access' button after completing all form steps and email verification",
+        "trace_steps": [
+          {
+            "step": 1,
+            "file": "src/modules/auth/components/RegistrationForm.tsx",
+            "line_number": 288,
+            "function_or_component": "RegistrationForm",
+            "action": "Form submission handler invokes handleSubmit from useRegistrationForm",
+            "details": "Form has noValidate attribute, uses React hook form controller. Submission locked while processing."
+          },
+          {
+            "step": 2,
+            "file": "src/modules/auth/hooks/controllers/useRegistrationForm.ts",
+            "line_number": 1,
+            "function_or_component": "useRegistrationForm",
+            "action": "Validate form state and delegate to useRegistrationSubmission submission handler",
+            "details": "Performs client-side validation on all fields, checks form is not locked, normalizes payload"
+          },
+          {
+            "step": 3,
+            "file": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+            "line_number": 1,
+            "function_or_component": "useRegistrationSubmission",
+            "action": "Dispatch 'start' action to submission reducer, set phase to 'signingUp'",
+            "details": "Generates attemptId UUID, stores normalized payload in state for error recovery"
+          },
+          {
+            "step": 4,
+            "file": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+            "line_number": 1,
+            "function_or_component": "handleSubmit in useRegistrationSubmission",
+            "action": "Invoke supabase.auth.signUp(email, password) with admin email and password",
+            "details": "Creates entry in auth.users table, sends verification email (already verified in workflow)"
+          },
+          {
+            "step": 5,
+            "file": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+            "line_number": 1,
+            "function_or_component": "useRegistrationSubmission",
+            "action": "On signUp success, dispatch 'await-verification' action",
+            "details": "Store adminUuid from signUp response, transition to awaitingVerification phase"
+          },
+          {
+            "step": 6,
+            "file": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+            "line_number": 1,
+            "function_or_component": "useRegistrationSubmission polling effect",
+            "action": "Poll check-email-status Edge Function every 5-60s with exponential backoff",
+            "details": "Await email confirmation notification from Supabase Auth hook, timeout after max poll attempts"
+          },
+          {
+            "step": 7,
+            "file": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+            "line_number": 1,
+            "function_or_component": "useRegistrationSubmission",
+            "action": "Email verification detected, dispatch 'verifying' action",
+            "details": "Transition phase to 'verifying', prepare to invoke register-organization Edge Function"
+          },
+          {
+            "step": 8,
+            "file": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+            "line_number": 1,
+            "function_or_component": "persistRegistration in useRegistrationSubmission",
+            "action": "Invoke register-organization Edge Function with JWT token and normalized payload",
+            "details": "Payload includes company.name, company.email, company.phone, company.taxId, company.address, admin email/password"
+          },
+          {
+            "step": 9,
+            "file": "supabase/functions/register-organization/index.ts",
+            "line_number": 167,
+            "function_or_component": "handleRegistration",
+            "action": "Verify JWT token and user email_confirmed_at flag",
+            "details": "Extract user ID from JWT claims, validate email verified before proceeding"
+          },
+          {
+            "step": 10,
+            "file": "supabase/functions/register-organization/index.ts",
+            "line_number": 200,
+            "function_or_component": "handleRegistration",
+            "action": "Connect to PostgreSQL via postgres.js and invoke create_account_with_admin() stored function",
+            "details": "Call stored function with company_name, company_email, admin first/last names (if provided), will create account+user+subscription atomically"
+          },
+          {
+            "step": 11,
+            "file": "supabase/functions/register-organization/index.ts",
+            "line_number": 1,
+            "function_or_component": "handleRegistration response",
+            "action": "Receive account_uuid, user_uuid, subscription_uuid from stored function, return 200 OK with correlation ID",
+            "details": "Store function handles all database writes in single transaction, rolls back on any error"
+          },
+          {
+            "step": 12,
+            "file": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+            "line_number": 1,
+            "function_or_component": "useRegistrationSubmission",
+            "action": "On Edge Function success, dispatch 'success' action with result",
+            "details": "Transition phase to 'succeeded', store companyId/adminUuid/membershipId in result state"
+          },
+          {
+            "step": 13,
+            "file": "src/modules/auth/components/RegistrationForm.tsx",
+            "line_number": 118,
+            "function_or_component": "handleVerificationDialogClose",
+            "action": "Close verification dialog, navigate to /login route with success message",
+            "details": "Display toast: 'Registration complete! Please sign in to continue', reset submission state"
+          },
+          {
+            "step": 14,
+            "file": "src/modules/auth/components/LoginForm.tsx",
+            "line_number": 49,
+            "function_or_component": "LoginForm",
+            "action": "User now able to sign in with email and password",
+            "details": "Login flow will now detect user in users table and account membership via orphan detection"
+          }
+        ],
+        "outcome": "User successfully registered with new account, first user assigned owner role, trial subscription created with 14-day expiry, user can now login"
+      },
+      {
+        "id": "FLOW-002",
+        "flow_name": "Login Flow with Orphan Detection",
+        "trigger": "User enters email and password in LoginForm and clicks 'Sign in' button",
+        "trace_steps": [
+          {
+            "step": 1,
+            "file": "src/modules/auth/components/LoginForm.tsx",
+            "line_number": 78,
+            "function_or_component": "LoginForm.handleSubmit",
+            "action": "Validate email and password are not empty, invoke useAuth().login(email, password)",
+            "details": "Client-side validation only, form requires both fields non-empty before submit enabled"
+          },
+          {
+            "step": 2,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 146,
+            "function_or_component": "AuthProvider.login",
+            "action": "Guard against duplicate concurrent login calls, invoke supabase.auth.signInWithPassword(email, password)",
+            "details": "Supabase client sends credentials to Auth service, returns session with JWT token if valid"
+          },
+          {
+            "step": 3,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 167,
+            "function_or_component": "AuthProvider.login",
+            "action": "Validate email_confirmed_at flag is set, sign out if not verified",
+            "details": "Unverified users are immediately signed out with error message guiding to verification"
+          },
+          {
+            "step": 4,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 178,
+            "function_or_component": "AuthProvider.login",
+            "action": "Invoke checkIfOrphaned(supabaseUser.id) with default options",
+            "details": "Default: maxRetries=3, timeoutMs=500. Performance critical: <200ms p95 target"
+          },
+          {
+            "step": 5,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 166,
+            "function_or_component": "checkIfOrphaned Attempt 1 (immediate)",
+            "action": "Execute parallel Promise.all() of two queries: profiles(id) and company_members(user_id)",
+            "details": "SELECT id FROM profiles WHERE id = ? AND deleted_at IS NULL LIMIT 1 (both) execute concurrently"
+          },
+          {
+            "step": 6,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 240,
+            "function_or_component": "checkIfOrphaned",
+            "action": "Race queries against 500ms timeout promise",
+            "details": "Whichever completes first (queries or timeout) determines result. Both queries must complete without errors"
+          },
+          {
+            "step": 7,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 250,
+            "function_or_component": "checkIfOrphaned",
+            "action": "Check for query errors (ignore PGRST116=no rows, fail on other codes)",
+            "details": "Partial failure (one query succeeds, one fails) triggers retry. RLS policy violations appear as no-rows."
+          },
+          {
+            "step": 8,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 267,
+            "function_or_component": "checkIfOrphaned",
+            "action": "Determine orphan status: isOrphaned = !hasProfile || !hasMembership",
+            "details": "User is orphaned if missing EITHER profile OR membership. Both required for complete registration."
+          },
+          {
+            "step": 9,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 278,
+            "function_or_component": "checkIfOrphaned success case",
+            "action": "Return OrphanCheckResult with metrics (totalDurationMs, queryDurationMs, attempt count)",
+            "details": "If detection >200ms, log warning. If >500ms, log critical performance issue"
+          },
+          {
+            "step": 10,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 229,
+            "function_or_component": "AuthProvider.login",
+            "action": "If orphanCheck.isOrphaned=true, sign out user and throw OrphanedUserError",
+            "details": "User found in auth.users but not in application database. Requires recovery flow."
+          },
+          {
+            "step": 11,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 299,
+            "function_or_component": "AuthProvider.login catch block",
+            "action": "Catch OrphanedUserError, initiate cleanup flow (fire-and-forget), display toast, create redirect error",
+            "details": "Toast shows: 'Registration Incomplete'. Redirect URL points to recovery route with correlation ID."
+          },
+          {
+            "step": 12,
+            "file": "src/modules/auth/components/LoginForm.tsx",
+            "line_number": 107,
+            "function_or_component": "LoginForm error handler",
+            "action": "Detect REDIRECT_TO_RECOVERY error, extract redirectUrl, navigate to recovery route",
+            "details": "User directed to complete registration via recovery flow with verification code"
+          },
+          {
+            "step": 13,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 247,
+            "function_or_component": "AuthProvider.login non-orphaned path",
+            "action": "User not orphaned, invoke mapUserWithProfile(supabaseUser) for profile enrichment",
+            "details": "Fetches user profile (full_name, avatar_url) from profiles table via ProfileQueries.getProfile()"
+          },
+          {
+            "step": 14,
+            "file": "src/core/supabase/queries/profiles.ts",
+            "line_number": 39,
+            "function_or_component": "ProfileQueries.getProfile",
+            "action": "Query profiles table with user ID, return full_name and avatar_url",
+            "details": "RLS policy ensures user can only view own profile or co-member profiles"
+          },
+          {
+            "step": 15,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 249,
+            "function_or_component": "AuthProvider.login",
+            "action": "Set session and user context with enriched profile data",
+            "details": "Update React state: setSession(session), setUser(enrichedUser)"
+          },
+          {
+            "step": 16,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 363,
+            "function_or_component": "syncLocalUserProfile effect",
+            "action": "Async effect syncs user profile to local SQLite for desktop app",
+            "details": "Calls Tauri IPC: createUserProfile or updateUserProfile. One-way sync from cloud to local."
+          },
+          {
+            "step": 17,
+            "file": "src/modules/auth/components/LoginForm.tsx",
+            "line_number": 95,
+            "function_or_component": "LoginForm redirect",
+            "action": "Login successful, navigate to / or redirect query param if provided",
+            "details": "User now authenticated and can access protected application features"
+          }
+        ],
+        "outcome": "User successfully authenticated, profile enriched, session established, navigation to workspace or redirect target"
+      },
+      {
+        "id": "FLOW-003",
+        "flow_name": "Orphan Detection Failure with Retry and Fail-Closed Fallback",
+        "trigger": "First orphan detection attempt times out due to database latency spike",
+        "trace_steps": [
+          {
+            "step": 1,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 213,
+            "function_or_component": "checkIfOrphaned Attempt 1",
+            "action": "Start timer at performance.now(), execute parallel queries with 500ms timeout",
+            "details": "Timeout promise created: setTimeout(() => reject, 500) races against queries"
+          },
+          {
+            "step": 2,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 240,
+            "function_or_component": "Promise.race()",
+            "action": "Database queries slower than 500ms, timeout promise rejects first",
+            "details": "Race completes with timeout error, caught in catch block"
+          },
+          {
+            "step": 3,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 349,
+            "function_or_component": "checkIfOrphaned catch block",
+            "action": "Log warning attempt failed, check if last attempt: attempt < maxRetries (1 < 3)",
+            "details": "Not last attempt, continue to next retry with backoff delay"
+          },
+          {
+            "step": 4,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 193,
+            "function_or_component": "Exponential backoff delay Attempt 2",
+            "action": "Apply random jitter: Math.random() * 200 ms, sleep before retrying",
+            "details": "Jitter randomizes retry timing (0-200ms) to prevent thundering herd under load"
+          },
+          {
+            "step": 5,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 213,
+            "function_or_component": "checkIfOrphaned Attempt 2",
+            "action": "Execute parallel queries again with fresh 500ms timeout",
+            "details": "Database latency still high, queries still don't complete within 500ms"
+          },
+          {
+            "step": 6,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 349,
+            "function_or_component": "checkIfOrphaned catch block Attempt 2",
+            "action": "Timeout again, check if last attempt: attempt < maxRetries (2 < 3)",
+            "details": "Not last attempt, apply second backoff delay and retry"
+          },
+          {
+            "step": 7,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 193,
+            "function_or_component": "Exponential backoff delay Attempt 3",
+            "action": "Apply larger random jitter: Math.random() * 500 ms, sleep before final attempt",
+            "details": "Maximum jitter range (0-500ms) for final attempt before giving up"
+          },
+          {
+            "step": 8,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 213,
+            "function_or_component": "checkIfOrphaned Attempt 3",
+            "action": "Final attempt, execute parallel queries with fresh 500ms timeout",
+            "details": "Still times out or encounters error"
+          },
+          {
+            "step": 9,
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "line_number": 365,
+            "function_or_component": "checkIfOrphaned catch block Attempt 3",
+            "action": "Last attempt failed, throw OrphanDetectionError with final metrics",
+            "details": "Error includes correlationId, attemptCount=3, totalDurationMs, queryDurationMs, timedOut=true"
+          },
+          {
+            "step": 10,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 259,
+            "function_or_component": "AuthProvider.login catch OrphanDetectionError",
+            "action": "Catch OrphanDetectionError, implement fail-closed: sign out user immediately",
+            "details": "Security priority over availability: block login rather than allow uncertain state"
+          },
+          {
+            "step": 11,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 266,
+            "function_or_component": "AuthProvider.login",
+            "action": "Log error with all metrics and correlation ID for incident response",
+            "details": "Error message includes: attemptCount, totalDurationMs, queryDurationMs, timedOut, hadError"
+          },
+          {
+            "step": 12,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 280,
+            "function_or_component": "AuthProvider.login",
+            "action": "Throw user-friendly error message instead of technical error",
+            "details": "Message: 'Authentication system is temporarily unavailable. Please try again in a few minutes.'"
+          },
+          {
+            "step": 13,
+            "file": "src/modules/auth/components/LoginForm.tsx",
+            "line_number": 120,
+            "function_or_component": "LoginForm error display",
+            "action": "Display error message in UI, user can retry login",
+            "details": "No redirect, user remains on login page, can retry after service recovery"
+          }
+        ],
+        "outcome": "Fail-closed security policy prevents login during system issue. User blocked from accessing application but protected from uncertain authentication state. Detailed logging enables incident response."
+      }
+    ],
+    "implementation_details": [
+      {
+        "id": "IMPL-001",
+        "category": "authentication",
+        "detail": "AuthProvider implements session-based authentication via Supabase Auth with JWT tokens. Session bootstraps on app load via supabase.auth.getSession(), auto-restored via browser storage. onAuthStateChange listener maintains real-time sync with auth state. User context includes id, email, name, emailVerified, fullName, avatarUrl. Session persists across page reloads via Supabase SDK internal handling.",
+        "location": [
+          "src/app/providers/auth/AuthProvider.tsx:101-144"
+        ],
+        "impact": "critical",
+        "code_examples": [
+          {
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "excerpt": "const { data, error } = await supabase.auth.getSession();\nif (error) throw error;\nif (!isMounted) return;\nsetSession(data.session);\nsetUser(mapUser(data.session?.user ?? null));",
+            "explanation": "Bootstrap fetches current session from Supabase Auth, maps user to context type, handles cleanup via isMounted ref"
+          }
+        ]
+      },
+      {
+        "id": "IMPL-002",
+        "category": "state-management",
+        "detail": "Login flow uses fail-closed security policy: if any critical check fails (email unverified, orphan detection fails, network error), user is immediately signed out and blocked from proceeding. Orphan detection implements 3-retry strategy with exponential backoff+jitter (0ms, 0-200ms, 0-500ms) to handle transient database issues while maintaining <200ms p95 latency target.",
+        "location": [
+          "src/app/providers/auth/AuthProvider.tsx:146-331",
+          "src/modules/auth/utils/orphanDetection.ts:166-407"
+        ],
+        "impact": "critical",
+        "code_examples": [
+          {
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "excerpt": "const delays = [\n  0,\n  Math.random() * 200,\n  Math.random() * 500\n];\nfor (let attempt = 1; attempt <= maxRetries; attempt++) {\n  if (attempt > 1) {\n    const delayMs = delays[attempt - 1];\n    await sleep(delayMs);\n  }\n  // Query execution with timeout\n}",
+            "explanation": "Exponential backoff with jitter prevents synchronized retry storms. Random delay component randomizes timing to avoid thundering herd problem under load."
+          }
+        ]
+      },
+      {
+        "id": "IMPL-003",
+        "category": "data-persistence",
+        "detail": "Current schema uses profiles table for user enrichment (full_name, avatar_url) and company_members junction table for membership tracking. Orphan detection checks BOTH tables: user must have profiles record AND company_members record to be non-orphaned. Missing either indicates incomplete registration. New schema will consolidate to users table with account_uuid FK.",
+        "location": [
+          "src/modules/auth/utils/orphanDetection.ts:218-231",
+          "src/core/supabase/queries/profiles.ts",
+          "src/core/supabase/queries/company_members.ts"
+        ],
+        "impact": "critical",
+        "code_examples": [
+          {
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "excerpt": "const [profileResult, membershipResult] = await Promise.all([\n  supabase.from('profiles').select('id').eq('id', userId).limit(1).maybeSingle(),\n  supabase.from('company_members').select('id').eq('user_id', userId).limit(1).maybeSingle(),\n]);\nconst isOrphaned = !profileResult.data || !membershipResult.data;",
+            "explanation": "Parallel queries check both conditions simultaneously. Orphaned if EITHER missing. Will change to users table check: !usersResult.data || !usersResult.data.account_uuid"
+          }
+        ]
+      },
+      {
+        "id": "IMPL-004",
+        "category": "api-integration",
+        "detail": "Registration flow invokes register-organization Edge Function which creates company, profile, and company_member records manually via separate INSERT statements. Must be refactored to invoke create_account_with_admin() stored function which performs atomic transaction: creates accounts record, users record (linked to auth.users via FK), company_members record (redundant?), and subscriptions record in single transaction.",
+        "location": [
+          "supabase/functions/register-organization/index.ts:167-200"
+        ],
+        "impact": "critical",
+        "code_examples": [
+          {
+            "file": "supabase/functions/register-organization/index.ts",
+            "excerpt": "const { user } = verification;\nconst adminEmail = (user.email ?? payload.company.email).toLowerCase();\n// Currently: INSERT INTO companies VALUES (...)\n// Must change to: CALL create_account_with_admin(company_name, company_email, first_name, last_name)",
+            "explanation": "Current flow requires 3 separate INSERT statements. New flow uses single stored function call for atomicity and simplicity."
+          }
+        ]
+      },
+      {
+        "id": "IMPL-005",
+        "category": "error-handling",
+        "detail": "Comprehensive error handling with correlation IDs enables distributed tracing. Every operation generates UUID correlation ID at entry point, passes through all layers (frontend → Edge Function → database), returned in response headers and error logs. Enables matching errors across 3 systems. Orphan detection includes retry metrics (attempt count, duration, timeout flag) for performance monitoring.",
+        "location": [
+          "src/core/supabase/errors.ts",
+          "src/modules/auth/utils/orphanDetection.ts:183-227",
+          "supabase/functions/register-organization/index.ts:89-98"
+        ],
+        "impact": "high",
+        "code_examples": [
+          {
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "excerpt": "const correlationId = crypto.randomUUID();\nconst operationStartTime = performance.now();\nconst metrics: OrphanDetectionMetrics = {\n  startedAt, completedAt,\n  totalDurationMs: Math.round(operationEndTime - operationStartTime),\n  queryDurationMs: Math.round(cumulativeQueryDurationMs),\n  attemptCount: attempt,\n  timedOut: false,\n  hadError: false,\n};",
+            "explanation": "Correlation ID paired with detailed metrics enables end-to-end tracing and performance monitoring for SLA compliance"
+          }
+        ]
+      },
+      {
+        "id": "IMPL-006",
+        "category": "authentication",
+        "detail": "Email verification probe integrated into registration flow. After signup completes, frontend polls check-email-status Edge Function to detect when user clicks verification link in email. Poll uses exponential backoff (5-60s) to avoid hammering database. Dialog UI blocks form submission until verification complete. Failed probe after timeout shows manual verification option.",
+        "location": [
+          "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+          "supabase/functions/check-email-status/index.ts"
+        ],
+        "impact": "high",
+        "code_examples": [
+          {
+            "file": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+            "excerpt": "const POLL_BASE_DELAY_MS = 5_000; // Start at 5s\nconst POLL_MAX_DELAY_MS = 60_000; // Cap at 60s\n// Exponential backoff: delay = delay * 1.5 (approx) each iteration",
+            "explanation": "Poll interval grows exponentially to reduce database load while user waits for verification email"
+          }
+        ]
+      },
+      {
+        "id": "IMPL-007",
+        "category": "performance",
+        "detail": "Orphan detection targets <200ms p95 latency via: (1) parallel queries (Promise.all), (2) indexed columns (profiles.id, company_members.user_id), (3) LIMIT 1 to avoid scanning multiple rows, (4) timeout per attempt (500ms) generous vs p99 target, (5) no JOIN (would slow query), (6) RLS policies evaluated in database. Performance monitored via metrics: p95 <200ms, p99 <350ms, max retry duration <2.2s.",
+        "location": [
+          "src/modules/auth/utils/orphanDetection.ts:213-248",
+          "src/app/providers/auth/AuthProvider.tsx:180-227"
+        ],
+        "impact": "high",
+        "code_examples": [
+          {
+            "file": "src/modules/auth/utils/orphanDetection.ts",
+            "excerpt": "const [profileResult, membershipResult] = await Promise.race([\n  Promise.all([...queries...]),\n  timeoutPromise\n]);\nif (metrics.totalDurationMs > 200) {\n  console.warn('[orphanDetection] Exceeded p95 target', { actual: metrics.totalDurationMs, target: 200 });\n}",
+            "explanation": "Parallel execution + timeout + performance logging enables SLA monitoring and optimization"
+          }
+        ]
+      },
+      {
+        "id": "IMPL-008",
+        "category": "security",
+        "detail": "RLS policies enforce data isolation at database level. All queries use authenticated Supabase client which includes user ID in JWT claims. Database policies check user ID against tables before returning rows. CompanyQueries.listUserCompanies uses !inner join syntax to ensure only companies with matching memberships returned. ProfileQueries.getProfile enforces user can only view own or co-member profiles.",
+        "location": [
+          "src/core/supabase/queries/companies.ts:82-131",
+          "src/core/supabase/queries/profiles.ts:39-115"
+        ],
+        "impact": "critical",
+        "code_examples": [
+          {
+            "file": "src/core/supabase/queries/companies.ts",
+            "excerpt": "const { data, error } = await supabase\n  .from('companies')\n  .select('*,company_members!inner(user_id)')\n  .eq('company_members.user_id', user.id);\n// RLS policy on companies table checks current_user_id in JWT",
+            "explanation": "!inner join ensures only companies where user is member returned. Database RLS policy as secondary enforcement."
+          }
+        ]
+      },
+      {
+        "id": "IMPL-009",
+        "category": "data-models",
+        "detail": "Database types defined in shared/types/database.ts (lines 338-437) with Company, Profile, CompanyMember interfaces. Company includes id, name, vat_id, email, phone, address (JSONB), logo_url, created_at, updated_at. Profile includes id, full_name, avatar_url, created_at, updated_at (no user email - stored in auth.users). CompanyMember includes company_id, user_id, role (owner|admin|member), invited_by, created_at, updated_at.",
+        "location": [
+          "src/shared/types/database.ts:338-437"
+        ],
+        "impact": "high",
+        "code_examples": [
+          {
+            "file": "src/shared/types/database.ts",
+            "excerpt": "export interface Company { id: string; name: string; vat_id: string; email: string; phone: string | null; address: Address | null; logo_url: string | null; created_at: string; updated_at: string; }\nexport interface Profile { id: string; full_name: string | null; avatar_url: string | null; created_at: string; updated_at: string; }\nexport interface CompanyMember { id: string; company_id: string; user_id: string; role: MemberRole; invited_by: string | null; created_at: string; updated_at: string; }",
+            "explanation": "Type definitions match schema. Will be replaced by Account, User (users table), and potentially obsolete CompanyMember (depends on new schema design)"
+          }
+        ]
+      },
+      {
+        "id": "IMPL-010",
+        "category": "testing",
+        "detail": "Test files cover registration form validation, submission state machine, and integration flows. Tests mock supabase client and Edge Functions, verify form state transitions, and validate error handling. Current tests use company/profile mocks that must be updated to new schema (account/user/subscription) mocks.",
+        "location": [
+          "src/test/modules/auth/hooks/useRegistrationForm.test.tsx",
+          "src/test/modules/auth/hooks/useRegistrationSubmission.test.ts",
+          "src/test/modules/auth/components/RegistrationForm.integration.test.tsx"
+        ],
+        "impact": "high",
+        "code_examples": [
+          {
+            "file": "src/test/modules/auth/hooks/useRegistrationForm.test.tsx",
+            "excerpt": "// Mock currently returns: { companyId, adminUuid, membershipId }\n// Must update to return: { accountUuid, userUuid, subscriptionUuid }\n// And mock create_account_with_admin() invocation instead of manual INSERTs",
+            "explanation": "Tests must be updated to match new response structure and function invocation"
+          }
+        ]
+      }
+    ],
+    "architecture_mapping": {
+      "layers": [
+        {
+          "layer_name": "Presentation Layer",
+          "purpose": "React components handling user interaction and form display. Includes RegistrationForm, LoginForm, step-specific form components. Presentation-only: business logic delegated to controller hooks.",
+          "components": [
+            "RegistrationForm.tsx",
+            "LoginForm.tsx",
+            "RegistrationCompanyStep.tsx",
+            "RegistrationAdminStep.tsx",
+            "EmailStatusBanner.tsx",
+            "RegistrationProgress.tsx"
+          ]
+        },
+        {
+          "layer_name": "State Management Layer",
+          "purpose": "React hooks managing application state and side effects. Includes AuthProvider context, form state controllers (useRegistrationForm, useRegistrationSubmission), and data retrieval hooks.",
+          "components": [
+            "AuthProvider.tsx",
+            "useRegistrationForm.ts",
+            "useRegistrationSubmission.ts",
+            "useAuth hook"
+          ]
+        },
+        {
+          "layer_name": "Business Logic Layer",
+          "purpose": "Utility functions and services implementing domain logic. Includes orphan detection, cleanup utilities, validation, password policy, registration constants.",
+          "components": [
+            "orphanDetection.ts",
+            "cleanupOrphanedUser.ts",
+            "cleanupInitiation.ts",
+            "passwordPolicy.ts",
+            "registrationSchema.ts",
+            "validation utilities"
+          ]
+        },
+        {
+          "layer_name": "Data Access Layer",
+          "purpose": "Query helper classes providing RLS-enforced Supabase queries. Static classes for CRUD operations: CompanyQueries, ProfileQueries, CompanyMemberQueries. Error mapping utilities.",
+          "components": [
+            "CompanyQueries.ts",
+            "ProfileQueries.ts",
+            "CompanyMemberQueries.ts",
+            "errors.ts"
+          ]
+        },
+        {
+          "layer_name": "Integration Layer",
+          "purpose": "External service integrations: Supabase Auth client, Edge Function invocations, Tauri IPC for local SQLite. Configuration and client setup.",
+          "components": [
+            "supabaseClient.ts",
+            "register-organization Edge Function",
+            "check-email-status Edge Function",
+            "cleanup-orphaned-user Edge Function",
+            "Tauri IPC commands"
+          ]
+        }
+      ],
+      "separation_of_concerns": "Code is well-separated across layers: (1) Presentation components handle only display and event binding, never query database directly, (2) Controller hooks manage form state and orchestrate business logic, (3) Utility functions implement reusable logic (orphan detection, cleanup), (4) Query helpers abstract database operations with consistent RLS enforcement, (5) Integration layer handles external services. However, orphan detection logic heavily entangled in AuthProvider (login flow handler) creating tight coupling. New schema migration provides opportunity to decouple and improve separation.",
+      "coupling_analysis": "Moderate coupling exists: (1) AuthProvider depends on ProfileQueries for enrichment - acceptable due to critical data dependency, (2) useRegistrationSubmission depends on register-organization Edge Function - unavoidable but well-abstracted via Supabase.functions.invoke(), (3) LoginForm tightly bound to AuthProvider context - necessary for authentication, (4) Orphan detection queries profiles and company_members tables - creates coupling to schema that must be updated for new design. Strong cohesion within modules (form components, submission hooks, query helpers) enables safe refactoring."
+    }
+  },
+  "key_findings": [
+    {
+      "id": "FIND-001",
+      "finding": "Current authentication architecture uses compound orphan detection checking BOTH profiles AND company_members tables. User must exist in BOTH to be non-orphaned. New schema consolidates to single users table with account_uuid FK, simplifying detection to single table query: users record exists AND account_uuid non-null AND deleted_at IS NULL.",
+      "category": "pattern",
+      "impact": "critical",
+      "affects": [
+        "FEAT-001",
+        "FEAT-002",
+        "FEAT-018"
+      ],
+      "recommendation": "Update orphan detection utility to query users table instead of dual queries. Rewrite checkIfOrphaned() to use single query with additional validations (account_uuid presence, deleted_at status, account record exists). This simplifies logic and improves performance.",
+      "priority": "immediate"
+    },
+    {
+      "id": "FIND-002",
+      "finding": "Email is used as login identifier but not globally unique in current schema. New schema enforces global email uniqueness via UNIQUE constraint on users.user_email. This is breaking change: same email cannot be used across different accounts.",
+      "category": "breaking-change",
+      "impact": "high",
+      "affects": [
+        "OBJ-006",
+        "TC-003",
+        "FEAT-012"
+      ],
+      "recommendation": "Update registration validation to check email uniqueness against users table BEFORE submission. Add clear error messaging when email already exists. Consider account transfer feature if users need multi-account access with same email.",
+      "priority": "immediate"
+    },
+    {
+      "id": "FIND-003",
+      "finding": "AuthProvider implements fail-closed security policy correctly: on any authentication failure (unverified email, orphan detection failure, network error), user is immediately signed out and blocked. This is proper security practice but creates UX friction when services have transient issues.",
+      "category": "strength",
+      "impact": "high",
+      "affects": [
+        "SC-002",
+        "RISK-004"
+      ],
+      "recommendation": "Maintain fail-closed policy in new schema. Ensure orphan detection retry logic and timeout values remain tuned for <200ms p95 latency to minimize false-positive failures.",
+      "priority": "high"
+    },
+    {
+      "id": "FIND-004",
+      "finding": "Profile enrichment happens on every login via ProfileQueries.getProfile() which adds latency. Enrichment adds full_name and avatar_url to user context. New schema with JWT custom claims (account_uuid, user_role) can eliminate separate profile fetch if these claims included.",
+      "category": "opportunity",
+      "impact": "medium",
+      "affects": [
+        "TC-002",
+        "FEAT-009"
+      ],
+      "recommendation": "Once custom_access_token_hook configured, include full_name and avatar_url in JWT claims to eliminate profile enrichment fetch on every login. Falls back to query if claims missing (TC-002 graceful degradation).",
+      "priority": "medium"
+    },
+    {
+      "id": "FIND-005",
+      "finding": "Registration form has multi-step UX but both company and admin email fields must match in new schema. Current form doesn't enforce this constraint. Company step collects company.email, admin step collects admin.email - must be identical for create_account_with_admin().",
+      "category": "anti-pattern",
+      "impact": "high",
+      "affects": [
+        "FEAT-003",
+        "FEAT-011"
+      ],
+      "recommendation": "Update RegistrationAdminStep to validate admin email matches company.email from previous step. Show validation error if mismatch. Consider pre-filling admin email from company step.",
+      "priority": "immediate"
+    },
+    {
+      "id": "FIND-006",
+      "finding": "Edge Function register-organization currently manually creates companies, profiles, and company_members records via separate INSERT statements. No atomicity guarantee if failure between inserts. New schema with create_account_with_admin() stored function provides atomic transaction.",
+      "category": "improvement",
+      "impact": "high",
+      "affects": [
+        "OBJ-002",
+        "FEAT-003",
+        "RISK-009"
+      ],
+      "recommendation": "Refactor Edge Function to invoke create_account_with_admin() instead of manual inserts. This ensures atomicity: either all 4 records (account, user, subscription, membership) created or all rolled back. Eliminates risk of partial registration.",
+      "priority": "immediate"
+    },
+    {
+      "id": "FIND-007",
+      "finding": "Orphan detection implements sophisticated retry logic (3 attempts, exponential backoff with jitter) and fail-closed policy, but current implementation queries profiles and company_members tables with parallel Promise.all(). New schema requires only users table query but must validate account_uuid non-null and account exists.",
+      "category": "strength",
+      "impact": "high",
+      "affects": [
+        "SC-005"
+      ],
+      "recommendation": "Maintain retry logic and fail-closed policy when rewriting for new schema. Consider adding account existence validation as third query if needed. Performance target <200ms p95 should improve with single query.",
+      "priority": "high"
+    },
+    {
+      "id": "FIND-008",
+      "finding": "Local SQLite profile synchronization via Tauri IPC happens on every login. Comments in code note this is for 'backward compatibility' and cloud profiles auto-created by trigger. With new schema, this becomes maintenance burden if local SQLite profiles diverge from cloud users table.",
+      "category": "technical-debt",
+      "impact": "medium",
+      "affects": [
+        "TC-008"
+      ],
+      "recommendation": "Document clearly that local SQLite is cache-only, not source-of-truth. Cloud users table is authoritative. Consider deprecating local profile sync in future release, moving to cloud-only. For now, maintain one-way sync from cloud to local.",
+      "priority": "medium"
+    },
+    {
+      "id": "FIND-009",
+      "finding": "Form validation logic spread across multiple files: registrationSchema.ts, validation.ts, controllers. Email status probe implements separate validation checking email already registered. New schema with global email uniqueness requires consolidating email validation into single source of truth.",
+      "category": "anti-pattern",
+      "impact": "medium",
+      "affects": [
+        "FEAT-012"
+      ],
+      "recommendation": "Create centralized email validation utility that checks users table for existing email. Call from registration form for real-time feedback AND from Edge Function as server-side validation. Prevents race conditions.",
+      "priority": "high"
+    },
+    {
+      "id": "FIND-010",
+      "finding": "Current schema supports one user per company via many-to-many junction table (company_members). However, new schema shows users.account_uuid as single FK, suggesting one-to-one relationship. This is fundamental architectural question (Q-004) affecting invitation flow and multi-account UI.",
+      "category": "ambiguity",
+      "impact": "high",
+      "affects": [
+        "Q-004",
+        "FEAT-005",
+        "FEAT-006"
+      ],
+      "recommendation": "Clarify from user requirements: does new schema support users in multiple accounts? If yes, preserve company_members (renamed to account_members). If no, users table should have single account_uuid. This decision affects AccountQueries.listUserAccounts() design.",
+      "priority": "blocking"
+    }
+  ],
+  "clarifications_needed": [
+    {
+      "id": "CLAR-001",
+      "question": "Should new users table support one-to-many relationship with accounts (user can belong to multiple accounts), or is it strictly one-to-one (user belongs to single account)?",
+      "category": "data-model",
+      "context": "Current schema uses company_members junction table enabling many-to-many. New schema shows users.account_uuid as single FK suggesting one-to-one. This affects query design, UI (account switching), and invitation flows fundamentally.",
+      "blocking": true,
+      "blocks": [
+        "FEAT-005",
+        "FEAT-006",
+        "FEAT-010"
+      ],
+      "possible_answers": [
+        {
+          "answer": "One-to-one: Users belong to single account only",
+          "implications": "Simplifies queries (no junction table needed), eliminates account switching UI, but prevents users from managing multiple organizations with same email address. Requires new invitation flow (invite creates new user?)"
+        },
+        {
+          "answer": "One-to-many: Users can belong to multiple accounts",
+          "implications": "Requires account_members junction table alongside users table, needs account switching UI in login flow, but enables standard SaaS pattern where user manages multiple organizations. Invitation flow adds existing user to new account."
+        }
+      ],
+      "resolution_source": "user-qa"
+    },
+    {
+      "id": "CLAR-002",
+      "question": "Is custom_access_token_hook already configured in the deployed Supabase instance, or does the user need to manually configure it?",
+      "category": "implementation",
+      "context": "Hook must be set up via Supabase Dashboard → Authentication → Hooks to add account_uuid and user_role to JWT claims. Code cannot auto-configure it. If not configured, JWT claims will be incomplete, breaking RLS efficiency and forcing fallback queries for every request.",
+      "blocking": true,
+      "blocks": [
+        "OBJ-003",
+        "TC-002",
+        "FEAT-009"
+      ],
+      "possible_answers": [
+        {
+          "answer": "Hook already configured in deployed Supabase instance",
+          "implications": "Code can immediately rely on account_uuid and user_role in JWT. No fallback logic needed. Optimal performance with RLS efficiently filtered by JWT claims. Skip TC-002 mitigation."
+        },
+        {
+          "answer": "Hook not configured, user must configure manually",
+          "implications": "Implement TC-002 mitigation: detect missing claims at runtime, warn user with step-by-step configuration guide, implement fallback queries. Code must function with incomplete claims until hook configured. Degraded performance but functional."
+        }
+      ],
+      "resolution_source": "user-qa"
+    },
+    {
+      "id": "CLAR-003",
+      "question": "Does the application currently have production users/data in the old companies/profiles/company_members schema that must be migrated, or is this a greenfield migration?",
+      "category": "data-model",
+      "context": "If production data exists, migration scripts required to move data from companies → accounts, profiles → users (keeping auth.users unchanged), company_members → account_members. If greenfield, can clean cutover to new schema.",
+      "blocking": true,
+      "blocks": [
+        "OBJ-001",
+        "RISK-001",
+        "FEAT-015",
+        "FEAT-020"
+      ],
+      "possible_answers": [
+        {
+          "answer": "No production data, greenfield migration only",
+          "implications": "Clean cutover: old schema can be removed entirely. No data migration scripts needed. Code changes only. Risk of data loss eliminated."
+        },
+        {
+          "answer": "Production data exists in old schema that must be migrated",
+          "implications": "Complex migration required: write data migration scripts, test thoroughly in staging, plan zero-downtime cutover or maintenance window. Risk of data loss/corruption if not carefully planned. May need blue-green deployment."
+        }
+      ],
+      "resolution_source": "user-qa"
+    },
+    {
+      "id": "CLAR-004",
+      "question": "Should the application maintain local SQLite profile storage in the desktop app, or migrate to cloud-only storage with Supabase users table as source of truth?",
+      "category": "architecture",
+      "context": "Current code syncs user profile from cloud profiles table to local SQLite via Tauri IPC on every login. With new schema, this becomes maintenance burden if not clearly documented. Cloud users table should be source-of-truth but desktop may need offline support.",
+      "blocking": false,
+      "blocks": [
+        "TC-008",
+        "FEAT-001"
+      ],
+      "possible_answers": [
+        {
+          "answer": "Keep local SQLite, maintain one-way sync from cloud to local for offline support",
+          "implications": "Continue Tauri IPC sync from cloud users table to local SQLite. Clearly document local is cache-only. Update code comments about this being backward compatibility. Additional maintenance cost but supports offline features."
+        },
+        {
+          "answer": "Deprecate local SQLite, migrate to cloud-only storage",
+          "implications": "Remove Tauri IPC profile sync code, simplify AuthProvider. Users table becomes only source-of-truth. Desktop app must always read from cloud. Eliminates offline support but reduces complexity. Recommended for future."
+        }
+      ],
+      "resolution_source": "user-qa"
+    },
+    {
+      "id": "CLAR-005",
+      "question": "What should happen if a user changes their account role (e.g., admin → member)? Should the change take effect immediately, require logout/login, or use session refresh mechanism?",
+      "category": "implementation",
+      "context": "If user_role stored in JWT claims, role changes won't reflect until next login or token refresh. Current code doesn't implement session refresh. RLS policies checked at request time so immediate backend enforcement, but frontend permissions lag.",
+      "blocking": false,
+      "blocks": [
+        "TC-010",
+        "FEAT-014"
+      ],
+      "possible_answers": [
+        {
+          "answer": "Require logout/login to apply role changes",
+          "implications": "Simplest implementation, no session refresh needed. User must re-login to see new permissions. Less seamless UX but easier to implement and test."
+        },
+        {
+          "answer": "Implement session refresh mechanism to update JWT claims",
+          "implications": "Use Supabase session.refresh() or custom endpoint to update JWT without logout. More complex but better UX. Must implement in frontend and test carefully."
+        }
+      ],
+      "resolution_source": "user-qa"
+    },
+    {
+      "id": "CLAR-006",
+      "question": "Should expired trial subscriptions completely block access to the application, show read-only mode, or provide grace period before blocking?",
+      "category": "user-flow",
+      "context": "Trial subscriptions expire after 14 days. Need decision on enforcement strictness: hard block (safest but worst UX), read-only mode (shows data but blocks editing), or 7-day grace period (balances UX and revenue).",
+      "blocking": false,
+      "blocks": [
+        "TC-009",
+        "FEAT-013"
+      ],
+      "possible_answers": [
+        {
+          "answer": "Hard block: expired trials completely blocked from app access",
+          "implications": "User cannot access any features, must upgrade subscription or contact support. Protects revenue but risks user frustration. Good for freemium models."
+        },
+        {
+          "answer": "Read-only mode: expired trials can view but not modify data",
+          "implications": "User can see what they have but cannot create/edit content. Encourages upgrade without hard block. More user-friendly. Requires read-vs-write permission checks."
+        },
+        {
+          "answer": "Grace period: 7-day continuation after trial expiry",
+          "implications": "User can continue using full features for grace period, clear deadline to upgrade. Best UX but requires payment reminders and cutoff enforcement."
+        }
+      ],
+      "resolution_source": "user-qa"
+    }
+  ],
+  "metadata": {
+    "created_at": "2025-10-30T00:00:00Z",
+    "analysis_version": "1.0.0",
+    "estimated_project_duration": "3-5 weeks",
+    "total_files_analyzed": 18,
+    "total_entry_points": 15,
+    "total_code_flows": 3,
+    "analysis_depth": "comprehensive"
+  }
+}

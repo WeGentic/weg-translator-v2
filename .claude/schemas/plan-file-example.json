@@ -1,0 +1,315 @@
+{
+  "project_name": "jwt-authentication-system",
+  "raw_user_input": "I need a secure authentication system with JWT tokens for the Tauri app. Users should be able to login, logout, and the system should automatically refresh tokens before they expire. It needs to work with our existing React 19 frontend.",
+  "key_objectives": [
+    {
+      "id": "OBJ-001",
+      "objective": "Implement secure JWT-based authentication that protects user sessions and prevents unauthorized access to the application",
+      "priority": "critical",
+      "category": "functional",
+      "success_indicators": [
+        "Users can authenticate with valid credentials",
+        "Invalid credentials are rejected with appropriate error messages",
+        "JWT tokens are generated and validated correctly",
+        "Tokens include necessary user claims and expiration data"
+      ]
+    },
+    {
+      "id": "OBJ-002",
+      "objective": "Provide seamless user experience with automatic token refresh that maintains sessions without requiring manual re-authentication",
+      "priority": "high",
+      "category": "user-experience",
+      "success_indicators": [
+        "Tokens refresh automatically before expiration",
+        "Users remain authenticated during active use",
+        "No visible interruption to user workflow during refresh",
+        "Failed refresh attempts handled gracefully"
+      ]
+    },
+    {
+      "id": "OBJ-003",
+      "objective": "Integrate cleanly with existing React 19 Context API patterns for state management without introducing breaking changes",
+      "priority": "high",
+      "category": "technical",
+      "success_indicators": [
+        "AuthContext follows same pattern as existing contexts",
+        "No modifications required to existing state management",
+        "Custom useAuth hook provides type-safe access to auth state",
+        "Integration requires minimal changes to existing components"
+      ]
+    }
+  ],
+  "technical_constraints": {
+    "constraints_list": [
+      {
+        "id": "TC-001",
+        "constraint": "Must integrate with existing React 19 frontend using established Context API pattern for global state management",
+        "impact": "high",
+        "mitigation": "Create AuthContext following the exact pattern used by ThemeContext and other existing contexts. Use same structure for provider, consumer, and custom hook to ensure consistency."
+      },
+      {
+        "id": "TC-002",
+        "constraint": "All frontend-backend communication must use Tauri IPC commands following project conventions in src-tauri/src/ipc/commands/",
+        "impact": "high",
+        "mitigation": "Create auth.rs command file mirroring structure of existing command files. Use same error handling pattern with Result<T, IpcError> return types."
+      },
+      {
+        "id": "TC-003",
+        "constraint": "Cannot use external authentication services or cloud-based token management - must be fully self-hosted",
+        "impact": "medium",
+        "mitigation": "Implement JWT generation and validation entirely in Rust backend using jsonwebtoken crate. Store secret key in environment variables for security."
+      },
+      {
+        "id": "TC-004",
+        "constraint": "Application must work offline after initial authentication for users without constant internet connection",
+        "impact": "medium",
+        "mitigation": "Store token in localStorage for persistence. Implement token validation that works without network access. Only require network for initial login and token refresh."
+      }
+    ]
+  },
+  "success_criteria": [
+    {
+      "id": "SC-001",
+      "criterion": "User can successfully login with valid credentials and receive a properly formatted JWT token",
+      "measurement": "Manual testing with test user accounts, verify token structure and claims",
+      "target": "100% success rate for valid credentials",
+      "category": "functionality",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-002",
+      "criterion": "Login response time from credential submission to token receipt is performant",
+      "measurement": "Browser DevTools network tab timing measurements",
+      "target": "< 500ms",
+      "category": "performance",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-003",
+      "criterion": "Token automatically refreshes before expiration without user intervention",
+      "measurement": "Monitor token refresh in application logs during extended session",
+      "target": "100% automatic refresh success rate",
+      "category": "functionality",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-004",
+      "criterion": "User session persists across application restarts",
+      "measurement": "Close and reopen application, verify user remains authenticated",
+      "target": "100% session restoration success",
+      "category": "reliability",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-005",
+      "criterion": "Invalid login attempts are handled securely without leaking information about valid usernames",
+      "measurement": "Test with invalid username and invalid password, verify identical error responses",
+      "target": "Generic error message with no username enumeration",
+      "category": "security",
+      "priority": "must-have"
+    }
+  ],
+  "risks_and_mitigations": [
+    {
+      "id": "RISK-001",
+      "risk": "Token storage in localStorage is vulnerable to XSS attacks if input sanitization fails anywhere in the application",
+      "category": "technical",
+      "probability": "medium",
+      "impact": "major",
+      "risk_score": 12,
+      "mitigation_strategy": "Implement comprehensive input sanitization across all user inputs. Use Content Security Policy headers to restrict script execution. Conduct security review of all input handling code before launch. Document XSS risks clearly for future developers.",
+      "contingency_plan": "If XSS vulnerability discovered, immediately migrate token storage to httpOnly cookies with same-site flags. Conduct full security audit. Invalidate all existing tokens and force re-authentication. Notify users of security incident if data was compromised.",
+      "owner": "Lead Developer"
+    },
+    {
+      "id": "RISK-002",
+      "risk": "Token refresh mechanism could fail during network issues leaving users logged out unexpectedly during active sessions",
+      "category": "technical",
+      "probability": "medium",
+      "impact": "moderate",
+      "risk_score": 9,
+      "mitigation_strategy": "Implement robust retry logic with exponential backoff for token refresh requests. Add offline detection to pause refresh attempts until connectivity restored. Provide clear user feedback when refresh fails. Extend token lifetime buffer to 5 minutes before expiration.",
+      "contingency_plan": "If refresh failures become frequent, increase token lifetime from 24 hours to 7 days to reduce refresh frequency. Add user setting to control auto-refresh behavior. Implement manual refresh button as fallback option.",
+      "owner": "Lead Developer"
+    },
+    {
+      "id": "RISK-003",
+      "risk": "Integration with existing React 19 Context patterns could introduce breaking changes to other components if not implemented carefully",
+      "category": "technical",
+      "probability": "low",
+      "impact": "major",
+      "risk_score": 8,
+      "mitigation_strategy": "Study existing Context implementations thoroughly before starting. Follow established patterns exactly. Create integration plan that identifies all affected components. Test integration incrementally with existing features.",
+      "contingency_plan": "If breaking changes introduced, create adapter layer that maintains backward compatibility. Roll back changes and redesign integration approach. Schedule dedicated refactoring sprint to fix affected components.",
+      "owner": "Tech Lead"
+    }
+  ],
+  "required_features": [
+    {
+      "id": "FEAT-001",
+      "feature": "JWT token generation utility that creates tokens with user claims, expiration timestamps, and secure signature using HS256 algorithm",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "2-4 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Function accepts user_id and username as parameters",
+        "Generated token includes user_id, username, and exp claims",
+        "Token is signed with secret key from environment variables",
+        "Token expiration is set to 24 hours from generation",
+        "Function returns Result type with proper error handling"
+      ]
+    },
+    {
+      "id": "FEAT-002",
+      "feature": "JWT token validation utility that verifies token signature, checks expiration, and extracts user claims safely",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "2-3 hours",
+      "dependencies": ["FEAT-001"],
+      "acceptance_criteria": [
+        "Function accepts JWT token string as parameter",
+        "Signature is validated against secret key",
+        "Expiration timestamp is checked against current time",
+        "User claims are extracted and returned on success",
+        "Specific error codes distinguish expired vs invalid tokens"
+      ]
+    },
+    {
+      "id": "FEAT-003",
+      "feature": "Login Tauri IPC command that validates user credentials against database and returns JWT token on successful authentication",
+      "category": "authentication",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "3-5 hours",
+      "dependencies": ["FEAT-001"],
+      "acceptance_criteria": [
+        "Command accepts username and password as parameters",
+        "User record is queried from database using sqlx",
+        "Password is hashed and compared using bcrypt",
+        "JWT token is generated and returned on successful match",
+        "Generic error message returned on failure to prevent enumeration"
+      ]
+    },
+    {
+      "id": "FEAT-004",
+      "feature": "React AuthContext provider that manages authentication state globally and provides login/logout methods to consuming components",
+      "category": "authentication",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "4-6 hours",
+      "dependencies": ["FEAT-003"],
+      "acceptance_criteria": [
+        "Context maintains user object, token, and isAuthenticated flag",
+        "Login method calls Tauri command and updates state on success",
+        "Token is persisted to localStorage on login",
+        "State is restored from localStorage on app initialization",
+        "Custom useAuth hook provides type-safe access to context"
+      ]
+    },
+    {
+      "id": "FEAT-005",
+      "feature": "Automatic token refresh mechanism that monitors token expiration and refreshes 5 minutes before expiry without user intervention",
+      "category": "authentication",
+      "priority": "must-have",
+      "complexity": "complex",
+      "estimated_effort": "6-8 hours",
+      "dependencies": ["FEAT-004", "FEAT-006"],
+      "acceptance_criteria": [
+        "Timer checks token expiration every minute",
+        "Refresh triggered automatically when 5 minutes remain",
+        "Mutex pattern prevents concurrent refresh requests",
+        "AuthContext updated with new token on successful refresh",
+        "User logged out gracefully if refresh fails"
+      ]
+    },
+    {
+      "id": "FEAT-006",
+      "feature": "Token refresh Tauri IPC command that validates current token and generates new token with extended expiration",
+      "category": "authentication",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "2-3 hours",
+      "dependencies": ["FEAT-001", "FEAT-002"],
+      "acceptance_criteria": [
+        "Command accepts current JWT token as parameter",
+        "Token is validated before refresh",
+        "New token generated with fresh 24-hour expiration",
+        "User information maintained in new token claims",
+        "Error returned if token is invalid or too far from expiration"
+      ]
+    },
+    {
+      "id": "FEAT-007",
+      "feature": "Logout functionality that clears authentication state from memory and localStorage and navigates user to login page",
+      "category": "authentication",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "1-2 hours",
+      "dependencies": ["FEAT-004"],
+      "acceptance_criteria": [
+        "Logout method clears token from state and localStorage",
+        "User object is reset to null",
+        "isAuthenticated flag is set to false",
+        "Application navigates to login page after logout",
+        "No residual authentication data remains in browser"
+      ]
+    },
+    {
+      "id": "FEAT-008",
+      "feature": "Protected route wrapper component that enforces authentication before rendering protected content and redirects unauthenticated users",
+      "category": "ui-ux",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "2-3 hours",
+      "dependencies": ["FEAT-004"],
+      "acceptance_criteria": [
+        "Component uses useAuth hook to check authentication status",
+        "Authenticated users see protected content immediately",
+        "Unauthenticated users redirected to login page",
+        "Loading state shown while validating token",
+        "Works seamlessly with TanStack Router"
+      ]
+    }
+  ],
+  "open_questions": [
+    {
+      "id": "Q-001",
+      "question": "Should the system support multi-factor authentication (MFA) using TOTP authenticator apps in addition to username/password login?",
+      "category": "security",
+      "priority": "high",
+      "context": "The user mentioned 'secure authentication' but didn't specify if MFA is required. Adding MFA would significantly increase security but also adds substantial complexity to the authentication flow, database schema, and user onboarding process. This decision affects multiple features and should be clarified early.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-003", "FEAT-004", "OBJ-001"]
+    },
+    {
+      "id": "Q-002",
+      "question": "What should happen when a user's token expires while they have unsaved work in the application?",
+      "category": "user-flow",
+      "priority": "medium",
+      "context": "The automatic refresh mechanism handles most cases, but if refresh fails or the user is offline during expiration, we need to decide whether to save work to localStorage, show a modal prompting re-authentication, or force logout with data loss. This affects user experience significantly.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-005"]
+    },
+    {
+      "id": "Q-003",
+      "question": "Are there existing database tables and schemas for user accounts, or does this need to be created from scratch?",
+      "category": "data-model",
+      "priority": "blocking",
+      "context": "The login feature requires querying user credentials from a database. If tables don't exist, we need to design schema, create migrations, and possibly add user registration functionality. If they exist, we need to understand their structure to integrate properly.",
+      "resolution_source": "codebase-analysis",
+      "blocks": ["FEAT-003"]
+    },
+    {
+      "id": "Q-004",
+      "question": "Should the system support multiple simultaneous sessions per user across different devices?",
+      "category": "architecture",
+      "priority": "medium",
+      "context": "This affects whether we need token blacklisting, session management tables, or device tracking. Single-session enforcement is simpler but less user-friendly. Multi-session support adds complexity but provides better UX for users who switch between devices.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-007"]
+    }
+  ]
+}

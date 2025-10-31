@@ -1,0 +1,319 @@
+{
+  "project_name": "auth-error-notifications",
+  "raw_user_input": "When user tries to log in and there is an error, nothing happens. For example, 'Failed to load resource: the server responded with a status of 400 ()' from https://wnohgxkujwnuoqtibsss.supabase.co/auth/v1/token?grant_type=password. Do NOT try to fix the underlying error - just provide a detailed error notification system.",
+  "key_objectives": [
+    {
+      "id": "OBJ-001",
+      "objective": "Implement comprehensive error notification system for login failures that displays user-friendly toast notifications for all Supabase authentication errors without silent failures",
+      "priority": "critical",
+      "category": "functional",
+      "success_indicators": [
+        "All Supabase auth errors display user-friendly toast notifications",
+        "Errors are mapped to actionable messages users can understand",
+        "No silent failures during login process",
+        "Toast system is properly integrated with AuthProvider"
+      ]
+    },
+    {
+      "id": "OBJ-002",
+      "objective": "Follow existing codebase patterns for consistency by adapting the proven registration flow error mapping pattern to login flow without introducing new architectural patterns",
+      "priority": "high",
+      "category": "technical",
+      "success_indicators": [
+        "Error mapping follows registration flow pattern from useRegistrationSubmission.ts",
+        "LoginError class follows OrphanedUserError structure",
+        "Toast implementation matches orphaned user toast pattern",
+        "No breaking changes to existing auth flows"
+      ]
+    },
+    {
+      "id": "OBJ-003",
+      "objective": "Provide clear, actionable error messages to users that explain what went wrong in plain language and guide them toward resolution without technical jargon",
+      "priority": "critical",
+      "category": "user-experience",
+      "success_indicators": [
+        "Error messages explain what went wrong in plain language",
+        "Users know what action to take next (verify email, reset password, etc.)",
+        "Network errors distinguished from credential errors",
+        "Generic 'try again' messages avoided for known error types"
+      ]
+    },
+    {
+      "id": "OBJ-004",
+      "objective": "Maintain accessibility and UX quality standards by ensuring toast notifications are screen-reader accessible and do not create duplicate or confusing error states",
+      "priority": "high",
+      "category": "user-experience",
+      "success_indicators": [
+        "Toast notifications are screen-reader accessible",
+        "Error messages have appropriate duration (8s for readability)",
+        "No duplicate notifications for same error",
+        "Inline validation errors still work for form fields"
+      ]
+    }
+  ],
+  "technical_constraints": {
+    "constraints_list": [
+      {
+        "id": "TC-001",
+        "constraint": "Must use existing toast notification system located at src/shared/ui/toast.tsx without creating new notification mechanisms or modifying the core toast implementation",
+        "impact": "high",
+        "mitigation": "Toast system is fully functional and positioned correctly in provider stack at src/app/providers/index.tsx. AuthProvider already has access to useToast() hook imported at line 22. No additional setup or infrastructure changes needed."
+      },
+      {
+        "id": "TC-002",
+        "constraint": "Must preserve OrphanedUserError recovery flow completely unchanged to avoid breaking existing user recovery and cleanup mechanisms in AuthProvider lines 431-454",
+        "impact": "critical",
+        "mitigation": "Keep OrphanedUserError catch block exactly as-is in AuthProvider. New error mapping only applies to non-OrphanedUserError cases before this special handling. Add regression test to verify orphan redirect to recovery route still works. Review catch block structure carefully during implementation."
+      },
+      {
+        "id": "TC-003",
+        "constraint": "Must follow React 19.2 coding guidelines and React Compiler requirements including avoiding unnecessary manual memoization and following Context API patterns",
+        "impact": "medium",
+        "mitigation": "Avoid manual useMemo and useCallback unless absolutely necessary per React 19 compiler guidance. Follow existing error handling patterns from registration flow. Use React Context properly as demonstrated in AuthProvider implementation."
+      },
+      {
+        "id": "TC-004",
+        "constraint": "Must integrate with Supabase AuthError types from @supabase/supabase-js package and handle all error properties including status codes, messages, and error names",
+        "impact": "high",
+        "mitigation": "Import AuthError type from @supabase/supabase-js as shown in useRegistrationSubmission.ts line 3. Follow registration flow pattern for error type detection using status codes combined with message pattern matching. Reference Supabase documentation for canonical error formats."
+      },
+      {
+        "id": "TC-005",
+        "constraint": "Error mapper must handle unknown and unexpected error types gracefully without crashing or showing empty error messages to prevent poor user experience",
+        "impact": "medium",
+        "mitigation": "Add catch-all mapper function (mapUnknownError) following the pattern in useRegistrationSubmission.ts lines 198-213. Provide generic but helpful fallback message. Log unmapped errors with full details for debugging and future enhancement."
+      },
+      {
+        "id": "TC-006",
+        "constraint": "Toast system has a maximum limit of 5 concurrent toasts as enforced in toast.tsx line 95, which could be exceeded if multiple errors occur rapidly",
+        "impact": "low",
+        "mitigation": "Login errors are sequential (one login attempt at a time) making it unlikely to hit the 5-toast limit. Toast system already handles duplicates via signature-based detection in toast.tsx lines 64-83. No additional handling needed unless future features allow parallel login attempts."
+      }
+    ]
+  },
+  "success_criteria": [
+    {
+      "id": "SC-001",
+      "criterion": "User sees toast notification with clear, actionable message when login fails due to invalid credentials (wrong email or password)",
+      "measurement": "Manual testing with incorrect password on test account, verify toast appears with user-friendly message",
+      "target": "Toast appears within 500ms with message explaining invalid credentials",
+      "category": "functionality",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-002",
+      "criterion": "Email verification errors display actionable toast message directing users to check their inbox for confirmation email",
+      "measurement": "Manual testing with unverified email account, verify toast shows verification instructions",
+      "target": "Toast shows 'Please verify your email' message with clear next steps",
+      "category": "functionality",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-003",
+      "criterion": "Network errors are distinguishable from authentication errors with different user-facing messages and guidance",
+      "measurement": "Test with network disconnected, verify different message than credential errors",
+      "target": "Network errors show 'connection failed' message, auth errors show credential-specific message",
+      "category": "functionality",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-004",
+      "criterion": "OrphanedUserError recovery flow remains completely unchanged with toast notification and redirect to recovery route working exactly as before",
+      "measurement": "Test with orphaned user account, verify toast shows 'Registration Incomplete' and redirects to recovery route",
+      "target": "100% preservation of existing orphan detection and recovery behavior",
+      "category": "reliability",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-005",
+      "criterion": "No duplicate toast notifications appear for a single login error event",
+      "measurement": "Trigger various error types and count toast notifications shown",
+      "target": "Exactly 1 toast per error event, no duplicates",
+      "category": "usability",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-006",
+      "criterion": "Toast error notifications are accessible to screen readers and announced automatically without user interaction",
+      "measurement": "Test with VoiceOver (macOS) or NVDA (Windows) screen reader",
+      "target": "Error message is announced automatically when toast appears",
+      "category": "usability",
+      "priority": "should-have"
+    },
+    {
+      "id": "SC-007",
+      "criterion": "Error mapper handles all known Supabase error codes and types documented in codebase analysis section 5.1 with appropriate user-friendly messages",
+      "measurement": "Unit tests cover all error types from analysis table (invalid credentials, email not confirmed, account locked, network errors, service unavailable)",
+      "target": "100% coverage of error types in codebase analysis table",
+      "category": "functionality",
+      "priority": "must-have"
+    }
+  ],
+  "risks_and_mitigations": [
+    {
+      "id": "RISK-001",
+      "risk": "Modifying AuthProvider.login() error handling could break the OrphanedUserError recovery flow that redirects users to cleanup and re-registration",
+      "category": "technical",
+      "probability": "medium",
+      "impact": "major",
+      "risk_score": 12,
+      "mitigation_strategy": "Keep OrphanedUserError catch block at AuthProvider.tsx lines 431-454 exactly as-is without modifications. New error mapping logic only applies to errors caught before this special handling block. Add integration test specifically for orphan detection flow to verify redirect to recovery route still works. During implementation, review the catch block structure carefully to ensure OrphanedUserError is checked first before applying new error mapping.",
+      "contingency_plan": "If orphan flow breaks after implementation, immediately revert AuthProvider changes to last working version. Redesign error handling to explicitly check for OrphanedUserError instance first using instanceof check, then apply new error mapping logic only to all other error types. Add explicit type guards to prevent OrphanedUserError from being processed by new error mapper.",
+      "owner": "Implementation Lead"
+    },
+    {
+      "id": "RISK-002",
+      "risk": "Multiple duplicate toast notifications could appear for a single login error if both AuthProvider and LoginForm show toasts for the same error event",
+      "category": "quality",
+      "probability": "high",
+      "impact": "moderate",
+      "risk_score": 9,
+      "mitigation_strategy": "Show toast notification in AuthProvider catch block ONLY. Do not add toast calls to LoginForm catch block to avoid duplication at source. Toast system has signature-based duplicate detection (toast.tsx lines 64-83) but better to prevent duplicates rather than rely on detection. AuthProvider is the authoritative source for auth errors, LoginForm only handles UI state.",
+      "contingency_plan": "If duplicate toasts appear during testing, add toast ID tracking in AuthProvider using correlation IDs. Pass correlation ID as toast id prop to ensure toast system recognizes duplicates. Alternatively, remove toast from whichever component is less authoritative (likely LoginForm) and rely solely on AuthProvider for error notifications.",
+      "owner": "Implementation Lead"
+    },
+    {
+      "id": "RISK-003",
+      "risk": "Error messages may not match all Supabase error message variations if error detection patterns are based on incomplete or outdated Supabase documentation",
+      "category": "technical",
+      "probability": "medium",
+      "impact": "moderate",
+      "risk_score": 9,
+      "mitigation_strategy": "Test against real Supabase errors in development environment, not just mocked errors in unit tests. Reference official Supabase authentication documentation for canonical error messages and status codes. Add catch-all mapper function (mapUnknownError) for error types not explicitly handled. Log all unmapped errors with full error details (status, message, code) to identify gaps in error mapping coverage.",
+      "contingency_plan": "If new Supabase error types are discovered in production that are not handled by current mapping, add hotfix to loginErrorMapper.ts with new detection patterns based on actual error format. Monitor application error logs weekly for unmapped error codes and update mapper accordingly. Maintain running list of unmapped errors in code comments for future enhancement.",
+      "owner": "Implementation Lead"
+    },
+    {
+      "id": "RISK-004",
+      "risk": "Toast notifications could disappear before users have time to read error messages, especially for longer or more complex error explanations",
+      "category": "quality",
+      "probability": "medium",
+      "impact": "minor",
+      "risk_score": 6,
+      "mitigation_strategy": "Use 8000ms (8 second) toast duration matching the orphaned user toast pattern in AuthProvider line 440. Keep error messages concise but informative, targeting under 80 characters when possible. Provide alternative persistent error state in LoginForm so message is available even after toast disappears. Use clear, scannable language that users can read quickly.",
+      "contingency_plan": "If users report missing or not seeing error messages, increase toast duration to 10000ms (10 seconds) for error toasts. Add user setting to control toast duration preferences in application settings. For critical errors like account lockout, consider making toast require manual dismissal by setting very long duration or adding action button that must be clicked to dismiss.",
+      "owner": "Implementation Lead"
+    }
+  ],
+  "required_features": [
+    {
+      "id": "FEAT-001",
+      "feature": "Custom LoginError class that extends Error with additional properties for error code, HTTP status, correlation ID, and user-friendly message generation following the OrphanedUserError pattern",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "1-2 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Class extends Error with proper name property and stack trace preservation",
+        "Properties include: code (string), message (string), status (number), correlationId (string)",
+        "getUserMessage() method returns user-friendly message appropriate for toast display",
+        "Follows OrphanedUserError.ts pattern exactly for consistency",
+        "Constructor validates required parameters and generates correlation ID if not provided"
+      ]
+    },
+    {
+      "id": "FEAT-002",
+      "feature": "Login error mapper utility with functions to detect and map Supabase AuthError types to user-friendly LoginError instances with correlation IDs for debugging",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "3-4 hours",
+      "dependencies": ["FEAT-001"],
+      "acceptance_criteria": [
+        "mapAuthError() function maps Supabase AuthError to LoginError with user-friendly message",
+        "Specific detector functions: isInvalidCredentialsError(), isEmailNotConfirmedError(), isAccountLockedError(), isNetworkError()",
+        "getErrorMessage() returns user-friendly messages for each error type (invalid credentials, email not confirmed, account locked, network error, service unavailable)",
+        "mapUnknownError() handles unexpected errors with generic fallback message",
+        "All mapped errors include correlation ID (crypto.randomUUID()) for support tracking",
+        "Error detection uses both status codes and message patterns like registration flow"
+      ]
+    },
+    {
+      "id": "FEAT-003",
+      "feature": "AuthProvider login method integration that catches Supabase errors, maps them to LoginError instances, and displays toast notifications before re-throwing errors to LoginForm",
+      "category": "authentication",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "2-3 hours",
+      "dependencies": ["FEAT-002"],
+      "acceptance_criteria": [
+        "Supabase auth errors caught at AuthProvider.tsx line 292-293 and mapped using loginErrorMapper before throwing",
+        "Toast notification shown for all non-OrphanedUserError errors using destructive variant",
+        "Toast duration set to 8000ms (8 seconds) matching orphaned user toast pattern",
+        "Correlation IDs logged with error message using logger.error() for debugging",
+        "OrphanedUserError flow at lines 431-454 preserved completely unchanged",
+        "Error thrown after toast shown to maintain existing LoginForm error handling"
+      ]
+    },
+    {
+      "id": "FEAT-004",
+      "feature": "LoginForm error handling coordination that displays inline validation errors for form fields while relying on AuthProvider toast for authentication errors without duplication",
+      "category": "ui-ux",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "1-2 hours",
+      "dependencies": ["FEAT-003"],
+      "acceptance_criteria": [
+        "LoginForm catch block at lines 107-121 does NOT show toast (AuthProvider handles toast)",
+        "Inline errors preserved for field validation (empty email, empty password)",
+        "Error state cleared when user successfully changes field values",
+        "No duplicate toasts shown for same error event",
+        "Orphaned user redirect logic at lines 109-116 still works correctly"
+      ]
+    },
+    {
+      "id": "FEAT-005",
+      "feature": "Comprehensive error type coverage for all common Supabase authentication errors documented in codebase analysis section 5.1 with distinct user-friendly messages for each",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "3-4 hours",
+      "dependencies": ["FEAT-002"],
+      "acceptance_criteria": [
+        "Invalid credentials (status 400) mapped to 'Email or password is incorrect. Please try again.'",
+        "Email not confirmed (status 400) mapped to 'Please verify your email before signing in. Check your inbox.'",
+        "Account locked (status 429) mapped to 'Account temporarily locked due to multiple failed attempts. Try again later.'",
+        "Network errors (no status) mapped to 'Network connection failed. Please check your internet.'",
+        "Service unavailable (status 500+) mapped to 'Authentication service is temporarily unavailable. Please try again.'",
+        "Session expired (status 401) mapped to 'Your session has expired. Please log in again.'",
+        "User not found (status 400) mapped to 'No account found with this email.'",
+        "All error types from codebase analysis table 5.1 covered with appropriate detection and messaging"
+      ]
+    },
+    {
+      "id": "FEAT-006",
+      "feature": "Error notification accessibility compliance ensuring toast notifications meet WCAG standards with proper ARIA attributes and screen reader announcements",
+      "category": "ui-ux",
+      "priority": "should-have",
+      "complexity": "simple",
+      "estimated_effort": "1-2 hours",
+      "dependencies": ["FEAT-003", "FEAT-004"],
+      "acceptance_criteria": [
+        "Toast uses role='alert' for automatic screen reader announcement (already implemented in toast.tsx line 30)",
+        "Screen readers announce error messages automatically when toast appears",
+        "Error messages are clear, concise, and actionable for all users",
+        "Toast duration (8000ms) allows sufficient time to read messages",
+        "Close button has proper aria-label (already implemented in toast.tsx line 229)"
+      ]
+    },
+    {
+      "id": "FEAT-007",
+      "feature": "Comprehensive unit test suite for loginErrorMapper utility covering all error detection functions and message mapping with edge cases",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "2-3 hours",
+      "dependencies": ["FEAT-002"],
+      "acceptance_criteria": [
+        "Test each error type detection function (isInvalidCredentialsError, isEmailNotConfirmedError, etc.)",
+        "Test error message mapping returns correct user-friendly message for each error type",
+        "Test correlation ID generation and inclusion in LoginError instances",
+        "Test mapUnknownError() fallback for unexpected error formats",
+        "Test edge cases: missing status code, empty error message, null error object",
+        "100% code coverage of loginErrorMapper.ts functions"
+      ]
+    }
+  ],
+  "open_questions": []
+}

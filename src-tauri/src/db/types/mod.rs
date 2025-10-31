@@ -9,6 +9,7 @@ pub mod note;
 pub mod project;
 pub mod reference;
 pub mod schema;
+pub mod supabase_schema;
 pub mod translation;
 pub mod validation;
 
@@ -32,3 +33,10 @@ pub use validation::Validation;
 
 #[allow(unused_imports)]
 pub use schema::*;
+
+// Re-export Supabase schema types for cloud data operations
+pub use supabase_schema::{
+    CompanyCreatePayload, CompanyDto, CompanyMemberDto, CompanyMemberRecord, CompanyRecord,
+    CompanyUpdatePayload, InviteMemberPayload, MemberRole, ProfileDto, ProfileRecord,
+    ProfileUpdatePayload, RemoveMemberPayload, UpdateMemberRolePayload,
+};

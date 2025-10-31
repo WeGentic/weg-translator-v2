@@ -1,0 +1,388 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tauri Project User Input Analysis",
+  "description": "Structured analysis of user input for Tauri application planning",
+  "type": "object",
+  "required": [
+    "project_name",
+    "raw_user_input",
+    "key_objectives",
+    "technical_constraints",
+    "success_criteria",
+    "risks_and_mitigations",
+    "required_features",
+    "open_questions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "project_name": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "minLength": 3,
+      "maxLength": 50,
+      "description": "Kebab-case project identifier derived from user input",
+      "guidance": "Extract key concepts from user input, convert to lowercase, join with hyphens. Example: 'JWT Authentication System' -> 'jwt-authentication-system'"
+    },
+    "raw_user_input": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 10000,
+      "description": "Original user input as provided",
+      "guidance": "Copy the user's exact input verbatim with no modifications"
+    },
+    "key_objectives": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "description": "Primary goals and objectives of the project",
+      "guidance": "Extract 1-10 main goals. Each objective should be specific, measurable, and actionable",
+      "items": {
+        "type": "object",
+        "required": ["id", "objective", "priority", "category"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^OBJ-\\d{3}$",
+            "description": "Unique objective identifier (e.g., OBJ-001)",
+            "guidance": "Use format OBJ-001, OBJ-002, etc. Exactly 3 digits with leading zeros"
+          },
+          "objective": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 300,
+            "description": "Clear, measurable objective statement",
+            "guidance": "Write 1-2 sentences stating the goal clearly. Example: 'Enable users to authenticate securely using JWT tokens with automatic session management'"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"],
+            "description": "Priority level for this objective",
+            "guidance": "critical = must have for MVP, high = important but not blocking, medium = nice to have, low = future consideration"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["functional", "performance", "user-experience", "technical", "business"],
+            "description": "Category of objective",
+            "guidance": "functional = what it does, performance = how fast, user-experience = usability, technical = architecture/code, business = ROI/metrics"
+          },
+          "success_indicators": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 10,
+              "maxLength": 200
+            },
+            "minItems": 1,
+            "maxItems": 5,
+            "description": "Measurable indicators of success",
+            "guidance": "List 1-5 measurable ways to verify this objective is achieved. Example: 'User can login within 3 clicks', 'Authentication completes in under 500ms'"
+          }
+        }
+      }
+    },
+    "technical_constraints": {
+      "type": "object",
+      "required": ["constraints_list"],
+      "additionalProperties": false,
+      "properties": {
+        "constraints_list": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 20,
+          "description": "List of technical constraints and limitations",
+          "guidance": "List 0-20 constraints. Can be empty array if no constraints",
+          "items": {
+            "type": "object",
+            "required": ["id", "constraint", "impact", "mitigation"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^TC-\\d{3}$",
+                "description": "Technical constraint identifier (e.g., TC-001)",
+                "guidance": "Format: TC-001, TC-002, etc. Exactly 3 digits with leading zeros"
+              },
+              "constraint": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 300,
+                "description": "Description of the constraint",
+                "guidance": "Describe the limitation in 1-2 sentences. Example: 'Must integrate with existing React 19 Context API pattern for state management'"
+              },
+              "impact": {
+                "type": "string",
+                "enum": ["critical", "high", "medium", "low"],
+                "description": "Impact level on project",
+                "guidance": "critical = blocks core functionality, high = significant limitation, medium = workaround exists, low = minor inconvenience"
+              },
+              "mitigation": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 500,
+                "description": "Strategy to handle or work around the constraint",
+                "guidance": "Explain in 1-3 sentences how to work within this constraint. Example: 'Follow existing Context pattern by creating AuthContext that mirrors ThemeContext structure'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "success_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 15,
+      "description": "Measurable criteria for project success",
+      "guidance": "Define 1-15 testable success criteria. Each should be objectively verifiable",
+      "items": {
+        "type": "object",
+        "required": ["id", "criterion", "measurement", "target", "category"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^SC-\\d{3}$",
+            "description": "Success criterion identifier (e.g., SC-001)",
+            "guidance": "Format: SC-001, SC-002, etc. Exactly 3 digits with leading zeros"
+          },
+          "criterion": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 300,
+            "description": "Clear statement of success criterion",
+            "guidance": "State what must be true for success in 1-2 sentences. Example: 'User authentication must complete successfully with valid credentials and return a JWT token'"
+          },
+          "measurement": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 200,
+            "description": "How this criterion will be measured",
+            "guidance": "Describe the test or measurement method in 1 sentence. Example: 'Manual testing with test user accounts and token validation'"
+          },
+          "target": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 100,
+            "description": "Target value or outcome (e.g., '< 100ms', '99.9% uptime')",
+            "guidance": "Specify the target metric. Examples: '< 500ms', '100% success rate', 'Zero security vulnerabilities', 'All tests pass'"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["performance", "functionality", "usability", "reliability", "security", "maintainability"],
+            "description": "Category of success criterion"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["must-have", "should-have", "nice-to-have"],
+            "description": "Priority level using MoSCoW method",
+            "guidance": "must-have = required for launch, should-have = important but not blocking, nice-to-have = future enhancement"
+          }
+        }
+      }
+    },
+    "risks_and_mitigations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "description": "Identified risks and their mitigation strategies",
+      "guidance": "Identify 1-20 potential risks. Consider technical, resource, schedule, and quality risks",
+      "items": {
+        "type": "object",
+        "required": ["id", "risk", "probability", "impact", "mitigation_strategy", "contingency_plan"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^RISK-\\d{3}$",
+            "description": "Risk identifier (e.g., RISK-001)",
+            "guidance": "Format: RISK-001, RISK-002, etc. Exactly 3 digits with leading zeros"
+          },
+          "risk": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 300,
+            "description": "Description of the risk",
+            "guidance": "Describe what could go wrong in 1-2 sentences. Example: 'Token storage in localStorage could be vulnerable to XSS attacks if input sanitization fails'"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["technical", "resource", "schedule", "scope", "external", "quality"],
+            "description": "Risk category",
+            "guidance": "technical = code/architecture, resource = people/skills, schedule = timing, scope = requirements, external = dependencies, quality = bugs/issues"
+          },
+          "probability": {
+            "type": "string",
+            "enum": ["very-low", "low", "medium", "high", "very-high"],
+            "description": "Likelihood of risk occurring",
+            "guidance": "very-low = <10%, low = 10-30%, medium = 30-50%, high = 50-70%, very-high = >70%"
+          },
+          "impact": {
+            "type": "string",
+            "enum": ["negligible", "minor", "moderate", "major", "catastrophic"],
+            "description": "Impact if risk materializes",
+            "guidance": "negligible = barely noticeable, minor = small delay, moderate = significant rework, major = project jeopardy, catastrophic = project failure"
+          },
+          "risk_score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25,
+            "description": "Calculated risk score (probability × impact)",
+            "guidance": "Calculate: very-low=1, low=2, medium=3, high=4, very-high=5 × negligible=1, minor=2, moderate=3, major=4, catastrophic=5. Range 1-25"
+          },
+          "mitigation_strategy": {
+            "type": "string",
+            "minLength": 30,
+            "maxLength": 500,
+            "description": "Proactive strategy to prevent or reduce risk",
+            "guidance": "Explain in 2-3 sentences what to do NOW to prevent this risk. Example: 'Implement comprehensive input sanitization, use Content Security Policy headers, conduct security review before launch'"
+          },
+          "contingency_plan": {
+            "type": "string",
+            "minLength": 30,
+            "maxLength": 500,
+            "description": "Reactive plan if risk occurs",
+            "guidance": "Explain in 2-3 sentences what to do IF this risk happens. Example: 'If XSS vulnerability discovered, immediately migrate to httpOnly cookies, conduct security audit, notify affected users'"
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50,
+            "description": "Person/role responsible for monitoring this risk",
+            "guidance": "Specify role or name. Examples: 'Lead Developer', 'Security Team', 'Tech Lead', 'Project Manager'"
+          }
+        }
+      }
+    },
+    "required_features": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 30,
+      "description": "List of required features for the application",
+      "guidance": "List 1-30 features derived from user input. Break down large requests into specific features",
+      "items": {
+        "type": "object",
+        "required": ["id", "feature", "priority", "complexity", "dependencies"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^FEAT-\\d{3}$",
+            "description": "Feature identifier (e.g., FEAT-001)",
+            "guidance": "Format: FEAT-001, FEAT-002, etc. Exactly 3 digits with leading zeros"
+          },
+          "feature": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 300,
+            "description": "Clear description of the feature",
+            "guidance": "Describe the feature in 1-2 sentences focusing on what it does. Example: 'User login form that accepts username and password, validates input, and authenticates via backend API'"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["core", "authentication", "data-management", "ui-ux", "integration", "security", "performance", "analytics"],
+            "description": "Feature category"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["must-have", "should-have", "nice-to-have"],
+            "description": "Priority using MoSCoW method",
+            "guidance": "must-have = MVP requirement, should-have = important but not blocking, nice-to-have = future enhancement"
+          },
+          "complexity": {
+            "type": "string",
+            "enum": ["trivial", "simple", "moderate", "complex", "very-complex"],
+            "description": "Implementation complexity",
+            "guidance": "trivial = <1hr, simple = 1-4hrs, moderate = 4-8hrs, complex = 1-3 days, very-complex = >3 days"
+          },
+          "estimated_effort": {
+            "type": "string",
+            "pattern": "^\\d+-\\d+\\s+(hours|days)$",
+            "description": "Estimated effort range (e.g., '4-8 hours', '2-3 days')",
+            "guidance": "Provide range with unit. Examples: '2-4 hours', '1-2 days', '3-5 days'. Must match pattern exactly"
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^FEAT-\\d{3}$"
+            },
+            "description": "IDs of features this depends on",
+            "guidance": "List feature IDs this feature requires. Empty array if no dependencies. Example: ['FEAT-001', 'FEAT-003']"
+          },
+          "acceptance_criteria": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 15,
+              "maxLength": 200
+            },
+            "minItems": 1,
+            "maxItems": 10,
+            "description": "Testable acceptance criteria",
+            "guidance": "List 1-10 testable conditions for feature completion. Each should start with action verb. Examples: 'User can click login button', 'Error message displays on invalid input'"
+          }
+        }
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 30,
+      "description": "Questions requiring clarification through codebase analysis or user interaction",
+      "guidance": "List 0-30 questions. Can be empty array if everything is clear. Identify ambiguities in user input",
+      "items": {
+        "type": "object",
+        "required": ["id", "question", "category", "priority", "context"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^Q-\\d{3}$",
+            "description": "Question identifier (e.g., Q-001)",
+            "guidance": "Format: Q-001, Q-002, etc. Exactly 3 digits with leading zeros"
+          },
+          "question": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 500,
+            "description": "The question requiring clarification",
+            "guidance": "Write as direct question in 1-2 sentences. Example: 'Should the system support multi-factor authentication in addition to username/password login?'"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["architecture", "implementation", "integration", "data-model", "user-flow", "performance", "security", "compatibility"],
+            "description": "Question category"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["blocking", "high", "medium", "low"],
+            "description": "Priority for getting answer",
+            "guidance": "blocking = must answer before starting, high = need soon, medium = clarify during dev, low = nice to know"
+          },
+          "context": {
+            "type": "string",
+            "minLength": 30,
+            "maxLength": 500,
+            "description": "Context explaining why this question matters",
+            "guidance": "Explain in 2-3 sentences why this needs clarification and what depends on the answer"
+          },
+          "resolution_source": {
+            "type": "string",
+            "enum": ["codebase-analysis", "user-qa", "research", "documentation"],
+            "description": "Expected source for answer",
+            "guidance": "codebase-analysis = check existing code, user-qa = ask user, research = investigate options, documentation = check docs"
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(FEAT|OBJ|TC|SC|RISK)-\\d{3}$"
+            },
+            "description": "IDs of items blocked by this question",
+            "guidance": "List IDs of features/objectives/etc that cannot proceed until this is answered. Empty array if nothing blocked"
+          }
+        }
+      }
+    }
+  }
+}

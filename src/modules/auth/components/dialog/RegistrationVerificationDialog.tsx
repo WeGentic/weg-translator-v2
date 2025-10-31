@@ -31,7 +31,7 @@ interface RegistrationVerificationDialogProps {
   phase: SubmissionPhase;
   attemptId: string | null;
   error: SubmissionError | null;
-  result: { companyId: string; adminUuid: string; payload: NormalizedRegistrationPayload } | null;
+  result: { accountUuid: string; userUuid: string; subscriptionUuid: string; payload: NormalizedRegistrationPayload } | null;
   canManualCheck: boolean;
   onManualCheck: () => Promise<void> | void;
   onClose: () => void;

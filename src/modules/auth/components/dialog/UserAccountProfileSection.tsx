@@ -1,7 +1,10 @@
 /**
  * Displays the authenticated user's profile summary within the account dialog.
+ * TASK 8.3: Added role badge to display current role from JWT claims.
  */
 import { Mail, UserCircle2 } from "lucide-react";
+import { RoleBadge } from "@/modules/auth/components/RoleBadge";
+import type { UserRole } from "@/shared/types/database";
 
 interface UserAccountProfileSectionProps {
   displayName: string;
@@ -9,6 +12,10 @@ interface UserAccountProfileSectionProps {
   initials: string;
   hasProfile: boolean;
   isAuthenticated: boolean;
+  /**
+   * TASK 8.3: User role from AuthProvider context (JWT claims)
+   */
+  userRole?: UserRole | null;
 }
 
 export function UserAccountProfileSection({
@@ -17,6 +24,7 @@ export function UserAccountProfileSection({
   initials,
   hasProfile,
   isAuthenticated,
+  userRole,
 }: UserAccountProfileSectionProps) {
   return (
     <>
@@ -37,6 +45,12 @@ export function UserAccountProfileSection({
           <p className="user-account-dialog__status" role="status">
             {isAuthenticated ? "Status: Signed in" : "Status: Signed out"}
           </p>
+          {/* TASK 8.3: Display role badge showing current role from JWT claims */}
+          {userRole && (
+            <div className="mt-2">
+              <RoleBadge role={userRole} />
+            </div>
+          )}
         </div>
       </section>
       <div className="user-account-divider" aria-hidden="true" />

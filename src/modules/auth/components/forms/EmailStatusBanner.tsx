@@ -108,9 +108,12 @@ export const EmailStatusBanner = forwardRef<HTMLDivElement, EmailStatusBannerPro
     );
   }
 
-  // Case 1.2: Orphaned Verified User (Phase 4)
-  // User verified email but database persistence failed, has no company data
-  if (status === "registered_verified" && result.isOrphaned === true) {
+  const hasCompanyData = result.hasCompanyData ?? null;
+  const isVerified = status === "registered_verified";
+  const lacksCompanyData = hasCompanyData !== true;
+
+  // Case 1.2: Verified account without persisted organization data
+  if (isVerified && lacksCompanyData) {
     return (
       <div
         className="registration-form__email-status registration-form__email-status--warning"
@@ -124,7 +127,9 @@ export const EmailStatusBanner = forwardRef<HTMLDivElement, EmailStatusBannerPro
         <div className="registration-form__email-status-content">
           <p className="registration-form__email-status-title">Registration incomplete - email verified.</p>
           <p className="registration-form__email-status-description">
-            Your email is verified but registration was incomplete. You can complete it now with your company information, or start fresh with a new account.
+            {result.isOrphaned === true
+              ? "Your email is verified but registration was incomplete. You can complete it now with your company information, or start fresh with a new account."
+              : "Your email is verified, but we haven't finished creating the organization yet. Continue below to finish registration or start over if this is unexpected."}
           </p>
         </div>
         <div className="registration-form__email-status-actions">
@@ -132,7 +137,7 @@ export const EmailStatusBanner = forwardRef<HTMLDivElement, EmailStatusBannerPro
             Complete registration
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={onRecover}>
-            Start fresh
+            Reset password
           </Button>
         </div>
       </div>
@@ -140,7 +145,7 @@ export const EmailStatusBanner = forwardRef<HTMLDivElement, EmailStatusBannerPro
   }
 
   // Fully registered user (email verified AND has company data)
-  if (status === "registered_verified") {
+  if (isVerified) {
     return (
       <div
         className="registration-form__email-status registration-form__email-status--error"
@@ -171,7 +176,7 @@ export const EmailStatusBanner = forwardRef<HTMLDivElement, EmailStatusBannerPro
 
   // Case 1.1: Orphaned Unverified User (Phase 4)
   // User created auth account but never verified email, and has no company data
-  if (status === "registered_unverified" && result.isOrphaned === true) {
+  if (status === "registered_unverified" && hasCompanyData !== true) {
     return (
       <div
         className="registration-form__email-status registration-form__email-status--warning"

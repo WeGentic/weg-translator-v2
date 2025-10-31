@@ -113,7 +113,7 @@ export interface UseRegistrationFormResult {
   submissionPhase: SubmissionPhase;
   submissionAttemptId: string | null;
   submissionError: SubmissionError | null;
-  submissionResult: { companyId: string; adminUuid: string; payload: NormalizedRegistrationPayload } | null;
+  submissionResult: { accountUuid: string; userUuid: string; subscriptionUuid: string; payload: NormalizedRegistrationPayload } | null;
   handleManualVerificationCheck: () => Promise<void>;
   resetSubmission: () => void;
 }
@@ -508,7 +508,11 @@ export function useRegistrationForm(): UseRegistrationFormResult {
         return;
       }
 
-      if (emailStatusProbe.status === "registered_verified") {
+      const probeResult = emailStatusProbe.result;
+      const isVerified = emailStatusProbe.status === "registered_verified";
+      const hasCompanyData = probeResult?.hasCompanyData ?? null;
+      const shouldBlockVerified = isVerified && hasCompanyData === true;
+      if (shouldBlockVerified) {
         return;
       }
 
@@ -522,6 +526,7 @@ export function useRegistrationForm(): UseRegistrationFormResult {
       isSubmissionLocked,
       phoneValue,
       emailStatusProbe.status,
+      emailStatusProbe.result?.hasCompanyData,
       submitRegistration,
       values,
     ],
@@ -550,34 +555,34 @@ export function useRegistrationForm(): UseRegistrationFormResult {
     const syncProfile = async () => {
       try {
         await createUserProfile({
-          userUuid: submissionResult.adminUuid,
+          userUuid: submissionResult.userUuid,
           username,
           email: adminEmail,
           roles: ["owner"],
         });
         logger.info("Registration profile synced", {
           attempt_id: submissionAttemptId,
-          admin_uuid: submissionResult.adminUuid,
-          company_id: submissionResult.companyId,
+          user_uuid: submissionResult.userUuid,
+          account_uuid: submissionResult.accountUuid,
         });
       } catch (error) {
         try {
           await updateUserProfile({
-            userUuid: submissionResult.adminUuid,
+            userUuid: submissionResult.userUuid,
             username,
             email: adminEmail,
             roles: ["owner"],
           });
           logger.info("Registration profile updated", {
             attempt_id: submissionAttemptId,
-            admin_uuid: submissionResult.adminUuid,
-            company_id: submissionResult.companyId,
+            user_uuid: submissionResult.userUuid,
+            account_uuid: submissionResult.accountUuid,
           });
         } catch (updateError) {
           logger.error("Failed to sync registration profile", updateError, {
             attempt_id: submissionAttemptId,
-            admin_uuid: submissionResult.adminUuid,
-            company_id: submissionResult.companyId,
+            user_uuid: submissionResult.userUuid,
+            account_uuid: submissionResult.accountUuid,
           });
         }
       }
@@ -597,11 +602,15 @@ export function useRegistrationForm(): UseRegistrationFormResult {
   );
 
   const emailStatusBlockingLabel = useMemo(() => {
-    if (emailStatusProbe.status === "registered_verified") {
+    const probeResult = emailStatusProbe.result;
+    if (
+      emailStatusProbe.status === "registered_verified" &&
+      (probeResult?.hasCompanyData ?? null) === true
+    ) {
       return "Administrator email is already registered.";
     }
     return null;
-  }, [emailStatusProbe.status]);
+  }, [emailStatusProbe.result?.hasCompanyData, emailStatusProbe.status]);
 
   const currentStepBlockingLabels = useMemo(() => {
     const labels = currentStepBlockingFields.map((field) => FIELD_CONFIG_BY_KEY[field].label);

@@ -217,7 +217,12 @@ describe("RegistrationForm integration scenarios", () => {
     mockFormState = createFormState({
       emailStatusProbe: createProbe({
         status: "registered_verified",
-        result: { ...baseProbeResult, status: "registered_verified" },
+        result: {
+          ...baseProbeResult,
+          status: "registered_verified",
+          hasCompanyData: true,
+          isOrphaned: false,
+        },
         reset: resetSpy,
       }),
       currentStepBlockingLabels: ["Administrator email is already registered."],
@@ -240,6 +245,70 @@ describe("RegistrationForm integration scenarios", () => {
       "Redirecting to login so you can recover your password.",
     );
     expect(mockNavigate).toHaveBeenLastCalledWith({ to: "/login" });
+  });
+
+  it("offers resume option for verified accounts without company data", () => {
+    const manualCheckSpy = vi.fn();
+    const stepSelectSpy = vi.fn();
+    mockFormState = createFormState({
+      emailStatusProbe: createProbe({
+        status: "registered_verified",
+        result: {
+          ...baseProbeResult,
+          status: "registered_verified",
+          hasCompanyData: false,
+          isOrphaned: true,
+        },
+      }),
+      currentStepBlockingLabels: [],
+      formBlockingLabels: [],
+      handleManualVerificationCheck: manualCheckSpy,
+      handleStepSelect: stepSelectSpy,
+    });
+
+    render(<RegistrationForm />);
+
+    expect(
+      screen.getByText(/registration incomplete - email verified/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /reset password/i })).toBeInTheDocument();
+    const resumeButton = screen.getByRole("button", { name: /complete registration/i });
+    fireEvent.click(resumeButton);
+    expect(stepSelectSpy).toHaveBeenCalledWith(0);
+    expect(manualCheckSpy).not.toHaveBeenCalled();
+    expect(mockSetMessage).toHaveBeenCalledWith(
+      "Resume your registration by confirming organization details, then submit to finish.",
+    );
+  });
+
+  it("allows manual verification when company data status is unknown", () => {
+    const manualCheckSpy = vi.fn();
+    const stepSelectSpy = vi.fn();
+    mockFormState = createFormState({
+      emailStatusProbe: createProbe({
+        status: "registered_verified",
+        result: {
+          ...baseProbeResult,
+          status: "registered_verified",
+          hasCompanyData: null,
+          isOrphaned: null,
+        },
+      }),
+      handleManualVerificationCheck: manualCheckSpy,
+      handleStepSelect: stepSelectSpy,
+    });
+
+    render(<RegistrationForm />);
+
+    expect(
+      screen.getByText(/we haven't finished creating the organization yet/i),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /complete registration/i }));
+    expect(stepSelectSpy).toHaveBeenCalledWith(0);
+    expect(manualCheckSpy).not.toHaveBeenCalled();
+    expect(mockSetMessage).toHaveBeenCalledWith(
+      "Resume your registration by confirming organization details, then submit to finish.",
+    );
   });
 
   it("opens the verification dialog and supports resend for unverified accounts", async () => {

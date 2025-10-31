@@ -104,9 +104,16 @@
 }
 
 .registration-form__stepper-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   font-size: 0.75rem;
   font-weight: 500;
   opacity: 0.85;
+}
+
+.registration-form__stepper-status-icon {
+  font-size: 0.85rem;
 }
 
 .registration-form__stepper-item:first-child .registration-form__stepper-trigger {
@@ -119,25 +126,14 @@
   border-bottom-right-radius: 0.5rem;
 }
 
-.registration-form__stepper-trigger[data-state="selected-incomplete"],
-.registration-form__stepper-trigger[data-state="selected-completed"] {
-  
+/* Selected step: accent color with primary background */
+.registration-form__stepper-trigger[data-state="selected"] {
+  background: var(--color-primary);
   color: var(--color-accent);
-
 }
 
-.registration-form__stepper-trigger[data-state="selected-completed"] {
-  background: var(--color-primary);
-  color: var(--color-secondary);
-}
-
-.registration-form__stepper-trigger[data-state="not-selected-completed"] {
-  background: var(--color-primary);
-  color: var(--color-secondary);
-
-}
-
-.registration-form__stepper-trigger[data-state="not-selected-incomplete"] {
+/* Non-selected steps: white/transparent background */
+.registration-form__stepper-trigger[data-state="not-selected"] {
   background: rgba(255, 255, 255, 0.75);
   color: var(--color-victorian-peacock-300);
 }
@@ -306,8 +302,7 @@
   
 }
 
-.registration-form__stepper-trigger[data-state="selected-incomplete"] .registration-form__stepper-index,
-.registration-form__stepper-trigger[data-state="selected-completed"] .registration-form__stepper-index {
+.registration-form__stepper-trigger[data-state="selected"] .registration-form__stepper-index {
   background: rgba(255, 255, 255, 0.45);
   color: var(--registration-button-text);
   text-shadow: rgba(255, 255, 255, 0.16) 0px 3px 6px, rgba(255, 255, 255, 0.23) 0px 3px 6px;

@@ -1,0 +1,1190 @@
+{
+  "project_name": "weg-translator-auth-error-notifications",
+  "overview": {
+    "user_input_summary": "The user needs to implement a detailed error notification system for authentication login/logout flows. Currently, when login fails (such as with invalid credentials or network errors from the Supabase auth endpoint), the system does not provide adequate user feedback. The task involves creating a comprehensive error handling and notification system that maps Supabase authentication errors to user-friendly messages and displays them via toast notifications.",
+    "analysis_scope": "Analyzed the authentication implementation across AuthProvider context, LoginForm component, existing toast notification system, and error handling patterns in the registration flow. Examined how errors currently flow through the system and identified gaps in error mapping and user feedback mechanisms.",
+    "primary_focus": [
+      "authentication",
+      "error-handling",
+      "ui-components",
+      "state-management",
+      "api-integration"
+    ]
+  },
+  "file_tree_structure": {
+    "root_directory": "weg-translator",
+    "relevant_paths": [
+      {
+        "path": "src/app/providers/auth/AuthProvider.tsx",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Core authentication provider managing Supabase login flow, session state, and user context. Contains the login() method where Supabase errors are caught and thrown.",
+        "key_exports": [
+          "AuthProvider",
+          "useAuth",
+          "AuthContext"
+        ]
+      },
+      {
+        "path": "src/modules/auth/components/LoginForm.tsx",
+        "type": "file",
+        "relevance": "critical",
+        "description": "React form component for user login with email and password inputs. Handles form validation and error display. Currently catches auth errors and stores them in local state.",
+        "key_exports": [
+          "LoginForm"
+        ]
+      },
+      {
+        "path": "src/shared/ui/toast.tsx",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Toast notification system providing user-friendly dismissable notifications. Fully functional but currently underutilized for authentication errors.",
+        "key_exports": [
+          "ToastProvider",
+          "useToast",
+          "ToastViewport",
+          "ToastItem"
+        ]
+      },
+      {
+        "path": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+        "type": "file",
+        "relevance": "high",
+        "description": "Registration flow hook with comprehensive error mapping patterns including mapAuthError(), mapFunctionInvokeError(), and error detection functions. Serves as reference pattern for login error handling.",
+        "key_exports": [
+          "useRegistrationSubmission",
+          "mapAuthError",
+          "mapFunctionInvokeError"
+        ]
+      },
+      {
+        "path": "src/modules/auth/errors/OrphanedUserError.ts",
+        "type": "file",
+        "relevance": "high",
+        "description": "Custom error class for orphaned user detection with correlation ID tracking and user-friendly messaging. Already demonstrates proper error class pattern with toast integration.",
+        "key_exports": [
+          "OrphanedUserError"
+        ]
+      },
+      {
+        "path": "src/modules/auth/errors/index.ts",
+        "type": "file",
+        "relevance": "medium",
+        "description": "Error class exports for authentication module. Will need to export new LoginError class.",
+        "key_exports": [
+          "OrphanedUserError",
+          "OrphanDetectionError"
+        ]
+      },
+      {
+        "path": "src/shared/ui/alert.tsx",
+        "type": "file",
+        "relevance": "high",
+        "description": "Base alert component used by toast system. Supports default and destructive variants for error display.",
+        "key_exports": [
+          "Alert",
+          "AlertTitle",
+          "AlertDescription"
+        ]
+      },
+      {
+        "path": "src/app/providers/index.tsx",
+        "type": "file",
+        "relevance": "high",
+        "description": "Application provider composition showing ToastProvider nested before AuthProvider, enabling proper error notification flow.",
+        "key_exports": [
+          "AppProviders"
+        ]
+      },
+      {
+        "path": "src/core/logging/index.ts",
+        "type": "file",
+        "relevance": "high",
+        "description": "Logging service used throughout codebase for JSON-formatted logs. Should be paired with error toast notifications for debugging.",
+        "key_exports": [
+          "logger"
+        ]
+      },
+      {
+        "path": "src/core/config/index.ts",
+        "type": "file",
+        "relevance": "high",
+        "description": "Supabase client configuration. Used in AuthProvider for auth.signInWithPassword() calls.",
+        "key_exports": [
+          "supabase"
+        ]
+      },
+      {
+        "path": "src/modules/auth/utils",
+        "type": "directory",
+        "relevance": "high",
+        "description": "Auth utility functions including orphan detection, cleanup, password policy, and subscriptions. Location for new error mapping utilities."
+      },
+      {
+        "path": "src/modules/auth",
+        "type": "directory",
+        "relevance": "critical",
+        "description": "Authentication module containing routes, components, hooks, errors, and utilities. Central location for all auth-related functionality."
+      }
+    ],
+    "tree_visualization": "weg-translator/\n├── src/\n│   ├── app/\n│   │   └── providers/\n│   │       ├── index.tsx (AppProviders)\n│   │       ├── auth/\n│   │       │   └── AuthProvider.tsx (core login logic)\n│   │       └── ...\n│   ├── modules/\n│   │   └── auth/\n│   │       ├── components/\n│   │       │   └── LoginForm.tsx (form UI & error display)\n│   │       ├── hooks/\n│   │       │   ├── useAuth.ts (exports from AuthProvider)\n│   │       │   └── controllers/\n│   │       │       └── useRegistrationSubmission.ts (error mapping pattern)\n│   │       ├── errors/\n│   │       │   ├── index.ts\n│   │       │   ├── OrphanedUserError.ts (custom error pattern)\n│   │       │   └── OrphanDetectionError.ts\n│   │       ├── utils/\n│   │       │   ├── orphanDetection.ts\n│   │       │   └── ... (location for new loginErrorMapper.ts)\n│   │       └── routes/\n│   │           └── index.tsx (LoginRoute)\n│   ├── shared/\n│   │   └── ui/\n│   │       ├── toast.tsx (ToastProvider & useToast)\n│   │       ├── alert.tsx (Alert component)\n│   │       └── ...\n│   └── core/\n│       ├── config/\n│       │   └── index.ts (supabase client)\n│       ├── logging/\n│       │   └── index.ts (logger)\n│       └── ...\n└── ..."
+  },
+  "entry_points": [
+    {
+      "id": "EP-001",
+      "name": "LoginForm",
+      "file_path": "src/modules/auth/components/LoginForm.tsx",
+      "line_number": 49,
+      "type": "component",
+      "purpose": "React form component that captures user email and password credentials, performs client-side validation, and initiates the login process. Currently catches authentication errors and displays them inline in the form.",
+      "dependencies": [
+        "EP-002",
+        "EP-003"
+      ],
+      "signature": "export function LoginForm(): JSX.Element",
+      "usage_examples": [
+        "Rendered in LoginRoute at /login page",
+        "Uses useAuth hook for login method",
+        "Catches auth errors in handleSubmit try-catch block (line 107-121)"
+      ]
+    },
+    {
+      "id": "EP-002",
+      "name": "useAuth",
+      "file_path": "src/modules/auth/hooks/useAuth.ts",
+      "line_number": 1,
+      "type": "hook",
+      "purpose": "Custom React hook providing access to authentication context including login/logout methods and user state. Currently re-exports from AuthProvider context.",
+      "dependencies": [
+        "EP-003"
+      ],
+      "signature": "export { useAuth } from '@/app/providers';",
+      "usage_examples": [
+        "const { login, isLoading } = useAuth() in LoginForm",
+        "Used in multiple components for auth state access"
+      ]
+    },
+    {
+      "id": "EP-003",
+      "name": "AuthProvider.login",
+      "file_path": "src/app/providers/auth/AuthProvider.tsx",
+      "line_number": 276,
+      "type": "function",
+      "purpose": "Async method that performs Supabase authentication with email and password. Handles session establishment, orphan detection, profile fetching, and subscription status. Primary location where authentication errors occur.",
+      "dependencies": [],
+      "signature": "const login = async (email: string, password: string) => Promise<void>",
+      "usage_examples": [
+        "Called from LoginForm.handleSubmit() with email and password",
+        "Line 287: supabase.auth.signInWithPassword() call",
+        "Line 292-294: Error thrown without mapping",
+        "Line 436-441: Toast shown only for orphaned users"
+      ]
+    },
+    {
+      "id": "EP-004",
+      "name": "useToast",
+      "file_path": "src/shared/ui/toast.tsx",
+      "line_number": 147,
+      "type": "hook",
+      "purpose": "Hook providing toast notification methods (toast, dismiss, clearAll). Returns interface with methods to display dismissable notifications with title, description, variant, duration, and optional action.",
+      "dependencies": [],
+      "signature": "export function useToast(): Pick<ToastController, 'toast' | 'dismiss' | 'clearAll'>",
+      "usage_examples": [
+        "const { toast } = useToast() in AuthProvider (line 230)",
+        "toast({ title, description, variant, duration, action }) to display notification",
+        "Currently used for orphaned user notification (AuthProvider line 436-441)"
+      ]
+    },
+    {
+      "id": "EP-005",
+      "name": "ToastProvider",
+      "file_path": "src/shared/ui/toast.tsx",
+      "line_number": 136,
+      "type": "component",
+      "purpose": "React Context provider component that manages toast notification state and rendering. Positioned in provider stack to wrap all app content including AuthProvider.",
+      "dependencies": [],
+      "signature": "export function ToastProvider({ children }: { children: React.ReactNode }): JSX.Element",
+      "usage_examples": [
+        "Wrapped in AppProviders at src/app/providers/index.tsx line 14",
+        "Enables useToast() hook usage throughout application",
+        "Renders ToastViewport for notification display (line 142)"
+      ]
+    },
+    {
+      "id": "EP-006",
+      "name": "supabase.auth.signInWithPassword",
+      "file_path": "src/app/providers/auth/AuthProvider.tsx",
+      "line_number": 287,
+      "type": "api-endpoint",
+      "purpose": "Supabase authentication client method that validates credentials against Supabase Auth service. Returns either successful session/user data or AuthError object.",
+      "dependencies": [],
+      "signature": "supabase.auth.signInWithPassword({ email: string, password: string }): Promise<{ data: { session, user }, error: AuthError | null }>",
+      "usage_examples": [
+        "Called in AuthProvider.login() at line 287",
+        "Returns error for invalid credentials, unverified email, user not found, etc.",
+        "Error status codes: 400 (bad request), 401 (unauthorized), 429 (too many attempts), 500+ (server error)"
+      ]
+    },
+    {
+      "id": "EP-007",
+      "name": "mapAuthError",
+      "file_path": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+      "line_number": 152,
+      "type": "function",
+      "purpose": "Utility function that maps Supabase AuthError to structured error object with code, message, source, and details. Serves as reference pattern for login error mapping.",
+      "dependencies": [],
+      "signature": "function mapAuthError(error: AuthError): SubmissionError",
+      "usage_examples": [
+        "Maps error.name to error code",
+        "Preserves error.message if valid",
+        "Captures error.status for HTTP status code",
+        "Should be extracted and reused for login errors"
+      ]
+    },
+    {
+      "id": "EP-008",
+      "name": "isEmailNotConfirmedError",
+      "file_path": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+      "line_number": 167,
+      "type": "function",
+      "purpose": "Utility function that detects email verification errors by checking error message and status code. Demonstrates error detection pattern for handling specific error types.",
+      "dependencies": [],
+      "signature": "function isEmailNotConfirmedError(error: AuthError): boolean",
+      "usage_examples": [
+        "Checks status === 400 && message.includes('not confirmed')",
+        "Pattern should be replicated for other specific errors (invalid credentials, user not found, etc.)"
+      ]
+    },
+    {
+      "id": "EP-009",
+      "name": "OrphanedUserError",
+      "file_path": "src/modules/auth/errors/OrphanedUserError.ts",
+      "line_number": 33,
+      "type": "function",
+      "purpose": "Custom error class for orphaned user detection with email, correlationId, and redirectUrl properties. Demonstrates proper error class implementation with toast integration.",
+      "dependencies": [],
+      "signature": "class OrphanedUserError extends Error { email: string; correlationId: string; redirectUrl: string; }",
+      "usage_examples": [
+        "Thrown at AuthProvider line 376 when orphan detected",
+        "Caught and handled with toast notification (line 436-441)",
+        "Shows pattern for custom error classes with rich context"
+      ]
+    }
+  ],
+  "codebase_structure": {
+    "architectural_patterns": [
+      {
+        "pattern": "React Context for Authentication State",
+        "location": [
+          "src/app/providers/auth/AuthProvider.tsx",
+          "src/modules/auth/hooks/useAuth.ts"
+        ],
+        "description": "Authentication state managed via React Context API with custom useAuth hook for consumption. Session, user, and auth methods provided globally to entire application tree.",
+        "relevance": "critical",
+        "should_follow": true
+      },
+      {
+        "pattern": "Error Mapping & Normalization",
+        "location": [
+          "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+          "lines 152-292"
+        ],
+        "description": "Comprehensive error mapping pattern that converts Supabase errors to structured SubmissionError objects with consistent code/message/source properties. Includes specialized error detectors for specific error types.",
+        "relevance": "critical",
+        "should_follow": true
+      },
+      {
+        "pattern": "Custom Error Classes with Context",
+        "location": [
+          "src/modules/auth/errors/OrphanedUserError.ts",
+          "src/modules/auth/errors/OrphanDetectionError.ts"
+        ],
+        "description": "Custom error classes extending Error base with application-specific properties (email, correlationId, redirectUrl, metrics). Enable type-safe error handling with rich context for logging and recovery.",
+        "relevance": "high",
+        "should_follow": true
+      },
+      {
+        "pattern": "Provider Nesting for Feature Composition",
+        "location": [
+          "src/app/providers/index.tsx"
+        ],
+        "description": "Application providers nested in specific order: LogProvider → AppErrorBoundary → QueryProvider → ToastProvider → AuthProvider. Ensures each provider has access to dependencies it requires.",
+        "relevance": "high",
+        "should_follow": true
+      },
+      {
+        "pattern": "Toast Notifications for User Feedback",
+        "location": [
+          "src/shared/ui/toast.tsx",
+          "src/app/providers/auth/AuthProvider.tsx line 436-441"
+        ],
+        "description": "Toast notification system using React Context and portals for non-blocking user feedback. Supports title, description, variant (default/destructive), duration, and optional action callback.",
+        "relevance": "high",
+        "should_follow": true
+      },
+      {
+        "pattern": "JSON Logging with Correlation IDs",
+        "location": [
+          "src/core/logging/index.ts",
+          "src/app/providers/auth/AuthProvider.tsx lines 98-356"
+        ],
+        "description": "Structured logging using logger service with correlation IDs for tracing errors through system. AuthProvider demonstrates logging pattern with metrics and context.",
+        "relevance": "high",
+        "should_follow": true
+      }
+    ],
+    "key_modules": [
+      {
+        "id": "MOD-001",
+        "name": "AuthProvider",
+        "path": "src/app/providers/auth/AuthProvider.tsx",
+        "purpose": "Core authentication provider managing Supabase session establishment, login flow, orphan detection, user profile fetching, and subscription status. Implements login() method that currently throws raw Supabase errors without mapping or user-friendly feedback.",
+        "type": "store",
+        "dependencies": [
+          "supabase",
+          "useToast",
+          "logger",
+          "UserQueries",
+          "OrphanedUserError"
+        ],
+        "exports": [
+          "AuthProvider",
+          "useAuth",
+          "AuthContext"
+        ],
+        "can_be_reused": false,
+        "needs_modification": true
+      },
+      {
+        "id": "MOD-002",
+        "name": "LoginForm",
+        "path": "src/modules/auth/components/LoginForm.tsx",
+        "purpose": "Form component for user authentication with email and password inputs. Handles form validation, field-level errors, and catches authentication errors. Currently stores errors in component state and displays inline only.",
+        "type": "component",
+        "dependencies": [
+          "useAuth",
+          "useRouter"
+        ],
+        "exports": [
+          "LoginForm"
+        ],
+        "can_be_reused": true,
+        "needs_modification": true
+      },
+      {
+        "id": "MOD-003",
+        "name": "ToastProvider & useToast",
+        "path": "src/shared/ui/toast.tsx",
+        "purpose": "Toast notification system providing user-friendly dismissable notifications with title, description, variant, duration, and optional action. Fully functional but currently underutilized for authentication errors.",
+        "type": "component",
+        "dependencies": [
+          "React",
+          "Alert"
+        ],
+        "exports": [
+          "ToastProvider",
+          "useToast",
+          "ToastViewport",
+          "ToastItem",
+          "ToastOptions",
+          "ToastVariant"
+        ],
+        "can_be_reused": true,
+        "needs_modification": false
+      },
+      {
+        "id": "MOD-004",
+        "name": "Error Mapping Utilities (Registration Pattern)",
+        "path": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+        "purpose": "Comprehensive error mapping and detection functions including mapAuthError(), mapFunctionInvokeError(), and error detection functions. Serves as proven pattern to be extracted and reused for login.",
+        "type": "utility",
+        "dependencies": [
+          "AuthError",
+          "Supabase types"
+        ],
+        "exports": [
+          "mapAuthError",
+          "mapFunctionInvokeError",
+          "mapUnknownError",
+          "mapVerificationError",
+          "isEmailNotConfirmedError",
+          "isUserAlreadyExistsError"
+        ],
+        "can_be_reused": true,
+        "needs_modification": false
+      },
+      {
+        "id": "MOD-005",
+        "name": "Custom Error Classes",
+        "path": "src/modules/auth/errors/",
+        "purpose": "Type-safe custom error classes (OrphanedUserError, OrphanDetectionError) extending Error with application-specific properties for context, correlation IDs, and recovery information.",
+        "type": "model",
+        "dependencies": [
+          "Error base class"
+        ],
+        "exports": [
+          "OrphanedUserError",
+          "OrphanDetectionError"
+        ],
+        "can_be_reused": true,
+        "needs_modification": true
+      },
+      {
+        "id": "MOD-006",
+        "name": "AppProviders",
+        "path": "src/app/providers/index.tsx",
+        "purpose": "Application provider composition wrapping entire app with LogProvider, AppErrorBoundary, QueryProvider, ToastProvider, and AuthProvider in correct dependency order.",
+        "type": "component",
+        "dependencies": [
+          "LogProvider",
+          "AppErrorBoundary",
+          "QueryProvider",
+          "ToastProvider",
+          "AuthProvider"
+        ],
+        "exports": [
+          "AppProviders"
+        ],
+        "can_be_reused": false,
+        "needs_modification": false
+      },
+      {
+        "id": "MOD-007",
+        "name": "Logger Service",
+        "path": "src/core/logging/index.ts",
+        "purpose": "Structured logging service for JSON-formatted logs with support for different log levels (info, warn, error, debug). Should be paired with toast notifications for debugging.",
+        "type": "service",
+        "dependencies": [],
+        "exports": [
+          "logger"
+        ],
+        "can_be_reused": true,
+        "needs_modification": false
+      }
+    ],
+    "data_flow": {
+      "description": "Authentication error flow begins when user submits LoginForm with credentials. The form calls useAuth hook's login method, which invokes AuthProvider's login function. AuthProvider makes Supabase API call via supabase.auth.signInWithPassword. On error, Supabase returns AuthError object containing status code, error message, and error name. Currently, this error is thrown without mapping or user-friendly translation. LoginForm catches the error and stores it in component state, displaying it inline above the form. The gap occurs because: (1) errors are not inspected by status/code before throwing, (2) no error mapping to user-friendly messages occurs, (3) no toast notifications are shown (except for special orphaned user case), (4) no correlation IDs are tracked for debugging. The desired flow would map Supabase errors to structured error objects with user-friendly messages, show toast notifications from AuthProvider, and provide recovery options via toast actions.",
+      "flow_diagrams": [
+        {
+          "name": "Current Login Error Flow (Broken)",
+          "flow_type": "authentication",
+          "steps": [
+            {
+              "step": 1,
+              "component": "LoginForm",
+              "description": "User enters email and password and clicks Submit button.",
+              "data_transformed": "Form input strings (email, password) collected"
+            },
+            {
+              "step": 2,
+              "component": "LoginForm.handleSubmit()",
+              "description": "Form validates inputs and calls login() from useAuth hook.",
+              "data_transformed": "Validated credentials passed to login method"
+            },
+            {
+              "step": 3,
+              "component": "useAuth hook",
+              "description": "Hook re-exports login method from AuthProvider context.",
+              "data_transformed": "No transformation, pass-through"
+            },
+            {
+              "step": 4,
+              "component": "AuthProvider.login()",
+              "description": "Calls supabase.auth.signInWithPassword() to authenticate user against Supabase Auth service.",
+              "data_transformed": "Returns { data: { session, user }, error: AuthError }"
+            },
+            {
+              "step": 5,
+              "component": "AuthProvider error handling (Line 292)",
+              "description": "Checks if error object returned. If truthy, throws raw Supabase AuthError without mapping or inspection.",
+              "data_transformed": "Raw AuthError thrown as exception"
+            },
+            {
+              "step": 6,
+              "component": "LoginForm catch block (Line 107)",
+              "description": "Catches thrown error, checks if it's orphan redirect, otherwise sets error state with error.message.",
+              "data_transformed": "Error message stored in local component state"
+            },
+            {
+              "step": 7,
+              "component": "LoginForm render (Line 256-272)",
+              "description": "Form displays error message inline above form. No toast notification shown (except orphan case).",
+              "data_transformed": "Error text rendered to user"
+            }
+          ]
+        },
+        {
+          "name": "Desired Login Error Flow (With Notifications)",
+          "flow_type": "authentication",
+          "steps": [
+            {
+              "step": 1,
+              "component": "LoginForm",
+              "description": "User enters email and password and clicks Submit button.",
+              "data_transformed": "Form input strings collected"
+            },
+            {
+              "step": 2,
+              "component": "LoginForm.handleSubmit()",
+              "description": "Form validates inputs and calls login() from useAuth hook.",
+              "data_transformed": "Validated credentials passed"
+            },
+            {
+              "step": 3,
+              "component": "AuthProvider.login()",
+              "description": "Calls supabase.auth.signInWithPassword().",
+              "data_transformed": "{ data, error } returned from Supabase"
+            },
+            {
+              "step": 4,
+              "component": "AuthProvider error handling (NEW)",
+              "description": "Inspects error.status and error.message to determine error type (invalid credentials, email not confirmed, too many attempts, etc.).",
+              "data_transformed": "Error code and type determined"
+            },
+            {
+              "step": 5,
+              "component": "Error Mapper (NEW)",
+              "description": "Maps Supabase error to structured LoginError with user-friendly message and error code.",
+              "data_transformed": "{ code, message, source, status, details }"
+            },
+            {
+              "step": 6,
+              "component": "Logger (NEW)",
+              "description": "Logs error with correlation ID and context for debugging.",
+              "data_transformed": "JSON structured log entry"
+            },
+            {
+              "step": 7,
+              "component": "Toast (NEW)",
+              "description": "Shows toast notification with error title, description, and optional action (e.g., Resend Email).",
+              "data_transformed": "Toast visible to user with dismissal option"
+            },
+            {
+              "step": 8,
+              "component": "LoginForm catch block (ENHANCED)",
+              "description": "Catches mapped error, displays optional inline message, user can retry or take recovery action.",
+              "data_transformed": "Form ready for retry or recovery action"
+            }
+          ]
+        },
+        {
+          "name": "Orphaned User Error Flow (Currently Working Pattern)",
+          "flow_type": "authentication",
+          "steps": [
+            {
+              "step": 1,
+              "component": "AuthProvider.login()",
+              "description": "Supabase login succeeds but orphan detection identifies user has no company data.",
+              "data_transformed": "orphanCheck.orphaned === true"
+            },
+            {
+              "step": 2,
+              "component": "AuthProvider orphan check (Line 360-377)",
+              "description": "Signs out user and throws OrphanedUserError with email and correlationId.",
+              "data_transformed": "OrphanedUserError instance with redirect URL"
+            },
+            {
+              "step": 3,
+              "component": "AuthProvider catch block (Line 431-454)",
+              "description": "Catches OrphanedUserError specifically, shows toast notification with instructions.",
+              "data_transformed": "Toast displayed to user"
+            },
+            {
+              "step": 4,
+              "component": "Toast notification (Line 436-441)",
+              "description": "Shows user-friendly message about incomplete registration with 8-second duration.",
+              "data_transformed": "User sees notification"
+            },
+            {
+              "step": 5,
+              "component": "Cleanup flow initiated (Line 433)",
+              "description": "Fire-and-forget cleanup initiates verification code send.",
+              "data_transformed": "Background cleanup process started"
+            },
+            {
+              "step": 6,
+              "component": "LoginForm catch block (Line 114)",
+              "description": "Catches redirect error and navigates to recovery route.",
+              "data_transformed": "User redirected to /register/recover"
+            }
+          ]
+        }
+      ]
+    },
+    "technology_stack": {
+      "frontend": [
+        {
+          "name": "React",
+          "version": "19.2",
+          "purpose": "UI framework with hooks and context for component-based architecture."
+        },
+        {
+          "name": "TypeScript",
+          "version": "5.x",
+          "purpose": "Type-safe JavaScript with interfaces and type definitions."
+        },
+        {
+          "name": "TanStack Router",
+          "version": "1.132+",
+          "purpose": "File-based routing with type safety and programmatic navigation."
+        },
+        {
+          "name": "TailwindCSS",
+          "version": "4.1.1",
+          "purpose": "Utility-first CSS framework for styling components."
+        },
+        {
+          "name": "Supabase JavaScript Client",
+          "version": "latest",
+          "purpose": "Client library for Supabase Auth, Database, and Realtime services."
+        }
+      ],
+      "backend": [
+        {
+          "name": "Supabase Auth",
+          "version": "latest",
+          "purpose": "Authentication as a service for email/password authentication."
+        },
+        {
+          "name": "Supabase Database (PostgreSQL)",
+          "version": "latest",
+          "purpose": "Relational database for user profiles, companies, and subscriptions."
+        }
+      ],
+      "libraries": [
+        {
+          "name": "@supabase/supabase-js",
+          "version": "latest",
+          "purpose": "Supabase JavaScript SDK for authentication and database access.",
+          "location": "frontend",
+          "is_critical": true
+        },
+        {
+          "name": "react-router",
+          "version": "@tanstack/react-router",
+          "purpose": "Type-safe routing for React applications.",
+          "location": "frontend",
+          "is_critical": true
+        },
+        {
+          "name": "ShadCN/UI",
+          "version": "3.3.1",
+          "purpose": "Pre-built accessible UI components (Alert, Button, Input, Dialog, Toast).",
+          "location": "frontend",
+          "is_critical": true
+        },
+        {
+          "name": "lucide-react",
+          "version": "latest",
+          "purpose": "Icon library for UI components.",
+          "location": "frontend",
+          "is_critical": false
+        },
+        {
+          "name": "class-variance-authority",
+          "version": "latest",
+          "purpose": "Type-safe component variant management for styling.",
+          "location": "frontend",
+          "is_critical": false
+        }
+      ]
+    }
+  },
+  "codebase_analysis": {
+    "code_flow_tracing": [
+      {
+        "id": "FLOW-001",
+        "flow_name": "Login with Invalid Credentials (Error Case)",
+        "trigger": "User enters incorrect email or password and clicks Sign In button on LoginForm.",
+        "trace_steps": [
+          {
+            "step": 1,
+            "file": "src/modules/auth/components/LoginForm.tsx",
+            "line_number": 78,
+            "function_or_component": "handleSubmit",
+            "action": "Form submission handler prevents default, validates fields, and calls login().",
+            "details": "Checks that both email and password are non-empty. If validation passes, calls login(email, password) from useAuth hook. If validation fails, sets error state with VALIDATION_MESSAGE."
+          },
+          {
+            "step": 2,
+            "file": "src/modules/auth/hooks/useAuth.ts",
+            "line_number": 1,
+            "function_or_component": "useAuth",
+            "action": "Re-exports useAuth hook from AuthProvider context.",
+            "details": "useAuth is simple pass-through hook that retrieves login method from AuthProvider context. No transformation or error handling occurs at this layer."
+          },
+          {
+            "step": 3,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 276,
+            "function_or_component": "login",
+            "action": "Sets loading state and calls Supabase signInWithPassword() method.",
+            "details": "Line 284: Sets isLoading to true. Line 287-290: Calls supabase.auth.signInWithPassword({ email, password }). Supabase returns { data: null, error: AuthError } for invalid credentials."
+          },
+          {
+            "step": 4,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 292,
+            "function_or_component": "login error handling",
+            "action": "Checks if error is truthy and throws raw AuthError without inspection or mapping.",
+            "details": "If error exists (line 292), throws error immediately (line 293). No inspection of error.status or error.message. No mapping to user-friendly error message. Raw Supabase error bubbles up to caller."
+          },
+          {
+            "step": 5,
+            "file": "src/modules/auth/components/LoginForm.tsx",
+            "line_number": 107,
+            "function_or_component": "catch block in handleSubmit",
+            "action": "Catches thrown error and checks if it's a redirect error from orphan detection.",
+            "details": "Line 109: Checks if error.message === 'REDIRECT_TO_RECOVERY'. If not, line 120: sets form error state with error.message as string. No toast notification shown. Error remains in form state until user changes input field."
+          },
+          {
+            "step": 6,
+            "file": "src/modules/auth/components/LoginForm.tsx",
+            "line_number": 256,
+            "function_or_component": "Form render",
+            "action": "Renders error message from state above form in aria-describedby region.",
+            "details": "Error visible as text but no visual highlighting. Raw Supabase error message shown (e.g., 'Invalid login credentials'). No toast notification. No recovery actions offered."
+          }
+        ],
+        "outcome": "User sees cryptic error message about invalid credentials, but message is not actionable. No suggestion to reset password, retry, or contact support. User must dismiss form and retry login.",
+        "edge_cases": [
+          "If network fails, error message is 'fetch failed' (unhelpful)",
+          "If account locked (429 Too Many Requests), no indication of lockout duration",
+          "If email not confirmed (400), message says 'Invalid login credentials' (confusing)",
+          "If user rapidly submits form twice, duplicate error messages shown"
+        ]
+      },
+      {
+        "id": "FLOW-002",
+        "flow_name": "Login with Email Not Confirmed (Special Case)",
+        "trigger": "User attempts to log in with email address that has not been verified.",
+        "trace_steps": [
+          {
+            "step": 1,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 287,
+            "function_or_component": "login",
+            "action": "Supabase returns success with user data where email_confirmed_at is null.",
+            "details": "supabase.auth.signInWithPassword() returns { data: { session, user }, error: null }. User object has email_confirmed_at === null indicating unverified email."
+          },
+          {
+            "step": 2,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 297,
+            "function_or_component": "Email verification check",
+            "action": "Verifies email confirmation status and throws generic Error if unverified.",
+            "details": "Line 297: const verified = Boolean(supabaseUser?.email_confirmed_at). Line 298-304: If not verified, signs out user, clears session, and throws generic Error with message about email verification."
+          },
+          {
+            "step": 3,
+            "file": "src/modules/auth/components/LoginForm.tsx",
+            "line_number": 107,
+            "function_or_component": "catch block",
+            "action": "Catches Error and sets error state with message.",
+            "details": "Error message is: 'Please verify your email before signing in. Check your inbox for the confirmation link.' This is more helpful than raw Supabase errors but still not a toast notification."
+          }
+        ],
+        "outcome": "User sees helpful error message about email verification, but it's displayed inline in form only. No persistent notification if user navigates away.",
+        "edge_cases": [
+          "User doesn't see verification email - no suggestion to resend",
+          "User navigates to different page - error notification is lost",
+          "Multiple login attempts - error state accumulates"
+        ]
+      },
+      {
+        "id": "FLOW-003",
+        "flow_name": "Login with Orphaned User (Currently Working Toast Pattern)",
+        "trigger": "User successfully authenticates but has no company/admin profile in database.",
+        "trace_steps": [
+          {
+            "step": 1,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 287,
+            "function_or_component": "login",
+            "action": "Supabase authentication succeeds, returns user session.",
+            "details": "Line 287-290: supabase.auth.signInWithPassword() succeeds. User email is confirmed and account exists in Supabase."
+          },
+          {
+            "step": 2,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 308,
+            "function_or_component": "checkIfOrphaned",
+            "action": "Queries database to check if user has company and membership records.",
+            "details": "Performs orphan detection by checking users and accounts tables. Returns { orphaned: true, orphanType: 'string', metrics: {...} } when user has no company data."
+          },
+          {
+            "step": 3,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 360,
+            "function_or_component": "Orphan handling block",
+            "action": "Signs out user and throws OrphanedUserError with email and correlationId.",
+            "details": "Line 362-364: Calls supabase.auth.signOut() and clears session. Line 376: Throws new OrphanedUserError(email, correlationId) with message about incomplete registration."
+          },
+          {
+            "step": 4,
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "line_number": 431,
+            "function_or_component": "Main catch block handling OrphanedUserError",
+            "action": "Catches OrphanedUserError specifically and shows toast notification.",
+            "details": "Line 431: Checks instanceof OrphanedUserError. Line 433: Calls initiateCleanupFlow() fire-and-forget. Line 436-441: Shows toast with title, description, and 8-second duration."
+          },
+          {
+            "step": 5,
+            "file": "src/shared/ui/toast.tsx",
+            "line_number": 136,
+            "function_or_component": "Toast system",
+            "action": "Renders toast notification to user with message about incomplete registration.",
+            "details": "Toast appears at bottom-right of screen. Contains title 'Registration Incomplete' and description about checking email for verification code. Auto-dismisses after 8 seconds."
+          },
+          {
+            "step": 6,
+            "file": "src/modules/auth/components/LoginForm.tsx",
+            "line_number": 114,
+            "function_or_component": "catch block REDIRECT_TO_RECOVERY handling",
+            "action": "Detects redirect error and navigates to recovery route.",
+            "details": "Line 109: Checks if err.message === 'REDIRECT_TO_RECOVERY'. Line 114: Calls router.navigate({ to: redirectUrl }) to take user to /register/recover?email=...&reason=orphaned"
+          }
+        ],
+        "outcome": "User sees clear toast notification about incomplete registration, receives recovery instructions, and is redirected to recovery flow with email pre-filled. This is the ONLY place login errors use toast notifications.",
+        "edge_cases": [
+          "Toast might be missed if user is not paying attention (8-second duration)",
+          "Redirect happens after toast, user might not read full message",
+          "If cleanup flow fails, user is stranded on recovery page"
+        ]
+      }
+    ],
+    "implementation_details": [
+      {
+        "id": "IMPL-001",
+        "category": "authentication",
+        "detail": "Supabase authentication is performed via supabase.auth.signInWithPassword() method in AuthProvider.login() at line 287-290. This method returns { data: { session, user }, error: AuthError | null }. When credentials are invalid, Supabase returns error object with status code 400 and message 'Invalid login credentials'. Current implementation throws this raw error without inspection or mapping to user-friendly message. Additionally, the method detects email confirmation status in separate check (lines 297-304) that was added after Supabase call succeeded, which is redundant since Supabase could return this information.",
+        "location": [
+          "src/app/providers/auth/AuthProvider.tsx lines 287-304"
+        ],
+        "impact": "critical",
+        "code_examples": [
+          {
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "excerpt": "const { data, error } = await supabase.auth.signInWithPassword({\n  email,\n  password,\n});\n\nif (error) {\n  throw error;  // Raw error thrown without mapping\n}",
+            "explanation": "Error is thrown immediately without inspection. Should check error.status and error.message to determine error type before throwing mapped error."
+          }
+        ]
+      },
+      {
+        "id": "IMPL-002",
+        "category": "error-handling",
+        "detail": "Error mapping pattern exists in registration flow (useRegistrationSubmission.ts lines 152-292) with functions mapAuthError(), mapFunctionInvokeError(), mapUnknownError(), and mapVerificationError(). These functions convert Supabase errors to structured SubmissionError objects with code, message, source, and details properties. The mapAuthError function specifically inspects error.name for code and preserves error.message for user display. This pattern is battle-tested and should be extracted to shared utility and reused in login flow.",
+        "location": [
+          "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts lines 152-292"
+        ],
+        "impact": "high",
+        "code_examples": [
+          {
+            "file": "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts",
+            "excerpt": "function mapAuthError(error: AuthError): SubmissionError {\n  const code = error.name || \"supabase_error\";\n  const message =\n    typeof error.message === \"string\" && error.message.trim().length > 0\n      ? error.message\n      : \"Supabase rejected the sign-up request.\";\n\n  return {\n    code,\n    message,\n    source: \"supabase\",\n    details: { status: error.status },\n  };\n}",
+            "explanation": "This pattern correctly maps error code and message while preserving status. Should be extracted to src/modules/auth/utils/loginErrorMapper.ts and reused."
+          }
+        ]
+      },
+      {
+        "id": "IMPL-003",
+        "category": "state-management",
+        "detail": "Toast notification system is fully implemented and functional in src/shared/ui/toast.tsx using React Context for state management and useToast hook for consumption. Toast supports title, description, variant (default/destructive), duration (default 6000ms), and optional action with label and onClick callback. Currently positioned correctly in provider stack (AppProviders line 14) before AuthProvider, enabling use throughout application. Only used in AuthProvider for orphaned user case (line 436-441) despite being available everywhere.",
+        "location": [
+          "src/shared/ui/toast.tsx lines 1-236",
+          "src/app/providers/index.tsx line 14",
+          "src/app/providers/auth/AuthProvider.tsx line 436-441"
+        ],
+        "impact": "high",
+        "code_examples": [
+          {
+            "file": "src/shared/ui/toast.tsx",
+            "excerpt": "export interface ToastOptions {\n  id?: string;\n  title?: string;\n  description?: string;\n  variant?: ToastVariant;\n  duration?: number;\n  action?: ToastAction;\n}\n\nexport function useToast(): Pick<ToastController, \"toast\" | \"dismiss\" | \"clearAll\"> {\n  const context = use(ToastContext);\n  if (!context) {\n    throw new Error(\"useToast must be used within a ToastProvider\");\n  }\n  return {\n    toast: context.toast,\n    dismiss: context.dismiss,\n    clearAll: context.clearAll,\n  };\n}",
+            "explanation": "Toast system is complete with support for actions. Just needs to be called from AuthProvider and LoginForm for login errors."
+          }
+        ]
+      },
+      {
+        "id": "IMPL-004",
+        "category": "error-handling",
+        "detail": "Custom error classes follow pattern of OrphanedUserError (src/modules/auth/errors/OrphanedUserError.ts) which extends Error base class and adds custom properties: email, correlationId, redirectUrl. Implements toJSON() and toString() methods for logging. Uses Error.captureStackTrace for proper stack traces and Object.setPrototypeOf for inheritance. This pattern should be replicated for new LoginError class to handle all login-specific errors.",
+        "location": [
+          "src/modules/auth/errors/OrphanedUserError.ts lines 33-87"
+        ],
+        "impact": "high",
+        "code_examples": [
+          {
+            "file": "src/modules/auth/errors/OrphanedUserError.ts",
+            "excerpt": "export class OrphanedUserError extends Error {\n  public readonly email: string;\n  public readonly correlationId: string;\n  public readonly redirectUrl: string;\n\n  constructor(email: string, correlationId: string, redirectUrl?: string) {\n    super(message);\n    this.name = 'OrphanedUserError';\n    this.email = email;\n    this.correlationId = correlationId;\n    this.redirectUrl = redirectUrl || `/register/recover?email=${encodeURIComponent(email)}&reason=orphaned&correlationId=${correlationId}`;\n    \n    if (Error.captureStackTrace) {\n      Error.captureStackTrace(this, OrphanedUserError);\n    }\n    Object.setPrototypeOf(this, OrphanedUserError.prototype);\n  }\n}",
+            "explanation": "Pattern shows proper error class implementation with correlation ID tracking. Should be adapted for LoginError."
+          }
+        ]
+      },
+      {
+        "id": "IMPL-005",
+        "category": "logging",
+        "detail": "Logger service is used throughout AuthProvider (lines 98-170, 216-220, 251, 302, 319-356, 367-374, 420-427) with structured logging including context objects with userId, email, correlationId, and error details. Logs are JSON-formatted and streamed from Rust backend via tauri-plugin-log. This infrastructure should be paired with toast notifications to provide debugging context when users report errors.",
+        "location": [
+          "src/core/logging/index.ts",
+          "src/app/providers/auth/AuthProvider.tsx lines 98-427"
+        ],
+        "impact": "high",
+        "code_examples": [
+          {
+            "file": "src/app/providers/auth/AuthProvider.tsx",
+            "excerpt": "void logger.warn(\"Blocked login for unverified user\", { email });\n\nvoid logger.info(\"Extracted account context from JWT claims\", {\n  userId: supabaseUser.id,\n  correlationId,\n  hasAccountUuid: true,\n  hasUserRole: true,\n});",
+            "explanation": "Logger is structured with context objects. Should be enhanced to log login errors with correlation IDs and user-friendly messages."
+          }
+        ]
+      }
+    ],
+    "architecture_mapping": {
+      "layers": [
+        {
+          "layer_name": "Presentation Layer",
+          "purpose": "React components responsible for rendering UI and handling user interactions. Includes LoginForm for credential capture and input validation.",
+          "components": [
+            "src/modules/auth/components/LoginForm.tsx",
+            "src/modules/auth/routes/index.tsx (LoginRoute)"
+          ]
+        },
+        {
+          "layer_name": "State Management Layer",
+          "purpose": "React Context API for global state including authentication state, user data, and session information. useAuth hook provides consumption interface.",
+          "components": [
+            "src/app/providers/auth/AuthProvider.tsx",
+            "src/modules/auth/hooks/useAuth.ts"
+          ]
+        },
+        {
+          "layer_name": "Error Handling Layer",
+          "purpose": "Custom error classes and error mapping utilities that normalize Supabase errors to application-specific error objects. Currently missing for login errors.",
+          "components": [
+            "src/modules/auth/errors/",
+            "src/modules/auth/hooks/controllers/useRegistrationSubmission.ts (reference pattern)"
+          ]
+        },
+        {
+          "layer_name": "Notification Layer",
+          "purpose": "Toast notification system for user-facing feedback. Currently underutilized for login errors.",
+          "components": [
+            "src/shared/ui/toast.tsx",
+            "src/shared/ui/alert.tsx"
+          ]
+        },
+        {
+          "layer_name": "API Integration Layer",
+          "purpose": "Supabase client configuration and authentication API calls.",
+          "components": [
+            "src/core/config/index.ts (supabase client)"
+          ]
+        },
+        {
+          "layer_name": "Infrastructure Layer",
+          "purpose": "Logging service for structured logs with correlation IDs.",
+          "components": [
+            "src/core/logging/index.ts"
+          ]
+        }
+      ],
+      "separation_of_concerns": "Architecture shows good separation between presentation (LoginForm), state management (AuthProvider), and API integration (Supabase client). However, error handling is fragmented: AuthProvider throws raw errors without mapping, LoginForm catches and stores in component state, and toast notifications are only used for orphaned user case. Error mapping layer exists in registration flow but is not reused in login. Recommendation: Extract error mapping to shared utils layer and use consistently across auth flows.",
+      "coupling_analysis": "Components are loosely coupled through well-defined interfaces. LoginForm depends on useAuth hook rather than directly on AuthProvider, allowing for testing and mocking. Toast system is fully decoupled via context. Main coupling issue is that AuthProvider throws raw Supabase errors expecting callers to handle them, creating tight coupling between error representation and error consumers. Recommendation: Implement error mapping in AuthProvider to return consistent error types, decoupling error producers from error consumers."
+    }
+  },
+  "key_findings": [
+    {
+      "id": "FIND-001",
+      "finding": "Toast notification system exists and is correctly positioned in provider stack but is severely underutilized. The ToastProvider wraps the entire application (including AuthProvider) and useToast hook is available everywhere. Currently toast is used only once in login-related code for the orphaned user case (AuthProvider line 436-441), demonstrating the pattern works perfectly. All other login errors fall back to inline form display only.",
+      "category": "opportunity",
+      "impact": "high",
+      "affects": [
+        "EP-001",
+        "EP-003",
+        "EP-004",
+        "MOD-001",
+        "MOD-002",
+        "MOD-003"
+      ],
+      "recommendation": "Expand toast usage to cover all login error scenarios. The orphaned user implementation (line 436-441) shows the exact pattern to follow: call toast() with title, description, variant (destructive for errors), duration, and optional action. Replicate this for invalid credentials, email not confirmed, account locked, network errors, and server errors.",
+      "priority": "high"
+    },
+    {
+      "id": "FIND-002",
+      "finding": "Error mapping pattern exists in registration flow (useRegistrationSubmission.ts lines 152-292) with proven error mapping and detection functions. The mapAuthError() function correctly inspects Supabase error properties and creates structured error objects. Error detection functions like isEmailNotConfirmedError() demonstrate specific error type detection. However, this pattern is not reused in login flow, resulting in raw Supabase errors being thrown.",
+      "category": "pattern",
+      "impact": "high",
+      "affects": [
+        "IMPL-002",
+        "MOD-001",
+        "MOD-004"
+      ],
+      "recommendation": "Extract error mapping functions to shared utility (e.g., src/modules/auth/utils/loginErrorMapper.ts). Create loginErrorMapper with functions: mapAuthError(), mapNetworkError(), detectInvalidCredentials(), detectEmailNotConfirmed(), detectAccountLocked(), getErrorMessage(), getErrorAction(). Import and use in AuthProvider.login() to map errors before throwing.",
+      "priority": "high"
+    },
+    {
+      "id": "FIND-003",
+      "finding": "Supabase authentication errors are not mapped to user-friendly messages. When login fails, Supabase returns generic messages like 'Invalid login credentials' which are displayed to users without context or suggestions. For example, email not confirmed case returns 400 status but message is cryptic.",
+      "category": "weakness",
+      "impact": "critical",
+      "affects": [
+        "EP-003",
+        "EP-006",
+        "IMPL-001",
+        "FLOW-001",
+        "FLOW-002"
+      ],
+      "recommendation": "Create mapping of Supabase error codes/messages to user-friendly messages: 'Invalid login credentials' → 'Email or password is incorrect. Try again or reset your password.', 'Email not confirmed' → 'Please verify your email before signing in.', 'Too many login attempts' → 'Account temporarily locked. Try again later.'. Implement in loginErrorMapper.ts with getLoginErrorMessage(code: string): string function.",
+      "priority": "immediate"
+    },
+    {
+      "id": "FIND-004",
+      "finding": "No error categorization system exists for different failure scenarios. All errors are treated identically: caught, stored in form state, displayed as inline text. No distinction between retryable errors (invalid credentials), permanent errors (user not found), user action errors (email not confirmed), and system errors (network, server).",
+      "category": "weakness",
+      "impact": "high",
+      "affects": [
+        "IMPL-002",
+        "FLOW-001",
+        "FLOW-002",
+        "FLOW-003"
+      ],
+      "recommendation": "Implement error categorization enum: type ErrorCategory = 'invalid_credentials' | 'email_not_confirmed' | 'account_locked' | 'network_error' | 'server_error' | 'user_not_found'. Add category to error mapper output. Use category to determine toast duration (errors → 8s, warnings → 6s, info → 4s) and action type.",
+      "priority": "high"
+    },
+    {
+      "id": "FIND-005",
+      "finding": "Toast action support is not utilized for login errors. Toast component supports optional action with label and onClick callback (toast.tsx line 23), but login errors never provide actionable recoveries like 'Resend Verification', 'Reset Password', or 'Contact Support'.",
+      "category": "opportunity",
+      "impact": "medium",
+      "affects": [
+        "EP-004",
+        "MOD-003"
+      ],
+      "recommendation": "Add recovery actions to appropriate error toasts: (1) Email not confirmed → Action 'Resend Email', (2) Forgot password → Action 'Reset Password', (3) Account locked → Action 'Contact Support', (4) Server error → Action 'Retry'. Implement getErrorAction(code: string): ToastAction | undefined in loginErrorMapper.ts.",
+      "priority": "medium"
+    },
+    {
+      "id": "FIND-006",
+      "finding": "Orphaned user error handling already demonstrates correct integration pattern: custom error class thrown from AuthProvider, caught with instanceof check, toast shown with user-friendly message, optional action provided, redirect performed. This pattern works perfectly and should be replicated for other error types.",
+      "category": "strength",
+      "impact": "high",
+      "affects": [
+        "FLOW-003",
+        "IMPL-004",
+        "MOD-005"
+      ],
+      "recommendation": "Keep orphaned user flow exactly as-is (it works perfectly). Extract the error handling pattern for reuse with other error types. The catch block structure (line 431-458) is reusable: throw custom error → catch with instanceof → show toast → optionally redirect.",
+      "priority": "low"
+    },
+    {
+      "id": "FIND-007",
+      "finding": "Error logging infrastructure exists and is extensively used in AuthProvider with structured logs including correlation IDs. However, error notifications (toasts) are not paired with corresponding log entries, making it difficult to correlate user-reported issues with backend logs.",
+      "category": "pattern",
+      "impact": "medium",
+      "affects": [
+        "IMPL-005",
+        "MOD-007"
+      ],
+      "recommendation": "Pair each login error toast with a structured log entry. Example: show toast('Email not verified') AND log.info('Email not confirmed during login', { email, correlationId }). Use consistent correlation IDs across toast notifications and log entries for tracing.",
+      "priority": "medium"
+    },
+    {
+      "id": "FIND-008",
+      "finding": "Form state and authentication error state are not coordinated. LoginForm maintains local error state (line 56) separate from any auth state in AuthProvider. When form field value changes, error might not clear automatically. Multiple error messages could be displayed simultaneously (field errors + general errors).",
+      "category": "weakness",
+      "impact": "medium",
+      "affects": [
+        "EP-001",
+        "MOD-002",
+        "FLOW-001"
+      ],
+      "recommendation": "Implement smart error clearing: (1) When user changes email or password field, clear the general auth error, (2) Clear field errors intelligently on change vs blur, (3) Use toast for auth errors instead of form state to avoid duplication. Implement in LoginForm.handleEmailChange() and handlePasswordChange().",
+      "priority": "medium"
+    }
+  ],
+  "clarifications_needed": [
+    {
+      "id": "CLAR-001",
+      "question": "Should login error toasts use the 'destructive' variant or 'default' variant for better UX?",
+      "category": "implementation",
+      "context": "Toast component supports variant prop with options 'default' and 'destructive'. Orphaned user flow uses 'default' (not destructive) even though it blocks login. Need to determine consistent variant strategy for all login errors to maintain visual consistency.",
+      "blocking": false,
+      "blocks": [],
+      "possible_answers": [
+        {
+          "answer": "Use 'destructive' variant for all login errors (invalid credentials, email not confirmed, account locked, etc.)",
+          "implications": "Consistent red/warning visual treatment for all authentication failures. Clear signal that something went wrong. May be too alarming for non-critical errors like 'email not confirmed'."
+        },
+        {
+          "answer": "Use 'default' variant for all login errors to match existing orphaned user implementation",
+          "implications": "Softer visual treatment consistent with current patterns. Less visually jarring but might not clearly signal error severity. Would require updating orphaned user flow to use 'default' (already uses default)."
+        },
+        {
+          "answer": "Use 'destructive' for blocking errors (invalid creds, account locked), 'default' for actionable errors (email not confirmed, needs recovery)",
+          "implications": "Nuanced visual hierarchy. Requires more error categorization logic. Better user experience with visual distinction between 'you did something wrong' vs 'take this action to proceed'."
+        }
+      ],
+      "resolution_source": "team-discussion"
+    },
+    {
+      "id": "CLAR-002",
+      "question": "Should login error toasts persist until dismissed or auto-dismiss after timeout?",
+      "category": "user-flow",
+      "context": "Toast component supports duration prop. Currently orphaned user error uses 8000ms (8 second) timeout. Need to decide timeout strategy for different error types.",
+      "blocking": false,
+      "blocks": [],
+      "possible_answers": [
+        {
+          "answer": "All login errors auto-dismiss after 6 seconds (default), user must read quickly or toast is gone",
+          "implications": "Consistent with other toasts in application. Users might miss critical errors. Good for non-blocking notifications but not ideal for auth failures."
+        },
+        {
+          "answer": "Login errors auto-dismiss after 8-10 seconds, matching orphaned user pattern, giving more time to read",
+          "implications": "More time to read error message. Consistent with existing orphan pattern. Might be too long for other notifications."
+        },
+        {
+          "answer": "Login errors with actions persist until dismissed, errors without actions auto-dismiss after 6 seconds",
+          "implications": "Errors requiring user action (Resend Email, Reset Password) persist until handled. Other errors don't clutter UI. Good balance but more complex to implement."
+        }
+      ],
+      "resolution_source": "user-qa"
+    },
+    {
+      "id": "CLAR-003",
+      "question": "Should we create a separate LoginError class or reuse existing SubmissionError from registration?",
+      "category": "architecture",
+      "context": "Registration flow has SubmissionError interface for error mapping. Could reuse this interface for login errors or create a new LoginError class following OrphanedUserError pattern.",
+      "blocking": false,
+      "blocks": [],
+      "possible_answers": [
+        {
+          "answer": "Reuse SubmissionError interface from registration flow to avoid duplication",
+          "implications": "Less code duplication, consistent error shape across registration and login. Requires moving SubmissionError to shared location. SubmissionError might have registration-specific properties."
+        },
+        {
+          "answer": "Create new LoginError class extending Error with code, message, status properties",
+          "implications": "Follows OrphanedUserError pattern already in codebase. Type-safe error handling. Can be caught with instanceof. Slightly more code than reusing interface."
+        }
+      ],
+      "resolution_source": "team-discussion"
+    },
+    {
+      "id": "CLAR-004",
+      "question": "Should we validate email format on client before sending to Supabase or rely on server validation?",
+      "category": "security",
+      "context": "LoginForm already validates that email and password are non-empty. Supabase will reject invalid email format with 400 error. Should we add client-side email format validation?",
+      "blocking": false,
+      "blocks": [],
+      "possible_answers": [
+        {
+          "answer": "Add client-side email format validation using regex or email-validator library",
+          "implications": "Faster feedback to user (no server call needed for obviously invalid emails). Reduces unnecessary API calls. Requires maintaining email validation regex."
+        },
+        {
+          "answer": "Rely on Supabase server validation, map 'invalid email' errors to user message",
+          "implications": "Single source of truth for validation. No duplicate validation logic. Slightly slower feedback. Maps Supabase error 'invalid email format' to clear message."
+        }
+      ],
+      "resolution_source": "user-qa"
+    }
+  ]
+}

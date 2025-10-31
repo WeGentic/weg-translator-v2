@@ -226,6 +226,18 @@ export function createRegistrationSchema(options: RegistrationSchemaOptions = {}
   return schema.superRefine((values, ctx) => {
     runCompanyChecks(values, ctx, options);
     runAdminChecks(values, ctx);
+
+    // Validate company_email matches admin_email for new schema requirement
+    const companyEmail = values.companyEmail.trim().toLowerCase();
+    const adminEmail = values.adminEmail.trim().toLowerCase();
+
+    if (companyEmail && adminEmail && companyEmail !== adminEmail) {
+      addIssue(
+        ctx,
+        "companyEmail",
+        "Company email must match your admin email"
+      );
+    }
   });
 }
 

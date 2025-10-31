@@ -1,5 +1,6 @@
 /**
  * Pure view for the user account dialog, showing profile or confirmation sections based on stage.
+ * TASK 8.3: Added userRole prop for role badge display
  */
 import {
   Dialog,
@@ -14,6 +15,7 @@ import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
 import { LogOut, Loader2 } from "lucide-react";
 import type { MutableRefObject } from "react";
+import type { UserRole } from "@/shared/types/database";
 
 import { UserAccountProfileSection } from "./UserAccountProfileSection";
 import { UserAccountConfirmSection } from "./UserAccountConfirmSection";
@@ -35,6 +37,10 @@ export interface UserAccountDialogViewProps {
   onRequestLogout: () => void;
   onCancelConfirm: () => void;
   onConfirmLogout: () => Promise<void>;
+  /**
+   * TASK 8.3: User role from JWT claims for role badge display
+   */
+  userRole?: UserRole | null;
 }
 
 export function UserAccountDialogView({
@@ -54,6 +60,7 @@ export function UserAccountDialogView({
   onRequestLogout,
   onCancelConfirm,
   onConfirmLogout,
+  userRole,
 }: UserAccountDialogViewProps) {
   const isConfirmStage = stage === "confirm";
 
@@ -84,6 +91,7 @@ export function UserAccountDialogView({
               initials={initials}
               hasProfile={hasProfile}
               isAuthenticated={isAuthenticated}
+              userRole={userRole}
             />
             <Separator />
           </>
