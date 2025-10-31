@@ -1,0 +1,418 @@
+{
+  "project_name": "supabase-health-check",
+  "raw_user_input": "Add a Supabase check when app loads, that check if database is healthy and working. You can find database info in docs/supabase_account_schemas/account-schemas.md. Provide a small connection indicator below \"Create a new Account\" button in Login page. And Add the same element in footer, once user is logged in.",
+  "key_objectives": [
+    {
+      "id": "OBJ-001",
+      "objective": "Implement a health check service that validates Supabase database connectivity when the application loads, ensuring users are immediately aware of any database connection issues before attempting to use authentication features.",
+      "priority": "critical",
+      "category": "functional",
+      "success_indicators": [
+        "Successfully connects to Supabase and validates database health",
+        "Detects connection failures and network timeouts appropriately",
+        "Returns health status within 3 seconds to avoid blocking UI",
+        "Works with existing Supabase client configuration without modifications"
+      ]
+    },
+    {
+      "id": "OBJ-002",
+      "objective": "Create a reusable connection indicator component that displays database health status with clear visual feedback using color-coded states (green for healthy, yellow for checking, red for unhealthy) and appropriate accessibility support.",
+      "priority": "high",
+      "category": "user-experience",
+      "success_indicators": [
+        "Clear visual distinction between checking, healthy, and unhealthy states",
+        "Updates in real-time when health status changes",
+        "Accessible via screen readers with proper ARIA labels",
+        "Non-intrusive design that fits naturally into existing UI patterns"
+      ]
+    },
+    {
+      "id": "OBJ-003",
+      "objective": "Integrate the connection indicator into the Login page below the \"Create a new Account\" button, providing immediate feedback about database availability before users attempt authentication.",
+      "priority": "high",
+      "category": "user-experience",
+      "success_indicators": [
+        "Indicator positioned correctly below the \"Create a new Account\" button",
+        "Shows health status before user attempts to login",
+        "Does not disrupt existing login page layout or styling",
+        "Health check runs automatically when login page loads"
+      ]
+    },
+    {
+      "id": "OBJ-004",
+      "objective": "Integrate the same connection indicator into the WorkspaceFooter component for authenticated users, enabling continuous monitoring of database health during active sessions.",
+      "priority": "high",
+      "category": "user-experience",
+      "success_indicators": [
+        "Indicator always visible in footer when user is logged in",
+        "Consistent visual design with login page indicator",
+        "Updates automatically with periodic health checks",
+        "Integrates seamlessly with existing footer metrics and layout"
+      ]
+    }
+  ],
+  "technical_constraints": {
+    "constraints_list": [
+      {
+        "id": "TC-001",
+        "constraint": "Must use the existing Supabase client configured in src/core/config/supabaseClient.ts without modifying its core initialization or authentication settings to maintain consistency across the application.",
+        "impact": "medium",
+        "mitigation": "Create a separate health check service module that imports and uses the existing supabase client instance. The service will be a pure utility function that accepts the client as a parameter, making it testable and decoupled from the client initialization."
+      },
+      {
+        "id": "TC-002",
+        "constraint": "Health check must execute asynchronously and not block application initialization, page rendering, or user interactions, ensuring a smooth user experience even when database connectivity is slow or unavailable.",
+        "impact": "high",
+        "mitigation": "Implement health check with a 3-second timeout using Promise.race pattern. Run check in background immediately on component mount. Display loading state initially, then update to healthy or unhealthy state asynchronously. Allow application to continue functioning even if health check fails or times out."
+      },
+      {
+        "id": "TC-003",
+        "constraint": "Must follow React 19.2 coding patterns and rely on the React Compiler for automatic memoization rather than manual useMemo or useCallback hooks unless absolutely necessary for correctness.",
+        "impact": "medium",
+        "mitigation": "Write clean, straightforward component code following React 19.2 best practices documented in docs/react19-guidelines.md. Let the React Compiler handle optimization automatically. Only use manual memoization if profiling reveals specific performance issues that the compiler cannot optimize."
+      },
+      {
+        "id": "TC-004",
+        "constraint": "Connection indicator component must be context-agnostic and work correctly in both authenticated and unauthenticated states, without depending on auth context or user session data for its core health check functionality.",
+        "impact": "medium",
+        "mitigation": "Design the health check to query system-level database health (such as table existence or basic connectivity) rather than user-specific data. The component should accept health status as props or use a standalone hook, making it reusable across different parts of the application regardless of authentication state."
+      },
+      {
+        "id": "TC-005",
+        "constraint": "Integration with WorkspaceFooter component in src/app/shell/main_elements/footer/WorkspaceFooter.tsx must preserve all existing functionality including footer visibility toggle, logger expansion, and current metrics display.",
+        "impact": "high",
+        "mitigation": "Carefully study the existing WorkspaceFooter implementation before making changes. Add the health indicator as a new FooterMetric element alongside the existing app version metric. Use the same styling patterns and ensure the layout adapts gracefully. Write tests to verify existing footer features continue working after integration."
+      }
+    ]
+  },
+  "success_criteria": [
+    {
+      "id": "SC-001",
+      "criterion": "Health check successfully detects when Supabase database is healthy and accessible, returning a positive health status that can be displayed to users.",
+      "measurement": "Manual testing with valid Supabase configuration and accessible database, verify health check returns success state",
+      "target": "100% success rate when database is accessible",
+      "category": "functionality",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-002",
+      "criterion": "Health check completes within acceptable time limits without blocking the user interface or causing perceived performance degradation during application load.",
+      "measurement": "Browser DevTools performance monitoring and Network tab timing measurements",
+      "target": "< 3 seconds",
+      "category": "performance",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-003",
+      "criterion": "Connection indicator component correctly displays all three visual states (checking with yellow color, healthy with green color, unhealthy with red color) with appropriate icons and text labels.",
+      "measurement": "Manual testing with mocked health states and visual inspection of rendered output",
+      "target": "All three states render correctly with proper colors, icons, and accessibility attributes",
+      "category": "functionality",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-004",
+      "criterion": "Connection indicator is positioned correctly on the Login page below the \"Create a new Account\" button without disrupting the existing layout or causing visual regression.",
+      "measurement": "Visual inspection, screenshot comparison with before/after states, responsive design testing",
+      "target": "Indicator appears in specified location with proper spacing and alignment, no layout breaks",
+      "category": "usability",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-005",
+      "criterion": "Connection indicator appears and functions correctly in the WorkspaceFooter for authenticated users, updating periodically to reflect current database health.",
+      "measurement": "Login to application and verify footer contains health indicator, wait for periodic updates",
+      "target": "Indicator visible and functional in WorkspaceFooter with automatic updates",
+      "category": "functionality",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-006",
+      "criterion": "All existing unit tests, integration tests, and end-to-end tests continue to pass after implementing the health check feature, demonstrating no regressions were introduced.",
+      "measurement": "Run npm test and verify test suite results",
+      "target": "All existing tests pass with zero failures",
+      "category": "reliability",
+      "priority": "must-have"
+    }
+  ],
+  "risks_and_mitigations": [
+    {
+      "id": "RISK-001",
+      "risk": "Health check query could fail due to network issues, DNS resolution problems, or Supabase service outages during application load, potentially causing poor user experience or blocking authentication flows if not handled gracefully.",
+      "category": "technical",
+      "probability": "medium",
+      "impact": "moderate",
+      "risk_score": 9,
+      "mitigation_strategy": "Implement a 3-second timeout on all health check queries using Promise.race. Show a brief \"checking\" state with yellow indicator, then transition to either healthy or unhealthy. Allow the application to continue loading and functioning even if the health check fails or times out. Provide a manual retry button that users can click to re-run the health check. Log all health check failures for monitoring and debugging purposes.",
+      "contingency_plan": "If health checks consistently fail or cause issues, add a user setting in the application preferences to disable automatic health checks on startup. Implement exponential backoff for retries to avoid hammering the database. Consider fallback to a simpler ping endpoint if full database queries are problematic.",
+      "owner": "Lead Developer"
+    },
+    {
+      "id": "RISK-002",
+      "risk": "Executing a Supabase query on every application load could contribute to rate limiting, quota exhaustion, or increased costs, especially for applications with many active users or frequent page refreshes.",
+      "category": "technical",
+      "probability": "low",
+      "impact": "minor",
+      "risk_score": 4,
+      "mitigation_strategy": "Use the most lightweight query possible for health checks, such as SELECT 1 or checking table existence rather than querying actual data. Implement client-side caching with a 5-minute TTL to prevent repeated health checks during the same session. For authenticated users, use the existing Supabase realtime connection status instead of making additional queries. Implement exponential backoff on health check failures to avoid rapid retry loops.",
+      "contingency_plan": "If rate limiting becomes an issue, switch to using Supabase's built-in connection events and realtime status rather than explicit queries. Monitor usage metrics and adjust cache TTL or check frequency as needed. Consider implementing health checks only on critical paths (login page) and making them optional elsewhere.",
+      "owner": "Lead Developer"
+    },
+    {
+      "id": "RISK-003",
+      "risk": "Connection indicator might not accurately reflect real-time database health if the connection drops after the initial check completes, giving users a false sense of connectivity when database operations would actually fail.",
+      "category": "technical",
+      "probability": "medium",
+      "impact": "moderate",
+      "risk_score": 9,
+      "mitigation_strategy": "For authenticated users in the footer, implement periodic re-checks of database health every 2 minutes using a lightweight query. Listen to Supabase's built-in realtime connection events (connected, disconnected) to update indicator immediately when connection state changes. Use a background polling mechanism that doesn't interfere with other application operations.",
+      "contingency_plan": "If real-time monitoring proves problematic or resource-intensive, add a manual \"Check Now\" button next to the indicator that users can click to trigger an immediate health check. Display the timestamp of the last successful check to inform users how recent the status is. Consider showing a warning if the last check is older than 5 minutes.",
+      "owner": "Lead Developer"
+    },
+    {
+      "id": "RISK-004",
+      "risk": "Modifications to the LoginRoute component and WorkspaceFooter component could break existing unit tests, integration tests, or snapshot tests, requiring updates to test suites and potentially revealing unexpected dependencies.",
+      "category": "quality",
+      "probability": "medium",
+      "impact": "minor",
+      "risk_score": 6,
+      "mitigation_strategy": "Run the full test suite immediately after making changes to identify any broken tests. Ensure all changes are additive rather than modifying existing behavior - add new elements rather than replacing them. Write new tests for the connection indicator before integrating it. Use feature flags or conditional rendering during development to allow easy rollback if issues arise.",
+      "contingency_plan": "If tests break extensively, wrap the health indicator in a feature flag that defaults to disabled. Fix tests incrementally and enable the feature only after verification. Consider splitting the implementation into smaller, independently testable chunks that can be merged and validated separately.",
+      "owner": "Lead Developer"
+    }
+  ],
+  "required_features": [
+    {
+      "id": "FEAT-001",
+      "feature": "Create a Supabase health check service module that performs lightweight connectivity tests using the existing Supabase client, implements timeout handling, and returns structured health status information including connection state and response time.",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "2-3 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Service module created at src/core/services/supabaseHealthCheck.ts",
+        "Function accepts Supabase client as parameter and returns Promise with health status",
+        "Implements 3-second timeout using Promise.race pattern",
+        "Uses lightweight query (SELECT 1 or table existence check) that works without authentication",
+        "Returns structured result with status, timestamp, responseTime, and optional error fields",
+        "Handles all error cases gracefully (network errors, timeouts, authentication failures)",
+        "Function is pure and testable without side effects"
+      ]
+    },
+    {
+      "id": "FEAT-002",
+      "feature": "Create a React hook (useSupabaseHealth) that manages health check state lifecycle, triggers checks on component mount, provides loading and error states, and offers a retry function for manual health check execution.",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "2-3 hours",
+      "dependencies": ["FEAT-001"],
+      "acceptance_criteria": [
+        "Hook created at src/core/hooks/useSupabaseHealth.ts",
+        "Automatically runs health check on component mount using useEffect",
+        "Manages loading, success, and error states using useState",
+        "Returns current health status, loading flag, error message, and retry function",
+        "Accepts optional configuration for polling interval and auto-retry behavior",
+        "Cleans up any pending health checks or timers on component unmount",
+        "Hook is reusable across multiple components without state conflicts"
+      ]
+    },
+    {
+      "id": "FEAT-003",
+      "feature": "Create a SupabaseConnectionIndicator component that displays visual health status using color-coded icons and text, implements proper accessibility attributes, and updates reactively when health status changes.",
+      "category": "ui-ux",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "2-4 hours",
+      "dependencies": ["FEAT-002"],
+      "acceptance_criteria": [
+        "Component created at src/shared/components/SupabaseConnectionIndicator.tsx",
+        "Displays checking state with yellow color and spinning/pulsing icon",
+        "Displays healthy state with green color and checkmark or wifi icon",
+        "Displays unhealthy state with red color and X or offline icon",
+        "Includes descriptive text label (\"Checking database...\", \"Connected\", \"Connection failed\")",
+        "Implements proper ARIA labels and roles for screen reader accessibility",
+        "Compact design suitable for footer and login page contexts",
+        "Supports optional tooltip or hover state with additional details"
+      ]
+    },
+    {
+      "id": "FEAT-004",
+      "feature": "Integrate the SupabaseConnectionIndicator component into the Login page (src/modules/auth/routes/index.tsx) below the \"Create a new Account\" button, ensuring the health check runs automatically when the page loads.",
+      "category": "ui-ux",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "1-2 hours",
+      "dependencies": ["FEAT-003"],
+      "acceptance_criteria": [
+        "Import SupabaseConnectionIndicator into LoginRoute component",
+        "Position indicator in the login-page__panel-toggle section below the Link button",
+        "Initialize useSupabaseHealth hook at component level to trigger automatic check",
+        "Indicator appears with proper spacing and does not disrupt existing layout",
+        "Health check executes automatically when login page mounts",
+        "Indicator updates correctly through all three states during health check lifecycle",
+        "Existing login functionality and tests remain unaffected"
+      ]
+    },
+    {
+      "id": "FEAT-005",
+      "feature": "Integrate the SupabaseConnectionIndicator component into the WorkspaceFooter component (src/app/shell/main_elements/footer/WorkspaceFooter.tsx) for authenticated users, implementing periodic health checks to keep status current during active sessions.",
+      "category": "ui-ux",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "1-2 hours",
+      "dependencies": ["FEAT-003"],
+      "acceptance_criteria": [
+        "Import SupabaseConnectionIndicator and useSupabaseHealth into WorkspaceFooter",
+        "Add health indicator as new FooterMetric element or custom component in metrics section",
+        "Configure useSupabaseHealth hook with 2-minute polling interval for periodic updates",
+        "Indicator appears alongside existing app version metric with consistent styling",
+        "Health status updates automatically every 2 minutes without user intervention",
+        "Existing footer functionality (hide button, logger toggle) continues working correctly",
+        "Footer layout adapts gracefully to include the new health indicator"
+      ]
+    },
+    {
+      "id": "FEAT-006",
+      "feature": "Create comprehensive TypeScript type definitions and interfaces for health check responses, status states, and hook return values to ensure type safety throughout the health check implementation.",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "trivial",
+      "estimated_effort": "1 hour",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Types file created at src/core/types/supabaseHealth.ts",
+        "Define SupabaseHealthStatus type with 'checking' | 'healthy' | 'unhealthy' literal values",
+        "Define SupabaseHealthResult interface with status, timestamp, responseTime, error fields",
+        "Define UseSupabaseHealthReturn interface for hook return type",
+        "Define SupabaseHealthCheckOptions interface for configuration parameters",
+        "All types exported and used consistently across service, hook, and component files",
+        "Types include JSDoc comments explaining purpose and usage"
+      ]
+    },
+    {
+      "id": "FEAT-007",
+      "feature": "Write comprehensive unit tests for the Supabase health check service using Vitest, covering success cases, timeout scenarios, error handling, and edge cases with mocked Supabase client.",
+      "category": "core",
+      "priority": "should-have",
+      "complexity": "moderate",
+      "estimated_effort": "2-3 hours",
+      "dependencies": ["FEAT-001"],
+      "acceptance_criteria": [
+        "Test file created at src/core/services/__tests__/supabaseHealthCheck.test.ts",
+        "Test covers successful health check returning healthy status",
+        "Test covers health check timeout after 3 seconds returning unhealthy status",
+        "Test covers network error handling returning unhealthy status with error message",
+        "Test covers edge cases like null responses or malformed data",
+        "Supabase client is properly mocked to avoid real database calls during tests",
+        "All tests pass and provide good code coverage (>80%)",
+        "Tests are fast (<100ms each) and do not depend on external resources"
+      ]
+    },
+    {
+      "id": "FEAT-008",
+      "feature": "Write component tests for SupabaseConnectionIndicator using React Testing Library, verifying all three visual states render correctly, accessibility attributes are present, and component updates reactively to prop changes.",
+      "category": "ui-ux",
+      "priority": "should-have",
+      "complexity": "simple",
+      "estimated_effort": "1-2 hours",
+      "dependencies": ["FEAT-003"],
+      "acceptance_criteria": [
+        "Test file created at src/shared/components/__tests__/SupabaseConnectionIndicator.test.tsx",
+        "Test verifies checking state renders with yellow styling and appropriate icon",
+        "Test verifies healthy state renders with green styling and checkmark icon",
+        "Test verifies unhealthy state renders with red styling and error icon",
+        "Test verifies proper ARIA labels and roles are present for accessibility",
+        "Test verifies component updates when health status prop changes",
+        "Test verifies tooltip or hover behavior if implemented",
+        "All tests use React Testing Library best practices and avoid implementation details"
+      ]
+    },
+    {
+      "id": "FEAT-009",
+      "feature": "Create CSS styling for the SupabaseConnectionIndicator component with color-coded states, smooth transitions, and animations for the checking state, ensuring consistent visual design with existing application UI patterns.",
+      "category": "ui-ux",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "1-2 hours",
+      "dependencies": ["FEAT-003"],
+      "acceptance_criteria": [
+        "CSS file created at src/shared/styles/components/supabase-connection-indicator.css",
+        "Define color variables: healthy green (#10b981), checking yellow (#f59e0b), unhealthy red (#ef4444)",
+        "Implement smooth transitions between states (200-300ms duration)",
+        "Add spinning or pulsing animation for checking state icon",
+        "Ensure compact size suitable for footer (height ~40px) and login page contexts",
+        "Follow existing CSS architecture patterns used in the application",
+        "Styles are responsive and work correctly at different viewport sizes",
+        "High contrast ratios for accessibility (WCAG AA compliant)"
+      ]
+    },
+    {
+      "id": "FEAT-010",
+      "feature": "Update existing integration tests for the Login page to verify that the health indicator renders correctly and does not interfere with existing login flows, authentication, or navigation behavior.",
+      "category": "ui-ux",
+      "priority": "should-have",
+      "complexity": "simple",
+      "estimated_effort": "1 hour",
+      "dependencies": ["FEAT-004"],
+      "acceptance_criteria": [
+        "Update test file at src/test/modules/auth/login-route.test.tsx",
+        "Verify health indicator component renders on login page",
+        "Verify indicator is positioned below \"Create a new Account\" button",
+        "Verify existing login form functionality remains unaffected",
+        "Verify navigation to registration page still works correctly",
+        "Mock useSupabaseHealth hook to avoid real health checks during tests",
+        "All existing login-related tests continue to pass",
+        "Tests run quickly without adding significant overhead to test suite"
+      ]
+    }
+  ],
+  "open_questions": [
+    {
+      "id": "Q-001",
+      "question": "What specific Supabase query or table should the health check use to validate database connectivity? Should we query the public.accounts table, use a simple SELECT 1 statement, check table existence, or use Supabase's built-in connection status events?",
+      "category": "implementation",
+      "priority": "high",
+      "context": "The health check needs a lightweight query that confirms database connectivity without requiring authentication or triggering RLS policies. The choice affects implementation complexity, performance, and reliability. Looking at the account-schemas.md, we see RLS is enabled on all tables. For unauthenticated health checks, we need a query that bypasses RLS or queries system tables. The best options are: (1) Use Supabase client's built-in health check if available, (2) Query a public system view, or (3) Use SELECT 1 which tests basic connectivity without table access.",
+      "resolution_source": "codebase-analysis",
+      "blocks": ["FEAT-001"]
+    },
+    {
+      "id": "Q-002",
+      "question": "Should the connection indicator display response time latency (e.g., \"Healthy - 45ms\") in addition to the basic health status, or is a simple healthy/unhealthy indicator sufficient for user needs?",
+      "category": "user-flow",
+      "priority": "medium",
+      "context": "Displaying latency provides additional useful diagnostic information that could help users and support teams understand performance issues. However, it adds UI complexity and requires careful design to avoid clutter. The decision affects what data the health check service returns and how the component displays information. If included, we need to format latency appropriately (ms vs seconds) and handle edge cases like timeouts where latency is not meaningful.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-003"]
+    },
+    {
+      "id": "Q-003",
+      "question": "Should the health check run automatically every time the app loads, only on first load per session, or should it be manually triggered by users? For authenticated users, should health checks continue periodically in the background?",
+      "category": "user-flow",
+      "priority": "high",
+      "context": "The user request states \"when app loads\" which implies automatic execution. However, we need to clarify the frequency. Running on every page load provides the most current information but could impact performance and rate limits. Running only on initial session load is more efficient but might miss connection issues. For authenticated users in the footer, periodic background checks provide ongoing monitoring. This decision affects where we initialize the health check hook and what polling intervals to use.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-002"]
+    },
+    {
+      "id": "Q-004",
+      "question": "What should happen when the health check fails on the login page - should users be prevented from attempting to login (hard block) or just shown a warning message that they can dismiss and proceed anyway (soft warning)?",
+      "category": "user-flow",
+      "priority": "high",
+      "context": "This is critical for UX and error handling. If database is unhealthy, we have two options: (1) Block login attempts and show an error message, preventing wasted effort and confusing authentication failures, or (2) Show a warning but allow users to try anyway, which is less restrictive but could lead to frustration if login genuinely fails. The user request asks for an indicator but does not specify blocking behavior. A soft warning approach is generally better UX but requires clear error messaging if subsequent operations fail.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-004"]
+    },
+    {
+      "id": "Q-005",
+      "question": "For authenticated users in the footer, should the connection indicator continuously monitor health with active polling, listen to Supabase realtime connection events, or just display the initial status from login without updates? If polling, what interval is appropriate (1 minute, 2 minutes, 5 minutes)?",
+      "category": "architecture",
+      "priority": "medium",
+      "context": "Different monitoring strategies have different tradeoffs. Continuous polling provides reliable status updates but consumes resources and could impact rate limits. Listening to Supabase realtime events is efficient but depends on websocket connectivity. Static display after initial check is simplest but provides stale information if connection drops during session. A reasonable compromise is periodic polling every 2-5 minutes, which balances freshness with resource usage. This decision affects the useSupabaseHealth hook configuration and polling logic.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-005"]
+    }
+  ]
+}

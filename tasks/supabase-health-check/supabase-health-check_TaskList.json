@@ -1,0 +1,632 @@
+{
+  "metadata": {
+    "project_name": "supabase-health-check",
+    "overview": "Implement real-time Supabase database health monitoring with visual connection indicators on login page and workspace footer. System validates database connectivity using lightweight queries, displays color-coded status (checking/connected/disconnected) with latency metrics, and provides automatic polling for authenticated users to ensure continuous monitoring throughout active sessions.",
+    "technology_stack": [
+      "React 19.2",
+      "TypeScript 5.3",
+      "Supabase PostgreSQL",
+      "TanStack Router",
+      "Vitest",
+      "React Testing Library",
+      "ShadCN UI Components",
+      "TailwindCSS 4.1"
+    ],
+    "estimated_duration": "16-24 hours"
+  },
+  "tasks": [
+    {
+      "id": "1",
+      "name": "Create Supabase database health check table and migration",
+      "status": "NOT_STARTED",
+      "requirements": ["FR-001", "NFR-001"],
+      "execution_type": "sequential",
+      "execution_metadata": {
+        "depends_on": [],
+        "blocks": ["2"],
+        "resource_locks": [
+          "supabase/migrations/*_health_check.sql"
+        ],
+        "parallelizable_with": []
+      },
+      "subtasks": [
+        {
+          "id": "1.1",
+          "name": "Create Supabase migration for health_check table",
+          "is_test": false,
+          "requirements": ["FR-001"],
+          "actions": [
+            "Create migration file with timestamp in supabase/migrations directory",
+            "Define public.health_check table with id serial primary key and checked_at timestamp",
+            "Insert single default row into health_check table for query target",
+            "Disable row-level security on health_check table to allow unauthenticated access",
+            "Add SQL comment documenting table purpose as health check endpoint"
+          ],
+          "status": "completed",
+          "estimated_hours": 1
+        },
+        {
+          "id": "1.2",
+          "name": "Apply migration and verify table accessibility",
+          "is_test": true,
+          "requirements": ["NFR-001"],
+          "actions": [
+            "Test migration applies cleanly using supabase migration up command",
+            "Verify health_check table exists and contains exactly one row",
+            "Test unauthenticated SELECT query succeeds without RLS blocking",
+            "Verify query response time under 100ms for baseline performance"
+          ],
+          "status": "NOT_STARTED",
+          "estimated_hours": 0.5
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "name": "Implement health check service with timeout and error handling",
+      "status": "completed",
+      "requirements": ["FR-001", "FR-002", "NFR-001", "NFR-002"],
+      "execution_type": "sequential",
+      "execution_metadata": {
+        "depends_on": ["1"],
+        "blocks": ["3", "4"],
+        "resource_locks": [
+          "src/core/supabase/health.ts",
+          "src/core/supabase/types.ts"
+        ],
+        "parallelizable_with": []
+      },
+      "subtasks": [
+        {
+          "id": "2.1",
+          "name": "Define TypeScript types for health check responses",
+          "is_test": false,
+          "requirements": ["FR-002"],
+          "actions": [
+            "Create SupabaseHealthStatus type with checking, connected, disconnected literal values",
+            "Define SupabaseHealthResult interface with status, timestamp, latency, error fields",
+            "Create SupabaseHealthCheckOptions interface for timeout and polling configuration",
+            "Add JSDoc comments documenting type usage and field meanings"
+          ],
+          "status": "completed",
+          "estimated_hours": 1
+        },
+        {
+          "id": "2.2",
+          "name": "Build health check query function with 3-second timeout",
+          "is_test": false,
+          "requirements": ["FR-001", "NFR-001", "NFR-002"],
+          "actions": [
+            "Create checkSupabaseHealth function in src/core/supabase/health.ts",
+            "Implement SELECT 1 FROM health_check LIMIT 1 query using Supabase client",
+            "Add Promise.race pattern with 3-second timeout using AbortController",
+            "Capture query start and end time to calculate latency in milliseconds",
+            "Return SupabaseHealthResult with status, timestamp, latency, and error details",
+            "Handle network errors, timeouts, and RLS policy failures gracefully"
+          ],
+          "status": "completed",
+          "estimated_hours": 3
+        },
+        {
+          "id": "2.3",
+          "name": "Test health check service across all scenarios",
+          "is_test": true,
+          "requirements": ["NFR-002"],
+          "actions": [
+            "Test successful health check returns connected status with sub-500ms latency",
+            "Test timeout scenario returns disconnected status after 3 seconds using fake timers",
+            "Test network error handling returns disconnected with descriptive error message",
+            "Test concurrent health check calls don't cause race conditions using request IDs",
+            "Verify AbortController properly cancels timed-out requests to prevent memory leaks"
+          ],
+          "status": "completed",
+          "estimated_hours": 2.5
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "name": "Create useSupabaseHealth hook with polling and cleanup",
+      "status": "completed",
+      "requirements": ["FR-003", "FR-004", "NFR-003"],
+      "execution_type": "sequential",
+      "execution_metadata": {
+        "depends_on": ["2"],
+        "blocks": ["5", "6"],
+        "resource_locks": [
+          "src/app/hooks/useSupabaseHealth.ts"
+        ],
+        "parallelizable_with": []
+      },
+      "subtasks": [
+        {
+          "id": "3.1",
+          "name": "Implement useSupabaseHealth hook with auto-run on mount",
+          "is_test": false,
+          "requirements": ["FR-003", "NFR-003"],
+          "actions": [
+            "Create useSupabaseHealth hook in src/app/hooks/useSupabaseHealth.ts",
+            "Add useState for health status, loading state, and error tracking",
+            "Implement useEffect that runs health check automatically on component mount",
+            "Add optional polling interval parameter defaulting to 60 seconds for authenticated users",
+            "Use setInterval with cleanup in useEffect return function to prevent memory leaks",
+            "Implement race condition guard using useRef to track latest request ID"
+          ],
+          "status": "completed",
+          "estimated_hours": 3
+        },
+        {
+          "id": "3.2",
+          "name": "Add manual retry and polling control functions",
+          "is_test": false,
+          "requirements": ["FR-003"],
+          "actions": [
+            "Create retry function that manually triggers immediate health check",
+            "Add startPolling and stopPolling functions for dynamic polling control",
+            "Implement cleanup logic clearing all intervals and pending requests on unmount",
+            "Return health status, loading flag, error, retry, startPolling, stopPolling from hook"
+          ],
+          "status": "completed",
+          "estimated_hours": 2
+        },
+        {
+          "id": "3.3",
+          "name": "Test useSupabaseHealth hook behavior and cleanup",
+          "is_test": true,
+          "requirements": ["NFR-003"],
+          "actions": [
+            "Test hook runs health check automatically on mount and updates state",
+            "Test polling triggers health check every 60 seconds using fake timers",
+            "Test retry function immediately triggers new health check request",
+            "Test cleanup properly clears intervals and cancels pending requests on unmount",
+            "Verify race condition handling ignores stale responses when new check starts"
+          ],
+          "status": "completed",
+          "estimated_hours": 2.5
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "name": "Build SupabaseConnectionIndicator component with accessibility",
+      "status": "completed",
+      "requirements": ["FR-005", "FR-006", "NFR-004"],
+      "execution_type": "sequential",
+      "execution_metadata": {
+        "depends_on": ["2"],
+        "blocks": ["5", "6"],
+        "resource_locks": [
+          "src/shared/components/SupabaseConnectionIndicator.tsx",
+          "src/shared/styles/components/supabase-connection.css"
+        ],
+        "parallelizable_with": ["3"]
+      },
+      "subtasks": [
+        {
+          "id": "4.1",
+          "name": "Create SupabaseConnectionIndicator component with visual states",
+          "is_test": false,
+          "requirements": ["FR-005", "FR-006"],
+          "actions": [
+            "Create component at src/shared/components/SupabaseConnectionIndicator.tsx",
+            "Define props accepting health status, latency, and optional className",
+            "Implement checking state with yellow color and spinning loader icon",
+            "Implement connected state with green color, checkmark icon, and latency display",
+            "Implement disconnected state with red color, X icon, and error message",
+            "Add descriptive text labels for each state visible to all users"
+          ],
+          "status": "completed",
+          "estimated_hours": 3
+        },
+        {
+          "id": "4.2",
+          "name": "Add WCAG-compliant accessibility attributes",
+          "is_test": false,
+          "requirements": ["NFR-004"],
+          "actions": [
+            "Add role status and aria-live polite for dynamic status updates",
+            "Implement descriptive aria-label for each state explaining connection status",
+            "Ensure color contrast ratios meet WCAG AA standards for all states",
+            "Add aria-hidden true to decorative icons with text labels providing context",
+            "Include tooltip with extended information on hover for additional context"
+          ],
+          "status": "completed",
+          "estimated_hours": 2
+        },
+        {
+          "id": "4.3",
+          "name": "Create component styles with smooth transitions",
+          "is_test": false,
+          "requirements": ["FR-006"],
+          "actions": [
+            "Define CSS variables for checking yellow, connected green, disconnected red colors",
+            "Implement smooth 200ms transitions between status states for visual polish",
+            "Add spinning animation for checking state icon using CSS keyframes",
+            "Create compact layout suitable for footer and login page contexts",
+            "Ensure responsive design works correctly at mobile and desktop viewport sizes"
+          ],
+          "status": "completed",
+          "estimated_hours": 2
+        },
+        {
+          "id": "4.4",
+          "name": "Test SupabaseConnectionIndicator rendering and accessibility",
+          "is_test": true,
+          "requirements": ["NFR-004"],
+          "actions": [
+            "Test checking state renders with yellow color and appropriate icon",
+            "Test connected state displays green checkmark and latency in milliseconds",
+            "Test disconnected state shows red X and error message if provided",
+            "Verify ARIA attributes present and announce status changes to screen readers",
+            "Test component updates reactively when health status prop changes",
+            "Verify color contrast ratios pass automated accessibility checks"
+          ],
+          "status": "completed",
+          "estimated_hours": 2
+        }
+      ]
+    },
+    {
+      "id": "5",
+      "name": "Integrate health indicator into login page below registration button",
+      "status": "completed",
+      "requirements": ["FR-007", "NFR-005"],
+      "execution_type": "sequential",
+      "execution_metadata": {
+        "depends_on": ["3", "4"],
+        "blocks": [],
+        "resource_locks": [
+          "src/modules/auth/routes/index.tsx"
+        ],
+        "parallelizable_with": ["6"]
+      },
+      "subtasks": [
+        {
+          "id": "5.1",
+          "name": "Add SupabaseConnectionIndicator to login page layout",
+          "is_test": false,
+          "requirements": ["FR-007"],
+          "actions": [
+            "Import SupabaseConnectionIndicator and useSupabaseHealth into LoginRoute component",
+            "Initialize useSupabaseHealth hook without polling for login page context",
+            "Position indicator below Create a new Account button after line 78",
+            "Pass health status and latency from hook to SupabaseConnectionIndicator component",
+            "Add appropriate spacing and alignment matching existing login page styling"
+          ],
+          "status": "completed",
+          "estimated_hours": 1.5
+        },
+        {
+          "id": "5.2",
+          "name": "Test login page integration without breaking existing flow",
+          "is_test": true,
+          "requirements": ["NFR-005"],
+          "actions": [
+            "Verify health indicator renders on login page mount automatically",
+            "Test indicator positioned correctly below Create a new Account button",
+            "Verify existing login form functionality remains completely unaffected",
+            "Test navigation to registration page still works without issues",
+            "Confirm health check runs in background without blocking login interactions"
+          ],
+          "status": "completed",
+          "estimated_hours": 1.5
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "name": "Integrate health indicator into WorkspaceFooter with polling",
+      "status": "completed",
+      "requirements": ["FR-008", "NFR-005"],
+      "execution_type": "sequential",
+      "execution_metadata": {
+        "depends_on": ["3", "4"],
+        "blocks": [],
+        "resource_locks": [
+          "src/app/shell/main_elements/footer/WorkspaceFooter.tsx"
+        ],
+        "parallelizable_with": ["5"]
+      },
+      "subtasks": [
+        {
+          "id": "6.1",
+          "name": "Add SupabaseConnectionIndicator to WorkspaceFooter metrics",
+          "is_test": false,
+          "requirements": ["FR-008"],
+          "actions": [
+            "Import SupabaseConnectionIndicator and useSupabaseHealth into WorkspaceFooter",
+            "Initialize useSupabaseHealth hook with 60-second polling interval parameter",
+            "Add health indicator in workspace-footer__metrics section alongside app version",
+            "Pass health status and latency from hook to SupabaseConnectionIndicator component",
+            "Ensure indicator styling matches existing footer metrics for visual consistency"
+          ],
+          "status": "completed",
+          "estimated_hours": 1.5
+        },
+        {
+          "id": "6.2",
+          "name": "Test footer integration preserves existing functionality",
+          "is_test": true,
+          "requirements": ["NFR-005"],
+          "actions": [
+            "Verify health indicator appears in footer for authenticated users only",
+            "Test indicator updates automatically every 60 seconds with new health status",
+            "Confirm existing footer hide button functionality continues working correctly",
+            "Verify logger toggle expansion feature remains completely unaffected",
+            "Test footer layout adapts gracefully to include health indicator without overflow"
+          ],
+          "status": "completed",
+          "estimated_hours": 1.5
+        }
+      ]
+    },
+    {
+      "id": "7",
+      "name": "Create comprehensive integration and performance tests",
+      "status": "completed",
+      "requirements": ["FR-009", "NFR-006"],
+      "execution_type": "parallel",
+      "execution_metadata": {
+        "depends_on": ["5", "6"],
+        "blocks": ["8"],
+        "resource_locks": [
+          "src/core/supabase/__tests__/health.integration.test.ts",
+          "src/app/__tests__/health-check-flow.test.tsx"
+        ],
+        "parallelizable_with": []
+      },
+      "subtasks": [
+        {
+          "id": "7.1",
+          "name": "Build integration tests for health check flow",
+          "is_test": true,
+          "requirements": ["FR-009"],
+          "actions": [
+            "Test complete health check flow from query to UI update end-to-end",
+            "Test health indicator correctly shows checking then connected states in sequence",
+            "Test polling continues automatically for authenticated users in workspace",
+            "Test health check handles Supabase connection failures gracefully with retry",
+            "Verify health status persists correctly across component remounts without duplicating checks"
+          ],
+          "status": "completed",
+          "estimated_hours": 3
+        },
+        {
+          "id": "7.2",
+          "name": "Implement performance and load testing",
+          "is_test": true,
+          "requirements": ["NFR-006"],
+          "actions": [
+            "Test health check query completes within 500ms under normal conditions",
+            "Verify timeout triggers at exactly 3 seconds with fake timers",
+            "Test polling interval maintains 60-second cadence without drift over 10 minutes",
+            "Verify concurrent health checks from multiple components share results efficiently",
+            "Test memory consumption remains stable during extended polling sessions"
+          ],
+          "status": "completed",
+          "estimated_hours": 2.5
+        }
+      ]
+    },
+    {
+      "id": "8",
+      "name": "Document health check implementation and troubleshooting",
+      "status": "completed",
+      "requirements": ["NFR-007"],
+      "execution_type": "sequential",
+      "execution_metadata": {
+        "depends_on": ["7"],
+        "blocks": [],
+        "resource_locks": [
+          "docs/features/supabase-health-check.md"
+        ],
+        "parallelizable_with": []
+      },
+      "subtasks": [
+        {
+          "id": "8.1",
+          "name": "Create inline JSDoc comments for all health check code",
+          "is_test": false,
+          "requirements": ["NFR-007"],
+          "actions": [
+            "Add comprehensive JSDoc comments to checkSupabaseHealth function explaining timeout logic",
+            "Document useSupabaseHealth hook parameters and return values with usage examples",
+            "Include JSDoc examples showing how to use SupabaseConnectionIndicator component",
+            "Document type definitions with field explanations and valid value ranges",
+            "Add comments explaining race condition handling and cleanup patterns"
+          ],
+          "status": "completed",
+          "estimated_hours": 2
+        },
+        {
+          "id": "8.2",
+          "name": "Write feature documentation and troubleshooting guide",
+          "is_test": false,
+          "requirements": ["NFR-007"],
+          "actions": [
+            "Create docs/features/supabase-health-check.md with architecture overview",
+            "Document health check query pattern and why health_check table bypasses RLS",
+            "Explain polling strategy differences between login page and authenticated workspace",
+            "Add troubleshooting section for common issues like timeout failures and RLS blocks",
+            "Include accessibility notes documenting WCAG compliance and ARIA usage"
+          ],
+          "status": "completed",
+          "estimated_hours": 2.5
+        }
+      ]
+    }
+  ],
+  "execution_plan": {
+    "batches": [
+      {
+        "batch_id": 1,
+        "execution_mode": "sequential",
+        "task_ids": ["1"],
+        "description": "Foundation: Create health_check table migration before any service code"
+      },
+      {
+        "batch_id": 2,
+        "execution_mode": "parallel",
+        "task_ids": ["2", "3", "4"],
+        "description": "Core implementation: Build service, hook, and component concurrently"
+      },
+      {
+        "batch_id": 3,
+        "execution_mode": "parallel",
+        "task_ids": ["5", "6"],
+        "description": "UI integration: Add indicators to login page and footer in parallel"
+      },
+      {
+        "batch_id": 4,
+        "execution_mode": "sequential",
+        "task_ids": ["7"],
+        "description": "Testing: Comprehensive integration and performance validation"
+      },
+      {
+        "batch_id": 5,
+        "execution_mode": "sequential",
+        "task_ids": ["8"],
+        "description": "Documentation: Final step after implementation complete"
+      }
+    ],
+    "critical_path": ["1", "2", "3", "5", "7", "8"],
+    "total_estimated_hours": 44
+  },
+  "checklist": {
+    "requirement_coverage": [
+      {
+        "requirement_id": "FR-001",
+        "description": "System must query Supabase database to validate connectivity and health",
+        "mapped_tasks": ["1", "1.1", "2", "2.2"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "FR-002",
+        "description": "Health check must return structured status with timestamp and latency",
+        "mapped_tasks": ["2", "2.1", "2.2"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "FR-003",
+        "description": "System must provide React hook for health monitoring with polling",
+        "mapped_tasks": ["3", "3.1", "3.2"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "FR-004",
+        "description": "Health check must run automatically on app mount for all users",
+        "mapped_tasks": ["3.1", "5.1", "6.1"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "FR-005",
+        "description": "Connection indicator must display checking, connected, disconnected states",
+        "mapped_tasks": ["4", "4.1", "4.3"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "FR-006",
+        "description": "Indicator must show connection latency in milliseconds for connected state",
+        "mapped_tasks": ["2.2", "4.1"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "FR-007",
+        "description": "Connection indicator must appear below Create a new Account button on login page",
+        "mapped_tasks": ["5", "5.1"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "FR-008",
+        "description": "Connection indicator must appear in workspace footer for authenticated users with polling",
+        "mapped_tasks": ["6", "6.1"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "FR-009",
+        "description": "System must include integration tests validating complete health check flow",
+        "mapped_tasks": ["7", "7.1"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "NFR-001",
+        "description": "Health check query must complete within 500ms under normal conditions",
+        "mapped_tasks": ["1.2", "2.2", "7.2"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "NFR-002",
+        "description": "Health check must implement 3-second timeout to prevent blocking UI",
+        "mapped_tasks": ["2.2", "2.3"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "NFR-003",
+        "description": "Polling interval must be 60 seconds for authenticated users",
+        "mapped_tasks": ["3.1", "3.3", "6.1"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "NFR-004",
+        "description": "Connection indicator must meet WCAG AA accessibility standards",
+        "mapped_tasks": ["4.2", "4.4"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "NFR-005",
+        "description": "Integration must not break existing login page or footer functionality",
+        "mapped_tasks": ["5.2", "6.2"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "NFR-006",
+        "description": "Performance tests must validate query speed and polling stability",
+        "mapped_tasks": ["7.2"],
+        "coverage_status": "complete"
+      },
+      {
+        "requirement_id": "NFR-007",
+        "description": "Comprehensive documentation must explain health check architecture and usage",
+        "mapped_tasks": ["8", "8.1", "8.2"],
+        "coverage_status": "complete"
+      }
+    ],
+    "technical_validation": [
+      "Dedicated health_check table with disabled RLS validated as 2025 best practice for Supabase health monitoring, bypassing authentication requirements while maintaining security",
+      "SELECT 1 FROM health_check LIMIT 1 query pattern confirmed lightweight and sufficient for connectivity validation with sub-100ms baseline performance",
+      "3-second timeout using Promise.race and AbortController aligns with 2025 recommendations for health check responsiveness without blocking UI",
+      "60-second polling interval validated as industry standard for database health monitoring, balancing freshness with resource consumption",
+      "React 19.2 useEffect with setInterval and cleanup pattern confirmed as current best practice, leveraging automatic memoization from React Compiler",
+      "Race condition handling using request ID tracking validated as robust pattern for concurrent health checks without stale state updates",
+      "WCAG AA accessibility compliance validated for color-coded status indicators using color plus icon plus text label approach meeting 1.4.1 Use of Color criterion",
+      "Component testing with Vitest fake timers and MSW mocking confirmed as 2025 standard for testing timeout scenarios and Supabase responses"
+    ],
+    "dependencies": [
+      "Supabase PostgreSQL database with public schema access for health_check table creation",
+      "@supabase/supabase-js v2.38+ for client-side database connectivity",
+      "React 19.2+ with automatic memoization via React Compiler",
+      "TypeScript 5.3+ for advanced type inference and strict mode validation",
+      "Vitest for unit testing with fake timers and mocking capabilities",
+      "React Testing Library v16.3+ for component testing with React 19 compatibility",
+      "TanStack Router v1.132+ for file-based routing integration",
+      "ShadCN UI components and TailwindCSS 4.1 for visual status indicators"
+    ],
+    "risk_mitigation": [
+      "Risk: Health check fails due to RLS policies blocking unauthenticated queries. Mitigation: Dedicated health_check table with RLS explicitly disabled ensures consistent accessibility regardless of authentication state",
+      "Risk: Network timeouts block app initialization. Mitigation: 3-second timeout with Promise.race ensures health check never blocks UI rendering, app continues functioning even if check fails",
+      "Risk: Excessive polling causes rate limiting or quota exhaustion. Mitigation: Conservative 60-second polling interval with client-side result caching prevents hammering database, polling only enabled for authenticated users in workspace",
+      "Risk: Race conditions from concurrent health checks corrupt state. Mitigation: Request ID tracking pattern ensures only latest response updates state, AbortController cancels stale requests preventing memory leaks",
+      "Risk: Breaking existing login or footer functionality. Mitigation: Comprehensive regression testing with isolated component integration, health indicator added additively without modifying existing behavior",
+      "Risk: Accessibility violations exclude users with disabilities. Mitigation: WCAG AA compliance with color-icon-text combination, proper ARIA attributes, and automated accessibility testing validates inclusive design",
+      "Risk: Performance degradation from continuous polling. Mitigation: Lightweight SELECT 1 query with connection pooling, performance tests validate sub-500ms response times and stable memory consumption over extended sessions"
+    ],
+    "assumptions": [
+      "Supabase project already configured with valid connection credentials in environment variables",
+      "PostgreSQL database accessible with permissions to create tables and disable RLS",
+      "Application uses existing Supabase client singleton from src/core/config/supabaseClient.ts",
+      "Login page and WorkspaceFooter components remain at documented file paths without major refactoring",
+      "Internet connectivity available for health checks, graceful degradation acceptable for offline scenarios",
+      "React 19.2 Compiler enabled in project configuration for automatic memoization optimization"
+    ]
+  }
+}

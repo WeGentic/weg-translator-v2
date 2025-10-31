@@ -3,6 +3,8 @@ import { EyeOff, Terminal } from "lucide-react";
 
 import { useLayoutStoreApi } from "@/app/shell/MainLayout";
 import type { AppHealthReport } from "@/core/ipc";
+import { useSupabaseHealth } from "@/app/hooks/useSupabaseHealth";
+import { SupabaseConnectionIndicator } from "@/shared/components/SupabaseConnectionIndicator";
 
 import { Button } from "@/shared/ui/button";
 import "@/shared/styles/layout/chrome/footer/workspace-footer.css";
@@ -17,6 +19,12 @@ export function WorkspaceFooter({
 }) {
   const layoutStore = useLayoutStoreApi();
   const [isLoggerExpanded, setIsLoggerExpanded] = useState(false);
+
+  // Initialize Supabase health monitoring with 60-second polling for authenticated users
+  const { healthResult } = useSupabaseHealth();
+
+  // Determine current database connection status
+  const dbStatus = healthResult?.status ?? 'checking';
 
   // Hiding the footer routes through the store to keep all layout metrics in sync.
   const handleHide = () => {
@@ -39,6 +47,23 @@ export function WorkspaceFooter({
         <div className="workspace-footer__top">
           <div className="workspace-footer__metrics">
             <FooterMetric label="App" value={health?.appVersion ?? "—"} />
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontWeight: '500',
+              background: healthResult?.status === 'connected' ? '#22c55e' : '#f59e0b',
+              color: 'white'
+            }}>
+              {healthResult?.status === 'connected'
+                ? `✓ DB ${healthResult.latency}ms`
+                : healthResult?.status === 'disconnected'
+                ? '✗ DB Error'
+                : '⟳ Checking...'
+              }
+            </div>
           </div>
           <div className="workspace-footer__actions">
             <Button

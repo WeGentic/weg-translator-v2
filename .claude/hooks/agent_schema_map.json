@@ -1,0 +1,14 @@
+{
+  "_comment": "Maps Claude Code agent names to their expected JSON schema files",
+  "_schema_location": "../schemas/",
+  "T-tasker": "task-file.json",
+  "T-planner": "plan-file.json",
+  "tasklist-agent-v2": "task-file.json",
+  "task-updater-agent": "task-file.json",
+  "input-analyzer": "plan-file.json",
+  "specs-agent-v2": "plan-file.json",
+  "design-agent-v2": "plan-file.json",
+  "codebase-explorer": "plan-file.json",
+  "codebase-explorer-task": "plan-file.json",
+  "T-codebase-explorer": "plan-file.json"
+}

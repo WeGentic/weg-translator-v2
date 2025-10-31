@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
+import type { Session, User as SupabaseUser, AuthError } from "@supabase/supabase-js";
 
 import { supabase } from "@/core/config";
 import {
@@ -17,8 +17,9 @@ import {
 } from "@/core/ipc/db/users";
 import { logger } from "@/core/logging";
 import { checkIfOrphaned } from "@/modules/auth/utils/orphanDetection";
-import { OrphanedUserError, OrphanDetectionError } from "@/modules/auth/errors";
+import { OrphanedUserError, OrphanDetectionError, LoginError } from "@/modules/auth/errors";
 import { initiateCleanupFlow } from "@/modules/auth/utils/cleanupInitiation";
+import { mapAuthError, mapUnknownError } from "@/modules/auth/utils/loginErrorMapper";
 import { useToast } from "@/shared/ui/toast";
 import { UserQueries } from "@/core/supabase/queries/users";
 import type { UserRole } from "@/shared/types/database";
@@ -39,7 +40,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isVerified: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ success: boolean }>;
   logout: () => Promise<void>;
   isLoading: boolean;
   session: Session | null;
@@ -273,15 +274,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<{ success: boolean }> => {
     // Guard against duplicate concurrent login calls
     if (loginInProgress.current) {
       void logger.warn("Login already in progress - ignoring duplicate call", { email });
-      return;
+      return { success: false };
     }
 
     loginInProgress.current = true;
-    setIsLoading(true);
+    // NOTE: Do NOT set isLoading(true) here - that state is for initial session restoration only.
+    // Setting isLoading during login causes the full-screen "Loading session..." overlay to appear,
+    // creating a jarring flash in the UI. Login button has its own loading state if needed.
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -381,6 +384,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userWithProfile = await mapUserWithProfile(supabaseUser);
         setSession(data.session);
         setUser(userWithProfile);
+
+        // Login successful - return success=true to allow navigation
+        return { success: true };
       } catch (orphanError) {
         // If orphanError is OrphanedUserError, rethrow it to trigger recovery flow
         if (orphanError instanceof OrphanedUserError) {
@@ -427,6 +433,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Authentication system is temporarily unavailable. Please try again in a few minutes. If this problem persists, please contact support.");
       }
     } catch (error) {
+      // CRITICAL: Preserve OrphanedUserError handling - DO NOT MODIFY
       // Handle OrphanedUserError: initiate cleanup flow and redirect to recovery route
       if (error instanceof OrphanedUserError) {
         // Initiate cleanup flow (fire-and-forget)
@@ -454,10 +461,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw redirectError;
       }
 
-      // Re-throw other errors
-      throw error;
+      // For all other errors (non-OrphanedUserError), map to user-friendly LoginError
+      // and display toast notification. No need to re-throw since toast provides user feedback.
+      let loginError: LoginError;
+
+      // Check if error is a Supabase AuthError (has status property)
+      if (error && typeof error === 'object' && 'status' in error) {
+        // Map Supabase AuthError to LoginError with user-friendly message
+        loginError = mapAuthError(error as AuthError);
+      } else {
+        // Map unknown error type to LoginError with generic fallback message
+        loginError = mapUnknownError(error);
+      }
+
+      // Log error with correlation ID for debugging and support tracking
+      void logger.error('Login failed', loginError.toJSON());
+
+      // Display toast notification with user-friendly message
+      // The toast IS the error feedback - no need to throw the error and cause
+      // page re-renders or state disruptions that create poor UX
+      toast({
+        title: "Login Failed",
+        description: loginError.getUserMessage(),
+        variant: "destructive",
+        duration: 8000,
+      });
+
+      // Return success=false to prevent navigation in LoginForm
+      // The toast notification provides user feedback without causing page flashing
+      return { success: false };
     } finally {
-      setIsLoading(false);
+      // NOTE: Do NOT set isLoading(false) here - we never set it to true for login attempts.
+      // isLoading is only used for initial session restoration on app startup.
       loginInProgress.current = false; // Reset flag in all cases (success, error)
     }
   };

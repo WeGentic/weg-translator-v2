@@ -165,8 +165,8 @@ function ToastViewport({ controller }: { controller: ToastController }) {
     }
     const node = document.createElement("div");
     node.className = cn(
-      "pointer-events-none fixed inset-x-4 bottom-4 z-[9999] flex flex-col items-end gap-3",
-      "sm:inset-x-auto sm:right-4",
+      "pointer-events-none fixed inset-x-4 top-4 z-[9999] flex flex-col items-center gap-3",
+      "sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2",
     );
     document.body.appendChild(node);
     portalRef.current = node;
@@ -181,7 +181,7 @@ function ToastViewport({ controller }: { controller: ToastController }) {
   }
 
   return createPortal(
-    <div className="pointer-events-none flex w-full flex-col items-end gap-3">
+    <div className="pointer-events-none flex w-full flex-col items-center gap-3">
       {controller.toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} dismiss={controller.dismiss} />
       ))}
@@ -207,9 +207,9 @@ function ToastItem({ toast, dismiss }: { toast: ToastRecord; dismiss: (id: strin
     <Alert
       variant={isDestructive ? "destructive" : "default"}
       className={cn(
-        "pointer-events-auto relative w-full max-w-sm rounded-xl border shadow-lg backdrop-blur",
+        "pointer-events-auto relative w-full max-w-md rounded-xl border shadow-2xl backdrop-blur-xl",
         isDestructive
-          ? "border-destructive/50 bg-destructive/10 text-destructive"
+          ? "border-red-500/60 bg-red-500/20 text-red-50 shadow-red-500/20"
           : "border-border/50 bg-card/95 text-card-foreground",
       )}
     >
@@ -225,7 +225,12 @@ function ToastItem({ toast, dismiss }: { toast: ToastRecord; dismiss: (id: strin
       <button
         type="button"
         onClick={() => dismiss(id)}
-        className="absolute right-2 top-2 rounded-full p-1 text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+        className={cn(
+          "absolute right-2 top-2 rounded-full p-1 transition focus-visible:outline-none focus-visible:ring-2",
+          isDestructive
+            ? "text-red-100 hover:text-white focus-visible:ring-red-400/60"
+            : "text-muted-foreground hover:text-foreground focus-visible:ring-ring/60"
+        )}
         aria-label="Dismiss notification"
       >
         <X className="h-4 w-4" aria-hidden="true" />

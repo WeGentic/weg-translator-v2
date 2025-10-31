@@ -1,0 +1,635 @@
+{
+  "project_name": "supabase-health-check",
+  "overview": {
+    "user_input_summary": "Add a Supabase health check when the app loads to verify the database is healthy and working. Display a small connection indicator below the 'Create a new Account' button in the Login page, and show the same element in the footer for logged-in users.",
+    "analysis_scope": "Analyzed Supabase client configuration, authentication flow, login page structure, footer component implementation, existing health check patterns, app initialization lifecycle, connection state management patterns, and UI component conventions used throughout the codebase.",
+    "primary_focus": [
+      "api-integration",
+      "authentication",
+      "state-management",
+      "ui-components"
+    ]
+  },
+  "entry_points": [
+    {
+      "id": "EP-001",
+      "name": "AuthProvider",
+      "file_path": "/src/app/providers/auth/AuthProvider.tsx",
+      "line_number": 224,
+      "type": "component",
+      "purpose": "Root authentication context provider that manages session state, user profile data, account context extraction, and login/logout flows. Initializes auth state on mount.",
+      "dependencies": ["EP-002"],
+      "signature": "export function AuthProvider({ children }: { children: ReactNode })",
+      "usage_examples": [
+        "Wraps application in AppProviders",
+        "Provides useAuth() hook for component access",
+        "Manages session bootstrap and user profile enrichment"
+      ]
+    },
+    {
+      "id": "EP-002",
+      "name": "useAuth",
+      "file_path": "/src/app/providers/auth/AuthProvider.tsx",
+      "line_number": 617,
+      "type": "hook",
+      "purpose": "Custom hook providing access to authentication state and methods. Returns user, session, account context, subscription status, and login/logout functions.",
+      "signature": "export function useAuth(): AuthContextType",
+      "usage_examples": [
+        "const { user, isAuthenticated, login, logout } = useAuth();",
+        "const { accountUuid, userRole } = useAuth();",
+        "const { hasActiveSubscription, trialEndsAt } = useAuth();"
+      ]
+    },
+    {
+      "id": "EP-003",
+      "name": "LoginRoute",
+      "file_path": "/src/modules/auth/routes/index.tsx",
+      "line_number": 15,
+      "type": "component",
+      "purpose": "Main login page component that renders brand section, login form, and 'Create a new Account' button. Ideal location to add connection indicator below registration button.",
+      "dependencies": ["EP-004"],
+      "signature": "export function LoginRoute()",
+      "usage_examples": [
+        "Rendered at /login route",
+        "Shows LoginForm component at line 63",
+        "'Create a new Account' button at lines 70-78"
+      ]
+    },
+    {
+      "id": "EP-004",
+      "name": "LoginForm",
+      "file_path": "/src/modules/auth/components/LoginForm.tsx",
+      "line_number": 49,
+      "type": "component",
+      "purpose": "Presentational login form component with email/password fields, validation, and submission handling. Uses useAuth hook for authentication.",
+      "dependencies": ["EP-002"],
+      "signature": "export function LoginForm()"
+    },
+    {
+      "id": "EP-005",
+      "name": "useAppHealth",
+      "file_path": "/src/app/hooks/useAppHealth.ts",
+      "line_number": 9,
+      "type": "hook",
+      "purpose": "Bootstrap IPC health channel and return latest health report. Currently checks app version and build info. Can be extended for Supabase health.",
+      "signature": "export function useAppHealth()",
+      "usage_examples": [
+        "const { health, systemError } = useAppHealth();",
+        "health?.appVersion provides app version string"
+      ]
+    },
+    {
+      "id": "EP-006",
+      "name": "WorkspaceFooter",
+      "file_path": "/src/app/shell/main_elements/footer/WorkspaceFooter.tsx",
+      "line_number": 13,
+      "type": "component",
+      "purpose": "Footer component for logged-in workspace displaying health metrics and logger controls. Ideal location to add Supabase connection indicator alongside app metrics.",
+      "dependencies": [],
+      "signature": "export function WorkspaceFooter({ health }: { health: AppHealthReport | null })",
+      "usage_examples": [
+        "Displays app version from health?.appVersion",
+        "Accepts health prop from parent component",
+        "Uses layout store for visibility management"
+      ]
+    },
+    {
+      "id": "EP-007",
+      "name": "supabase client",
+      "file_path": "/src/core/config/supabaseClient.ts",
+      "line_number": 21,
+      "type": "service",
+      "purpose": "Singleton Supabase client instance configured with environment credentials. Provides connection to cloud database with auth, auto-refresh, and session persistence.",
+      "signature": "export const supabase = createClient(supabaseUrl, supabaseAnonKey, {...})"
+    },
+    {
+      "id": "EP-008",
+      "name": "healthCheck",
+      "file_path": "/src/core/ipc/client.ts",
+      "line_number": 28,
+      "type": "function",
+      "purpose": "IPC wrapper function that invokes Tauri backend health_check command. Returns AppHealthReport with version info.",
+      "signature": "export async function healthCheck()"
+    }
+  ],
+  "key_modules": [
+    {
+      "id": "MOD-001",
+      "name": "AuthProvider & Context",
+      "path": "/src/app/providers/auth/AuthProvider.tsx",
+      "purpose": "Manages global authentication state, user profile enrichment, session lifecycle, and JWT token handling. Provides useAuth hook for all components.",
+      "type": "store",
+      "dependencies": ["supabase", "UserQueries", "useSubscriptionStatus"],
+      "exports": ["AuthProvider", "useAuth", "AuthContext"],
+      "can_be_reused": true,
+      "needs_modification": false
+    },
+    {
+      "id": "MOD-002",
+      "name": "Supabase Client",
+      "path": "/src/core/config/supabaseClient.ts",
+      "purpose": "Singleton Supabase JavaScript client for cloud database access. Handles auth flow, session management, and RLS enforcement.",
+      "type": "service",
+      "dependencies": ["@supabase/supabase-js"],
+      "exports": ["supabase", "VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY"],
+      "can_be_reused": true,
+      "needs_modification": false
+    },
+    {
+      "id": "MOD-003",
+      "name": "Supabase Query Helpers",
+      "path": "/src/core/supabase/queries/users.ts",
+      "purpose": "Type-safe static query helpers for database operations with error handling, correlation IDs, and RLS enforcement. Pattern for implementing new queries.",
+      "type": "api",
+      "dependencies": ["supabase", "error handling utilities"],
+      "exports": ["UserQueries class with static methods"],
+      "can_be_reused": true,
+      "needs_modification": false
+    },
+    {
+      "id": "MOD-004",
+      "name": "Login Route",
+      "path": "/src/modules/auth/routes/index.tsx",
+      "purpose": "File-based TanStack Router route component rendering login page. Contains brand section, LoginForm, and registration button.",
+      "type": "component",
+      "dependencies": ["LoginForm", "usePageTransition"],
+      "exports": ["LoginRoute", "loginRouteComponent"],
+      "can_be_reused": false,
+      "needs_modification": true
+    },
+    {
+      "id": "MOD-005",
+      "name": "WorkspaceFooter",
+      "path": "/src/app/shell/main_elements/footer/WorkspaceFooter.tsx",
+      "purpose": "Footer component for logged-in workspace displaying health metrics, logger, and hide controls. Uses layout store for state.",
+      "type": "component",
+      "dependencies": ["useLayoutStoreApi", "AppHealthReport"],
+      "exports": ["WorkspaceFooter", "FooterMetric"],
+      "can_be_reused": true,
+      "needs_modification": true
+    },
+    {
+      "id": "MOD-006",
+      "name": "App Health Hook",
+      "path": "/src/app/hooks/useAppHealth.ts",
+      "purpose": "Bootstrap app health checking via IPC. Fetches AppHealthReport from Tauri backend on component mount.",
+      "type": "hook",
+      "dependencies": ["healthCheck IPC", "logger"],
+      "exports": ["useAppHealth"],
+      "can_be_reused": true,
+      "needs_modification": true
+    },
+    {
+      "id": "MOD-007",
+      "name": "IPC Types & Client",
+      "path": "/src/core/ipc/types.ts and /src/core/ipc/client.ts",
+      "purpose": "Type definitions for IPC communication including AppHealthReport. Provides typed invoke wrapper for Tauri commands.",
+      "type": "model",
+      "dependencies": ["Tauri invoke API"],
+      "exports": ["AppHealthReport interface", "healthCheck function"],
+      "can_be_reused": true,
+      "needs_modification": true
+    },
+    {
+      "id": "MOD-008",
+      "name": "Supabase Error Handling",
+      "path": "/src/core/supabase/errors.ts",
+      "purpose": "Error mapping, correlation ID generation, and structured logging utilities for Supabase operations.",
+      "type": "utility",
+      "dependencies": [],
+      "exports": ["generateCorrelationId", "mapSupabaseError", "logOperationError"],
+      "can_be_reused": true,
+      "needs_modification": false
+    }
+  ],
+  "data_flow": {
+    "description": "Authentication and health checking flows work in parallel during app startup. The AuthProvider initializes on app mount and bootstraps session state from localStorage or server. The useAppHealth hook separately fetches IPC health status. Login page renders early and can display Supabase health independently. Once authenticated, user is redirected to protected routes where workspace footer displays health metrics.",
+    "flow_diagrams": [
+      {
+        "name": "App Initialization Flow",
+        "flow_type": "user-action",
+        "steps": [
+          {
+            "step": 1,
+            "component": "App.tsx",
+            "description": "Application mounts and initializes",
+            "data_transformed": "None"
+          },
+          {
+            "step": 2,
+            "component": "AppProviders",
+            "description": "Wraps app with providers including AuthProvider and LogProvider",
+            "data_transformed": "Establishes context hierarchy"
+          },
+          {
+            "step": 3,
+            "component": "AuthProvider useEffect",
+            "description": "Bootstrap session from localStorage or server",
+            "data_transformed": "Session | null"
+          },
+          {
+            "step": 4,
+            "component": "useAppHealth hook",
+            "description": "Calls IPC health_check command to Tauri backend",
+            "data_transformed": "AppHealthReport"
+          },
+          {
+            "step": 5,
+            "component": "TanStack Router",
+            "description": "Route resolution based on auth context",
+            "data_transformed": "Route path determined"
+          },
+          {
+            "step": 6,
+            "component": "LoginRoute or Protected Routes",
+            "description": "Render based on authentication status",
+            "data_transformed": "Component tree"
+          }
+        ]
+      },
+      {
+        "name": "Login Page with Supabase Health",
+        "flow_type": "user-action",
+        "steps": [
+          {
+            "step": 1,
+            "component": "LoginRoute",
+            "description": "User navigates to or is redirected to /login",
+            "data_transformed": "None"
+          },
+          {
+            "step": 2,
+            "component": "LoginForm",
+            "description": "Form rendered with email/password inputs",
+            "data_transformed": "UI components"
+          },
+          {
+            "step": 3,
+            "component": "ConnectionIndicator (NEW)",
+            "description": "Display Supabase connection status via parallel health check",
+            "data_transformed": "Health status state"
+          },
+          {
+            "step": 4,
+            "component": "User submits login",
+            "description": "Email and password sent to Supabase auth",
+            "data_transformed": "Credentials → Session | Error"
+          },
+          {
+            "step": 5,
+            "component": "Redirect to workspace",
+            "description": "On success, user routed to protected pages",
+            "data_transformed": "Navigation"
+          }
+        ]
+      },
+      {
+        "name": "Workspace Footer with Supabase Health",
+        "flow_type": "state-update",
+        "steps": [
+          {
+            "step": 1,
+            "component": "MainLayout",
+            "description": "Logged-in workspace renders with footer",
+            "data_transformed": "Layout structure"
+          },
+          {
+            "step": 2,
+            "component": "WorkspaceFooter receives health prop",
+            "description": "Parent passes AppHealthReport (extended with Supabase status)",
+            "data_transformed": "AppHealthReport object"
+          },
+          {
+            "step": 3,
+            "component": "FooterMetric components",
+            "description": "Render app version and Supabase status side by side",
+            "data_transformed": "Visual metrics"
+          },
+          {
+            "step": 4,
+            "component": "User hovers or views footer",
+            "description": "Connection status visible at a glance",
+            "data_transformed": "Visual feedback"
+          }
+        ]
+      }
+    ]
+  },
+  "technology_stack": {
+    "frontend": [
+      {
+        "name": "React",
+        "version": "19.2",
+        "purpose": "UI framework with Compiler enabled for auto-memoization"
+      },
+      {
+        "name": "TypeScript",
+        "version": "5.x",
+        "purpose": "Type-safe code with compile-time checking"
+      },
+      {
+        "name": "TanStack Router",
+        "version": "1.132+",
+        "purpose": "File-based routing with type-safe route protection"
+      },
+      {
+        "name": "ShadCN/UI",
+        "version": "3.3.1",
+        "purpose": "Accessible component library with Tailwind CSS"
+      },
+      {
+        "name": "Tailwind CSS",
+        "version": "4.1.1",
+        "purpose": "Utility-first CSS framework for styling"
+      }
+    ],
+    "backend": [
+      {
+        "name": "Tauri",
+        "version": "2.8.5",
+        "purpose": "Desktop app framework with IPC bridge"
+      },
+      {
+        "name": "Rust",
+        "version": "1.89",
+        "purpose": "Backend implementation for sidecars and native operations"
+      }
+    ],
+    "libraries": [
+      {
+        "name": "@supabase/supabase-js",
+        "version": "2.57.4",
+        "purpose": "JavaScript client for Supabase (auth, database, real-time)",
+        "location": "frontend",
+        "is_critical": true
+      },
+      {
+        "name": "React Context",
+        "version": "built-in",
+        "purpose": "State management for auth and app state",
+        "location": "frontend",
+        "is_critical": true
+      },
+      {
+        "name": "Zustand",
+        "version": "latest",
+        "purpose": "State management for layout and UI state",
+        "location": "frontend",
+        "is_critical": false
+      },
+      {
+        "name": "react-icons",
+        "version": "latest",
+        "purpose": "Icon library for UI components",
+        "location": "frontend",
+        "is_critical": false
+      }
+    ]
+  },
+  "implementation_insights": [
+    {
+      "id": "IMPL-001",
+      "category": "authentication",
+      "detail": "Auth state is managed via React Context with useAuth hook for consumption. AuthProvider handles session bootstrap on mount, JWT token extraction with fallback queries, orphan user detection, and subscription status enrichment. The pattern provides a clean separation between authentication logic and UI components.",
+      "location": [
+        "/src/app/providers/auth/AuthProvider.tsx",
+        "/src/modules/auth/hooks/useAuth.ts"
+      ],
+      "impact": "critical",
+      "code_examples": [
+        {
+          "file": "/src/app/providers/auth/AuthProvider.tsx",
+          "excerpt": "export function useAuth() {\n  const context = use(AuthContext);\n  if (!context) {\n    throw new Error('useAuth must be used within an AuthProvider');\n  }\n  return context;\n}",
+          "explanation": "Custom hook provides type-safe access to auth context with error boundary for misuse"
+        }
+      ]
+    },
+    {
+      "id": "IMPL-002",
+      "category": "api-integration",
+      "detail": "Supabase client is configured as a singleton with persistent session, auto-refresh token, and URL detection enabled. All queries use the static query helper pattern with error mapping, correlation IDs, and structured logging. This ensures consistent error handling and traceability across all database operations.",
+      "location": [
+        "/src/core/config/supabaseClient.ts",
+        "/src/core/supabase/queries/users.ts"
+      ],
+      "impact": "critical",
+      "code_examples": [
+        {
+          "file": "/src/core/supabase/queries/users.ts",
+          "excerpt": "static async getUser(userUuid: string): Promise<User | null> {\n  const correlationId = generateCorrelationId();\n  try {\n    const { data, error } = await supabase\n      .from('users')\n      .select('*')\n      .eq('user_uuid', userUuid)\n      .is('deleted_at', null)\n      .maybeSingle();\n    if (error) {\n      throw mapSupabaseError(error, correlationId);\n    }\n    return data;\n  } catch (error) {\n    logOperationError('getUser', error, { userUuid });\n    throw error;\n  }\n}",
+          "explanation": "Type-safe query pattern with correlation ID tracing and error mapping"
+        }
+      ]
+    },
+    {
+      "id": "IMPL-003",
+      "category": "state-management",
+      "detail": "App health is managed through useAppHealth hook that fetches IPC health report on mount. Layout state is managed via Zustand store accessed through useLayoutStoreApi. Auth state is managed via React Context. This multi-pattern approach provides flexibility: context for cross-cutting concerns (auth), hooks for local effects (health check), and stores for UI layout (Zustand).",
+      "location": [
+        "/src/app/hooks/useAppHealth.ts",
+        "/src/app/providers/auth/AuthProvider.tsx",
+        "/src/app/shell/MainLayout.tsx"
+      ],
+      "impact": "high"
+    },
+    {
+      "id": "IMPL-004",
+      "category": "routing",
+      "detail": "TanStack Router uses beforeLoad hooks for auth enforcement. Root route (__root.tsx) checks isAuthenticated and redirects to /login if needed. Login route redirects authenticated users away. This creates a clean separation where routes are self-protecting.",
+      "location": [
+        "/src/router/routes/__root.tsx",
+        "/src/router/routes/login.tsx"
+      ],
+      "impact": "high"
+    },
+    {
+      "id": "IMPL-005",
+      "category": "ui-components",
+      "detail": "Components follow ShadCN/UI patterns with Tailwind CSS utility classes. Footer uses layout store for state management. Cards, buttons, alerts, and badges are all available from shared UI library. Components are kept lean with presentation-focused responsibility.",
+      "location": [
+        "/src/shared/ui/",
+        "/src/app/shell/main_elements/"
+      ],
+      "impact": "medium"
+    }
+  ],
+  "key_findings": [
+    {
+      "id": "FIND-001",
+      "finding": "The codebase has a well-established health check infrastructure via useAppHealth hook and IPC command pattern. The AppHealthReport interface can be cleanly extended to include Supabase connection status without breaking existing code.",
+      "category": "strength",
+      "impact": "high",
+      "recommendation": "Extend AppHealthReport interface to include supaba_healthy: boolean field. This allows incremental addition of Supabase health without disrupting existing health check flow.",
+      "priority": "medium"
+    },
+    {
+      "id": "FIND-002",
+      "finding": "Login page structure already has a clear insertion point for the connection indicator: directly below the 'Create a new Account' button at line 78 in /src/modules/auth/routes/index.tsx. This location is ideal as it's visually grouped with authentication UI.",
+      "category": "opportunity",
+      "impact": "high",
+      "recommendation": "Create a reusable ConnectionIndicator component that can be inserted at this location without modifying login form logic. Component should be self-contained and handle its own health check state.",
+      "priority": "high"
+    },
+    {
+      "id": "FIND-003",
+      "finding": "WorkspaceFooter already displays app metrics (app version) and accepts a health prop. The footer has space for additional metrics in the workspace-footer__metrics div. This is the ideal location for Supabase health indicator for logged-in users.",
+      "category": "opportunity",
+      "impact": "high",
+      "recommendation": "Add a new FooterMetric component instance displaying Supabase connection status next to app version. Reuse the same ConnectionIndicator component from login page for consistency.",
+      "priority": "high"
+    },
+    {
+      "id": "FIND-004",
+      "finding": "The Supabase client is properly configured as a singleton with session persistence and auto-refresh. Query helpers use a consistent pattern with error mapping, correlation IDs, and structured logging. This is excellent for adding health check queries.",
+      "category": "strength",
+      "impact": "medium",
+      "recommendation": "Create a new query helper file /src/core/supabase/queries/health.ts following the existing pattern. Use a simple health check query like SELECT COUNT(*) FROM accounts LIMIT 1 that confirms database connectivity.",
+      "priority": "medium"
+    },
+    {
+      "id": "FIND-005",
+      "finding": "AuthProvider has comprehensive error handling including error boundaries, graceful degradation, and fail-closed security policies. The pattern of checking JWT claims first with fallback to database queries is well-established.",
+      "category": "strength",
+      "impact": "medium",
+      "recommendation": "Apply the same error handling philosophy to Supabase health checks. Timeout after 5 seconds, log failures for monitoring, and fail gracefully to avoid blocking authentication.",
+      "priority": "medium"
+    },
+    {
+      "id": "FIND-006",
+      "finding": "The useAppHealth hook uses an effect to bootstrap health checking on mount, which is the correct place to integrate Supabase health. However, it currently only checks IPC health. Could create a separate useSupabaseHealth hook for better separation of concerns.",
+      "category": "pattern",
+      "impact": "medium",
+      "recommendation": "Create a separate useSupabaseHealth hook that parallels useAppHealth. This keeps concerns separated and allows independent control of Supabase health polling/caching behavior.",
+      "priority": "low"
+    }
+  ],
+  "clarifications_needed": [
+    {
+      "id": "CLAR-001",
+      "question": "Should the Supabase health check run on unauthenticated users (login page) or only authenticated users?",
+      "category": "implementation",
+      "context": "The login page could benefit from showing database status to unauthenticated users. However, RLS policies might prevent simple queries from anonymous users. Need to decide: (1) Run check via IPC command that doesn't require auth, (2) Only show on login page if user has internet but not auth yet, (3) Only show on authenticated workspace footer.",
+      "blocking": false,
+      "possible_answers": [
+        {
+          "answer": "Health check runs for both authenticated and unauthenticated users",
+          "implications": "Need to implement a simple health query that works without authentication (e.g., connection pool status query or simple non-RLS query)"
+        },
+        {
+          "answer": "Health check only runs for authenticated users in workspace footer",
+          "implications": "Login page won't show Supabase status, only workspace footer will. Simpler to implement since auth is guaranteed"
+        },
+        {
+          "answer": "Create a separate IPC command for health check that doesn't require Supabase auth",
+          "implications": "More complex but most flexible. Backend can perform health check without frontend auth constraints"
+        }
+      ],
+      "resolution_source": "user-qa"
+    },
+    {
+      "id": "CLAR-002",
+      "question": "Should the health check be polled continuously or run once on app load?",
+      "category": "implementation",
+      "context": "useAppHealth currently runs once on mount. Could extend to poll periodically (every 30s, 1m, etc). Need to balance between knowing current status vs. avoiding unnecessary database hits.",
+      "blocking": false,
+      "possible_answers": [
+        {
+          "answer": "Run health check once on app load only",
+          "implications": "Minimal database overhead. User sees status from startup only. No continuous monitoring. Simplest to implement"
+        },
+        {
+          "answer": "Poll health check periodically (e.g., every 60 seconds)",
+          "implications": "More current status but increases database load. Shows when connection is restored if it goes down. More complex with cleanup needed"
+        },
+        {
+          "answer": "Run check once on load, then poll if status becomes unhealthy",
+          "implications": "Good balance - minimal overhead normally, but monitors when something is wrong. More complex conditional logic"
+        }
+      ],
+      "resolution_source": "user-qa"
+    },
+    {
+      "id": "CLAR-003",
+      "question": "What database query should be used for the Supabase health check?",
+      "category": "implementation",
+      "context": "Need a simple, fast query that confirms database connectivity. Options: (1) SELECT COUNT(*) FROM accounts LIMIT 1, (2) SELECT 1 FROM accounts LIMIT 1, (3) Supabase-specific connection health check.",
+      "blocking": false,
+      "possible_answers": [
+        {
+          "answer": "Use SELECT COUNT(*) FROM accounts LIMIT 1",
+          "implications": "Simple, fast, confirms database and accounts table are accessible. RLS applies so user must have permission to accounts table"
+        },
+        {
+          "answer": "Use SELECT 1 LIMIT 1 (connection only)",
+          "implications": "Fastest query, minimal overhead. But doesn't verify actual table access. May not respect RLS"
+        },
+        {
+          "answer": "Use SELECT CURRENT_TIMESTAMP (server time check)",
+          "implications": "Database-only check, doesn't test table permissions. Very lightweight and works for all users"
+        }
+      ],
+      "resolution_source": "user-qa"
+    }
+  ],
+  "file_structure": {
+    "critical_paths": [
+      {
+        "path": "/src/core/config/supabaseClient.ts",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Supabase client singleton with environment configuration",
+        "key_exports": ["supabase"]
+      },
+      {
+        "path": "/src/app/providers/auth/AuthProvider.tsx",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Auth context provider managing session and user state",
+        "key_exports": ["AuthProvider", "useAuth", "AuthContext"]
+      },
+      {
+        "path": "/src/modules/auth/routes/index.tsx",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Login page component (WHERE TO ADD: indicator below registration button)",
+        "key_exports": ["LoginRoute"]
+      },
+      {
+        "path": "/src/app/shell/main_elements/footer/WorkspaceFooter.tsx",
+        "type": "file",
+        "relevance": "critical",
+        "description": "Footer component for logged-in workspace (WHERE TO ADD: indicator in metrics)",
+        "key_exports": ["WorkspaceFooter"]
+      },
+      {
+        "path": "/src/app/hooks/useAppHealth.ts",
+        "type": "file",
+        "relevance": "high",
+        "description": "Health check bootstrap hook (TO EXTEND: add Supabase health)",
+        "key_exports": ["useAppHealth"]
+      },
+      {
+        "path": "/src/core/ipc/types.ts",
+        "type": "file",
+        "relevance": "high",
+        "description": "IPC type definitions (TO EXTEND: AppHealthReport interface)",
+        "key_exports": ["AppHealthReport"]
+      },
+      {
+        "path": "/src/core/supabase/queries/users.ts",
+        "type": "file",
+        "relevance": "high",
+        "description": "Query helper pattern reference for new health query",
+        "key_exports": ["UserQueries"]
+      },
+      {
+        "path": "/src/core/supabase/errors.ts",
+        "type": "file",
+        "relevance": "high",
+        "description": "Error handling utilities for Supabase operations",
+        "key_exports": ["generateCorrelationId", "mapSupabaseError", "logOperationError"]
+      }
+    ],
+    "tree_visualization": ".\n├── src/\n│   ├── app/\n│   │   ├── providers/\n│   │   │   └── auth/\n│   │   │       └── AuthProvider.tsx (context provider)\n│   │   ├── hooks/\n│   │   │   └── useAppHealth.ts (health check hook)\n│   │   └── shell/\n│   │       └── main_elements/\n│   │           └── footer/\n│   │               └── WorkspaceFooter.tsx (WHERE TO ADD: indicator)\n│   ├── core/\n│   │   ├── config/\n│   │   │   └── supabaseClient.ts (Supabase client setup)\n│   │   ├── ipc/\n│   │   │   ├── types.ts (AppHealthReport interface)\n│   │   │   └── client.ts (IPC health check)\n│   │   └── supabase/\n│   │       ├── queries/\n│   │       │   ├── users.ts (query pattern)\n│   │       │   └── health.ts (NEW: health query)\n│   │       └── errors.ts (error handling)\n│   ├── modules/\n│   │   └── auth/\n│   │       ├── routes/\n│   │       │   └── index.tsx (LoginRoute - WHERE TO ADD: indicator)\n│   │       ├── components/\n│   │       │   └── LoginForm.tsx\n│   │       └── hooks/\n│   │           └── useAuth.ts\n│   ├── shared/\n│   │   └── ui/\n│   │       └── (ShadCN components)\n│   └── router/\n│       └── routes/\n│           ├── __root.tsx (root layout with auth check)\n│           └── login.tsx (login route)\n├── docs/\n│   └── supabase_account_schemas/\n│       └── account-schemas.md (schema reference)\n└── tasks/\n    └── supabase-health-check/\n        ├── supabase-health-check_CodebaseAnalysis.md\n        └── analysis.json"
+  }
+}
