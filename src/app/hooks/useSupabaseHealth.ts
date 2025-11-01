@@ -1,12 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/app/providers/auth/AuthProvider";
 import { logger } from "@/core/logging";
 import { checkSupabaseHealth } from "@/core/supabase/health";
-import type {
-  SupabaseHealthResult,
-  SupabaseHealthStatus,
-} from "@/core/supabase/types";
+import type { SupabaseHealthResult } from "@/core/supabase/types";
 
 /**
  * Configuration options for useSupabaseHealth hook.
@@ -79,7 +76,7 @@ export function useSupabaseHealth(
   /**
    * Executes a single health check operation.
    */
-  const runHealthCheck = async () => {
+  const runHealthCheck = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -122,13 +119,13 @@ export function useSupabaseHealth(
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   /**
    * Starts automatic polling for authenticated users.
    * Does nothing if polling is already active.
    */
-  const startPolling = () => {
+  const startPolling = useCallback(() => {
     // Don't start polling if already active
     if (intervalIdRef.current !== null) {
       void logger.debug("Supabase health polling already active");
@@ -148,69 +145,51 @@ export function useSupabaseHealth(
     intervalIdRef.current = setInterval(() => {
       void runHealthCheck();
     }, pollingInterval);
-  };
+  }, [isAuthenticated, pollingInterval, runHealthCheck]);
 
   /**
    * Stops automatic polling.
    * Safe to call even if polling is not active.
    */
-  const stopPolling = () => {
+  const stopPolling = useCallback(() => {
     if (intervalIdRef.current !== null) {
       clearInterval(intervalIdRef.current);
       intervalIdRef.current = null;
 
       void logger.info("Stopped Supabase health polling");
     }
-  };
+  }, []);
 
   /**
    * Manually triggers a health check.
    * Can be called at any time to get fresh status.
    */
-  const retry = () => {
+  const retry = useCallback(() => {
     void logger.info("Manual Supabase health check triggered");
     void runHealthCheck();
-  };
+  }, [runHealthCheck]);
 
   // Effect: Initial health check and polling setup
   useEffect(() => {
-    // Run initial health check if autoStart is enabled
-    if (autoStart) {
-      void runHealthCheck();
-
-      // Start polling if user is authenticated
-      if (isAuthenticated) {
-        startPolling();
-      }
+    if (!autoStart) {
+      stopPolling();
+      return () => {
+        stopPolling();
+      };
     }
 
-    // Cleanup: stop polling on unmount
+    void runHealthCheck();
+
+    if (isAuthenticated) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+
     return () => {
       stopPolling();
     };
-    // Note: Intentionally omitting dependencies to run only on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Effect: Handle authentication state changes for polling
-  useEffect(() => {
-    if (!autoStart) {
-      return;
-    }
-
-    // Start polling when user becomes authenticated
-    if (isAuthenticated && intervalIdRef.current === null) {
-      startPolling();
-    }
-
-    // Stop polling when user logs out
-    if (!isAuthenticated && intervalIdRef.current !== null) {
-      stopPolling();
-    }
-
-    // Note: startPolling and stopPolling are stable functions, safe to omit
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, autoStart]);
+  }, [autoStart, isAuthenticated, runHealthCheck, startPolling, stopPolling]);
 
   return {
     healthResult,

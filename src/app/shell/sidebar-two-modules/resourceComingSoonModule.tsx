@@ -1,11 +1,12 @@
 import type { SidebarTwoModuleDefinition, SidebarTwoModuleProps } from "@/app/shell/sidebar-two-registry/types";
 import { ComingSoon } from "@/app/shell/sidebar-two-content/ComingSoon";
 
-export interface ResourceComingSoonPayload {}
+type ResourceComingSoonPayload = Record<string, never>;
 
 export const RESOURCE_COMING_SOON_MODULE_ID = "resource:placeholder";
 
-function ResourceComingSoonModule(_props: SidebarTwoModuleProps<ResourceComingSoonPayload>) {
+function ResourceComingSoonModule(props: SidebarTwoModuleProps<ResourceComingSoonPayload>) {
+  void props;
   return <ComingSoon />;
 }
 

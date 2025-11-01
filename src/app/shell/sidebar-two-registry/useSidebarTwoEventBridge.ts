@@ -22,7 +22,7 @@ function resolveTargetView(
   }
 
   if (fallbackRoutes && fallbackRoutes.length > 0) {
-    return fallbackRoutes[0]!;
+    return fallbackRoutes[0];
   }
 
   return "projects";
@@ -59,9 +59,15 @@ export function useSidebarTwoEventBridge(currentViewRef: ViewRef) {
             continue;
           }
 
-          const custom = event as CustomEvent<unknown>;
-          const result =
-            definition.trigger.mapEvent?.(custom) ?? ({ payload: custom.detail } as SidebarTwoEventResult<unknown>);
+          if (!(event instanceof CustomEvent)) {
+            continue;
+          }
+
+          const custom: CustomEvent<unknown> = event;
+          const fallbackResult: SidebarTwoEventResult<unknown> = {
+            payload: custom.detail,
+          };
+          const result = definition.trigger.mapEvent?.(custom) ?? fallbackResult;
 
           if (!result) {
             continue;

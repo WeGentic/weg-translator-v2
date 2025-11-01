@@ -61,7 +61,7 @@ export function validateImageFile(
 
   // Check file type
   const allowedTypes = options.allowedTypes || ALLOWED_IMAGE_TYPES;
-  if (!allowedTypes.includes(file.type as any)) {
+  if (!allowedTypes.includes(file.type)) {
     throw new FileValidationError(
       `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`,
       'INVALID_TYPE',

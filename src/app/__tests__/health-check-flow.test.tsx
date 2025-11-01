@@ -8,8 +8,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
-
 import { useSupabaseHealth } from "@/app/hooks/useSupabaseHealth";
 import { SupabaseConnectionIndicator } from "@/shared/components/SupabaseConnectionIndicator";
 import type { SupabaseHealthResult } from "@/app/hooks/useSupabaseHealth";
@@ -21,8 +19,7 @@ import type { SupabaseHealthResult } from "@/app/hooks/useSupabaseHealth";
 const mockCheckSupabaseHealth = vi.fn<[], Promise<SupabaseHealthResult>>();
 
 vi.mock("@/core/supabase/health", () => ({
-  checkSupabaseHealth: (options?: { timeoutMs?: number }) =>
-    mockCheckSupabaseHealth(),
+  checkSupabaseHealth: () => mockCheckSupabaseHealth(),
 }));
 
 // Mock the logger
@@ -181,13 +178,13 @@ describe("Health check flow integration", () => {
       mockAuthContext.isAuthenticated = true;
 
       let callCount = 0;
-      mockCheckSupabaseHealth.mockImplementation(async () => {
+      mockCheckSupabaseHealth.mockImplementation(() => {
         callCount++;
-        return {
+        return Promise.resolve({
           status: "connected",
           timestamp: new Date(),
           latency: 40 + callCount * 5, // Increasing latency
-        };
+        });
       });
 
       render(<WorkspaceHealthIndicator />);
@@ -571,14 +568,14 @@ describe("Health check flow integration", () => {
       const latencies = [45, 50, 120, 35, 60];
       let callIndex = 0;
 
-      mockCheckSupabaseHealth.mockImplementation(async () => {
+      mockCheckSupabaseHealth.mockImplementation(() => {
         const latency = latencies[callIndex % latencies.length];
         callIndex++;
-        return {
+        return Promise.resolve({
           status: "connected",
           timestamp: new Date(),
           latency,
-        };
+        });
       });
 
       render(<WorkspaceHealthIndicator />);

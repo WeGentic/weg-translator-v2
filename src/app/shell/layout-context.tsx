@@ -127,16 +127,32 @@ export function useSidebarTwoRegistrySelector<T>(selector: (state: SidebarTwoReg
  */
 export function useSidebarTwoRegistryActions() {
   return useLayoutActions((state) => ({
-    registerSidebarTwoModule: state.registerSidebarTwoModule,
-    unregisterSidebarTwoModule: state.unregisterSidebarTwoModule,
-    activateSidebarTwoModule: state.activateSidebarTwoModule,
-    deactivateSidebarTwoModule: state.deactivateSidebarTwoModule,
-    clearSidebarTwoModules: state.clearSidebarTwoModules,
-    setSidebarTwoLegacyContent: state.setSidebarTwoLegacyContent,
-    serializeSidebarTwoModules: state.serializeSidebarTwoModules,
-    hydrateSidebarTwoModules: state.hydrateSidebarTwoModules,
-    setSidebarTwoFocusTarget: state.setSidebarTwoFocusTarget,
-    requestSidebarTwoFocus: state.requestSidebarTwoFocus,
+    registerSidebarTwoModule: (
+      ...args: Parameters<typeof state.registerSidebarTwoModule>
+    ) => state.registerSidebarTwoModule(...args),
+    unregisterSidebarTwoModule: (
+      ...args: Parameters<typeof state.unregisterSidebarTwoModule>
+    ) => state.unregisterSidebarTwoModule(...args),
+    activateSidebarTwoModule: (
+      ...args: Parameters<typeof state.activateSidebarTwoModule>
+    ) => state.activateSidebarTwoModule(...args),
+    deactivateSidebarTwoModule: (
+      ...args: Parameters<typeof state.deactivateSidebarTwoModule>
+    ) => state.deactivateSidebarTwoModule(...args),
+    clearSidebarTwoModules: () => state.clearSidebarTwoModules(),
+    setSidebarTwoLegacyContent: (
+      ...args: Parameters<typeof state.setSidebarTwoLegacyContent>
+    ) => state.setSidebarTwoLegacyContent(...args),
+    serializeSidebarTwoModules: () => state.serializeSidebarTwoModules(),
+    hydrateSidebarTwoModules: (
+      ...args: Parameters<typeof state.hydrateSidebarTwoModules>
+    ) => state.hydrateSidebarTwoModules(...args),
+    setSidebarTwoFocusTarget: (
+      ...args: Parameters<typeof state.setSidebarTwoFocusTarget>
+    ) => state.setSidebarTwoFocusTarget(...args),
+    requestSidebarTwoFocus: (
+      ...args: Parameters<typeof state.requestSidebarTwoFocus>
+    ) => state.requestSidebarTwoFocus(...args),
   }));
 }
 

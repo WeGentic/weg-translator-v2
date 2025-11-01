@@ -1,11 +1,12 @@
 import type { SidebarTwoModuleDefinition, SidebarTwoModuleProps } from "@/app/shell/sidebar-two-registry/types";
 import { EditorMenu } from "@/app/shell/sidebar-two-content/EditorMenu";
 
-export interface EditorMenuPayload {}
+type EditorMenuPayload = Record<string, never>;
 
 export const EDITOR_MENU_MODULE_ID = "editor:menu";
 
-function EditorMenuModule(_props: SidebarTwoModuleProps<EditorMenuPayload>) {
+function EditorMenuModule(props: SidebarTwoModuleProps<EditorMenuPayload>) {
+  void props;
   return <EditorMenu />;
 }
 

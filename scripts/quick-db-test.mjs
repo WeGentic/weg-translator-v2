@@ -9,7 +9,7 @@ const supabase = createClient(
 console.log('Testing database access (unauthenticated)...\n');
 
 // Test if we can at least query without infinite recursion
-const { data, error } = await supabase.from('users').select('user_uuid').limit(0);
+const { error } = await supabase.from('users').select('user_uuid').limit(0);
 
 if (error) {
   if (error.message.includes('infinite recursion')) {

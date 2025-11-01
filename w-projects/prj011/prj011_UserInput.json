@@ -1,0 +1,356 @@
+{
+  "project_name": "prj011",
+  "raw_user_input": "Implement microanimations in Login page",
+  "key_objectives": [
+    {
+      "id": "OBJ-001",
+      "objective": "Enhance user experience through purposeful microanimations that provide clear visual feedback for all user interactions on the login page including form inputs, buttons, and state transitions",
+      "priority": "high",
+      "category": "user-experience",
+      "success_indicators": [
+        "Users report improved perception of responsiveness and polish",
+        "Reduced user hesitation during form interaction",
+        "Increased user confidence in system feedback"
+      ]
+    },
+    {
+      "id": "OBJ-002",
+      "objective": "Implement performant GPU-accelerated animations using Framer Motion that maintain 60fps performance across all target devices without introducing jank or layout shifts",
+      "priority": "critical",
+      "category": "performance",
+      "success_indicators": [
+        "All animations run at consistent 60fps",
+        "No layout thrashing or reflow during animations",
+        "GPU acceleration confirmed for transform and opacity properties"
+      ]
+    },
+    {
+      "id": "OBJ-003",
+      "objective": "Ensure full accessibility compliance by respecting prefers-reduced-motion user preferences and maintaining WCAG 2.1 AA standards for all animated components",
+      "priority": "critical",
+      "category": "user-experience",
+      "success_indicators": [
+        "All animations respect prefers-reduced-motion media query",
+        "Screen reader announcements remain unaffected by animations",
+        "Keyboard navigation flow is not disrupted by animation states"
+      ]
+    },
+    {
+      "id": "OBJ-004",
+      "objective": "Create a cohesive animation system that integrates seamlessly with existing design tokens, CSS variables, and component architecture without breaking current functionality",
+      "priority": "high",
+      "category": "technical",
+      "success_indicators": [
+        "Animation durations align with existing transition timings in CSS",
+        "No regression in existing component behavior or tests",
+        "Reusable animation variants created for future components"
+      ]
+    }
+  ],
+  "technical_constraints": {
+    "constraints_list": [
+      {
+        "id": "TC-001",
+        "constraint": "Must use existing Framer Motion 12.23.24 library already installed in package.json without introducing additional animation dependencies or increasing bundle size significantly",
+        "impact": "medium",
+        "mitigation": "Leverage existing Framer Motion installation with tree-shaking to minimize bundle impact, use motion components efficiently, and implement code-splitting for animation-heavy features"
+      },
+      {
+        "id": "TC-002",
+        "constraint": "Must maintain compatibility with React 19.2 and React Compiler automatic optimizations, avoiding manual memoization that could conflict with compiler optimizations",
+        "impact": "high",
+        "mitigation": "Follow React 19 best practices, rely on React Compiler for optimization, use Framer Motion's built-in performance features, and test with React DevTools Profiler"
+      },
+      {
+        "id": "TC-003",
+        "constraint": "Animation performance must not degrade on lower-end devices, maintaining 60fps target and respecting device performance capabilities with graceful degradation if needed",
+        "impact": "high",
+        "mitigation": "Use only GPU-accelerated properties (transform, opacity), implement performance monitoring, use will-change CSS property judiciously, and provide fallback static states"
+      },
+      {
+        "id": "TC-004",
+        "constraint": "Must work within existing CSS architecture using CSS custom properties and class-based styling, integrating with login-form.css without major restructuring",
+        "impact": "medium",
+        "mitigation": "Combine Framer Motion with existing CSS classes, use CSS variables for animation timing consistency, and maintain separation of concerns between styling and animation logic"
+      }
+    ]
+  },
+  "success_criteria": [
+    {
+      "id": "SC-001",
+      "criterion": "All microanimations complete within optimal timing ranges: 150-200ms for micro-interactions, 200-300ms for transitions, and 300-500ms for complex state changes",
+      "measurement": "Measure animation duration using Chrome DevTools Performance panel and verify timing consistency across interactions",
+      "target": "100% of animations within specified ranges",
+      "category": "performance",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-002",
+      "criterion": "Complete accessibility compliance with WCAG 2.1 AA standards including full prefers-reduced-motion support that disables or reduces all non-essential animations",
+      "measurement": "Test with prefers-reduced-motion enabled in browser and validate with axe-core accessibility testing tool",
+      "target": "Zero accessibility violations",
+      "category": "usability",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-003",
+      "criterion": "Maintain 60fps frame rate during all animations without dropped frames or jank on devices meeting minimum system requirements",
+      "measurement": "Monitor frame rate using Chrome DevTools Performance panel during animation sequences",
+      "target": "60fps sustained",
+      "category": "performance",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-004",
+      "criterion": "Zero regression in existing functionality with all current tests passing and user flows remaining intact after animation implementation",
+      "measurement": "Run full test suite including unit tests, integration tests, and manual QA of login flow",
+      "target": "100% test pass rate",
+      "category": "functionality",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-005",
+      "criterion": "Animations enhance perceived performance and user confidence without causing distraction or confusion during critical authentication flow",
+      "measurement": "User testing and feedback collection, monitoring completion rates and error recovery patterns",
+      "target": "Positive user feedback",
+      "category": "usability",
+      "priority": "should-have"
+    }
+  ],
+  "risks_and_mitigations": [
+    {
+      "id": "RISK-001",
+      "risk": "Over-animation could distract users from the primary task of authentication, reducing usability and increasing cognitive load during a critical security flow",
+      "category": "quality",
+      "probability": "medium",
+      "impact": "moderate",
+      "risk_score": 9,
+      "mitigation_strategy": "Follow established UX principles for microanimations: keep animations subtle and purposeful, limit duration to 150-300ms, ensure animations support rather than distract from user goals, and conduct user testing to validate animation choices",
+      "contingency_plan": "If users report distraction or confusion, reduce animation intensity by decreasing duration, removing non-essential animations, or making animations more subtle through reduced scale/opacity changes",
+      "owner": "UX Lead"
+    },
+    {
+      "id": "RISK-002",
+      "risk": "Animation implementation could degrade performance on lower-end devices or older browsers, causing jank, dropped frames, or increased CPU usage that negatively impacts user experience",
+      "category": "technical",
+      "probability": "medium",
+      "impact": "major",
+      "risk_score": 12,
+      "mitigation_strategy": "Strictly use GPU-accelerated properties only (transform and opacity), implement performance monitoring during development, test on minimum-spec devices, use Chrome DevTools Performance panel to identify bottlenecks, and implement feature detection for graceful degradation",
+      "contingency_plan": "Implement progressive enhancement approach where animations are disabled on devices that fail performance thresholds, provide static fallbacks, or reduce animation complexity based on device capabilities detected at runtime",
+      "owner": "Technical Lead"
+    },
+    {
+      "id": "RISK-003",
+      "risk": "Adding Framer Motion components and animation logic could break existing component tests, increase test maintenance burden, and cause CI pipeline failures",
+      "category": "technical",
+      "probability": "high",
+      "impact": "minor",
+      "risk_score": 8,
+      "mitigation_strategy": "Update test setup to properly mock Framer Motion components, add specific animation tests using Testing Library, ensure tests wait for animations to complete when needed, and update test documentation with animation testing patterns",
+      "contingency_plan": "If tests become too complex or brittle, isolate animation logic into separate testable hooks, use test utilities to disable animations in tests, or refactor to make animation concerns easier to mock and test",
+      "owner": "Development Team"
+    },
+    {
+      "id": "RISK-004",
+      "risk": "Animations may not properly respect accessibility preferences like prefers-reduced-motion, causing issues for users with vestibular disorders or motion sensitivity",
+      "category": "quality",
+      "probability": "low",
+      "impact": "major",
+      "risk_score": 8,
+      "mitigation_strategy": "Implement prefers-reduced-motion detection using Framer Motion's built-in support, test thoroughly with motion preferences enabled, use automated accessibility testing tools, and follow WCAG 2.1 animation guidelines including option to disable animations",
+      "contingency_plan": "If accessibility violations are found, immediately implement motion preference detection, provide user-level animation controls in settings, reduce animation intensity globally, or disable problematic animations until proper solution is implemented",
+      "owner": "Accessibility Lead"
+    }
+  ],
+  "required_features": [
+    {
+      "id": "FEAT-001",
+      "feature": "Implement entrance animation for login card using fade-in combined with subtle slide-up motion that creates polished first impression when page loads",
+      "category": "ui-ux",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "2-3 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Login card fades in from 0 to 1 opacity over 300-400ms",
+        "Card slides up 20-30px during entrance animation",
+        "Animation uses ease-out timing function for natural deceleration",
+        "Animation respects prefers-reduced-motion by showing card immediately",
+        "No layout shift or reflow during entrance animation"
+      ]
+    },
+    {
+      "id": "FEAT-002",
+      "feature": "Add interactive focus state animations for input fields including subtle scale effect and icon color transition that provides clear visual feedback",
+      "category": "ui-ux",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "3-4 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Input fields scale to 1.01 on focus with 150ms duration",
+        "Field icons animate color and size changes smoothly",
+        "Focus ring animation is smooth and visible",
+        "Scale animation uses transform property for GPU acceleration",
+        "Reduced motion users see instant focus state without scale"
+      ]
+    },
+    {
+      "id": "FEAT-003",
+      "feature": "Create animated error message display with slide-down entrance and optional shake animation for validation failures that draws attention without being jarring",
+      "category": "ui-ux",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "4-6 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Error messages slide down from 0 height over 200ms",
+        "Errors fade in simultaneously with slide animation",
+        "Form shake animation triggers on submit with validation errors",
+        "Shake animation is subtle (3-5px horizontal movement)",
+        "Errors exit smoothly when resolved with fade-out animation"
+      ]
+    },
+    {
+      "id": "FEAT-004",
+      "feature": "Enhance submit button with press feedback animation and loading state pulse that provides tactile response and clear feedback during authentication",
+      "category": "ui-ux",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "2-3 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Button scales to 0.98 on active state with 100ms duration",
+        "Loading state shows smooth pulse animation on button",
+        "Spinner icon rotates continuously during loading",
+        "Button hover state animates background color smoothly",
+        "All button animations use GPU-accelerated properties"
+      ]
+    },
+    {
+      "id": "FEAT-005",
+      "feature": "Add rotation animation for password visibility toggle icon that creates smooth transition between show and hide states",
+      "category": "ui-ux",
+      "priority": "should-have",
+      "complexity": "simple",
+      "estimated_effort": "1-2 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Eye icon rotates 180 degrees when toggling visibility",
+        "Rotation animation completes in 200ms with ease-in-out",
+        "Icon swap is synchronized with rotation midpoint",
+        "Toggle button maintains clickable area during animation",
+        "Animation respects reduced motion preferences"
+      ]
+    },
+    {
+      "id": "FEAT-006",
+      "feature": "Implement staggered entrance animation for form fields that creates elegant sequential reveal effect without delaying user interaction",
+      "category": "ui-ux",
+      "priority": "nice-to-have",
+      "complexity": "moderate",
+      "estimated_effort": "3-4 hours",
+      "dependencies": [
+        "FEAT-001"
+      ],
+      "acceptance_criteria": [
+        "Form fields appear sequentially with 50-80ms stagger delay",
+        "Each field fades in and slides up slightly",
+        "Total stagger animation completes within 500ms",
+        "Fields are interactive immediately despite animation",
+        "Stagger is disabled for reduced motion preference"
+      ]
+    },
+    {
+      "id": "FEAT-007",
+      "feature": "Create success state animation with brief scale and fade effect before navigation that confirms successful authentication",
+      "category": "ui-ux",
+      "priority": "nice-to-have",
+      "complexity": "simple",
+      "estimated_effort": "2-3 hours",
+      "dependencies": [
+        "FEAT-004"
+      ],
+      "acceptance_criteria": [
+        "Success animation scales button to 1.05 briefly",
+        "Green color wash or checkmark icon appears",
+        "Animation completes in 300-400ms before navigation",
+        "Animation does not delay navigation unreasonably",
+        "Success state is indicated instantly for reduced motion users"
+      ]
+    }
+  ],
+  "open_questions": [
+    {
+      "id": "Q-001",
+      "question": "Are there existing animation duration tokens or design system variables that should be used for consistency across the application?",
+      "category": "architecture",
+      "priority": "high",
+      "context": "Current CSS shows transition durations of 150-160ms, but no centralized animation token system is visible. Need to determine if there are design tokens for animation timing that should be respected.",
+      "resolution_source": "codebase-analysis",
+      "blocks": [
+        "FEAT-001",
+        "FEAT-002",
+        "FEAT-003",
+        "FEAT-004"
+      ]
+    },
+    {
+      "id": "Q-002",
+      "question": "Should animation intensity or duration differ based on user authentication state (first-time login vs returning user)?",
+      "category": "user-flow",
+      "priority": "medium",
+      "context": "It may be beneficial to show more pronounced animations for first-time users as onboarding, while returning users might prefer more subtle animations. Need to clarify product requirements.",
+      "resolution_source": "user-qa",
+      "blocks": []
+    },
+    {
+      "id": "Q-003",
+      "question": "What is the testing strategy for animations - should we add specific animation tests, mock animations in existing tests, or use visual regression testing?",
+      "category": "implementation",
+      "priority": "high",
+      "context": "Existing tests at src/test/modules/auth/ may need updates to handle Framer Motion components. Need to determine best approach to avoid brittle tests while ensuring animation correctness.",
+      "resolution_source": "codebase-analysis",
+      "blocks": [
+        "FEAT-001",
+        "FEAT-002",
+        "FEAT-003"
+      ]
+    },
+    {
+      "id": "Q-004",
+      "question": "Should we create reusable animation variants or hooks that can be shared across other authentication-related components like registration or password reset?",
+      "category": "architecture",
+      "priority": "medium",
+      "context": "This implementation could establish patterns for other forms in the application. Need to determine scope of reusability and whether to create shared animation utilities.",
+      "resolution_source": "codebase-analysis",
+      "blocks": []
+    },
+    {
+      "id": "Q-005",
+      "question": "Are there existing Framer Motion configurations or setup files in the codebase that should be leveraged or updated?",
+      "category": "implementation",
+      "priority": "medium",
+      "context": "Framer Motion is installed but need to check if there are existing motion config files, custom variants, or animation utilities already in use elsewhere in the codebase.",
+      "resolution_source": "codebase-analysis",
+      "blocks": [
+        "FEAT-001"
+      ]
+    }
+  ],
+  "codebase_analysis_scope": {
+    "target_directories": [
+      "src/modules/auth",
+      "src/modules/auth/components",
+      "src/shared/ui",
+      "src/shared/hooks",
+      "src/test/modules/auth"
+    ],
+    "focus_areas": [
+      "authentication",
+      "state-management",
+      "architecture"
+    ]
+  }
+}

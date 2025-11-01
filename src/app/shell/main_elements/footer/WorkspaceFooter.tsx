@@ -4,7 +4,6 @@ import { EyeOff, Terminal } from "lucide-react";
 import { useLayoutStoreApi } from "@/app/shell/MainLayout";
 import type { AppHealthReport } from "@/core/ipc";
 import { useSupabaseHealth } from "@/app/hooks/useSupabaseHealth";
-import { SupabaseConnectionIndicator } from "@/shared/components/SupabaseConnectionIndicator";
 
 import { Button } from "@/shared/ui/button";
 import "@/shared/styles/layout/chrome/footer/workspace-footer.css";
@@ -22,9 +21,6 @@ export function WorkspaceFooter({
 
   // Initialize Supabase health monitoring with 60-second polling for authenticated users
   const { healthResult } = useSupabaseHealth();
-
-  // Determine current database connection status
-  const dbStatus = healthResult?.status ?? 'checking';
 
   // Hiding the footer routes through the store to keep all layout metrics in sync.
   const handleHide = () => {

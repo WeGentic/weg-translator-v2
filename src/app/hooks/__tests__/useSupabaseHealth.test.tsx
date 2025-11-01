@@ -14,13 +14,9 @@ import type { SupabaseHealthResult } from "../useSupabaseHealth";
 // Mock the health service with proper async function
 const mockCheckSupabaseHealth = vi.fn<[], Promise<SupabaseHealthResult>>();
 
-vi.mock("@/core/supabase/health", async () => {
-  return {
-    checkSupabaseHealth: async (options?: { timeoutMs?: number }) => {
-      return mockCheckSupabaseHealth();
-    },
-  };
-});
+vi.mock("@/core/supabase/health", () => ({
+  checkSupabaseHealth: () => mockCheckSupabaseHealth(),
+}));
 
 // Mock the logger
 vi.mock("@/core/logging", () => ({
@@ -150,7 +146,7 @@ describe("useSupabaseHealth", () => {
         latency: 50,
       });
 
-      const { result } = renderHook(() => useSupabaseHealth({ pollingInterval: 60000 }), {
+      renderHook(() => useSupabaseHealth({ pollingInterval: 60000 }), {
         wrapper: createWrapper(),
       });
 
@@ -185,7 +181,7 @@ describe("useSupabaseHealth", () => {
         latency: 50,
       });
 
-      const { result } = renderHook(() => useSupabaseHealth(), {
+      renderHook(() => useSupabaseHealth(), {
         wrapper: createWrapper(),
       });
 
@@ -213,7 +209,7 @@ describe("useSupabaseHealth", () => {
         latency: 50,
       });
 
-      const { result } = renderHook(
+      renderHook(
         () => useSupabaseHealth({ pollingInterval: 120000 }),
         {
           wrapper: createWrapper(),
@@ -331,7 +327,7 @@ describe("useSupabaseHealth", () => {
         latency: 50,
       });
 
-      const { result, unmount } = renderHook(() => useSupabaseHealth(), {
+      const { unmount } = renderHook(() => useSupabaseHealth(), {
         wrapper: createWrapper(),
       });
 
@@ -512,7 +508,7 @@ describe("useSupabaseHealth", () => {
         latency: 50,
       });
 
-      const { result, rerender } = renderHook(() => useSupabaseHealth(), {
+      const { rerender } = renderHook(() => useSupabaseHealth(), {
         wrapper: createWrapper(),
       });
 
@@ -546,7 +542,7 @@ describe("useSupabaseHealth", () => {
         latency: 50,
       });
 
-      const { result, rerender } = renderHook(() => useSupabaseHealth(), {
+      const { rerender } = renderHook(() => useSupabaseHealth(), {
         wrapper: createWrapper(),
       });
 

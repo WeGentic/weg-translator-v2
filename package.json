@@ -21,7 +21,9 @@
     "format:check": "prettier \"**/*.{cjs,js,jsx,mjs,ts,tsx,json,md,css}\" --check",
     "generate:types": "supabase gen types typescript --project-id wnohgxkujwnuoqtibsss > src/shared/types/supabase.ts",
     "validate:schema": "node scripts/validate-schema.mjs",
-    "test:jwt-hook": "node scripts/test-jwt-hook.mjs"
+    "test:jwt-hook": "node scripts/test-jwt-hook.mjs",
+    "orchestrator": "cd scripts/orchestrator && npm install && npm run build && cd ../.. && node scripts/orchestrator/dist/index.js",
+    "orchestrator:dev": "cd scripts/orchestrator && npm install && npm run build && cd ../.. && node scripts/orchestrator/dist/index.js"
   },
   "dependencies": {
     "@openai/codex": "^0.50.0",

@@ -36,9 +36,9 @@ describe("checkSupabaseHealth", () => {
       }),
     });
 
-    vi.mocked(supabase.from).mockReturnValue({
+    vi.mocked(supabase).from.mockReturnValue({
       select: mockSelect,
-    } as any);
+    } as ReturnType<typeof supabase.from>);
 
     // Execute health check
     const resultPromise = checkSupabaseHealth();
@@ -56,7 +56,7 @@ describe("checkSupabaseHealth", () => {
     expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 
     // Verify query was called correctly
-    expect(supabase.from).toHaveBeenCalledWith("health_check");
+    expect(vi.mocked(supabase).from).toHaveBeenCalledWith("health_check");
     expect(mockSelect).toHaveBeenCalledWith("id");
   });
 
@@ -75,9 +75,9 @@ describe("checkSupabaseHealth", () => {
       }),
     });
 
-    vi.mocked(supabase.from).mockReturnValue({
+    vi.mocked(supabase).from.mockReturnValue({
       select: mockSelect,
-    } as any);
+    } as ReturnType<typeof supabase.from>);
 
     // Execute health check with default 3 second timeout
     const resultPromise = checkSupabaseHealth();
@@ -110,9 +110,9 @@ describe("checkSupabaseHealth", () => {
       }),
     });
 
-    vi.mocked(supabase.from).mockReturnValue({
+    vi.mocked(supabase).from.mockReturnValue({
       select: mockSelect,
-    } as any);
+    } as ReturnType<typeof supabase.from>);
 
     // Execute health check with custom 5 second timeout
     const resultPromise = checkSupabaseHealth({ timeoutMs: 5000 });
@@ -135,9 +135,9 @@ describe("checkSupabaseHealth", () => {
       }),
     });
 
-    vi.mocked(supabase.from).mockReturnValue({
+    vi.mocked(supabase).from.mockReturnValue({
       select: mockSelect,
-    } as any);
+    } as ReturnType<typeof supabase.from>);
 
     // Execute health check
     const resultPromise = checkSupabaseHealth();
@@ -167,9 +167,9 @@ describe("checkSupabaseHealth", () => {
       }),
     });
 
-    vi.mocked(supabase.from).mockReturnValue({
+    vi.mocked(supabase).from.mockReturnValue({
       select: mockSelect,
-    } as any);
+    } as ReturnType<typeof supabase.from>);
 
     // Execute health check
     const resultPromise = checkSupabaseHealth();
@@ -203,9 +203,9 @@ describe("checkSupabaseHealth", () => {
       }),
     }));
 
-    vi.mocked(supabase.from).mockReturnValue({
+    vi.mocked(supabase).from.mockReturnValue({
       select: mockSelect,
-    } as any);
+    } as ReturnType<typeof supabase.from>);
 
     // Start two concurrent health checks
     const result1Promise = checkSupabaseHealth();
@@ -227,7 +227,7 @@ describe("checkSupabaseHealth", () => {
     expect(result1.latency).toBeLessThan(result2.latency!);
 
     // Verify query was called twice
-    expect(supabase.from).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(supabase).from).toHaveBeenCalledTimes(2);
   });
 
   it("should track latency accurately", async () => {
@@ -245,9 +245,9 @@ describe("checkSupabaseHealth", () => {
       }),
     });
 
-    vi.mocked(supabase.from).mockReturnValue({
+    vi.mocked(supabase).from.mockReturnValue({
       select: mockSelect,
-    } as any);
+    } as ReturnType<typeof supabase.from>);
 
     // Execute health check
     const resultPromise = checkSupabaseHealth();
@@ -274,9 +274,9 @@ describe("checkSupabaseHealth", () => {
       }),
     });
 
-    vi.mocked(supabase.from).mockReturnValue({
+    vi.mocked(supabase).from.mockReturnValue({
       select: mockSelect,
-    } as any);
+    } as ReturnType<typeof supabase.from>);
 
     // Execute health check
     const resultPromise = checkSupabaseHealth();
