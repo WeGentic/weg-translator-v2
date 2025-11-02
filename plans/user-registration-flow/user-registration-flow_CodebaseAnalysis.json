@@ -1,0 +1,516 @@
+{
+  "project_name": "user-registration-flow",
+  "analysis_date": "2025-10-31",
+  "codebase_version": "2.8.5",
+  "existing_patterns": {
+    "authentication": {
+      "description": "The application uses Supabase Auth with custom JWT claims and RLS policies. Authentication state is managed via React Context with session persistence.",
+      "key_files": [
+        {
+          "path": "src/app/providers/auth/AuthProvider.tsx",
+          "purpose": "Main authentication provider with session management, login/logout, orphan detection, and profile enrichment",
+          "patterns_to_follow": [
+            "Use mapUser() and mapUserWithProfile() for consistent user object mapping",
+            "Implement extractAccountContext() pattern for JWT claims extraction with fallback",
+            "Follow fail-closed security policy for orphan detection failures",
+            "Use correlation IDs for all auth operations for debugging",
+            "Sync local SQLite profiles alongside Supabase auth for desktop features"
+          ]
+        },
+        {
+          "path": "src/core/config/supabaseClient.ts",
+          "purpose": "Supabase client configuration with auth settings",
+          "patterns_to_follow": [
+            "Use environment variables for Supabase URL and anon key",
+            "Configure auth with persistSession, autoRefreshToken, detectSessionInUrl",
+            "Use storageKey 'weg-translator-auth' for session persistence"
+          ]
+        },
+        {
+          "path": "src/core/supabase/queries/users.ts",
+          "purpose": "User queries for fetching user data from Supabase",
+          "patterns_to_follow": [
+            "Use UserQueries.getUser() for fetching user records",
+            "Handle RLS policy access patterns",
+            "Query users table for account_uuid and role when JWT claims not available"
+          ]
+        }
+      ],
+      "current_flow": "Login uses signInWithPassword() → checks email verification → runs orphan detection → fetches profile data → syncs local SQLite → sets session. Registration exists but needs enhancement.",
+      "gaps_to_address": [
+        "No pending_registrations table for temporary storage",
+        "No encrypted PII storage mechanism using Supabase Vault",
+        "No rate limiting implementation",
+        "No database trigger for auto-account creation after email verification",
+        "No deep link handling for email verification in desktop app",
+        "No fallback mechanisms for registration completion"
+      ]
+    },
+    "database_architecture": {
+      "description": "The application uses both PostgreSQL (Supabase) for cloud data and SQLite for local desktop data. Migrations are managed via SQL files in supabase/migrations/.",
+      "key_files": [
+        {
+          "path": "supabase/migrations/20250130000004_final_rls_fix_with_security_definer.sql",
+          "purpose": "RLS policies using SECURITY DEFINER function to prevent infinite recursion",
+          "patterns_to_follow": [
+            "Use get_current_user_account_info() SECURITY DEFINER function for RLS policies",
+            "COALESCE JWT claims with fallback queries for account_uuid and user_role",
+            "All policies check deleted_at IS NULL for soft delete support",
+            "Use STABLE functions for performance optimization",
+            "Grant EXECUTE to authenticated and anon roles"
+          ]
+        },
+        {
+          "path": "src-tauri/migrations/0001_baseline_schema.up.sql",
+          "purpose": "Local SQLite schema for desktop app data",
+          "patterns_to_follow": [
+            "Use IF NOT EXISTS guards for safety",
+            "Foreign keys with ON UPDATE CASCADE and ON DELETE CASCADE/RESTRICT",
+            "Triggers for automatic timestamp updates",
+            "Composite primary keys for junction tables"
+          ]
+        }
+      ],
+      "current_schema": {
+        "accounts": {
+          "description": "B2B account/tenant entity",
+          "columns": ["account_uuid (PK)", "company_name", "company_email", "created_at", "modified_at", "deleted_at"],
+          "location": "supabase (PostgreSQL)"
+        },
+        "users": {
+          "description": "User records linked to accounts with roles",
+          "columns": ["user_uuid (PK, FK to auth.users)", "account_uuid (FK)", "user_email (UNIQUE)", "first_name", "last_name", "avatar_url", "role (owner|admin|member|viewer)", "created_at", "modified_at", "deleted_at"],
+          "location": "supabase (PostgreSQL)"
+        },
+        "subscriptions": {
+          "description": "Trial and paid subscription management",
+          "columns": ["subscription_uuid (PK)", "account_uuid (FK)", "status (trialing|active|past_due|canceled|unpaid)", "plan_id", "trial_ends_at", "current_period_start", "current_period_end", "created_at", "modified_at", "deleted_at"],
+          "location": "supabase (PostgreSQL)"
+        }
+      },
+      "gaps_to_address": [
+        "No pending_registrations table with encrypted_data column",
+        "No registration_rate_limits table for abuse prevention",
+        "No security_audit_log table for registration events",
+        "No pg_cron extension configured for scheduled cleanup jobs",
+        "No Supabase Vault configuration for encryption keys"
+      ]
+    },
+    "ipc_patterns": {
+      "description": "Tauri IPC commands in Rust follow a consistent pattern with typed errors and structured modules",
+      "key_files": [
+        {
+          "path": "src-tauri/src/ipc/commands/mod.rs",
+          "purpose": "Main command registration module",
+          "patterns_to_follow": [
+            "Organize commands into domain modules (users_v2, clients_v2, etc.)",
+            "Export all commands from mod.rs for centralized registration",
+            "Use #[tauri::command] attribute for command functions",
+            "Log command execution with correlation IDs"
+          ]
+        },
+        {
+          "path": "src-tauri/src/ipc/commands/users_v2.rs",
+          "purpose": "User-related IPC commands",
+          "patterns_to_follow": [
+            "Follow v2 naming convention for new/updated commands",
+            "Return Result<T, IpcError> for consistent error handling",
+            "Use managed state for shared resources (DbManager, SettingsManager)",
+            "Validate inputs before database operations"
+          ]
+        },
+        {
+          "path": "src-tauri/src/ipc/commands/shared.rs",
+          "purpose": "Shared utilities like file locking",
+          "patterns_to_follow": [
+            "Use with_project_file_lock() for file operations to prevent concurrent modification",
+            "Implement advisory locking patterns (flock on Unix)"
+          ]
+        }
+      ],
+      "current_patterns": "Commands use async/await, return Result<T, IpcError>, log operations, manage state via Tauri's state management, and follow domain-driven module organization.",
+      "gaps_to_address": [
+        "No registration-specific IPC commands yet",
+        "Need commands for: store_pending_registration, complete_registration_with_token, complete_registration_by_email, request_verification_resend, cancel_pending_registration"
+      ]
+    },
+    "frontend_routing": {
+      "description": "TanStack Router with file-based routing, auth-protected routes, and route guards",
+      "key_files": [
+        {
+          "path": "src/router/routeTree.gen.ts",
+          "purpose": "Auto-generated route tree from file-based routes",
+          "patterns_to_follow": [
+            "Routes defined in src/router/routes/ directory",
+            "Auth routes: /login, /register, /register/recover",
+            "Protected routes under /_app layout",
+            "Route tree auto-generates, don't manually edit"
+          ]
+        },
+        {
+          "path": "src/modules/auth/routes/RegistrationRoute.tsx",
+          "purpose": "Registration route component",
+          "patterns_to_follow": [
+            "Export route using createFileRoute()",
+            "Use route guards for authentication checks",
+            "Implement loading states and error boundaries"
+          ]
+        },
+        {
+          "path": "src/modules/auth/routes/RecoveryRoute.tsx",
+          "purpose": "Recovery route for incomplete registrations (/register/recover)",
+          "patterns_to_follow": [
+            "Nested route under /register parent",
+            "Handle registration recovery flow",
+            "Display recovery form with verification code entry"
+          ]
+        }
+      ],
+      "current_routes": {
+        "authentication": ["/login", "/register", "/register/recover"],
+        "protected": ["/ (workspace)", "/dashboard", "/resources", "/projects/$projectId"]
+      },
+      "gaps_to_address": [
+        "No email verification pending screen route",
+        "No deep link callback handler route",
+        "Need to enhance /register/recover for state token and email-based fallbacks"
+      ]
+    },
+    "ui_component_patterns": {
+      "description": "ShadCN v3.3.1 components with TailwindCSS 4.1.1, form validation with react-hook-form, atomic design principles",
+      "key_files": [
+        {
+          "path": "src/modules/auth/components/RegistrationForm.tsx",
+          "purpose": "Multi-step registration form with company and admin steps",
+          "patterns_to_follow": [
+            "Use useRegistrationForm() hook for state management and validation",
+            "Separate form logic (controller) from presentation (view)",
+            "Multi-step forms with RegistrationProgress component",
+            "Step-specific components: RegistrationCompanyStep, RegistrationAdminStep",
+            "Dialog-based verification flow with RegistrationVerificationDialog",
+            "Password strength with PasswordStrengthMeter and PasswordRequirementsPanel",
+            "Phone input with react-phone-number-input",
+            "Address autocomplete integration"
+          ]
+        },
+        {
+          "path": "src/modules/auth/components/LoginForm.tsx",
+          "purpose": "Login form with error handling and toast notifications",
+          "patterns_to_follow": [
+            "Use useAuth() hook for authentication",
+            "Toast notifications for user feedback",
+            "Loading states during submission",
+            "Clear error messages mapped from auth errors",
+            "Navigate on success using router"
+          ]
+        },
+        {
+          "path": "src/modules/auth/components/dialog/RegistrationVerificationDialog.tsx",
+          "purpose": "Dialog for email verification status",
+          "patterns_to_follow": [
+            "Use Dialog component from ShadCN",
+            "Show verification status (awaiting, verifying, succeeded, failed)",
+            "Resend email functionality with cooldown",
+            "Manual verification code entry option",
+            "Close dialog redirects to login on success"
+          ]
+        }
+      ],
+      "form_validation": "react-hook-form with custom validation logic in useRegistrationForm hook, real-time field validation, step-based validation, blocking errors prevent progression",
+      "shared_components": "Located in src/shared/ui/ - Button, Card, Dialog, Tooltip, Input, Form components from ShadCN",
+      "gaps_to_address": [
+        "Need email verification pending screen component",
+        "Need manual token entry fallback UI",
+        "Need rate limit error display component",
+        "Need deep link failure fallback UI"
+      ]
+    },
+    "security_infrastructure": {
+      "description": "RLS policies with SECURITY DEFINER functions, JWT claims optimization, soft delete patterns, correlation ID tracking",
+      "key_files": [
+        {
+          "path": "supabase/migrations/20250130000004_final_rls_fix_with_security_definer.sql",
+          "purpose": "RLS policies preventing infinite recursion",
+          "patterns_to_follow": [
+            "Create SECURITY DEFINER functions that bypass RLS for safe lookups",
+            "COALESCE JWT claims with fallback function queries",
+            "STABLE functions for performance (cached within transaction)",
+            "Grant EXECUTE to authenticated and anon roles",
+            "All policies check deleted_at IS NULL"
+          ]
+        },
+        {
+          "path": "docs/migration/AUTH_B2B_SCHEMA_MIGRATION.md",
+          "purpose": "Documentation of security patterns and JWT claims setup",
+          "patterns_to_follow": [
+            "Custom access token hook adds account_uuid and user_role to JWT",
+            "60-80% faster queries with JWT claims vs fallback queries",
+            "Fallback graceful degradation when hook not configured",
+            "Role validation with allowedRoles array",
+            "Correlation IDs for all security events"
+          ]
+        }
+      ],
+      "current_measures": [
+        "RLS policies on accounts, users, subscriptions tables",
+        "SECURITY DEFINER function for account context lookup",
+        "JWT claims with fallback pattern",
+        "Orphan detection with fail-closed policy",
+        "Email verification required before login",
+        "Correlation ID tracking for security events"
+      ],
+      "gaps_to_address": [
+        "No Supabase Vault encryption implementation",
+        "No rate limiting infrastructure",
+        "No security audit log table",
+        "No RLS policies for pending_registrations, rate_limits tables",
+        "No deep link token validation mechanism",
+        "No email mismatch detection for verification links"
+      ]
+    },
+    "deep_link_handling": {
+      "description": "Tauri deep link capability needs to be configured for email verification callback",
+      "key_files": [
+        {
+          "path": "src-tauri/capabilities/default.json",
+          "purpose": "Tauri capability configuration",
+          "patterns_to_follow": [
+            "Register custom protocol scheme for app",
+            "Add permissions for deep link handling",
+            "Validate URL schemes and parameters",
+            "Use regex validators for security"
+          ]
+        }
+      ],
+      "current_state": "No deep link handling currently implemented. Needs custom protocol registration.",
+      "gaps_to_address": [
+        "No custom protocol scheme registered (e.g., app://callback)",
+        "No deep link listener in Tauri app",
+        "No URL parsing and validation for verification tokens",
+        "No fallback for deep link failures",
+        "Platform-specific deep link registration needed (Windows, macOS, Linux)"
+      ]
+    },
+    "state_management": {
+      "description": "React Context for auth state, local hooks for component state, Tauri managed state for Rust backend",
+      "key_files": [
+        {
+          "path": "src/app/providers/auth/AuthProvider.tsx",
+          "purpose": "Global auth context",
+          "patterns_to_follow": [
+            "Use React Context for global auth state",
+            "useMemo for derived values",
+            "useEffect for session sync and cleanup",
+            "Ref guards for preventing duplicate operations",
+            "Loading states for async operations"
+          ]
+        },
+        {
+          "path": "src/modules/auth/hooks/controllers/useRegistrationForm.ts",
+          "purpose": "Registration form state and validation logic",
+          "patterns_to_follow": [
+            "Separate controller logic from view components",
+            "Step-based form state management",
+            "Field validation with blocking errors",
+            "Submission phases for async operations",
+            "Correlation IDs for tracking submission attempts"
+          ]
+        },
+        {
+          "path": "src-tauri/src/lib.rs",
+          "purpose": "Rust backend state management",
+          "patterns_to_follow": [
+            "Use Tauri managed state for shared resources",
+            "DbManager for database connections",
+            "SettingsManager for app settings",
+            "Thread-safe state with Arc/Mutex when needed"
+          ]
+        }
+      ],
+      "current_patterns": "React Context for global state, custom hooks for feature-specific state, Tauri managed state for backend resources, no global state management library (Zustand/Redux)",
+      "gaps_to_address": [
+        "Need state management for pending registration tracking",
+        "Need state for email verification status polling",
+        "Need state for deep link processing",
+        "Need state for rate limit error handling"
+      ]
+    }
+  },
+  "integration_points": {
+    "supabase_integration": {
+      "description": "Supabase provides authentication, database, and edge functions",
+      "current_usage": [
+        "Auth: signInWithPassword(), signUp(), signOut(), getSession(), onAuthStateChange()",
+        "Database: Direct table queries with RLS policies",
+        "Edge Functions: cleanup-orphaned-user, check-email-status, register-organization"
+      ],
+      "required_additions": [
+        "Vault: Encryption key storage and retrieval",
+        "pg_cron: Scheduled cleanup jobs",
+        "Database functions: store_pending_registration, encryption/decryption, rate limiting",
+        "Database trigger: Auto-account creation on email verification",
+        "RLS policies: pending_registrations, rate_limits, audit_log tables"
+      ]
+    },
+    "tauri_integration": {
+      "description": "Tauri provides desktop app framework with IPC, windowing, and native capabilities",
+      "current_usage": [
+        "IPC commands for database operations",
+        "Window management",
+        "File system access",
+        "Settings persistence"
+      ],
+      "required_additions": [
+        "Deep link protocol registration",
+        "Deep link event listener",
+        "OS-specific keychain/credential storage for state tokens",
+        "Capability permissions for deep links"
+      ]
+    }
+  },
+  "recommendations": {
+    "reuse_patterns": [
+      {
+        "pattern": "AuthProvider pattern",
+        "apply_to": "Registration flow state management",
+        "rationale": "Proven pattern for managing auth state with session persistence, error handling, and user feedback"
+      },
+      {
+        "pattern": "SECURITY DEFINER function pattern",
+        "apply_to": "RLS policies for new registration tables",
+        "rationale": "Prevents infinite recursion in RLS policies while maintaining security"
+      },
+      {
+        "pattern": "RegistrationForm multi-step pattern",
+        "apply_to": "Enhanced registration flow with verification steps",
+        "rationale": "Existing multi-step form infrastructure can be extended with new verification steps"
+      },
+      {
+        "pattern": "Correlation ID tracking",
+        "apply_to": "All registration flow operations and audit logging",
+        "rationale": "Critical for debugging, support, and security incident investigation"
+      },
+      {
+        "pattern": "Toast notification feedback",
+        "apply_to": "Registration errors, rate limits, verification status",
+        "rationale": "Consistent user feedback mechanism already implemented"
+      }
+    ],
+    "implementation_priority": [
+      {
+        "priority": 1,
+        "task": "Create Supabase database schema (pending_registrations, rate_limits, audit_log tables)",
+        "rationale": "Foundation for all backend registration logic"
+      },
+      {
+        "priority": 2,
+        "task": "Implement Supabase Vault encryption functions",
+        "rationale": "Required for secure PII storage before accepting registrations"
+      },
+      {
+        "priority": 3,
+        "task": "Implement database trigger for auto-account creation",
+        "rationale": "Core automated registration flow mechanism"
+      },
+      {
+        "priority": 4,
+        "task": "Implement rate limiting functions and table",
+        "rationale": "Security requirement to prevent abuse"
+      },
+      {
+        "priority": 5,
+        "task": "Implement RLS policies for new tables",
+        "rationale": "Security requirement to prevent unauthorized access"
+      },
+      {
+        "priority": 6,
+        "task": "Implement frontend registration submission handler",
+        "rationale": "User-facing registration initiation"
+      },
+      {
+        "priority": 7,
+        "task": "Implement email verification pending UI",
+        "rationale": "User feedback during verification wait"
+      },
+      {
+        "priority": 8,
+        "task": "Implement deep link handling in Tauri app",
+        "rationale": "Desktop app verification callback mechanism"
+      },
+      {
+        "priority": 9,
+        "task": "Implement fallback mechanisms (state token and email-based)",
+        "rationale": "Edge case recovery for failed verifications"
+      },
+      {
+        "priority": 10,
+        "task": "Implement pg_cron scheduled cleanup jobs",
+        "rationale": "GDPR compliance and database hygiene"
+      },
+      {
+        "priority": 11,
+        "task": "Implement monitoring views and alerting",
+        "rationale": "Operational visibility and abuse detection"
+      },
+      {
+        "priority": 12,
+        "task": "Comprehensive security testing",
+        "rationale": "Validation of all security measures"
+      }
+    ],
+    "potential_challenges": [
+      {
+        "challenge": "Supabase Vault setup complexity",
+        "mitigation": "Create detailed setup documentation, implement health checks, provide development mode with mock encryption",
+        "impact": "high"
+      },
+      {
+        "challenge": "pg_cron availability on Supabase plan",
+        "mitigation": "Verify plan supports pg_cron, document alternative using Edge Functions if not available",
+        "impact": "high"
+      },
+      {
+        "challenge": "Deep link platform compatibility",
+        "mitigation": "Test across Windows, macOS, Linux; implement fallback manual token entry; document known issues",
+        "impact": "high"
+      },
+      {
+        "challenge": "Database trigger idempotency and concurrency",
+        "mitigation": "Use advisory locks, implement existence checks before creation, comprehensive error handling",
+        "impact": "medium"
+      },
+      {
+        "challenge": "RLS policy complexity with new tables",
+        "mitigation": "Follow established SECURITY DEFINER pattern, test with multiple user contexts, document policy logic",
+        "impact": "medium"
+      },
+      {
+        "challenge": "Integration with existing RegistrationForm",
+        "mitigation": "Extend existing useRegistrationForm hook, add new submission phases, maintain backward compatibility",
+        "impact": "low"
+      }
+    ]
+  },
+  "file_references": {
+    "critical_files_to_study": [
+      "src/app/providers/auth/AuthProvider.tsx",
+      "src/modules/auth/components/RegistrationForm.tsx",
+      "src/modules/auth/hooks/controllers/useRegistrationForm.ts",
+      "supabase/migrations/20250130000004_final_rls_fix_with_security_definer.sql",
+      "docs/migration/AUTH_B2B_SCHEMA_MIGRATION.md",
+      "src/core/config/supabaseClient.ts",
+      "src-tauri/src/ipc/commands/mod.rs",
+      "src-tauri/capabilities/default.json"
+    ],
+    "related_documentation": [
+      "docs/migration/AUTH_B2B_SCHEMA_MIGRATION.md",
+      "docs/architecture/orphan-detection-architecture.md",
+      "docs/architecture/orphan-cleanup-adrs.md",
+      "docs/api/cleanup-orphaned-user.md",
+      "docs/api/check-email-status.md",
+      "docs/supabase-jwt-claims-setup.md",
+      "docs/features/supabase-health-check.md"
+    ]
+  },
+  "notes": "The codebase has a solid authentication foundation with Supabase Auth, B2B multi-tenant schema, RLS policies, and desktop app integration via Tauri. The registration flow exists but needs significant enhancement to match the comprehensive specification. Key gaps are: (1) No pending registration storage with encryption, (2) No rate limiting, (3) No audit logging, (4) No auto-account creation trigger, (5) No deep link handling, (6) No fallback mechanisms. The existing patterns (SECURITY DEFINER functions, correlation ID tracking, multi-step forms, toast notifications) provide excellent foundation to build upon."
+}

@@ -32,6 +32,7 @@ export default [
   {
     ignores: [
       'dist',
+      'scripts/orchestrator/dist/**',
       'public',
       'src-tauri/target',
       'src-tauri/gen',

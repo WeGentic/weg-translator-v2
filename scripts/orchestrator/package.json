@@ -1,0 +1,28 @@
+{
+  "name": "claude-code-orchestrator",
+  "version": "1.0.0",
+  "description": "Deterministic TypeScript orchestrator for running Claude Code instances",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "claude",
+    "orchestrator",
+    "ai",
+    "automation"
+  ],
+  "dependencies": {
+    "@types/node": "^22.10.2",
+    "chalk": "^5.4.1",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "@types/prompts": "^2.4.9",
+    "typescript": "^5.7.2"
+  }
+}

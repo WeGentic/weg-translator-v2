@@ -8,7 +8,7 @@ const supabase = createClient(
 
 console.log('Full error details:\n');
 
-const { data, error } = await supabase.from('users').select('user_uuid').limit(0);
+const { error } = await supabase.from('users').select('user_uuid').limit(0);
 
 console.log('Error object:', JSON.stringify(error, null, 2));
 console.log('\nError code:', error?.code);

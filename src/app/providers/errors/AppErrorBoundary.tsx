@@ -139,7 +139,6 @@ function DefaultErrorFallback({
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const titleId = useId();
   const descriptionId = useId();
-  const detailsId = useId();
   const diagnosticsId = useId();
   const metaTitleId = useId();
   const sectionRef = useRef<HTMLElement | null>(null);

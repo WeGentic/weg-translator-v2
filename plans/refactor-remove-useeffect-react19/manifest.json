@@ -1,0 +1,31 @@
+{
+  "project_name": "refactor-remove-useeffect-react19",
+  "mode": "GenerateArtifacts",
+  "artifacts": [
+    {
+      "path": "plans/refactor-remove-useeffect-react19/refactor-remove-useeffect-react19_CodebaseAnalysis.md",
+      "status": "created"
+    },
+    {
+      "path": "plans/refactor-remove-useeffect-react19/refactor-remove-useeffect-react19_Requirements.md",
+      "status": "created"
+    },
+    {
+      "path": "plans/refactor-remove-useeffect-react19/refactor-remove-useeffect-react19_Design.md",
+      "status": "created"
+    },
+    {
+      "path": "plans/refactor-remove-useeffect-react19/refactor-remove-useeffect-react19_TaskList.md",
+      "status": "created"
+    },
+    {
+      "path": "plans/refactor-remove-useeffect-react19/refactor-remove-useeffect-react19_Report.md",
+      "status": "created"
+    },
+    {
+      "path": "plans/refactor-remove-useeffect-react19/refactor-remove-useeffect-react19_Mindmap.mm",
+      "status": "created"
+    }
+  ],
+  "notes": []
+}

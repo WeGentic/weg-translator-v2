@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, waitFor, act } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 
 import { checkSupabaseHealth } from "../health";
 import { supabase } from "@/core/config/supabaseClient";
@@ -72,9 +72,9 @@ describe("Health check performance", () => {
         }),
       });
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase).from.mockReturnValue({
         select: mockSelect,
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       const startTime = performance.now();
       const resultPromise = checkSupabaseHealth();
@@ -116,9 +116,9 @@ describe("Health check performance", () => {
           }),
         });
 
-        vi.mocked(supabase.from).mockReturnValue({
+        vi.mocked(supabase).from.mockReturnValue({
           select: mockSelect,
-        } as any);
+        } as ReturnType<typeof supabase.from>);
 
         const resultPromise = checkSupabaseHealth();
 
@@ -152,9 +152,9 @@ describe("Health check performance", () => {
         }),
       });
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase).from.mockReturnValue({
         select: mockSelect,
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       const startTime = performance.now();
       const resultPromise = checkSupabaseHealth();
@@ -199,9 +199,9 @@ describe("Health check performance", () => {
           }),
         });
 
-        vi.mocked(supabase.from).mockReturnValue({
+        vi.mocked(supabase).from.mockReturnValue({
           select: mockSelect,
-        } as any);
+        } as ReturnType<typeof supabase.from>);
 
         const resultPromise = checkSupabaseHealth({ timeoutMs: timeout });
 
@@ -223,20 +223,20 @@ describe("Health check performance", () => {
 
       const callTimestamps: number[] = [];
 
-      const mockCheckSupabaseHealth = vi.fn().mockImplementation(async () => {
+      const mockCheckSupabaseHealth = vi.fn().mockImplementation(() => {
         callTimestamps.push(Date.now());
-        return {
+        return Promise.resolve({
           status: "connected",
           timestamp: new Date(),
           latency: 50,
-        };
+        });
       });
 
       vi.doMock("@/core/supabase/health", () => ({
         checkSupabaseHealth: mockCheckSupabaseHealth,
       }));
 
-      const { result } = renderHook(() => useSupabaseHealth({ pollingInterval: 60000 }), {
+      renderHook(() => useSupabaseHealth({ pollingInterval: 60000 }), {
         wrapper: ({ children }) => <>{children}</>,
       });
 
@@ -267,13 +267,13 @@ describe("Health check performance", () => {
       mockAuthContext.isAuthenticated = true;
 
       let checkCount = 0;
-      const mockCheckSupabaseHealth = vi.fn().mockImplementation(async () => {
+      const mockCheckSupabaseHealth = vi.fn().mockImplementation(() => {
         checkCount++;
-        return {
+        return Promise.resolve({
           status: "connected",
           timestamp: new Date(),
           latency: 50,
-        };
+        });
       });
 
       vi.doMock("@/core/supabase/health", () => ({
@@ -310,11 +310,7 @@ describe("Health check performance", () => {
     it("should maintain different polling intervals independently", async () => {
       mockAuthContext.isAuthenticated = true;
 
-      const calls30s: number[] = [];
-      const calls60s: number[] = [];
-      const calls120s: number[] = [];
-
-      const mockCheckSupabaseHealth = vi.fn().mockImplementation(async () => ({
+      const mockCheckSupabaseHealth = vi.fn().mockImplementation(() => Promise.resolve({
         status: "connected",
         timestamp: new Date(),
         latency: 50,
@@ -325,20 +321,17 @@ describe("Health check performance", () => {
       }));
 
       // Create hooks with different intervals
-      const { result: hook30 } = renderHook(
-        () => useSupabaseHealth({ pollingInterval: 30000 }),
-        { wrapper: ({ children }) => <>{children}</> }
-      );
+      renderHook(() => useSupabaseHealth({ pollingInterval: 30000 }), {
+        wrapper: ({ children }) => <>{children}</>,
+      });
 
-      const { result: hook60 } = renderHook(
-        () => useSupabaseHealth({ pollingInterval: 60000 }),
-        { wrapper: ({ children }) => <>{children}</> }
-      );
+      renderHook(() => useSupabaseHealth({ pollingInterval: 60000 }), {
+        wrapper: ({ children }) => <>{children}</>,
+      });
 
-      const { result: hook120 } = renderHook(
-        () => useSupabaseHealth({ pollingInterval: 120000 }),
-        { wrapper: ({ children }) => <>{children}</> }
-      );
+      renderHook(() => useSupabaseHealth({ pollingInterval: 120000 }), {
+        wrapper: ({ children }) => <>{children}</>,
+      });
 
       // Initial checks
       await act(async () => {
@@ -378,9 +371,9 @@ describe("Health check performance", () => {
         }),
       }));
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase).from.mockReturnValue({
         select: mockSelect,
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       // Start 5 concurrent health checks
       const checks = Array.from({ length: 5 }, () => checkSupabaseHealth());
@@ -399,7 +392,7 @@ describe("Health check performance", () => {
       });
 
       // All 5 checks should have been made
-      expect(supabase.from).toHaveBeenCalledTimes(5);
+      expect(vi.mocked(supabase).from).toHaveBeenCalledTimes(5);
     });
 
     it("should not cause race conditions with rapid sequential checks", async () => {
@@ -412,9 +405,9 @@ describe("Health check performance", () => {
         }),
       });
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase).from.mockReturnValue({
         select: mockSelect,
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       // Fire 20 rapid sequential checks
       const results = [];
@@ -433,7 +426,7 @@ describe("Health check performance", () => {
         expect(result.status).toBe("connected");
       });
 
-      expect(supabase.from).toHaveBeenCalledTimes(20);
+      expect(vi.mocked(supabase).from).toHaveBeenCalledTimes(20);
     });
   });
 
@@ -451,7 +444,7 @@ describe("Health check performance", () => {
         checkSupabaseHealth: mockCheckSupabaseHealth,
       }));
 
-      const { result, unmount } = renderHook(
+      const { unmount } = renderHook(
         () => useSupabaseHealth({ pollingInterval: 60000 }),
         { wrapper: ({ children }) => <>{children}</> }
       );
@@ -575,9 +568,9 @@ describe("Health check performance", () => {
         }),
       });
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase).from.mockReturnValue({
         select: mockSelect,
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       const resultPromise = checkSupabaseHealth();
 
@@ -608,9 +601,9 @@ describe("Health check performance", () => {
         }),
       });
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase).from.mockReturnValue({
         select: mockSelect,
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       const startTime = performance.now();
       const resultPromise = checkSupabaseHealth();

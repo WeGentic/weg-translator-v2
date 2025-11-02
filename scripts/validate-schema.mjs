@@ -51,6 +51,8 @@ async function testRLSPolicies() {
         `
       });
 
+    let policyRows = data ?? [];
+
     if (error) {
       // Try alternative method - direct table query
       const { data: policiesData, error: policiesError } = await supabase
@@ -63,6 +65,8 @@ async function testRLSPolicies() {
         console.log('   ⚠️  Cannot auto-verify (requires service role key)\n');
         return;
       }
+
+      policyRows = policiesData ?? [];
     }
 
     const expectedPolicies = [
@@ -71,7 +75,9 @@ async function testRLSPolicies() {
       'Users can view own account subscription'
     ];
 
-    const foundPolicies = data?.map(p => p.policyname) || [];
+    const foundPolicies = policyRows
+      .map((row) => row?.policyname)
+      .filter((name) => typeof name === 'string');
     const hasBasicPolicies = expectedPolicies.some(ep =>
       foundPolicies.some(fp => fp.includes(ep) || ep.includes(fp))
     );
@@ -83,7 +89,7 @@ async function testRLSPolicies() {
       results.warnings.push('RLS policies may be missing or not accessible with anon key');
       console.log('   ⚠️  Could not verify RLS policies (manual check recommended)\n');
     }
-  } catch (err) {
+  } catch {
     results.warnings.push('RLS policy check requires manual validation');
     console.log('   ⚠️  Auto-check not available (requires service role key)\n');
   }
@@ -98,7 +104,7 @@ async function testTablesExist() {
 
   for (const table of tables) {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from(table)
         .select('*')
         .limit(0);
@@ -129,7 +135,7 @@ async function testTableColumns() {
 
   // Check users table has account_uuid column
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('users')
       .select('user_uuid, account_uuid, user_email, role')
       .limit(0);
@@ -149,7 +155,7 @@ async function testTableColumns() {
       results.passed.push('users table has correct schema structure');
       console.log('   ✅ users table has account_uuid, user_email, role columns');
     }
-  } catch (err) {
+  } catch {
     results.warnings.push('users table schema check inconclusive');
     console.log('   ⚠️  Could not fully verify schema');
   }
@@ -162,7 +168,7 @@ async function testAccountCreationFunction() {
 
   try {
     // Try to invoke the function with invalid data to see if it exists
-    const { data, error } = await supabase.rpc('create_account_with_admin', {
+    const { error } = await supabase.rpc('create_account_with_admin', {
       p_company_name: '',  // Invalid - will fail constraint
       p_company_email: 'test@test.com',
       p_admin_first_name: 'Test',
@@ -200,7 +206,7 @@ async function testCustomAccessTokenHook() {
   console.log('5️⃣  Testing custom_access_token_hook function...');
 
   try {
-    const { data, error } = await supabase.rpc('custom_access_token_hook', {
+    const { error } = await supabase.rpc('custom_access_token_hook', {
       event: { user_id: '00000000-0000-0000-0000-000000000000', claims: {} }
     });
 
@@ -216,7 +222,7 @@ async function testCustomAccessTokenHook() {
       results.passed.push('custom_access_token_hook function exists');
       console.log('   ✅ Hook function is deployed');
     }
-  } catch (err) {
+  } catch {
     results.warnings.push('custom_access_token_hook check inconclusive');
     console.log('   ⚠️  Could not verify hook function (may require special permissions)');
   }

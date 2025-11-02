@@ -1,0 +1,1050 @@
+{
+  "project_name": "user-registration-flow",
+  "raw_user_input": "FULLY IMPLEMENT the final User Login and Registration flow with complete ASCII diagram showing registration flow from form submission through email verification to dashboard redirect, including all phases, edge cases, and background maintenance. Implement SQL functions and triggers including: PostgreSQL extensions, pending_registrations table, registration_rate_limits table, security_audit_log table with events (registration_started, registration_rate_limited, email_verification_sent, email_verification_resent, registration_completed, registration_failed, email_mismatch_detected, invalid_deep_link, trigger_created_account, fallback_used), encryption/decryption functions using Supabase Vault, rate limiting functions, store pending registration function, auto-create account trigger after email verification, fallback functions for registration completion, verification email resend, cancel registration, cleanup expired registrations, GDPR purge, scheduled jobs via pg_cron, RLS policies, monitoring views, and comprehensive security checklists covering encryption, rate limiting, security headers, deep link security, session management, audit logging, GDPR compliance, performance optimization, monitoring/alerting, backup/disaster recovery.",
+  "key_objectives": [
+    {
+      "id": "OBJ-001",
+      "objective": "Implement a complete, secure user registration flow with email verification, rate limiting, and encryption of sensitive registration data using Supabase Vault",
+      "priority": "critical",
+      "category": "functional",
+      "success_indicators": [
+        "Registration form captures user data and stores encrypted in pending_registrations table",
+        "Email verification triggers automatic account creation via database trigger",
+        "Rate limiting prevents abuse with configurable thresholds per IP and email",
+        "All sensitive data encrypted at rest using AES-256-GCM via Supabase Vault"
+      ]
+    },
+    {
+      "id": "OBJ-002",
+      "objective": "Implement comprehensive security audit logging for all registration-related events to enable forensics and compliance monitoring",
+      "priority": "critical",
+      "category": "security",
+      "success_indicators": [
+        "All registration events logged to security_audit_log table with metadata",
+        "Audit events include registration_started, rate_limited, verification_sent, completed, failed",
+        "Logs capture IP addresses, user agents, timestamps, and correlation IDs",
+        "Audit logs retained for compliance periods and archived properly"
+      ]
+    },
+    {
+      "id": "OBJ-003",
+      "objective": "Create automated database triggers that handle account creation immediately after email verification without requiring application code",
+      "priority": "critical",
+      "category": "technical",
+      "success_indicators": [
+        "Database trigger fires on auth.users email_confirmed_at update",
+        "Trigger retrieves encrypted pending registration data and creates account",
+        "Account creation is atomic with proper error handling and rollback",
+        "Trigger logs success/failure to audit log with detailed context"
+      ]
+    },
+    {
+      "id": "OBJ-004",
+      "objective": "Implement fallback mechanisms for edge cases where email verification fails or state is lost, allowing registration recovery",
+      "priority": "high",
+      "category": "functional",
+      "success_indicators": [
+        "Fallback function accepts state token to complete registration manually",
+        "Alternative fallback using email lookup for registration completion",
+        "Deep link validation prevents replay attacks and token hijacking",
+        "Users can resend verification emails with proper rate limiting"
+      ]
+    },
+    {
+      "id": "OBJ-005",
+      "objective": "Implement automated cleanup and maintenance jobs using pg_cron for expired registrations, rate limits, and audit logs",
+      "priority": "high",
+      "category": "technical",
+      "success_indicators": [
+        "Expired pending registrations cleaned up every 15 minutes",
+        "Old registrations purged daily for GDPR compliance (24h + 7d retention)",
+        "Rate limit entries cleaned hourly to prevent table bloat",
+        "Audit logs archived weekly to maintain query performance"
+      ]
+    },
+    {
+      "id": "OBJ-006",
+      "objective": "Enforce strict rate limiting at multiple levels (IP-based, email-based, global) to prevent abuse and spam registrations",
+      "priority": "high",
+      "category": "security",
+      "success_indicators": [
+        "Rate limit checks before accepting any registration attempt",
+        "Configurable thresholds for different rate limit types",
+        "Rate limit violations logged to audit log for monitoring",
+        "Legitimate users not blocked by aggressive rate limiting"
+      ]
+    },
+    {
+      "id": "OBJ-007",
+      "objective": "Implement Row Level Security (RLS) policies that prevent direct table access, forcing all operations through secure functions",
+      "priority": "high",
+      "category": "security",
+      "success_indicators": [
+        "Direct SELECT/INSERT/UPDATE/DELETE blocked on pending_registrations table",
+        "Direct access blocked on registration_rate_limits table",
+        "Only authorized functions can access sensitive tables",
+        "Users can view their own audit logs (admin scope)"
+      ]
+    },
+    {
+      "id": "OBJ-008",
+      "objective": "Create monitoring views and alerting capabilities to track registration health, abuse patterns, and system performance",
+      "priority": "medium",
+      "category": "performance",
+      "success_indicators": [
+        "Monitoring views show registration success/failure rates",
+        "Views identify rate limiting patterns and potential abuse",
+        "Performance metrics tracked for registration flow timing",
+        "Alerts configured for anomalous registration activity"
+      ]
+    },
+    {
+      "id": "OBJ-009",
+      "objective": "Ensure GDPR compliance with proper data retention policies, right to erasure, and transparent data handling",
+      "priority": "high",
+      "category": "business",
+      "success_indicators": [
+        "Pending registrations deleted after 24 hours if not completed",
+        "Failed registrations retained for 7 days for debugging",
+        "Audit logs archived after 90 days retention period",
+        "Users can cancel pending registrations (right to erasure)"
+      ]
+    },
+    {
+      "id": "OBJ-010",
+      "objective": "Implement deep link security validation to prevent email verification link replay attacks and token tampering",
+      "priority": "high",
+      "category": "security",
+      "success_indicators": [
+        "State tokens validated for format, expiration, and single-use",
+        "Email mismatch detection between verification link and registered email",
+        "Invalid deep links logged to security audit log",
+        "Proper error messages without leaking sensitive information"
+      ]
+    }
+  ],
+  "technical_constraints": {
+    "constraints_list": [
+      {
+        "id": "TC-001",
+        "constraint": "This is a Tauri desktop application with Supabase backend. Registration flow must work within desktop context using WebView and handle deep links for email verification.",
+        "impact": "critical",
+        "mitigation": "Implement custom protocol handler for desktop deep links. Use Tauri's deep link API to intercept verification URLs. Provide fallback web-based flow if deep link fails. Test across Windows, macOS, and Linux platforms."
+      },
+      {
+        "id": "TC-002",
+        "constraint": "Supabase Vault must be properly configured with encryption keys before deployment. Missing keys will cause registration failures.",
+        "impact": "critical",
+        "mitigation": "Provide clear setup documentation for Vault configuration. Implement runtime checks to verify Vault accessibility. Create development mode with mock encryption for testing. Add health check endpoint to verify Vault status."
+      },
+      {
+        "id": "TC-003",
+        "constraint": "PostgreSQL extensions (pg_cron, pgcrypto) must be enabled in Supabase project. Not all Supabase plans support pg_cron.",
+        "impact": "high",
+        "mitigation": "Document minimum Supabase plan requirements (Pro plan for pg_cron). Provide alternative implementation using Supabase Edge Functions for scheduled jobs. Test extension availability during deployment."
+      },
+      {
+        "id": "TC-004",
+        "constraint": "Email verification deep links contain sensitive state tokens that must be validated for single-use and expiration to prevent replay attacks.",
+        "impact": "high",
+        "mitigation": "Implement cryptographic state token validation with HMAC signatures. Store used tokens in database to prevent replay. Set short expiration windows (1-2 hours). Log all validation failures."
+      },
+      {
+        "id": "TC-005",
+        "constraint": "Rate limiting must balance security with usability. Aggressive limits may block legitimate users, weak limits allow abuse.",
+        "impact": "high",
+        "mitigation": "Use tiered rate limiting with different thresholds for different actions. Allow configuration via environment variables. Implement exponential backoff for repeated failures. Provide admin override capability."
+      },
+      {
+        "id": "TC-006",
+        "constraint": "The database trigger for auto-account creation must be idempotent and handle concurrent email verifications gracefully.",
+        "impact": "high",
+        "mitigation": "Use PostgreSQL advisory locks to prevent concurrent execution. Check if account already exists before creation. Use UPSERT patterns where appropriate. Comprehensive error handling with rollback."
+      },
+      {
+        "id": "TC-007",
+        "constraint": "Audit logging must not impact registration performance. High-frequency logging may cause database bottlenecks.",
+        "impact": "medium",
+        "mitigation": "Use async logging patterns to decouple audit writes from main flow. Implement batch inserts for audit logs. Monitor audit table size and query performance. Consider partitioning for large datasets."
+      },
+      {
+        "id": "TC-008",
+        "constraint": "RLS policies that enforce function-only access may complicate debugging and direct database queries during development.",
+        "impact": "medium",
+        "mitigation": "Provide development mode with relaxed RLS policies. Create admin functions for data inspection. Document debugging procedures. Use comprehensive logging to aid troubleshooting."
+      },
+      {
+        "id": "TC-009",
+        "constraint": "Email provider rate limits may prevent sending verification emails during high registration volumes.",
+        "impact": "medium",
+        "mitigation": "Implement exponential backoff for email send failures. Queue email sends for retry. Monitor email send success rates. Consider multiple email providers for redundancy."
+      },
+      {
+        "id": "TC-010",
+        "constraint": "GDPR compliance requires proper data retention and deletion, but audit logs need retention for security analysis creating tension.",
+        "impact": "medium",
+        "mitigation": "Implement tiered retention policies: 24h for pending data, 7d for failed registrations, 90d for audit logs. Anonymize audit logs after retention period instead of deletion. Document retention policies clearly."
+      }
+    ]
+  },
+  "success_criteria": [
+    {
+      "id": "SC-001",
+      "criterion": "Registration flow completes successfully from form submission through email verification to account creation with all data properly encrypted",
+      "measurement": "End-to-end testing with real email verification; verify data encrypted in pending_registrations table",
+      "target": "100% success rate for valid registrations; <2 second registration submission time",
+      "category": "functionality",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-002",
+      "criterion": "Rate limiting effectively prevents abuse while allowing legitimate registration attempts",
+      "measurement": "Load testing with various rate limit scenarios; verify legitimate users not blocked",
+      "target": "Block 100% of abuse attempts; 0% false positive blocks for legitimate users",
+      "category": "security",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-003",
+      "criterion": "All registration events properly logged to security_audit_log with complete metadata",
+      "measurement": "Verify audit log entries for each registration flow step; check metadata completeness",
+      "target": "100% of registration events logged; all required fields populated",
+      "category": "security",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-004",
+      "criterion": "Database trigger automatically creates accounts after email verification without application intervention",
+      "measurement": "Verify account created in accounts table after email confirmation; check trigger execution logs",
+      "target": "100% automatic account creation; <500ms trigger execution time",
+      "category": "functionality",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-005",
+      "criterion": "Encryption and decryption functions work correctly with Supabase Vault using AES-256-GCM",
+      "measurement": "Unit tests for encryption/decryption roundtrip; verify Vault key usage; check ciphertext format",
+      "target": "100% encryption success; no plaintext data in database; proper key rotation support",
+      "category": "security",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-006",
+      "criterion": "RLS policies completely prevent direct table access, forcing all operations through functions",
+      "measurement": "Attempt direct table access with various user contexts; verify all blocked",
+      "target": "0% direct access success; 100% of operations go through secure functions",
+      "category": "security",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-007",
+      "criterion": "Fallback mechanisms successfully recover from edge cases like lost state or failed email verification",
+      "measurement": "Test fallback functions with various failure scenarios; verify recovery success",
+      "target": "100% recovery rate for valid fallback scenarios; <3 second fallback execution",
+      "category": "reliability",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-008",
+      "criterion": "Deep link validation prevents replay attacks and token tampering",
+      "measurement": "Attempt to reuse verification links; try tampered tokens; verify all rejected",
+      "target": "100% replay attack prevention; all tampering attempts logged and blocked",
+      "category": "security",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-009",
+      "criterion": "Automated cleanup jobs via pg_cron run on schedule and properly maintain database hygiene",
+      "measurement": "Monitor scheduled job execution; verify expired data cleaned; check table sizes",
+      "target": "100% scheduled job success rate; no data retention violations",
+      "category": "maintainability",
+      "priority": "should-have"
+    },
+    {
+      "id": "SC-010",
+      "criterion": "Monitoring views provide accurate real-time visibility into registration health and abuse patterns",
+      "measurement": "Query monitoring views during load testing; verify metrics accuracy",
+      "target": "Real-time metrics with <30 second lag; 100% accuracy in anomaly detection",
+      "category": "performance",
+      "priority": "should-have"
+    },
+    {
+      "id": "SC-011",
+      "criterion": "GDPR compliance verified with proper data retention, deletion, and user rights implementation",
+      "measurement": "Audit data retention periods; test user cancellation flows; verify deletion execution",
+      "target": "100% compliance with retention policies; instant response to user deletion requests",
+      "category": "security",
+      "priority": "must-have"
+    },
+    {
+      "id": "SC-012",
+      "criterion": "Email mismatch detection prevents account takeover via verification link forwarding",
+      "measurement": "Test email verification with mismatched emails; verify detection and blocking",
+      "target": "100% mismatch detection; all attempts logged to security audit",
+      "category": "security",
+      "priority": "must-have"
+    }
+  ],
+  "risks_and_mitigations": [
+    {
+      "id": "RISK-001",
+      "risk": "Supabase Vault misconfiguration or key unavailability will cause complete registration flow failure with encrypted data unrecoverable",
+      "category": "technical",
+      "probability": "medium",
+      "impact": "catastrophic",
+      "risk_score": 20,
+      "mitigation_strategy": "Implement comprehensive Vault health checks at startup and before each encryption operation. Create detailed setup documentation with validation scripts. Use development mode with mock encryption for testing. Implement key backup and recovery procedures. Monitor Vault availability continuously.",
+      "contingency_plan": "If Vault fails, immediately switch to degraded mode storing data unencrypted with warning flag. Notify administrators immediately. Encrypt existing plaintext data once Vault restored. Consider key escrow service for disaster recovery.",
+      "owner": "Security Lead"
+    },
+    {
+      "id": "RISK-002",
+      "risk": "Database trigger for auto-account creation may fail during concurrent email verifications causing duplicate accounts or orphaned registrations",
+      "category": "technical",
+      "probability": "medium",
+      "impact": "major",
+      "risk_score": 15,
+      "mitigation_strategy": "Use PostgreSQL advisory locks to serialize trigger execution. Implement idempotent account creation with existence checks. Use proper transaction isolation levels. Comprehensive error handling with rollback. Test concurrent scenarios thoroughly.",
+      "contingency_plan": "If duplicate accounts created, implement cleanup job to merge or delete duplicates. Add unique constraints to prevent duplicates. Implement account reconciliation procedure. Monitor for orphaned pending registrations.",
+      "owner": "Backend Lead"
+    },
+    {
+      "id": "RISK-003",
+      "risk": "Rate limiting may be too aggressive, blocking legitimate users, or too permissive, allowing abuse and spam registrations",
+      "category": "quality",
+      "probability": "high",
+      "impact": "moderate",
+      "risk_score": 15,
+      "mitigation_strategy": "Start with conservative rate limits and adjust based on real usage patterns. Implement tiered limits with escalating restrictions. Provide CAPTCHA fallback for rate-limited users. Allow manual admin override for false positives. Monitor rate limit hit rates and adjust.",
+      "contingency_plan": "If legitimate users blocked, immediately raise rate limits and notify affected users. If abuse detected, temporarily tighten limits. Implement IP reputation services for better abuse detection. Add manual review queue for suspicious registrations.",
+      "owner": "Product Owner"
+    },
+    {
+      "id": "RISK-004",
+      "risk": "Deep link handling in Tauri desktop app may fail on certain platforms or configurations, preventing email verification completion",
+      "category": "technical",
+      "probability": "medium",
+      "impact": "major",
+      "risk_score": 15,
+      "mitigation_strategy": "Implement comprehensive deep link testing across all supported platforms (Windows, macOS, Linux). Provide fallback manual token entry if deep link fails. Test with various security configurations and antivirus software. Document known platform-specific issues.",
+      "contingency_plan": "If deep links fail, automatically show manual verification code entry form. Provide clear instructions for manual verification. Log deep link failures for platform-specific debugging. Consider web-based verification as ultimate fallback.",
+      "owner": "Desktop App Lead"
+    },
+    {
+      "id": "RISK-005",
+      "risk": "pg_cron scheduled jobs may fail silently causing data retention violations, table bloat, and GDPR non-compliance",
+      "category": "external",
+      "probability": "medium",
+      "impact": "major",
+      "risk_score": 15,
+      "mitigation_strategy": "Implement job execution monitoring with alerts for failures. Add redundant cleanup via application-level scheduled tasks. Monitor table sizes and retention compliance. Log all cleanup operations. Test job execution regularly.",
+      "contingency_plan": "If pg_cron unavailable, fall back to Edge Functions with scheduled invocations. Implement manual cleanup procedures for emergencies. Add database size alerts. Consider external scheduler service as backup.",
+      "owner": "DevOps Lead"
+    },
+    {
+      "id": "RISK-006",
+      "risk": "Audit logging may cause database performance degradation during high registration volumes, slowing down entire flow",
+      "category": "performance",
+      "probability": "medium",
+      "impact": "moderate",
+      "risk_score": 12,
+      "mitigation_strategy": "Implement async logging with queued writes. Use batch inserts for audit logs. Monitor audit table size and query performance. Implement table partitioning if needed. Consider separate audit database for isolation.",
+      "contingency_plan": "If audit logging causes performance issues, temporarily disable non-critical audit events. Implement log sampling during high load. Add dedicated read replicas for audit queries. Consider external logging service.",
+      "owner": "Database Administrator"
+    },
+    {
+      "id": "RISK-007",
+      "risk": "Email verification links may be caught by spam filters or blocked by corporate firewalls, preventing registration completion",
+      "category": "external",
+      "probability": "medium",
+      "impact": "moderate",
+      "risk_score": 12,
+      "mitigation_strategy": "Use reputable email service with high deliverability. Implement SPF, DKIM, and DMARC properly. Provide resend verification email option. Monitor email bounce rates. Test with common email providers.",
+      "contingency_plan": "If emails not delivered, provide alternative verification method (SMS, authenticator app). Show verification troubleshooting guide. Allow manual verification by support team. Monitor email delivery metrics closely.",
+      "owner": "DevOps Lead"
+    },
+    {
+      "id": "RISK-008",
+      "risk": "State token replay attacks or token theft could allow unauthorized account creation or takeover despite validation",
+      "category": "security",
+      "probability": "low",
+      "impact": "major",
+      "risk_score": 10,
+      "mitigation_strategy": "Use cryptographically secure tokens with HMAC validation. Enforce single-use tokens with database tracking. Set short expiration windows (1-2 hours). Log all validation failures. Bind tokens to session or device fingerprint.",
+      "contingency_plan": "If token compromise detected, immediately invalidate all pending tokens. Force re-verification for affected users. Audit account creation patterns for anomalies. Implement additional verification step for suspicious patterns.",
+      "owner": "Security Lead"
+    },
+    {
+      "id": "RISK-009",
+      "risk": "RLS policy complexity may introduce bugs that allow unauthorized data access or prevent legitimate operations",
+      "category": "security",
+      "probability": "medium",
+      "impact": "major",
+      "risk_score": 15,
+      "mitigation_strategy": "Thoroughly test RLS policies with various user contexts. Use policy testing framework. Document policy logic clearly. Regular security audits of RLS policies. Implement fail-closed approach for ambiguous cases.",
+      "contingency_plan": "If RLS policy bugs found, immediately deploy restrictive policy that blocks everything. Audit data access logs for potential breaches. Fix policy bugs in staging before production. Consider temporary table access disable during emergency.",
+      "owner": "Security Lead"
+    },
+    {
+      "id": "RISK-010",
+      "risk": "GDPR data retention requirements may conflict with security audit log retention needs, creating compliance tension",
+      "category": "scope",
+      "probability": "medium",
+      "impact": "moderate",
+      "risk_score": 12,
+      "mitigation_strategy": "Implement tiered retention with anonymization after personal data retention period. Separate PII from security event data. Document retention policy rationale. Consult legal counsel on compliance requirements. Implement data minimization principles.",
+      "contingency_plan": "If retention conflict identified, prioritize GDPR compliance and aggressively anonymize audit logs. Retain only minimum security-relevant data. Document all retention decisions. Consider geographic-specific retention policies.",
+      "owner": "Legal/Compliance"
+    }
+  ],
+  "required_features": [
+    {
+      "id": "FEAT-001",
+      "feature": "Create pending_registrations table with encrypted data storage and foreign key to auth.users",
+      "category": "data-management",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "4-6 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Table includes user_uuid FK to auth.users with ON DELETE CASCADE",
+        "Encrypted_data column stores encrypted JSON registration payload",
+        "State_token column for verification link validation",
+        "Proper indexes on user_uuid, state_token, and created_at",
+        "Retention tracking with expires_at timestamp",
+        "RLS policies prevent direct access"
+      ]
+    },
+    {
+      "id": "FEAT-002",
+      "feature": "Create registration_rate_limits table with composite keys for IP and email-based rate limiting",
+      "category": "security",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "2-4 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Table tracks rate limits by rate_limit_key (IP or email hash)",
+        "Columns for attempt_count, window_start, last_attempt_at",
+        "Efficient indexes for rate limit lookups",
+        "TTL-style cleanup with scheduled jobs",
+        "Support for multiple rate limit types",
+        "RLS policies block direct access"
+      ]
+    },
+    {
+      "id": "FEAT-003",
+      "feature": "Create security_audit_log table with comprehensive event tracking and metadata storage",
+      "category": "security",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "3-5 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Event_type enum with all registration-related events",
+        "Columns for user_uuid, ip_address, user_agent, metadata JSONB",
+        "Proper indexes for querying by event_type, user_uuid, timestamp",
+        "Partition-ready schema for large datasets",
+        "RLS policies allow users to view own audit logs",
+        "Efficient archival mechanism"
+      ]
+    },
+    {
+      "id": "FEAT-004",
+      "feature": "Implement encryption and decryption functions using Supabase Vault with AES-256-GCM",
+      "category": "security",
+      "priority": "must-have",
+      "complexity": "complex",
+      "estimated_effort": "6-10 hours",
+      "dependencies": ["FEAT-001"],
+      "acceptance_criteria": [
+        "encrypt_registration_data() function retrieves key from Vault",
+        "decrypt_registration_data() function decrypts with proper error handling",
+        "Functions use AES-256-GCM authenticated encryption",
+        "Proper key rotation support",
+        "Comprehensive error handling for Vault failures",
+        "Unit tests for encryption roundtrip"
+      ]
+    },
+    {
+      "id": "FEAT-005",
+      "feature": "Implement rate limiting check and record functions with configurable thresholds",
+      "category": "security",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "4-6 hours",
+      "dependencies": ["FEAT-002"],
+      "acceptance_criteria": [
+        "check_rate_limit() function validates against thresholds",
+        "record_rate_limit_attempt() function updates counters atomically",
+        "Support for sliding window rate limiting",
+        "Configurable thresholds via database parameters",
+        "Returns clear rate limit violation errors",
+        "Logs rate limit violations to audit log"
+      ]
+    },
+    {
+      "id": "FEAT-006",
+      "feature": "Implement store_pending_registration() function callable from client with proper validation",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "complex",
+      "estimated_effort": "6-10 hours",
+      "dependencies": ["FEAT-001", "FEAT-004", "FEAT-005"],
+      "acceptance_criteria": [
+        "Function accepts registration payload and encrypts before storage",
+        "Validates input data format and required fields",
+        "Checks rate limits before accepting registration",
+        "Generates cryptographically secure state_token",
+        "Logs registration_started event to audit log",
+        "Returns state_token for verification link",
+        "Atomic transaction with proper rollback"
+      ]
+    },
+    {
+      "id": "FEAT-007",
+      "feature": "Create database trigger that automatically creates account after email verification",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "very-complex",
+      "estimated_effort": "8-12 hours",
+      "dependencies": ["FEAT-001", "FEAT-004"],
+      "acceptance_criteria": [
+        "Trigger fires on auth.users email_confirmed_at update",
+        "Retrieves and decrypts pending registration data",
+        "Creates account atomically using create_account_with_admin()",
+        "Uses advisory locks to prevent concurrent execution",
+        "Idempotent - handles already-created accounts gracefully",
+        "Logs trigger_created_account event to audit log",
+        "Comprehensive error handling with rollback",
+        "Cleans up pending_registrations record after success"
+      ]
+    },
+    {
+      "id": "FEAT-008",
+      "feature": "Implement fallback_complete_registration_with_token() for manual registration completion",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "complex",
+      "estimated_effort": "6-8 hours",
+      "dependencies": ["FEAT-001", "FEAT-004"],
+      "acceptance_criteria": [
+        "Function accepts state_token for registration lookup",
+        "Validates token format, expiration, and single-use",
+        "Prevents token replay attacks with used_token tracking",
+        "Retrieves and decrypts registration data",
+        "Completes account creation with proper error handling",
+        "Logs fallback_used event to audit log",
+        "Returns account_uuid and user_uuid on success"
+      ]
+    },
+    {
+      "id": "FEAT-009",
+      "feature": "Implement fallback_complete_registration_by_email() for email-based registration recovery",
+      "category": "core",
+      "priority": "should-have",
+      "complexity": "moderate",
+      "estimated_effort": "4-6 hours",
+      "dependencies": ["FEAT-001", "FEAT-004"],
+      "acceptance_criteria": [
+        "Function accepts user_email for pending registration lookup",
+        "Validates user is authenticated and email matches",
+        "Retrieves most recent pending registration for email",
+        "Completes account creation if email verified",
+        "Detects and logs email_mismatch_detected attempts",
+        "Proper error handling for no pending registration found"
+      ]
+    },
+    {
+      "id": "FEAT-010",
+      "feature": "Implement request_verification_email_resend() function with rate limiting",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "4-6 hours",
+      "dependencies": ["FEAT-005"],
+      "acceptance_criteria": [
+        "Function checks rate limits before allowing resend",
+        "Validates pending registration exists",
+        "Triggers new email verification send via Supabase Auth",
+        "Logs email_verification_resent event to audit log",
+        "Returns clear error if rate limited",
+        "Configurable resend cooldown period"
+      ]
+    },
+    {
+      "id": "FEAT-011",
+      "feature": "Implement cancel_pending_registration() function for user-initiated cancellation",
+      "category": "core",
+      "priority": "should-have",
+      "complexity": "simple",
+      "estimated_effort": "2-3 hours",
+      "dependencies": ["FEAT-001"],
+      "acceptance_criteria": [
+        "Function accepts user_uuid to identify registration",
+        "Validates user is authenticated and owns registration",
+        "Soft deletes pending registration record",
+        "Logs cancellation event to audit log",
+        "GDPR compliance with immediate data deletion option",
+        "Returns success confirmation"
+      ]
+    },
+    {
+      "id": "FEAT-012",
+      "feature": "Implement cleanup_expired_pending_registrations() scheduled function",
+      "category": "data-management",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "2-4 hours",
+      "dependencies": ["FEAT-001"],
+      "acceptance_criteria": [
+        "Function deletes registrations older than 24 hours",
+        "Runs via pg_cron every 15 minutes",
+        "Logs number of records cleaned",
+        "Handles large batch deletions efficiently",
+        "Does not interfere with active registrations",
+        "Monitoring metrics for cleanup effectiveness"
+      ]
+    },
+    {
+      "id": "FEAT-013",
+      "feature": "Implement purge_old_pending_registrations() for GDPR compliance",
+      "category": "data-management",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "2-3 hours",
+      "dependencies": ["FEAT-001"],
+      "acceptance_criteria": [
+        "Function purges failed registrations older than 7 days",
+        "Runs via pg_cron daily at 2 AM",
+        "Complete data deletion for GDPR right to erasure",
+        "Logs purge operations to audit log",
+        "Monitors purge execution success",
+        "Configurable retention periods"
+      ]
+    },
+    {
+      "id": "FEAT-014",
+      "feature": "Implement cleanup_old_rate_limits() scheduled function",
+      "category": "data-management",
+      "priority": "should-have",
+      "complexity": "trivial",
+      "estimated_effort": "1-2 hours",
+      "dependencies": ["FEAT-002"],
+      "acceptance_criteria": [
+        "Function deletes rate limit entries older than 24 hours",
+        "Runs via pg_cron hourly",
+        "Prevents registration_rate_limits table bloat",
+        "Efficient batch deletion",
+        "Monitoring for cleanup effectiveness"
+      ]
+    },
+    {
+      "id": "FEAT-015",
+      "feature": "Implement archive_old_audit_logs() scheduled function",
+      "category": "data-management",
+      "priority": "should-have",
+      "complexity": "moderate",
+      "estimated_effort": "3-5 hours",
+      "dependencies": ["FEAT-003"],
+      "acceptance_criteria": [
+        "Function archives audit logs older than 90 days",
+        "Runs via pg_cron weekly on Sunday at 3 AM",
+        "Moves logs to archive table or cold storage",
+        "Maintains query performance on active logs",
+        "Configurable retention and archive location",
+        "Anonymizes PII in archived logs"
+      ]
+    },
+    {
+      "id": "FEAT-016",
+      "feature": "Configure pg_cron scheduled jobs for all maintenance functions",
+      "category": "integration",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "2-3 hours",
+      "dependencies": ["FEAT-012", "FEAT-013", "FEAT-014", "FEAT-015"],
+      "acceptance_criteria": [
+        "Expired registrations cleanup every 15 minutes",
+        "Old registrations purge daily at 2 AM",
+        "Rate limits cleanup hourly",
+        "Audit logs archive weekly on Sunday at 3 AM",
+        "Jobs monitored for execution success",
+        "Alerting configured for job failures"
+      ]
+    },
+    {
+      "id": "FEAT-017",
+      "feature": "Implement comprehensive RLS policies for pending_registrations table",
+      "category": "security",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "3-5 hours",
+      "dependencies": ["FEAT-001"],
+      "acceptance_criteria": [
+        "Direct SELECT blocked for all users",
+        "Direct INSERT/UPDATE/DELETE blocked for all users",
+        "Only authorized functions can access table",
+        "Service role has full access for maintenance",
+        "Policies tested with multiple user contexts",
+        "Security audit validates policy effectiveness"
+      ]
+    },
+    {
+      "id": "FEAT-018",
+      "feature": "Implement RLS policies for registration_rate_limits table",
+      "category": "security",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "2-3 hours",
+      "dependencies": ["FEAT-002"],
+      "acceptance_criteria": [
+        "Direct access blocked for all users",
+        "Only rate limiting functions can access table",
+        "Service role access for monitoring",
+        "Policies prevent rate limit bypass",
+        "Testing validates security effectiveness"
+      ]
+    },
+    {
+      "id": "FEAT-019",
+      "feature": "Implement RLS policies for security_audit_log table",
+      "category": "security",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "3-4 hours",
+      "dependencies": ["FEAT-003"],
+      "acceptance_criteria": [
+        "Users can view own audit logs only",
+        "Admin role can view all audit logs",
+        "Direct INSERT blocked (only functions can log)",
+        "UPDATE/DELETE blocked for all users",
+        "Policies tested with various user roles",
+        "Audit log integrity maintained"
+      ]
+    },
+    {
+      "id": "FEAT-020",
+      "feature": "Create monitoring views for registration health and abuse detection",
+      "category": "analytics",
+      "priority": "should-have",
+      "complexity": "moderate",
+      "estimated_effort": "4-6 hours",
+      "dependencies": ["FEAT-003"],
+      "acceptance_criteria": [
+        "View shows registration success/failure rates",
+        "View identifies rate limiting patterns",
+        "View tracks registration timing metrics",
+        "View detects anomalous registration activity",
+        "Views optimized for real-time querying",
+        "Dashboard integration ready"
+      ]
+    },
+    {
+      "id": "FEAT-021",
+      "feature": "Implement deep link validation in Tauri desktop app for email verification",
+      "category": "integration",
+      "priority": "must-have",
+      "complexity": "complex",
+      "estimated_effort": "6-10 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Custom protocol handler registered for verification links",
+        "State token extracted from deep link URL",
+        "Token validated for format and signature",
+        "Calls fallback_complete_registration_with_token()",
+        "Handles deep link failures gracefully",
+        "Cross-platform support (Windows, macOS, Linux)",
+        "Fallback to manual token entry if deep link fails"
+      ]
+    },
+    {
+      "id": "FEAT-022",
+      "feature": "Create registration form UI in desktop app with proper validation",
+      "category": "ui-ux",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "4-6 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Form collects all required registration fields",
+        "Real-time validation with user feedback",
+        "Clear error messages for validation failures",
+        "Password strength indicator",
+        "Terms of service and privacy policy acceptance",
+        "Accessible form with keyboard navigation",
+        "Loading states during submission"
+      ]
+    },
+    {
+      "id": "FEAT-023",
+      "feature": "Implement registration submission handler calling store_pending_registration()",
+      "category": "core",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "4-6 hours",
+      "dependencies": ["FEAT-006", "FEAT-022"],
+      "acceptance_criteria": [
+        "Handler collects form data and validates",
+        "Calls store_pending_registration() function",
+        "Handles rate limiting errors gracefully",
+        "Displays clear success message with next steps",
+        "Error handling with user-friendly messages",
+        "Triggers email verification send",
+        "Redirects to verification pending screen"
+      ]
+    },
+    {
+      "id": "FEAT-024",
+      "feature": "Create email verification pending screen with resend capability",
+      "category": "ui-ux",
+      "priority": "must-have",
+      "complexity": "simple",
+      "estimated_effort": "3-4 hours",
+      "dependencies": ["FEAT-010"],
+      "acceptance_criteria": [
+        "Clear instructions for checking email",
+        "Resend verification email button with cooldown",
+        "Visual feedback for resend operation",
+        "Handles rate limiting with clear messaging",
+        "Manual verification code entry option",
+        "Link to support if verification issues"
+      ]
+    },
+    {
+      "id": "FEAT-025",
+      "feature": "Implement manual verification token entry as fallback mechanism",
+      "category": "core",
+      "priority": "should-have",
+      "complexity": "moderate",
+      "estimated_effort": "3-5 hours",
+      "dependencies": ["FEAT-008"],
+      "acceptance_criteria": [
+        "UI for entering verification code manually",
+        "Token format validation before submission",
+        "Calls fallback_complete_registration_with_token()",
+        "Clear success/error messaging",
+        "Helpful instructions for token location",
+        "Handles expired tokens gracefully"
+      ]
+    },
+    {
+      "id": "FEAT-026",
+      "feature": "Create comprehensive security testing suite for registration flow",
+      "category": "security",
+      "priority": "must-have",
+      "complexity": "complex",
+      "estimated_effort": "6-10 hours",
+      "dependencies": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005", "FEAT-006", "FEAT-007"],
+      "acceptance_criteria": [
+        "Tests for SQL injection prevention",
+        "Tests for rate limit bypass attempts",
+        "Tests for token replay attacks",
+        "Tests for encryption/decryption security",
+        "Tests for RLS policy effectiveness",
+        "Tests for concurrent registration handling",
+        "Tests for edge cases and error handling",
+        "Automated security test suite in CI/CD"
+      ]
+    },
+    {
+      "id": "FEAT-027",
+      "feature": "Implement monitoring and alerting for registration flow health",
+      "category": "analytics",
+      "priority": "should-have",
+      "complexity": "moderate",
+      "estimated_effort": "4-6 hours",
+      "dependencies": ["FEAT-020"],
+      "acceptance_criteria": [
+        "Metrics collection for registration success/failure rates",
+        "Alerts for high failure rates",
+        "Alerts for rate limiting anomalies",
+        "Alerts for scheduled job failures",
+        "Dashboard for real-time registration monitoring",
+        "Performance metrics tracking",
+        "Integration with existing monitoring systems"
+      ]
+    },
+    {
+      "id": "FEAT-028",
+      "feature": "Create comprehensive documentation for registration flow implementation",
+      "category": "analytics",
+      "priority": "should-have",
+      "complexity": "moderate",
+      "estimated_effort": "4-6 hours",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "Architecture documentation with flow diagrams",
+        "Database schema documentation",
+        "Function reference documentation",
+        "Security considerations documented",
+        "Deployment checklist",
+        "Troubleshooting guide",
+        "Monitoring and maintenance procedures",
+        "GDPR compliance documentation"
+      ]
+    },
+    {
+      "id": "FEAT-029",
+      "feature": "Implement backup and disaster recovery procedures for registration data",
+      "category": "data-management",
+      "priority": "should-have",
+      "complexity": "moderate",
+      "estimated_effort": "4-6 hours",
+      "dependencies": ["FEAT-001", "FEAT-002", "FEAT-003"],
+      "acceptance_criteria": [
+        "Automated database backups configured",
+        "Backup verification procedures",
+        "Recovery procedures documented and tested",
+        "Point-in-time recovery capability",
+        "Backup retention policy implemented",
+        "Disaster recovery runbook created",
+        "Regular recovery drills scheduled"
+      ]
+    },
+    {
+      "id": "FEAT-030",
+      "feature": "Implement Supabase Vault setup and configuration validation",
+      "category": "integration",
+      "priority": "must-have",
+      "complexity": "moderate",
+      "estimated_effort": "3-5 hours",
+      "dependencies": ["FEAT-004"],
+      "acceptance_criteria": [
+        "Vault initialization scripts",
+        "Key generation and storage procedures",
+        "Health check endpoints for Vault availability",
+        "Configuration validation on startup",
+        "Development mode with mock encryption",
+        "Documentation for Vault setup",
+        "Key rotation procedures documented"
+      ]
+    }
+  ],
+  "open_questions": [
+    {
+      "id": "Q-001",
+      "question": "What specific registration data needs to be encrypted? Should we encrypt all registration fields or only sensitive ones like email, name, password hash?",
+      "category": "security",
+      "priority": "high",
+      "context": "Encryption adds overhead and complexity. Need to determine which fields are truly sensitive enough to warrant encryption vs storing in plaintext. This affects performance and implementation complexity.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-004", "FEAT-006"]
+    },
+    {
+      "id": "Q-002",
+      "question": "What are the specific rate limiting thresholds? How many registration attempts per IP per hour? Per email per day?",
+      "category": "security",
+      "priority": "high",
+      "context": "Rate limits must balance security and usability. Too strict blocks legitimate users, too lenient allows abuse. Need concrete thresholds based on expected usage patterns.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-005"]
+    },
+    {
+      "id": "Q-003",
+      "question": "Is pg_cron available in the current Supabase plan? If not, should we implement alternative scheduling mechanism?",
+      "category": "implementation",
+      "priority": "blocking",
+      "context": "pg_cron requires Supabase Pro plan or higher. If unavailable, need alternative like Supabase Edge Functions with scheduled invocations or external scheduler service.",
+      "resolution_source": "codebase-analysis",
+      "blocks": ["FEAT-016"]
+    },
+    {
+      "id": "Q-004",
+      "question": "What should happen if email verification takes longer than 24 hours? Should we extend the window or force re-registration?",
+      "category": "user-flow",
+      "priority": "high",
+      "context": "Current design purges pending registrations after 24 hours. Some email providers delay emails. Need policy for handling delayed verifications.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-012"]
+    },
+    {
+      "id": "Q-005",
+      "question": "Should we implement CAPTCHA or similar bot detection in addition to rate limiting? If yes, which service (reCAPTCHA, hCaptcha, Turnstile)?",
+      "category": "security",
+      "priority": "medium",
+      "context": "Rate limiting alone may not prevent sophisticated bots. CAPTCHA adds friction but improves security. Need decision on bot detection strategy.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-023"]
+    },
+    {
+      "id": "Q-006",
+      "question": "How should we handle registration attempts with disposable/temporary email addresses? Should we block them or allow?",
+      "category": "user-flow",
+      "priority": "medium",
+      "context": "Temporary emails used for spam/abuse but also legitimate privacy concerns. Need policy on email address validation and blocking.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-006"]
+    },
+    {
+      "id": "Q-007",
+      "question": "What custom protocol scheme should be used for deep links? Should it be app-specific or generic?",
+      "category": "implementation",
+      "priority": "high",
+      "context": "Deep link protocol must be registered with OS and be unique to avoid conflicts. Need decision on protocol naming convention.",
+      "resolution_source": "codebase-analysis",
+      "blocks": ["FEAT-021"]
+    },
+    {
+      "id": "Q-008",
+      "question": "Should pending registrations be recoverable by support staff in case of user issues? What level of admin access is needed?",
+      "category": "user-flow",
+      "priority": "medium",
+      "context": "Users may need support help completing registration. Admin access to pending registrations creates privacy concerns but enables support. Need policy.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-006"]
+    },
+    {
+      "id": "Q-009",
+      "question": "How should we handle concurrent email verifications from the same user (e.g., clicking link on mobile and desktop)?",
+      "category": "implementation",
+      "priority": "medium",
+      "context": "Users may verify email from multiple devices. Need to handle concurrent trigger execution gracefully without errors or duplicate accounts.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-007"]
+    },
+    {
+      "id": "Q-010",
+      "question": "What monitoring and observability tools are available in the tech stack? Should we integrate with existing tools or use Supabase built-in monitoring?",
+      "category": "integration",
+      "priority": "medium",
+      "context": "Need to understand existing monitoring infrastructure to properly integrate registration flow metrics and alerts.",
+      "resolution_source": "codebase-analysis",
+      "blocks": ["FEAT-027"]
+    },
+    {
+      "id": "Q-011",
+      "question": "Should we implement progressive profiling where minimal data collected at registration and more collected later?",
+      "category": "user-flow",
+      "priority": "low",
+      "context": "Reducing registration friction may improve completion rates. Need decision on minimal vs comprehensive registration data collection.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-022"]
+    },
+    {
+      "id": "Q-012",
+      "question": "What happens if Supabase Vault becomes unavailable during registration? Should registrations be queued or rejected?",
+      "category": "architecture",
+      "priority": "high",
+      "context": "Vault availability is critical for encryption. Need contingency plan for Vault outages - queue registrations, degrade to plaintext with flag, or reject entirely.",
+      "resolution_source": "user-qa",
+      "blocks": ["FEAT-004", "FEAT-006"]
+    }
+  ],
+  "codebase_analysis_scope": {
+    "target_directories": [
+      "src/modules/auth",
+      "src/app/providers/auth",
+      "src/core/supabase",
+      "supabase/migrations",
+      "supabase/functions",
+      "src-tauri/src/ipc/commands"
+    ],
+    "focus_areas": [
+      "authentication",
+      "data-models",
+      "api-integration",
+      "business-logic"
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 import {
   createContext,
   use,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -274,7 +275,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean }> => {
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean }> => {
     // Guard against duplicate concurrent login calls
     if (loginInProgress.current) {
       void logger.warn("Login already in progress - ignoring duplicate call", { email });
@@ -495,14 +496,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // isLoading is only used for initial session restoration on app startup.
       loginInProgress.current = false; // Reset flag in all cases (success, error)
     }
-  };
+  }, [toast]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       throw error;
     }
-  };
+  }, []);
 
   const value = useMemo<AuthContextType>(() => {
     const isVerified = Boolean(user?.emailVerified);

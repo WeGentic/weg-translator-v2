@@ -10,7 +10,12 @@ import {
   type ClientFocusDetail,
 } from "@/modules/clients/events";
 import { PROJECT_CLEAR_EVENT, PROJECT_FOCUS_EVENT } from "@/modules/projects/events";
-import { useLayoutSelector, useLayoutStoreApi, useSidebarTwoRegistrySelector } from "./layout-context";
+import {
+  useLayoutActions,
+  useLayoutSelector,
+  useLayoutStoreApi,
+  useSidebarTwoRegistrySelector,
+} from "./layout-context";
 import type { SidebarTwoActivationSource } from "./sidebar-two-registry/types";
 import { useSidebarTwoEventBridge } from "./sidebar-two-registry/useSidebarTwoEventBridge";
 import { useRegisterCoreSidebarTwoModules } from "./sidebar-two-modules/registerCoreSidebarTwoModules";
@@ -220,8 +225,14 @@ export function LayoutSidebarTwo({
   const registryModules = useSidebarTwoRegistrySelector((state) => state.activeModules);
   const registryLegacyContent = useSidebarTwoRegistrySelector((state) => state.legacyContent);
 const routeBindings = useSidebarTwoRegistrySelector((state) => state.routeBindings);
-const deactivateSidebarTwoModule = useLayoutSelector((state) => state.deactivateSidebarTwoModule);
-const requestSidebarFocus = useLayoutSelector((state) => state.requestSidebarTwoFocus);
+const { deactivateSidebarTwoModule, requestSidebarTwoFocus } = useLayoutActions((state) => ({
+  deactivateSidebarTwoModule: (
+    ...args: Parameters<typeof state.deactivateSidebarTwoModule>
+  ) => state.deactivateSidebarTwoModule(...args),
+  requestSidebarTwoFocus: (
+    ...args: Parameters<typeof state.requestSidebarTwoFocus>
+  ) => state.requestSidebarTwoFocus(...args),
+}));
 
   useEffect(() => {
     const store = layoutStore.getState();
@@ -285,11 +296,11 @@ const requestSidebarFocus = useLayoutSelector((state) => state.requestSidebarTwo
             context={module.context}
             payload={module.payload}
             deactivate={handleDeactivate}
-            requestFocus={requestSidebarFocus}
+            requestFocus={requestSidebarTwoFocus}
           />
         );
       }),
-    [modulesForCurrentView, deactivateSidebarTwoModule, requestSidebarFocus],
+    [modulesForCurrentView, deactivateSidebarTwoModule, requestSidebarTwoFocus],
   );
 
   useEffect(() => {
