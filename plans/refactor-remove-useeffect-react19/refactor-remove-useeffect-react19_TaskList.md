@@ -1,0 +1,109 @@
+# Implementation Plan
+
+- [ ] 1. Establish React 19 declarative infrastructure (Phase 1)
+  - [ ] 1.1. Ship `createResource` utility and suspense integration
+    - Requirements: Req#1, Req#2 → Comp `createResource` / Phase 1
+    - [ ] Define resource descriptor types and cache helpers
+    - [ ] Implement `createResource` + `useResourceSelector` backed by React Query
+    - [ ] Add Vitest coverage with mocked IPC handlers
+  - [ ] 1.2. Introduce scheduler for timers and retries
+    - Requirements: Req#1, Req#4 → Comp `Scheduler` / Phase 1
+    - [ ] Implement scheduler API returning cancel handles
+    - [ ] Replace ad-hoc `setTimeout`/`setInterval` usage in utilities
+    - [ ] Document concurrency safeguards in diagnostics
+  - [ ] 1.3. Build `createEventStore` abstraction
+    - Requirements: Req#1, Req#3 → Comp `createEventStore` / Phase 1
+    - [ ] Implement subscribe/getSnapshot contract using `useSyncExternalStore`
+    - [ ] Provide helpers for DOM targets and Tauri listeners
+    - [ ] Write unit tests covering subscribe/unsubscribe behaviour
+
+- [ ] 2. Refactor core providers and shell bootstrap (Phase 1)
+  - [ ] 2.1. Migrate `LogProvider` to event store
+    - Requirements: Req#1 → Comp `LogProvider` / Phase 1
+    - [ ] Wrap `attachLogger` stream inside `createEventStore`
+    - [ ] Remove manual `cancelled` flags and verify cleanup
+    - [ ] Update `LogConsole` consumer to new hook
+  - [ ] 2.2. Rework `AuthProvider` session/resource flow
+    - Requirements: Req#1, Req#2 → Comp `createResource` / Phase 1
+    - [ ] Encapsulate Supabase session in resource with suspense fallback
+    - [ ] Port profile hydration and orphan detection to action-based mutations
+    - [ ] Adjust tests for new async boundaries
+  - [ ] 2.3. Replace `useShellReadyEmitter` timers
+    - Requirements: Req#1 → Comp `Scheduler` / Phase 1
+    - [ ] Use scheduler + resource mutation to emit readiness
+    - [ ] Ensure retry strategy logs structured diagnostics
+    - [ ] Validate removal of placeholder DOM cleanup effect
+
+- [ ] 3. Migrate data hooks to resource layer (Phase 2)
+  - [ ] 3.1. Translation history resource
+    - Requirements: Req#2 → Comp `createResource` / Phase 2
+    - [ ] Wrap `listTranslationHistory` in suspenseful resource
+    - [ ] Trigger refresh via event store subscription to IPC events
+    - [ ] Update hook API to expose derived selectors without effects
+  - [ ] 3.2. Health monitoring refactor
+    - Requirements: Req#2 → Comp `Scheduler` / Phase 2
+    - [ ] Convert Supabase/App health polling to shared scheduler
+    - [ ] Surface results via React Query selectors
+    - [ ] Remove manual loading/error flags in consumer UI
+  - [ ] 3.3. Client/project data hooks
+    - Requirements: Req#2 → Comp `createResource` / Phase 2
+    - [ ] Transition wizard/client hooks to resources
+    - [ ] Ensure mutation invalidations refresh dependent data
+    - [ ] Expand unit tests for optimistic updates
+
+- [ ] 4. Replace event and media subscriptions (Phase 2)
+  - [ ] 4.1. Global navigation & workspace events
+    - Requirements: Req#3 → Comp `createEventStore` / Phase 2
+    - [ ] Use event store for `app:navigate` dispatch and routing sync
+    - [ ] Provide stable handlers via `useEffectEvent` wrapper
+    - [ ] Verify LegacyApp and router layouts respond correctly
+  - [ ] 4.2. Media query & reduced motion hooks
+    - Requirements: Req#3 → Comp `EventStore` / Phase 2
+    - [ ] Replace `useMediaQuery` with event store + SSR-safe fallbacks
+    - [ ] Integrate reduced-motion preference into transition controller
+    - [ ] Update responsive components/tests to new API
+  - [ ] 4.3. File-drop and Tauri window listeners
+    - Requirements: Req#3 → Comp `EventStore` / Phase 2
+    - [ ] Wrap Tauri file-drop handlers in event store abstraction
+    - [ ] Ensure cleanup occurs automatically on unmount
+    - [ ] Add regression tests for drag/drop flows
+
+- [ ] 5. Rebuild transition orchestration (Phase 3)
+  - [ ] 5.1. Implement transition state controller
+    - Requirements: Req#4 → Comp `TransitionStateController` / Phase 3
+    - [ ] Define finite state machine for exiting/entering states
+    - [ ] Use scheduler for timed transitions without effects
+    - [ ] Add unit tests for concurrent navigate scenarios
+  - [ ] 5.2. Refactor PageTransitionProvider & fallback
+    - Requirements: Req#4 → Comp `Transition Orchestrator` / Phase 3
+    - [ ] Integrate controller with TanStack router listeners
+    - [ ] Rework suspense registration to avoid mutable refs
+    - [ ] Validate reduced-motion path bypasses animations
+  - [ ] 5.3. Update diagnostics & overlay UI
+    - Requirements: Req#4 → Comp `Diagnostics` / Phase 3
+    - [ ] Ensure overlay message derives from resource snapshots
+    - [ ] Log transition metrics for observability
+    - [ ] Confirm tests cover message lifecycle
+
+- [ ] 6. Refactor forms and wizard flows (Phase 3)
+  - [ ] 6.1. Auth form action suite
+    - Requirements: Req#5 → Comp `FormActionSuite` / Phase 3
+    - [ ] Implement `useActionState` wrappers for login/registration
+    - [ ] Replace effect-based validation with scheduler debouncing
+    - [ ] Update toast handling to respond to action results
+  - [ ] 6.2. Wizard data flows
+    - Requirements: Req#5 → Comp `createResource` / Phase 3
+    - [ ] Migrate client/project wizard hooks to resources
+    - [ ] Swap address autocomplete listeners to event store
+    - [ ] Add smoke tests for wizard happy path
+  - [ ] 6.3. Recovery and account dialogs
+    - Requirements: Req#5 → Comp `FormActionSuite` / Phase 3
+    - [ ] Port recovery dialogs to action-based submissions
+    - [ ] Ensure Supabase status probes rely on shared health resource
+    - [ ] Verify dialog focus/close logic without effects
+
+- [ ] 7. Validation, documentation, and rollout
+  - Requirements: Req#1, Req#2, Req#3, Req#4, Req#5 → Phase 3
+  - [ ] 7.1. Update Vitest suites and add new coverage for utilities
+  - [ ] 7.2. Run full QA regression on macOS/Windows Tauri builds
+  - [ ] 7.3. Publish migration notes and remove deprecated helpers

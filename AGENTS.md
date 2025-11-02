@@ -1,12 +1,26 @@
 # Repository Guidelines
 
+## Perplexity MCP tool
+
+perplexity_search
+Direct web search using the Perplexity Search API. Returns ranked search results with metadata, perfect for finding current information.
+
+perplexity_ask
+General-purpose conversational AI with real-time web search using the sonar-pro model. Great for quick questions and everyday searches.
+
+perplexity_research
+Deep, comprehensive research using the sonar-deep-research model. Ideal for thorough analysis and detailed reports.
+
+perplexity_reason
+Advanced reasoning and problem-solving using the sonar-reasoning-pro model. Perfect for complex analytical tasks.
+
 ## Core Instruction
 
-When in Planning you must use pro-actively perplexity-ask MCP tool to fill knowledge gaps, fetch most up-to-date information, best practices, patterns, and validate your assumptions.
+When in Planning you must use pro-actively perplexity MCP tool to fill knowledge gaps, fetch most up-to-date information, best practices, patterns, and validate your assumptions.
 
 When in Write Mode, you must focus on producing high-quality code that adheres to the project's guidelines and best practices. This includes writing clear, maintainable code, and thoroughly testing your changes.
 
-Your highest priority is accuracy and reliability. When you are unsure, you must admit it and it's mandatory that you will use perplexity-ask to fill your knowledge gaps. A careful "I'm unsure" is always better than a confident but wrong answer.
+Your highest priority is accuracy and reliability. When you are unsure, you must admit it and it's mandatory that you will use perplexity to fill your knowledge gaps. A careful "I'm unsure" is always better than a confident but wrong answer.
 
 **ANY CODE YOU WRITE MUST PERFECTLY INTEGRATE WITH THE EXISTING CODEBASE AND FOLLOW THE PROJECT GUIDELINES. IF ARE MODIFICATIONS TO EXISTING CODE, YOU MUST ENSURE THAT YOUR CHANGES DO NOT BREAK ANYTHING.**
 
@@ -22,7 +36,7 @@ Your highest priority is accuracy and reliability. When you are unsure, you must
 
 - Do your best to provide small, single-scoped files (under 300-500 lines of code), aiming for high cohesion and low coupling, and for the best maintainability.
 - Follow all currect best practices for coding, including but not limited to:
-  - You *MUST* follow React 19.2 coding guidelines (see docs/react19-guidelines.md)
+  - You *MUST* follow React 19.2 coding guidelines (see docs/react19-guidelines.md), AND you *MUST* completely avoid using "useEffect" and use more modern React 19 ONLY patterns.
   - When UI is involved, you will always provide separate CSS files for styling.
   - Proper naming conventions
   - YAGNI (You Aren't Gonna Need It)
@@ -65,18 +79,6 @@ Do I have strong, context-supported evidence for this answer?
 - Answers that show clear boundaries and admit uncertainty will always be preferred over speculative or fabricated responses.
 
 **Remember**: Uncertainty = Professionalism. Guessing = Incompetence. Questions = Intelligence. Assumptions = Failures.
-
-## Coding guidelines
-
-- Do your best to provide small, single-scoped files (under 300-500 lines of code), aiming for high cohesion and low coupling, and for the best maintainability.
-- Follow all currect best practices for coding, including but not limited to:
-  - You must follow React 19.2 coding guidelines (see docs/react19-guidelines.md)
-  - Proper naming conventions
-  - YAGNI (You Aren't Gonna Need It)
-  - KISS (Keep It Simple, Stupid)
-  - DRY (Don't Repeat Yourself)
-  - SOLID principles
-  - Proper error handling
 
 ## Project Scope
 
